@@ -9,6 +9,8 @@
 Oyster Mesh
 </body>
 <script type="text/javascript">
-    oy_get_peers();
+    oy_peers_clear();
+    console.log(oy_peer_add("bob"));
+    console.log(oy_peers_get());
 </script>
 </html>
