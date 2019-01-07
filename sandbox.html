@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Oyster Mesh Sandbox</title>
+    <script src="peer.min.js"></script>
+</head>
+<body>
+Oyster Mesh Sandbox
+</body>
+<div id="control_buttons" style="display:none;">
+    <input type="button" value="START" onclick="start()" />
+    <input type="button" value="TEST" onclick="test()" />
+</div>
+<script type="text/javascript">
+    function getQueryVariable(variable) {
+        var query = window.location.search.substring(1);
+        var vars = query.split("&");
+        for (var i=0;i<vars.length;i++) {
+            var pair = vars[i].split("=");
+            if(pair[0] == variable){return pair[1];}
+        }
+        return(false);
+    }
+
+    ///*
+    window.conn = null;
+    var peer = new Peer(getQueryVariable("self"), {key: 'lwjd5qra8257b9'});
+    peer.on('open', function(id) {
+        console.log('My peer ID is: ' + id);
+    });
+
+    var other = getQueryVariable("other");
+    console.log(other);
+    if (other!==false) {
+        document.getElementById('control_buttons').style.display = "block";
+    }
+    else {
+        peer.on('connection', function(conn) {
+            // Receive messages
+            conn.on('data', function (data) {
+                console.log('Received', data);
+                console.log(conn.peer);
+            });
+        });
+    }
+    function start() {
+        window.conn = peer.connect(other);
+        window.conn.on('open', function() {
+            console.log(window.conn);
+            localStorage.setItem("conn_test", JSON.stringify(window.conn));
+            //^ JSON.stringify is unable to convert DOM objects because of their circular references
+            //for now we will use global variables instead, and perhaps down the road a solution can be used to persist
+            //P2P connection handles beyond a page refresh. This could become a significant optimization for when swarm nodes
+            //are used to generate revenue on websites (significant amount of refresh events). There is a repo called flatted
+            //that may work but I don't want to be depending on jQuery anytime soon.
+        });
+    }
+    function test() {
+        var local_conn = JSON.parse(localStorage.getItem("conn_test"));
+        console.log("test active");
+        window.conn.send('2Hello!');
+        console.log("2BOB"+window.conn.id);
+        console.log("2message sent");
+    }
+    //*/
+</script>
+</html>
