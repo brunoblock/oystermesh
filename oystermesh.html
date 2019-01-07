@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Oyster Mesh</title>
+    <script src="oystermesh.js"></script>
+    <script src="peer.min.js"></script>
+</head>
+<body>
+Oyster Mesh
+</body>
+<script type="text/javascript">
+    //oy_peers_clear();
+    //console.log(oy_peer_add("bob"));
+    //console.log(oy_peers_get());
+    function getQueryVariable(variable) {
+        var query = window.location.search.substring(1);
+        var vars = query.split("&");
+        for (var i=0;i<vars.length;i++) {
+            var pair = vars[i].split("=");
+            if(pair[0] == variable){return pair[1];}
+        }
+        return(false);
+    }
+
+
+    oy_init();
+    /*
+    var peer = new Peer(getQueryVariable("self"), {key: 'lwjd5qra8257b9'});
+    peer.on('open', function(id) {
+        console.log('My peer ID is: ' + id);
+    });
+
+    var other = getQueryVariable("other");
+    console.log(other);
+    if (other!==false) {
+        var conn = peer.connect(other);
+        conn.on('open', function() {
+            // Send messages
+            conn.send('Hello!');
+            console.log("message sent");
+        });
+    }
+    else {
+        peer.on('connection', function(conn) {
+            // Receive messages
+            conn.on('data', function (data) {
+                console.log('Received', data);
+                console.log(conn.peer);
+            });
+        });
+    }
+    */
+</script>
+</html>
