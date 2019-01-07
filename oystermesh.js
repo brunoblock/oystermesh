@@ -12,7 +12,10 @@ window.OY_PEER_MAX = 9;//maximum mutual peers per zone (applicable difference is
 // INIT
 window.OY_CONN = null;//global P2P connection handle
 window.OY_INIT = 0;//prevents multiple instances of oy_init() from running simultaneously
-window.OY_PEERS = {};//optimization for quick and inexpensive checks for mutual peering and connection handling
+window.OY_SELF = null;//self P2P ID
+window.OY_PEERS = {};//optimization for quick and inexpensive checks for mutual peering
+window.OY_NODES = {};//P2P connection handling for individual nodes
+window.OY_ZONES = {};//handling and tracking zone allegiances
 window.OY_BLACKLIST = {};//nodes to block for x amount of time
 window.OY_PROPOSED = {};//nodes that have been recently proposed to for mutual peering
 
@@ -27,15 +30,9 @@ function oy_gen_id(oy_zone) {
     if (oy_zone===false) return "xxxxxxxx".replace(/x/g, oy_gen_id_sub);
     return "xxxx".replace(/x/g, oy_gen_id_sub);
 }
+
 function oy_gen_id_sub() {
     return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
-}
-
-function oy_peer_connect(oy_peer_id) {
-    var oy_local_conn = window.OY_CONN.connect(oy_peer_id);
-    oy_local_conn.on('open', function {
-        window.OY_PEERS[oy_peer_id] = oy_local_conn;
-    });
 }
 
 function oy_peer_add(oy_peer_id) {
@@ -48,7 +45,7 @@ function oy_peer_add(oy_peer_id) {
     }
     oy_peers[oy_peer_id] = oy_peer_local;
     localStorage.setItem("oy_peers", JSON.stringify(oy_peers));
-    window.OY_PEERS[oy_peer_id] = true;//TODO need to assemble logic for tracking conn handles in global var
+    window.OY_PEERS[oy_peer_id] = true;
     return true;
 }
 
@@ -82,6 +79,16 @@ function oy_peer_process(oy_peer_id, oy_data) {
     //is self's peer asking for self to refer some of self's other peers
     if (oy_data[4]==="OY_PEER_REFER") {
 
+    }
+}
+
+function oy_node_connect(oy_node_id) {
+    if (typeof(window.OY_NODES[oy_node_id])==="undefined"||window.OY_NODES[oy_node_id].disconnected===false) {
+        var oy_local_conn = window.OY_CONN.connect(oy_node_id);
+        oy_local_conn.on('open', function() {
+            window.OY_NODES[oy_node_id] = oy_local_conn;
+            oy_latency_test(oy_node_id);//this may or may not need to be here
+        });
     }
 }
 
@@ -136,12 +143,12 @@ function oy_node_negotiate(oy_node_id, oy_data) {
         }
     }
     else if (oy_data[4]==="OY_PEER_REQUEST") {
-        oy_latency_check(oy_node_id);
+        oy_latency_test(oy_node_id);
     }
 }
 
 function oy_latency_test(oy_node_id) {
-    oy_data_send(oy_node_id, "OY_LATENCY_TEST", "PAYLOADPAYLOADPAYLOADPAYLOAD");
+    oy_data_send(oy_node_id, "OY_LATENCY_TEST_SPARK", "PAYLOADPAYLOADPAYLOADPAYLOAD");
 }
 
 //initiates and keeps alive the P2P connection session
@@ -152,6 +159,7 @@ function oy_data_conn() {
             oy_self_id = oy_gen_id();
             localStorage.setItem("oy_self_id", oy_self_id);
         }
+        window.SELF = oy_self_id;
         window.OY_CONN = new Peer(oy_self_id, {key: 'lwjd5qra8257b9'});
     }
     return !window.OY_CONN.disconnected;
@@ -161,11 +169,11 @@ function oy_data_conn() {
 function oy_data_send(oy_node_id, oy_data_flag, oy_data_payload) {
     if (!window.OY_CONN.disconnected&&!oy_data_conn()) {
         oy_log("Connection handler was unable to create a persisting P2P session", 1);
-        return false
+        return false;
     }
-    var oy_conn = window.OY_CONN.connect(oy_node_id);
-    oy_conn.on('open')
-    //oy_conn.id
+    oy_node_connect(oy_node_id);
+    var oy_data = [window.OY_MESH_DYNASTY, window.OY_MESH_VERSION, window.OY_SELF, window.OY_ZONES, oy_data_flag, oy_data_payload];
+    window.OY_NODES[oy_node_id].send(JSON.stringify(oy_data));//send the JSON-converted data array to the destination node
 }
 
 //incoming data validation
@@ -173,7 +181,7 @@ function oy_data_send(oy_node_id, oy_data_flag, oy_data_payload) {
 //[1] is version difference tolerance
 //[2] is sending node's identity
 //[3] is sending node's zone allegiances
-//[4] is nature of business definition
+//[4] is payload definition
 //[5] is payload
 function oy_data_validate(oy_peer_id, oy_data_raw) {
    try {
@@ -196,14 +204,14 @@ function oy_init() {
         return false;
     }
     window.OY_INIT = 1;
-    //TODO needs to load peers from storage to session, then modify oy_peers_get() as needed
     var oy_peers = oy_peers_get();
     if (oy_peers!==false) {
         window.OY_PEERS = {};
-        for (i in oy_peers) {
-            window.OY_PEERS[i] = true;
+        var oy_peer_id;
+        for (oy_peer_id in oy_peers) {
+            window.OY_PEERS[oy_peer_id] = true;
+            oy_node_connect(oy_peer_id);
         }
-        //delete oy_peers;//free up memory?
     }
     if (!oy_data_conn()) {
         oy_log("Connection handler was unable to create a persisting P2P session", 1);
