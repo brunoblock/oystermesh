@@ -31,6 +31,13 @@ function oy_gen_id_sub() {
     return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
 }
 
+function oy_peer_connect(oy_peer_id) {
+    var oy_local_conn = window.OY_CONN.connect(oy_peer_id);
+    oy_local_conn.on('open', function {
+        window.OY_PEERS[oy_peer_id] = oy_local_conn;
+    });
+}
+
 function oy_peer_add(oy_peer_id) {
     var oy_peer_local = [Date.now()/1000|0, 0, -1, []];//[date added, last msg, latency avg, latency history]
     var oy_peers = oy_peers_get();
@@ -41,7 +48,7 @@ function oy_peer_add(oy_peer_id) {
     }
     oy_peers[oy_peer_id] = oy_peer_local;
     localStorage.setItem("oy_peers", JSON.stringify(oy_peers));
-    window.OY_PEERS[oy_peer_id] = true;
+    window.OY_PEERS[oy_peer_id] = true;//TODO need to assemble logic for tracking conn handles in global var
     return true;
 }
 

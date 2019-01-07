@@ -50,7 +50,7 @@ Oyster Mesh Sandbox
             console.log(window.conn);
             localStorage.setItem("conn_test", JSON.stringify(window.conn));
             //^ JSON.stringify is unable to convert DOM objects because of their circular references
-            //for now we will use global variables instead, and perhaps down the road a solution can be used to persist
+            //for now we will use global variables instead of localStorage, and perhaps down the road a solution can be used to persist
             //P2P connection handles beyond a page refresh. This could become a significant optimization for when swarm nodes
             //are used to generate revenue on websites (significant amount of refresh events). There is a repo called flatted
             //that may work but I don't want to be depending on jQuery anytime soon.
