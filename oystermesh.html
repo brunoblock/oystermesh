@@ -9,10 +9,15 @@
 <body>
 Oyster Mesh
 </body>
+<input id="oy_node_input" type="text" style="width:100px;" />
+<input type="button" value="NODE CONNECT" onclick="oy_button()" />
 <script type="text/javascript">
-    oy_peers_clear();
-    console.log(oy_peer_add("bob"));
-    console.log(oy_peers_get());
+    //oy_peers_clear();
+    //console.log(oy_peer_add("bob"));
+    //console.log(oy_peers_get());
     oy_init();
+    function oy_button() {
+        oy_node_initiate(document.getElementById('oy_node_input').value);
+    }
 </script>
 </html>
