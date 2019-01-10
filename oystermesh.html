@@ -7,12 +7,16 @@
     <script src="peer.min.js"></script>
 </head>
 <body>
-Oyster Mesh
-</body>
+Oyster Mesh<br>
+ID: <span id="oy_field_id"></span>
+<br><br>
 <input id="oy_node_input" type="text" style="width:100px;" />
 <input type="button" value="NODE CONNECT" onclick="oy_button()" />
+<br><br>
 <input id="oy_data_input" type="text" style="width:100px;" />
 <input type="button" value="DATA STORE" onclick="oy_button2()" />
+<br><br>
+<input type="button" value="RESET" onclick="localStorage.clear()" />
 <script type="text/javascript">
     //oy_peers_clear();
     //console.log(oy_peer_add("bob"));
@@ -21,6 +25,7 @@ Oyster Mesh
     //localStorage.clear();
 
     oy_init();
+    document.getElementById("oy_field_id").innerHTML = window.OY_MAIN['oy_self_id'];
     function oy_button() {
         oy_node_initiate(document.getElementById('oy_node_input').value);
     }
@@ -28,4 +33,5 @@ Oyster Mesh
         oy_node_initiate(document.getElementById('oy_node_input').value);
     }
 </script>
+</body>
 </html>
