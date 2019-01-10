@@ -10,11 +10,12 @@
 Oyster Mesh<br>
 ID: <span id="oy_field_id"></span>
 <br><br>
-<input id="oy_node_input" type="text" style="width:100px;" />
+<input id="oy_input_node" type="text" style="width:100px;" />
 <input type="button" value="NODE CONNECT" onclick="oy_button()" />
 <br><br>
-<input id="oy_data_input" type="text" style="width:100px;" />
-<input type="button" value="DATA STORE" onclick="oy_button2()" />
+<input id="oy_input_handle" type="text" style="width:100px;" />
+<input id="oy_input_data" type="text" style="width:100px;" />
+<input type="button" value="DATA PUSH" onclick="oy_button2()" />
 <br><br>
 <input type="button" value="RESET" onclick="localStorage.clear()" />
 <script type="text/javascript">
@@ -27,10 +28,10 @@ ID: <span id="oy_field_id"></span>
     oy_init();
     document.getElementById("oy_field_id").innerHTML = window.OY_MAIN['oy_self_id'];
     function oy_button() {
-        oy_node_initiate(document.getElementById('oy_node_input').value);
+        oy_node_initiate(document.getElementById('oy_input_node').value);
     }
     function oy_button2() {
-        oy_node_initiate(document.getElementById('oy_node_input').value);
+        oy_data_push(["OY_LOGIC_SPREAD"], document.getElementById('oy_input_handle').value, document.getElementById('oy_input_data').value);
     }
 </script>
 </body>

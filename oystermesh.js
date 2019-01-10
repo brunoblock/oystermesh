@@ -4,6 +4,9 @@
 // GLOBAL VARS
 window.OY_MESH_DYNASTY = "BRUNO_GENESIS_TESTNET";//mesh dynasty definition
 window.OY_MESH_VERSION = 1;//mesh version, increments every significant code upgrade
+window.OY_MESH_FLOW = 64000;//characters per second allowed per peer, and for all aggregate non-peer nodes
+window.OY_MESH_MEASURE = 30;//seconds by which to measure mesh flow, larger means more tracking of nearby node, peer and sector activity
+window.OY_MESH_PULL_BUFFER = 1.1;//multiplication factor for mesh inflow buffer, to give some leeway to compliant peers
 window.OY_MESH_TOLERANCE = 2;//max version iterations until peering is refused (similar to hard-fork)
 window.OY_NODE_TOLERANCE = 3;//max amount of protocol communication violations until node is blacklisted
 window.OY_NODE_BLACKTIME = 259200;//seconds to blacklist a punished node for
@@ -16,6 +19,7 @@ window.OY_LATENCY_TOLERANCE = 2;//tolerance buffer factor for receiving ping req
 window.OY_LATENCY_MAX = 4;//max amount seconds for latency test before peership is refused or starts breaking down
 window.OY_LATENCY_TRACK = 200;//how many latency measurements to keep at a time per peer
 window.OY_DATA_MAX = 64000;//max size of data that can be sent to another node
+window.OY_DATA_CHUNK = 32000;//chunk size by which data is split up and sent per transmission
 window.OY_ENGINE_INTERVAL = 1000;//ms interval for core mesh engine to run, the time must clear a reasonable latency round-about
 
 // INIT
@@ -26,7 +30,7 @@ window.OY_MAIN = {};//tracks important information that is worth persisting betw
 window.OY_ENGINE = [{}, {}];//tracking object for core engine variables, [0] is latency tracking
 window.OY_PEERS = {};//optimization for quick and inexpensive checks for mutual peering
 window.OY_NODES = {};//P2P connection handling for individual nodes, is not mirrored in localStorage due to DOM restrictions
-window.OY_ZONES = {};//handling and tracking zone allegiances TODO might turn into SECTOR_ALPHA and SECTOR_BETA
+window.OY_SECTORS = {};//handling and tracking sector allegiances TODO might turn into SECTOR_ALPHA and SECTOR_BETA
 window.OY_LATENCY = {};//handle latency sessions
 window.OY_PROPOSED = {};//nodes that have been recently proposed to for mutual peering
 window.OY_BLACKLIST = {};//nodes to block for x amount of time
@@ -75,7 +79,7 @@ function oy_peer_add(oy_peer_id) {
         oy_log("Failed to add node "+oy_peer_id+" whilst peer list is saturated");
         return false;//cancel if peer list is saturated
     }
-    window.OY_PEERS[oy_peer_id] = [(Date.now()/1000), -1, -1, []];//[date added timestamp, last msg timestamp, latency avg, latency history]
+    window.OY_PEERS[oy_peer_id] = [(Date.now()/1000), -1, -1, [], [], []];//[date added timestamp, last msg timestamp, latency avg, latency history, data push history, data pull history]
     window.OY_PEER_COUNT++;
     oy_local_store("oy_peers", window.OY_PEERS);
     return true;
@@ -103,7 +107,7 @@ function oy_peer_latency(oy_peer_id, oy_latency_new) {
         oy_log("Peer latency tracking was called on a non-existent peer");
         return false;
     }
-    window.OY_PEERS[oy_peer_id][3].push(oy_latency_new);
+    window.OY_PEERS[oy_peer_id][3].unshift(oy_latency_new);
     if (window.OY_PEERS[oy_peer_id][3].length>window.OY_LATENCY_TRACK) {//TODO need to verify that this part works properly and then define global var for 100
         window.OY_PEERS[oy_peer_id][3].pop();
     }
@@ -112,13 +116,19 @@ function oy_peer_latency(oy_peer_id, oy_latency_new) {
     oy_log("Latency data updated for peer "+oy_peer_id);
 }
 
-//checks if peer is still valid for mutual peering
-function oy_peer_verify(oy_peer_id) {
+//select a random peer for data transmission
+function oy_peer_rand(oy_peers_local_input) {
+    let oy_peers_local;
+    if (typeof(oy_peers_local)==="undefined") oy_peers_local = window.OY_PEERS;
+    else oy_peers_local = oy_peers_local_input;
 
-}
+    if (oy_peers_local.length===0) {
+        oy_log("Tried to select a peer whilst the peer list ran empty");
+        return false;
+    }
+    let oy_peers_keys = Object.keys(oy_peers_local);
+    let oy_peer_select = oy_peers_keys[oy_peers_keys.length * Math.random() << 0];
 
-function oy_peers_verify() {
-    //scroll through all peers and invoke oy_peer_verify()
 }
 
 //retrieved mutual peer definitions from localStorage
@@ -319,8 +329,8 @@ function oy_latency_response(oy_node_id, oy_data) {
                     oy_peer_latency(oy_node_id, oy_latency_result);
                 }
                 else {
-                    var oy_peer_weak = [false, -1];
-                    var oy_peer_local;
+                    let oy_peer_weak = [false, -1];
+                    let oy_peer_local;
                     for (oy_peer_local in window.OY_PEERS) {
                         if (window.OY_PEERS[oy_peer_local][2]>oy_peer_weak[1]) {
                             oy_peer_weak = [oy_peer_local, window.OY_PEERS[oy_peer_local][2]];
@@ -382,6 +392,41 @@ function oy_latency_test(oy_node_id, oy_latency_followup, oy_latency_new) {
     return false;
 }
 
+//measures data flow on the mesh in either push or pull direction
+function oy_data_measure(oy_data_push, oy_node_id, oy_data_length) {
+    let oy_time_local = Date.now()/1000|0;
+    let oy_array_select;
+    if (oy_data_push===false) oy_array_select = 5;
+    else oy_array_select = 4;
+    window.OY_PEERS[oy_node_id][oy_array_select].push([oy_time_local, oy_data_length]);
+    while ((oy_time_local-window.OY_PEERS[oy_node_id][oy_array_select][0][0])>window.OY_MESH_MEASURE) window.OY_PEERS[oy_node_id][oy_array_select].shift();
+    let oy_measure_total = 0;
+    for (let i in window.OY_PEERS[oy_node_id][oy_array_select]) oy_measure_total += window.OY_PEERS[oy_node_id][oy_array_select][i][1];
+    let oy_measure_time = oy_time_local-window.OY_PEERS[oy_node_id][oy_array_select][0][0];
+    //either mesh overflow has occurred, parent function will respond accordingly, or mesh flow is in compliance
+    return !((oy_measure_total/(oy_time_local-window.OY_PEERS[oy_node_id][oy_array_select][0][0]))>window.OY_MESH_FLOW*((oy_data_push===false)?window.OY_MESH_PULL_BUFFER:1));
+}
+
+//pushes data onto the mesh, data_logic indicates strategy for data pushing
+function oy_data_push(oy_data_logic, oy_data_handle, oy_data_value) {
+
+    let oy_data_nonce = 0;
+    if (oy_data_value.length<window.OY_DATA_CHUNK) {
+        oy_data_route(oy_data_logic, [oy_data_handle, oy_data_nonce, oy_data_value]);
+    }
+}
+
+//pulls data onto the mesh
+function oy_data_pull(oy_data_handle) {
+
+}
+
+function oy_data_route(oy_data_logic, oy_data_payload) {
+    if (oy_data_logic[0]==="OY_LOGIC_SPREAD") {
+
+    }
+}
+
 //initiates and keeps alive the P2P connection session
 function oy_data_conn() {
     if (window.OY_CONN===null||window.OY_CONN.disconnected!==false) {
@@ -406,8 +451,8 @@ function oy_data_send(oy_node_id, oy_data_flag, oy_data_payload) {
         setTimeout("oy_data_send(\""+oy_node_id+"\", \""+oy_data_flag+"\", \""+oy_data_payload+"\")", 300);
         return true;//might need something more elegant/accurate here
     }
-    var oy_data = [window.OY_MESH_DYNASTY, window.OY_MESH_VERSION, window.OY_MAIN['oy_self_id'], window.OY_ZONES, oy_data_flag, oy_data_payload];
-    var oy_data_raw = JSON.stringify(oy_data);//convert data array to JSON
+    let oy_data = [window.OY_MESH_DYNASTY, window.OY_MESH_VERSION, window.OY_MAIN['oy_self_id'], window.OY_ZONES, oy_data_flag, oy_data_payload];
+    let oy_data_raw = JSON.stringify(oy_data);//convert data array to JSON
     if (oy_data_raw.length>window.OY_DATA_MAX) {
         oy_log("System is misconfigured, almost sent an excessively sized data sequence", 1);
         return false;
@@ -482,7 +527,7 @@ function oy_init() {
     }
 
     window.OY_PEERS = oy_local_get("oy_peers");
-    var oy_peer_local;
+    let oy_peer_local;
     for (oy_peer_local in window.OY_PEERS) {
         oy_log("Recovering peer "+oy_peer_local);
         window.OY_PEER_COUNT++;
@@ -509,7 +554,7 @@ function oy_init() {
                 oy_node_punish(oy_conn.peer);
                 return false;
             }
-            var oy_data = oy_data_validate(oy_conn.peer, oy_data_raw);
+            let oy_data = oy_data_validate(oy_conn.peer, oy_data_raw);
             if (oy_data===false) {
                 oy_log("Node "+oy_conn.peer+" sent invalid data, will punish and cease session");
                 oy_node_punish(oy_conn.peer);
@@ -520,6 +565,10 @@ function oy_init() {
             }
             else if (oy_peer_check(oy_conn.peer)) {
                 oy_log("Node "+oy_conn.peer+" is mutually peered");
+                if (oy_data_measure(false, oy_conn.peer, oy_data_raw.length)===false) {
+                    oy_log("Peer "+oy_conn.peer+" exceeded mesh flow compliance limits, will punish");
+                    oy_node_punish(oy_conn.peer);
+                }
                 oy_peer_process(oy_conn.peer, oy_data)
             }
             else if (oy_node_blocked(oy_conn.peer)) {
