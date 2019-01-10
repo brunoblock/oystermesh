@@ -11,12 +11,20 @@ Oyster Mesh
 </body>
 <input id="oy_node_input" type="text" style="width:100px;" />
 <input type="button" value="NODE CONNECT" onclick="oy_button()" />
+<input id="oy_data_input" type="text" style="width:100px;" />
+<input type="button" value="DATA STORE" onclick="oy_button2()" />
 <script type="text/javascript">
     //oy_peers_clear();
     //console.log(oy_peer_add("bob"));
     //console.log(oy_peers_get());
+
+    //localStorage.clear();
+
     oy_init();
     function oy_button() {
+        oy_node_initiate(document.getElementById('oy_node_input').value);
+    }
+    function oy_button2() {
         oy_node_initiate(document.getElementById('oy_node_input').value);
     }
 </script>
