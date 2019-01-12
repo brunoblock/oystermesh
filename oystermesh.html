@@ -54,8 +54,8 @@ ID: <span id="oy_field_id"></span>
         document.getElementById("oy_push_handle").disabled = false;
         document.getElementById("oy_button_push").disabled = false;
         document.getElementById("oy_button_push_cancel").disabled = true;
-        console.log(window.OY_DATA[document.getElementById('oy_push_handle').value.split("@")[0]]);
-        window.OY_DATA[document.getElementById('oy_push_handle').value.split("@")[0]] = false;
+        console.log(window.OY_DATA_PUSH[document.getElementById('oy_push_handle').value.split("@")[0]]);
+        window.OY_DATA_PUSH[document.getElementById('oy_push_handle').value.split("@")[0]] = false;
     }
     function oy_button4() {
         document.getElementById("oy_pull_data").disabled = true;
