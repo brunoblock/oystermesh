@@ -83,7 +83,21 @@ CONSTRUCT:<br>
     function oy_maintain() {
         let oy_peer_build = "";
         for (let i in window.OY_PEERS) {
-            oy_peer_build += i+"<br>";
+            oy_peer_build += i+" LAT: "+window.OY_PEERS[i][2];
+            let oy_time_local = Date.now()/1000|0;
+            if (window.OY_PEERS[i][4].length>5) {
+                while ((oy_time_local-window.OY_PEERS[i][4][0][0])>window.OY_MESH_MEASURE) window.OY_PEERS[i][4].shift();
+                let oy_measure_total = 0;
+                for (let x in window.OY_PEERS[i][4]) oy_measure_total += window.OY_PEERS[i][4][x][1];
+                oy_peer_build += " PUSH: "+(oy_measure_total/(oy_time_local-window.OY_PEERS[i][4][0][0]));
+            }
+            if (window.OY_PEERS[i][5].length>5) {
+                while ((oy_time_local-window.OY_PEERS[i][5][0][0])>window.OY_MESH_MEASURE) window.OY_PEERS[i][5].shift();
+                let oy_measure_total = 0;
+                for (let x in window.OY_PEERS[i][5]) oy_measure_total += window.OY_PEERS[i][5][x][1];
+                oy_peer_build += " PULL: "+(oy_measure_total/(oy_time_local-window.OY_PEERS[i][5][0][0]));
+            }
+            oy_peer_build +="<br>";
         }
         document.getElementById("oy_peer_list").innerHTML = oy_peer_build;
         let oy_collect_build = "";
