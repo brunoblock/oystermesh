@@ -67,9 +67,10 @@ CONSTRUCT:<br>
         document.getElementById("oy_button_pull").disabled = true;
         document.getElementById("oy_button_pull_cancel").disabled = false;
         oy_data_pull(function(oy_superhandle, oy_data_value) {
-            alert("DATA RECEIVED");
+            oy_button5();
             console.log("HANDLE: "+oy_superhandle);
             console.log("DATA: "+oy_data_value);
+            alert(oy_data_value);
         }, ["OY_LOGIC_SPREAD"], document.getElementById('oy_pull_handle').value);
     }
 

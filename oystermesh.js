@@ -233,7 +233,6 @@ function oy_peer_process(oy_peer_id, oy_data) {
         let oy_fwd_chance = window.OY_MESH_PULL_BOOST;
         if (typeof(window.OY_DEPOSIT[oy_data[5][1]])!=="undefined") {
             oy_log("Found nonce(s) for handle "+oy_data[5][1]);
-            oy_data[5][0].push(window.OY_MAIN['oy_self_id']);//filler for oy_data_route() to remove
             for (let oy_data_nonce in window.OY_DEPOSIT[oy_data[5][1]]) {//scroll through all available nonces of the requested handle
                 //DATA_FULFILL has a defined payload of: [0] is the route passport (return back to the peer doing the original pull), [1] is the handle, [2] is the nonce, [3] is the source, [4] is the data
                 setTimeout(function() {
@@ -292,7 +291,7 @@ function oy_peer_check(oy_node_id) {
 }
 
 function oy_node_connect(oy_node_id, oy_callback) {
-    if (oy_node_id===false) {
+    if (oy_node_id===false||oy_node_id===window.OY_MAIN['oy_self_id']) {
         oy_log("Tried to connect to invalid node ID", 1);//functions need to validate node_id before forwarding here
         return false;
     }
@@ -302,7 +301,7 @@ function oy_node_connect(oy_node_id, oy_callback) {
         oy_local_conn.on('open', function() {
             window.OY_NODES[oy_node_id] = oy_local_conn;
             oy_log("Connection status: "+window.OY_NODES[oy_node_id].open+" with node "+oy_node_id);
-            oy_callback();
+            if (typeof(oy_callback)==="function") oy_callback();
         });
         return oy_local_conn;
     }
@@ -575,10 +574,9 @@ function oy_data_push(oy_data_logic, oy_data_value, oy_data_handle) {
 }
 
 //pulls data from the mesh
-//TODO might want to consider using async/await on this function
 function oy_data_pull(oy_callback, oy_data_logic, oy_data_handle, oy_data_nonce_max) {
     if (typeof(oy_data_nonce_max)==="undefined") {
-        oy_data_nonce_max = oy_data_handle.substr(40);
+        oy_data_nonce_max = parseInt(oy_data_handle.substr(40));
         oy_data_handle = oy_data_handle.substr(0, 40);//40 is for length of SHA1
     }
     oy_log("Pulling handle "+oy_data_handle+" with logic: "+oy_data_logic);
@@ -594,7 +592,7 @@ function oy_data_pull(oy_callback, oy_data_logic, oy_data_handle, oy_data_nonce_
 
     //check OY_COLLECT to see if anything came back
     if (typeof(window.OY_COLLECT[oy_data_handle])==="undefined") window.OY_COLLECT[oy_data_handle] = {};
-    if (typeof(window.OY_CONSTRUCT[oy_data_handle])==="undefined") window.OY_CONSTRUCT[oy_data_handle] = {};
+    if (typeof(window.OY_CONSTRUCT[oy_data_handle])==="undefined") window.OY_CONSTRUCT[oy_data_handle] = [];
     for (let oy_data_nonce in window.OY_COLLECT[oy_data_handle]) {
         if (oy_data_nonce>=oy_data_nonce_max) continue;
         let oy_source_highest = 0;
@@ -608,17 +606,20 @@ function oy_data_pull(oy_callback, oy_data_logic, oy_data_handle, oy_data_nonce_
         window.OY_CONSTRUCT[oy_data_handle][oy_data_nonce] = oy_source_data;
         oy_log("Committed construct for "+oy_data_handle+" at nonce "+oy_data_nonce);
     }
+    console.log(window.OY_CONSTRUCT[oy_data_handle].length+oy_data_nonce_max);
     if (window.OY_CONSTRUCT[oy_data_handle].length===oy_data_nonce_max) {
         oy_log("Construct for "+oy_data_handle+" achieved all nonces");
-        let oy_data_construct = window.OY_CONSTRUCT[oy_data_handle].toString();
+        let oy_data_construct = window.OY_CONSTRUCT[oy_data_handle].join("");
         if (oy_data_handle===oy_gen_hash(oy_data_construct)) {
             oy_log("Construct for "+oy_data_handle+" cleared hash check");
-            oy_callback(oy_data_construct);
+            delete window.OY_DATA_PULL[oy_data_handle];
+            delete window.OY_COLLECT[oy_data_handle];
+            delete window.OY_CONSTRUCT[oy_data_handle];
+            oy_callback(oy_data_handle+oy_data_nonce_max, oy_data_construct);
             return true;//end the pull loop
         }
         else oy_log("Construct for "+oy_data_handle+" failed hash check");
     }
-    console.log(window.OY_DATA_PULL_INTERVAL*oy_data_nonce_max);
     setTimeout(function() {
         oy_data_pull(oy_callback, oy_data_logic, oy_data_handle, oy_data_nonce_max);
     }, window.OY_DATA_PULL_INTERVAL*oy_data_nonce_max);
@@ -653,13 +654,8 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_peers_ex
         oy_data_send(oy_peer_select, oy_data_flag, oy_data_payload);
     }
     else if (oy_data_logic[0]==="OY_LOGIC_REVERSE") {
-        console.log(oy_peer_select);
-        console.log(oy_data_flag);
-        console.log(oy_data_payload);
-        let oy_peer_select = oy_data_payload[0].pop();//select the next peer on the passport
+        oy_peer_select = oy_data_payload[0].pop();//select the next peer on the passport
         if (oy_data_payload[0].length===0) oy_data_payload[0].push(oy_peer_select);
-        console.log(oy_data_payload);
-        console.log(oy_peer_select);
         oy_data_send(oy_peer_select, oy_data_flag, oy_data_payload);
     }
     return oy_peer_select;
