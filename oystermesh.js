@@ -291,19 +291,22 @@ function oy_peer_check(oy_node_id) {
     return typeof(window.OY_PEERS[oy_node_id])!=="undefined";
 }
 
-function oy_node_connect(oy_node_id) {
-    if (typeof(window.OY_NODES[oy_node_id])!=="undefined") {
-        console.log(window.OY_NODES[oy_node_id]);
-        console.log(window.OY_NODES[oy_node_id].open);
+function oy_node_connect(oy_node_id, oy_callback) {
+    if (oy_node_id===false) {
+        oy_log("Tried to connect to invalid node ID", 1);//functions need to validate node_id before forwarding here
+        return false;
     }
     if (typeof(window.OY_NODES[oy_node_id])==="undefined"||window.OY_NODES[oy_node_id].open===false) {
+        oy_log("Connection warming up with node "+oy_node_id);
         let oy_local_conn = window.OY_CONN.connect(oy_node_id);
         oy_local_conn.on('open', function() {
             window.OY_NODES[oy_node_id] = oy_local_conn;
+            oy_log("Connection status: "+window.OY_NODES[oy_node_id].open+" with node "+oy_node_id);
+            oy_callback();
         });
-        return false;
+        return oy_local_conn;
     }
-    return true;
+    return window.OY_NODES[oy_node_id];
 }
 
 function oy_node_disconnect(oy_node_id) {
@@ -368,9 +371,12 @@ function oy_node_initiate(oy_node_id) {
         oy_log("Tried to initiate peership with an already agreed upon peer");
         return false;
     }
-    oy_data_send(oy_node_id, "OY_PEER_REQUEST", null);
-    window.OY_PROPOSED[oy_node_id] = (Date.now()/1000)+window.OY_NODE_PROPOSETIME;//set proposal session with expiration timestamp
-    oy_local_store("oy_proposed", window.OY_PROPOSED);
+    let oy_local_callback = function() {
+        oy_data_send(oy_node_id, "OY_PEER_REQUEST", null);
+        window.OY_PROPOSED[oy_node_id] = (Date.now()/1000)+window.OY_NODE_PROPOSETIME;//set proposal session with expiration timestamp
+        oy_local_store("oy_proposed", window.OY_PROPOSED);
+    };
+    if (oy_node_connect(oy_node_id, oy_local_callback).open===true) oy_local_callback();
     return true;
 }
 
@@ -404,7 +410,10 @@ function oy_node_negotiate(oy_node_id, oy_data) {
         }
     }
     else if (oy_data[4]==="OY_PEER_REQUEST") {
-        oy_latency_test(oy_node_id, "OY_PEER_REQUEST", true);
+        let oy_local_callback = function() {
+            oy_latency_test(oy_node_id, "OY_PEER_REQUEST", true);
+        };
+        if (oy_node_connect(oy_node_id, oy_local_callback).open===true) oy_local_callback();
         return true;
     }
     else if (oy_data[4]==="OY_PEER_LATENCY") {
@@ -647,8 +656,10 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_peers_ex
         console.log(oy_peer_select);
         console.log(oy_data_flag);
         console.log(oy_data_payload);
-        oy_peer_select = oy_data_payload[0].pop();//select the next peer on the passport
+        let oy_peer_select = oy_data_payload[0].pop();//select the next peer on the passport
         if (oy_data_payload[0].length===0) oy_data_payload[0].push(oy_peer_select);
+        console.log(oy_data_payload);
+        console.log(oy_peer_select);
         oy_data_send(oy_peer_select, oy_data_flag, oy_data_payload);
     }
     return oy_peer_select;
@@ -674,22 +685,17 @@ function oy_data_send(oy_node_id, oy_data_flag, oy_data_payload) {
         oy_log("Connection handler was unable to create a persisting P2P session", 1);
         return false;
     }
-    if (!oy_node_connect(oy_node_id)) {
-        oy_log("Connection to "+oy_node_id+" failed, will try again");
-        console.log(window.OY_NODES[oy_node_id]);
-        setTimeout(function() {
-            oy_data_send(oy_node_id, oy_data_flag, oy_data_payload);
-        }, 500);
-        return true;//might need something more elegant/accurate here
-    }
-    let oy_data = [window.OY_MESH_DYNASTY, window.OY_MESH_VERSION, window.OY_MAIN['oy_self_id'], window.OY_SECTORS, oy_data_flag, oy_data_payload];
-    let oy_data_raw = JSON.stringify(oy_data);//convert data array to JSON
-    if (oy_data_raw.length>window.OY_DATA_MAX) {
-        oy_log("System is misconfigured, almost sent an excessively sized data sequence", 1);
-        return false;
-    }
-    oy_log("Sent data to node "+oy_node_id+": "+oy_data_raw);
-    window.OY_NODES[oy_node_id].send(oy_data_raw);//send the JSON-converted data array to the destination node
+    let oy_local_callback = function() {
+        let oy_data = [window.OY_MESH_DYNASTY, window.OY_MESH_VERSION, window.OY_MAIN['oy_self_id'], window.OY_SECTORS, oy_data_flag, oy_data_payload];
+        let oy_data_raw = JSON.stringify(oy_data);//convert data array to JSON
+        if (oy_data_raw.length>window.OY_DATA_MAX) {
+            oy_log("System is misconfigured, almost sent an excessively sized data sequence", 1);
+            return false;
+        }
+        oy_log("Sent data to node "+oy_node_id+": "+oy_data_raw);
+        window.OY_NODES[oy_node_id].send(oy_data_raw);//send the JSON-converted data array to the destination node
+    };
+    if (oy_node_connect(oy_node_id, oy_local_callback).open===true) oy_local_callback();
     return true;
 }
 
