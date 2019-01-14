@@ -4,9 +4,9 @@
 // GLOBAL VARS
 window.OY_MESH_DYNASTY = "BRUNO_GENESIS_TESTNET";//mesh dynasty definition
 window.OY_MESH_VERSION = 1;//mesh version, increments every significant code upgrade
-window.OY_MESH_FLOW = 16000;//characters per second allowed per peer, and for all aggregate non-peer nodes//TODO
+window.OY_MESH_FLOW = 4000;//characters per second allowed per peer, and for all aggregate non-peer nodes//TODO
 window.OY_MESH_MEASURE = 30;//seconds by which to measure mesh flow, larger means more tracking of nearby node, peer and sector activity
-window.OY_MESH_PULL_BUFFER = 1.75;//multiplication factor for mesh inflow buffer, to give some leeway to compliant peers
+window.OY_MESH_PULL_BUFFER = 2.25;//multiplication factor for mesh inflow buffer, to give some leeway to compliant peers
 window.OY_MESH_PUSH_MAIN = 0.5;//probability that a peer will forward a data_push when the nonce was not previously stored on self
 window.OY_MESH_PUSH_BOOST = 0.65;//probability that a peer will forward a data_push when the nonce was previously stored on self
 window.OY_MESH_PULL_MAIN = 0.4;//probability that a peer will forward a data_pull when the nonce was found on self
@@ -24,12 +24,12 @@ window.OY_PEER_MAX = 5;//maximum mutual peers per zone (applicable difference is
 window.OY_LATENCY_SIZE = 100;//size of latency ping payload, larger is more accurate yet more taxing, vice-versa applies
 window.OY_LATENCY_REPEAT = 2;//how many ping round trips should be performed to conclude the latency test
 window.OY_LATENCY_TOLERANCE = 2;//tolerance buffer factor for receiving ping requested from a proposed-to node
-window.OY_LATENCY_MAX = 8;//max amount of seconds for latency test before peership is refused or starts breaking down
+window.OY_LATENCY_MAX = 40;//max amount of seconds for latency test before peership is refused or starts breaking down
 window.OY_LATENCY_TRACK = 200;//how many latency measurements to keep at a time per peer
 window.OY_DATA_MAX = 64000;//max size of data that can be sent to another node
-window.OY_DATA_CHUNK = 16000;//32000//chunk size by which data is split up and sent per transmission
-window.OY_DATA_PUSH_INTERVAL = 200;//ms per chunk per push loop iteration
-window.OY_DATA_PULL_INTERVAL = 200;//ms per chunk per pull loop iteration
+window.OY_DATA_CHUNK = 8000;//32000//chunk size by which data is split up and sent per transmission
+window.OY_DATA_PUSH_INTERVAL = 500;//ms per chunk per push loop iteration
+window.OY_DATA_PULL_INTERVAL = 250;//ms per chunk per pull loop iteration
 window.OY_ENGINE_INTERVAL = 2000;//ms interval for core mesh engine to run, the time must clear a reasonable latency round-about
 
 // INIT
@@ -749,7 +749,7 @@ function oy_engine() {
                 oy_latency_test(oy_peer_local, "OY_PEER_CONNECT", true);
             }
             else if (oy_time_local-window.OY_ENGINE[0][oy_peer_local]>window.OY_LATENCY_MAX) {
-                oy_log("Engine found non-responsive peer "+oy_peer_local+", will punish");
+                oy_log("Engine found non-responsive peer "+oy_peer_local+" with latency lag: "+(oy_time_local-window.OY_ENGINE[0][oy_peer_local])+", will punish");
                 oy_node_punish(oy_peer_local);
             }
         }
