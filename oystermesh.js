@@ -4,13 +4,14 @@
 // GLOBAL VARS
 window.OY_MESH_DYNASTY = "BRUNO_GENESIS_TESTNET";//mesh dynasty definition
 window.OY_MESH_VERSION = 1;//mesh version, increments every significant code upgrade
-window.OY_MESH_FLOW = 32000;//characters per second allowed per peer, and for all aggregate non-peer nodes
+window.OY_MESH_FLOW = 16000;//characters per second allowed per peer, and for all aggregate non-peer nodes//TODO
 window.OY_MESH_MEASURE = 30;//seconds by which to measure mesh flow, larger means more tracking of nearby node, peer and sector activity
 window.OY_MESH_PULL_BUFFER = 1.75;//multiplication factor for mesh inflow buffer, to give some leeway to compliant peers
 window.OY_MESH_PUSH_MAIN = 0.5;//probability that a peer will forward a data_push when the nonce was not previously stored on self
 window.OY_MESH_PUSH_BOOST = 0.65;//probability that a peer will forward a data_push when the nonce was previously stored on self
 window.OY_MESH_PULL_MAIN = 0.4;//probability that a peer will forward a data_pull when the nonce was found on self
 window.OY_MESH_PULL_BOOST = 0.7;//probability that a peer will forward a data_pull when the nonce was not found on self
+window.OY_MESH_FULLFILL = 0.15;//probability that data is stored whilst fulfilling a pull request, this makes data intelligently migrate overtime//TODO
 window.OY_MESH_SOURCE = 3;//node in route passport (from destination) that is assigned with defining the source variable
 window.OY_MESH_TOLERANCE = 2;//max version iterations until peering is refused (similar to hard-fork)
 window.OY_NODE_TOLERANCE = 3;//max amount of protocol communication violations until node is blacklisted
@@ -18,17 +19,17 @@ window.OY_NODE_BLACKTIME = 259200;//seconds to blacklist a punished node for
 window.OY_NODE_PROPOSETIME = 60;//seconds for peer proposal session duration
 window.OY_PEER_LATENCYTIME = 60;//peers are expected to communicate with each other within this interval in seconds
 window.OY_PEER_KEEPTIME = 8;//peers are expected to communicate with each other within this interval in seconds
+window.OY_PEER_REFERTIME = 20;//interval in which self asks peers for peer recommendations (as needed)
 window.OY_PEER_MAX = 5;//maximum mutual peers per zone (applicable difference is for gateway nodes)
 window.OY_LATENCY_SIZE = 100;//size of latency ping payload, larger is more accurate yet more taxing, vice-versa applies
 window.OY_LATENCY_REPEAT = 2;//how many ping round trips should be performed to conclude the latency test
 window.OY_LATENCY_TOLERANCE = 2;//tolerance buffer factor for receiving ping requested from a proposed-to node
-window.OY_LATENCY_MAX = 4;//max amount of seconds for latency test before peership is refused or starts breaking down
+window.OY_LATENCY_MAX = 8;//max amount of seconds for latency test before peership is refused or starts breaking down
 window.OY_LATENCY_TRACK = 200;//how many latency measurements to keep at a time per peer
 window.OY_DATA_MAX = 64000;//max size of data that can be sent to another node
 window.OY_DATA_CHUNK = 16000;//32000//chunk size by which data is split up and sent per transmission
-window.OY_DATA_PUSH_INTERVAL = 100;//ms per chunk per push loop iteration
-window.OY_DATA_PULL_INTERVAL = 100;//ms per chunk per pull loop iteration
-window.OY_DATA_PUSH_COOL = 100;//ms to wait per data_send cool off, ensures mesh flow compliance
+window.OY_DATA_PUSH_INTERVAL = 200;//ms per chunk per push loop iteration
+window.OY_DATA_PULL_INTERVAL = 200;//ms per chunk per pull loop iteration
 window.OY_ENGINE_INTERVAL = 2000;//ms interval for core mesh engine to run, the time must clear a reasonable latency round-about
 
 // INIT
@@ -126,6 +127,18 @@ function oy_peer_remove(oy_peer_id) {
     }
 }
 
+//remove all peer relationships, this function might only get used in manual instances
+function oy_peers_reset() {
+    let oy_peer_local;
+    for (oy_peer_local in window.OY_PEERS) {
+        oy_data_send(oy_peer_local, "OY_PEER_TERMINATE", null);
+        oy_node_disconnect(oy_peer_local);
+    }
+    window.OY_PEERS = {};
+    window.OY_PEER_COUNT = 0;
+    localStorage.removeItem("oy_peers");
+}
+
 //updates latency tracking of peer
 function oy_peer_latency(oy_peer_id, oy_latency_new) {
     if (!oy_peer_check(oy_peer_id)) {
@@ -155,17 +168,6 @@ function oy_peer_rand(oy_peers_local, oy_peers_exception) {
     }
     let oy_peers_keys = Object.keys(oy_peers_local);
     return oy_peers_keys[oy_peers_keys.length * Math.random() << 0];
-}
-
-//remove all peer relationships, this function might only get used in manual instances
-function oy_peers_reset() {
-    let oy_peer_local;
-    for (oy_peer_local in window.OY_PEERS) {
-        oy_data_send(oy_peer_local, "OY_PEER_TERMINATE", null);
-    }
-    window.OY_PEERS = {};
-    window.OY_PEER_COUNT = 0;
-    localStorage.removeItem("oy_peers");
 }
 
 //process data sequence received from mutual peer oy_peer_id
@@ -270,7 +272,10 @@ function oy_peer_process(oy_peer_id, oy_data) {
         return true;
     }
     else if (oy_data[4]==="OY_PEER_REFER") {//is self's peer asking for self to refer some of self's other peers
-        let oy_peers_local = window.OY_PEERS;
+        let oy_peers_local = {};
+        for (let i in window.OY_PEERS) {
+            oy_peers_local[i] = window.OY_PEERS[i];
+        }
         let oy_peer_select = oy_peer_rand(oy_peers_local, [oy_peer_id]);
         if (oy_peer_select===false) {
             oy_log("Self doesn't have any available peers to recommend");
@@ -391,6 +396,7 @@ function oy_node_negotiate(oy_node_id, oy_data) {
         return false;
     }
     else if (oy_data[4]==="OY_PEER_AFFIRM") {
+        oy_node_punish(oy_node_id);
         oy_log("Received a peership affirmation notice from a non-peer, something went wrong");
         return false;
     }
@@ -739,15 +745,22 @@ function oy_engine() {
         if (oy_time_diff_last>window.OY_PEER_KEEPTIME||oy_time_diff_latency>window.OY_PEER_LATENCYTIME) {
             if (typeof(window.OY_ENGINE[0][oy_peer_local])==="undefined") {
                 oy_log("Engine initiating latency test with peer "+oy_peer_local+", time_diff_last: "+oy_time_diff_last+"/"+window.OY_PEER_KEEPTIME+", time_diff_latency: "+oy_time_diff_latency+"/"+window.OY_PEER_LATENCYTIME);
-                window.OY_ENGINE[0][oy_peer_local] = true;
+                window.OY_ENGINE[0][oy_peer_local] = oy_time_local;
                 oy_latency_test(oy_peer_local, "OY_PEER_CONNECT", true);
             }
-            else {
+            else if (oy_time_local-window.OY_ENGINE[0][oy_peer_local]>window.OY_LATENCY_MAX) {
                 oy_log("Engine found non-responsive peer "+oy_peer_local+", will punish");
                 oy_node_punish(oy_peer_local);
             }
         }
         else delete window.OY_ENGINE[0][oy_peer_local];
+        if (window.OY_PEER_COUNT<window.OY_PEER_MAX&&oy_peer_check(oy_peer_local)) {
+            if (typeof(window.OY_REFER[oy_peer_local])==="undefined"||(oy_time_local-window.OY_REFER[oy_peer_local])>window.OY_PEER_REFERTIME) {
+                window.OY_REFER[oy_peer_local] = oy_time_local;
+                oy_data_send(oy_peer_local, "OY_PEER_REFER", null);
+                oy_log("Asked peer "+oy_peer_local+" for peer recommendation");
+            }
+        }
     }
     setTimeout("oy_engine()", window.OY_ENGINE_INTERVAL);
 }
