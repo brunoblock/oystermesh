@@ -3,125 +3,216 @@
 <head>
     <meta charset="UTF-8">
     <title>Oyster Mesh</title>
-    <script src="sha1.js"></script>
     <script src="oystermesh.js"></script>
-    <script src="peer.min.js"></script>
+    <script src="oy_resources/sha1.js"></script>
+    <script src="oy_resources/peer.min.js"></script>
+    <base target="_blank">
+    <style type="text/css">
+        @font-face {
+            font-family: 'geo_med';
+            src: url('oy_resources/geo_med.ttf') format('truetype');
+        }
+
+        @font-face {
+            font-family: 'geo_light';
+            src: url('oy_resources/geo_light.ttf') format('truetype');
+        }
+        body, html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: #f7f7f7;
+            font-family: geo_light, Fallback, sans-serif;
+            color: #2a2a2a;
+        }
+        .slide {
+            position: relative;
+            top: 0;
+            width: 100%;
+            height: 85%;
+            overflow: hidden;
+        }
+        a {
+            color:black;
+        }
+        @media screen and (orientation: landscape) {
+            .oy_shell_img {
+                position: relative;
+                width: auto;
+                height: auto;
+                max-height: 28vh;
+                max-width: 35vh;
+                top: -1vh;
+                left: 0;
+                animation: bounce 8s ease-in-out infinite;
+                animation-delay: 0.1s;
+                z-index: 100;
+            }
+
+            .oy_shell_cont_img {
+                position: absolute;
+                top: 6vh;
+                left: 50%;
+                height: 35vh;
+                transform: translateX(-50%);
+            }
+
+            .oy_shadow {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                height: 6.5vh;
+                animation: expand 4s ease-in-out infinite;
+                animation-direction: alternate;
+                animation-delay: 0.1s;
+            }
+            #oy_github_ribbon a:hover {
+                background: #14a2cc;
+                color: #fff;
+            }
+
+            #oy_github_ribbon a::before, #github_ribbon a::after {
+                content: "";
+                width: 100%;
+                display: block;
+                position: absolute;
+                top: 0.1vh;
+                left: 0;
+                height: 0.1vh;
+                background: #0f0f0f;
+            }
+
+            #oy_github_ribbon a::after {
+                bottom: 0.1vh;
+                top: auto;
+            }
+
+            #oy_github_ribbon {
+                position: absolute;
+                display: block;
+                top: 0;
+                right: 0;
+                width: 20vw;
+                overflow: hidden;
+                height: 20vh;
+                z-index: 9999;
+            }
+
+            #oy_github_ribbon a {
+                background: #000;
+                color: #f7f7f7;
+                text-decoration: none;
+                font-family: arial, sans-serif;
+                text-align: center;
+                font-weight: bold;
+                padding: 0.5vh 4vh;
+                font-size: 1.5vh;
+                line-height: 3vh;
+                transition: 0.5s;
+                width: 20vh;
+                position: absolute;
+                top: 6vh;
+                right: -6vh;
+                transform: rotate(45deg);
+            }
+        }
+        @media screen and (orientation: portrait) {
+            .oy_shell_img {
+                position: relative;
+                width: auto;
+                height: auto;
+                max-height: 28vw;
+                max-width: 35vw;
+                top: -1vw;
+                left: 0;
+                animation: bounce 8s ease-in-out infinite;
+                animation-delay: 0.1s;
+                z-index: 100;
+            }
+
+            .oy_shell_cont_img {
+                position: absolute;
+                top: 12vw;
+                left: 50%;
+                height: 35vw;
+                transform: translateX(-50%);
+            }
+
+            .oy_shadow {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                height: 6.5vw;
+                animation: expand 4s ease-in-out infinite;
+                animation-direction: alternate;
+                animation-delay: 0.1s;
+            }
+            #oy_github_ribbon a:hover {
+                background: #14a2cc;
+                color: #fff;
+            }
+
+            #oy_github_ribbon a::before, #oy_github_ribbon a::after {
+                content: "";
+                width: 100%;
+                display: block;
+                position: absolute;
+                top: 0.1vw;
+                left: 0;
+                height: 0.1vw;
+                background: #f7f7f7;
+            }
+
+            #oy_github_ribbon a::after {
+                bottom: 0.1vw;
+                top: auto;
+            }
+
+            #oy_github_ribbon {
+                position: absolute;
+                display: block;
+                top: 0;
+                right: 0;
+                width: 20vw;
+                overflow: hidden;
+                height: 20vw;
+                z-index: 9999;
+            }
+
+            #oy_github_ribbon a {
+                background: #000;
+                color: #f7f7f7;
+                text-decoration: none;
+                font-family: arial, sans-serif;
+                text-align: center;
+                font-weight: bold;
+                padding: 0.5vw 4vw;
+                font-size: 1.5vw;
+                line-height: 3vw;
+                transition: 0.5s;
+                width: 20vw;
+                position: absolute;
+                top: 6vw;
+                right: -6vw;
+                transform: rotate(45deg);
+            }
+        }
+    </style>
 </head>
 <body>
-Oyster Mesh<br>
-ID: <span id="oy_field_id"></span>
-<br><br>
-<input id="oy_input_node" type="text" style="width:100px;" />
-<input type="button" value="NODE CONNECT" onclick="oy_button()" />
-<br><br>
-<input id="oy_push_handle" type="text" style="width:100px;" disabled="disabled" />
-<input id="oy_push_data" type="text" style="width:100px;" />
-<input id="oy_button_push" type="button" value="DATA PUSH" onclick="oy_button2()" />
-<input id="oy_button_push_cancel" type="button" disabled="disabled" value="CANCEL" onclick="oy_button3()" />
-<br><br>
-<input id="oy_pull_handle" type="text" style="width:100px;" />
-<input id="oy_button_pull" type="button" value="DATA PULL" onclick="oy_button4()" />
-<input id="oy_button_pull_cancel" type="button" disabled="disabled" value="CANCEL" onclick="oy_button5()" />
-<br><br>
-<input type="button" value="RESET" onclick="localStorage.clear()" />
-<br><br>
-PEERS:<br>
-<div id="oy_peer_list">
-    BLANK
-</div><br>
-COLLECT:<br>
-<div id="oy_collect_list">
-    BLANK
-</div><br>
-CONSTRUCT:<br>
-<div id="oy_construct_list">
-    BLANK
-</div><br>
-<script type="text/javascript">
-    //oy_peers_clear();
-    //console.log(oy_peer_add("bob"));
-    //console.log(oy_peers_get());
-
-    //localStorage.clear();
-
-    oy_init();
-    document.getElementById("oy_field_id").innerHTML = window.OY_MAIN['oy_self_id'];
-    function oy_button() {
-        oy_node_initiate(document.getElementById('oy_input_node').value);
-    }
-    function oy_button2() {
-        document.getElementById("oy_push_data").disabled = true;
-        document.getElementById("oy_button_push").disabled = true;
-        document.getElementById("oy_button_push_cancel").disabled = false;
-        document.getElementById("oy_push_handle").value = oy_data_push(["OY_LOGIC_SPREAD"], document.getElementById('oy_push_data').value);
-    }
-    function oy_button3() {
-        document.getElementById("oy_push_data").disabled = false;
-        document.getElementById("oy_push_handle").disabled = false;
-        document.getElementById("oy_button_push").disabled = false;
-        document.getElementById("oy_button_push_cancel").disabled = true;
-        window.OY_DATA_PUSH[document.getElementById('oy_push_handle').value.substr(0, 40)] = false;
-    }
-    function oy_button4() {
-        document.getElementById("oy_pull_handle").disabled = true;
-        document.getElementById("oy_button_pull").disabled = true;
-        document.getElementById("oy_button_pull_cancel").disabled = false;
-        oy_data_pull(function(oy_superhandle, oy_data_value) {
-            oy_button5();
-            console.log("HANDLE: "+oy_superhandle);
-            console.log("DATA: "+oy_data_value);
-            alert(oy_data_value);
-        }, ["OY_LOGIC_SPREAD"], document.getElementById('oy_pull_handle').value);
-    }
-
-    function oy_button5() {
-        document.getElementById("oy_pull_handle").disabled = false;
-        document.getElementById("oy_button_pull").disabled = false;
-        document.getElementById("oy_button_pull_cancel").disabled = true;
-        window.OY_DATA_PULL[document.getElementById('oy_pull_handle').value.substr(0, 40)] = false;
-    }
-    function oy_maintain() {
-        let oy_peer_build = "";
-        for (let i in window.OY_PEERS) {
-            oy_peer_build += i+" LAT: "+window.OY_PEERS[i][2];
-            let oy_time_local = Date.now()/1000|0;
-            if (window.OY_PEERS[i][4].length>5) {
-                while ((oy_time_local-window.OY_PEERS[i][4][0][0])>window.OY_MESH_MEASURE) window.OY_PEERS[i][4].shift();
-                let oy_measure_total = 0;
-                for (let x in window.OY_PEERS[i][4]) oy_measure_total += window.OY_PEERS[i][4][x][1];
-                oy_peer_build += " PUSH: "+(oy_measure_total/(oy_time_local-window.OY_PEERS[i][4][0][0]));
-            }
-            if (window.OY_PEERS[i][5].length>5) {
-                while ((oy_time_local-window.OY_PEERS[i][5][0][0])>window.OY_MESH_MEASURE) window.OY_PEERS[i][5].shift();
-                let oy_measure_total = 0;
-                for (let x in window.OY_PEERS[i][5]) oy_measure_total += window.OY_PEERS[i][5][x][1];
-                oy_peer_build += " PULL: "+(oy_measure_total/(oy_time_local-window.OY_PEERS[i][5][0][0]));
-            }
-            oy_peer_build +="<br>";
-        }
-        document.getElementById("oy_peer_list").innerHTML = oy_peer_build;
-        let oy_collect_build = "";
-        for (let i in window.OY_COLLECT) {
-            oy_collect_build += i+"<br>";
-            for (let x in window.OY_COLLECT[i]) {
-                oy_collect_build += "---"+x+"<br>";
-                for (let y in window.OY_COLLECT[i][x]) {
-                    oy_collect_build += "------"+y+":"+window.OY_COLLECT[i][x][y]+"<br>";
-                }
-            }
-        }
-        document.getElementById("oy_collect_list").innerHTML = oy_collect_build;
-        let oy_construct_build = "";
-        for (let i in window.OY_CONSTRUCT) {
-            oy_construct_build += i+"<br>";
-            for (let x in window.OY_CONSTRUCT[i]) {
-                oy_construct_build += "---"+x+"<br>";
-            }
-        }
-        document.getElementById("oy_construct_list").innerHTML = oy_construct_build;
-        setTimeout("oy_maintain()", 200);
-    }
-    oy_maintain();
-</script>
+<span id="oy_github_ribbon" class="oy_fade five"><a href="https://github.com/brunoblock/oystermesh" target="_blank">GitHub Repo</a></span>
+<div id="front" class="slide scroll" style="height:100%;background-color:#f7f7f7">
+    <div class="oy_fade one oy_shell_cont_img">
+        <img class="oy_shell_img" src="oy_resources/oy_logo_shell.png"/>
+        <div class="oy_shadow">
+            <div style="position:relative;width:100%;height:100%;background: rgba(48, 48, 48, 0.20);border-radius:50%;filter: blur(8px);">
+                <div style="position:absolute;left:50%;top:50%;transform: translateX(-50%) translateY(-50%);width:75%;height:50%;background: rgba(70, 70, 70, 0.40);border-radius:50%;z-index:20"></div>
+            </div>
+        </div>
+    </div>
+    <div class="lead oy_fade two">Proof of Concept</div>
+</div>
 </body>
 </html>
