@@ -122,6 +122,7 @@
         a {
             color:black;
         }
+
         .oy_fade {
             opacity: 0;
             animation: fade_in ease-in 1;
@@ -246,6 +247,10 @@
 
             .oy_border.oy_interface_main {
                 border:0.2vh solid #14a2cc;
+            }
+
+            .oy_stats {
+                font-size:1.6vh;
             }
 
             #oy_github_ribbon a:hover {
@@ -420,11 +425,11 @@
             </div>
         </div>
     </div>
-    <div class="oy_holder oy_fade two" style="background-color: transparent">
+    <div class="oy_holder oy_fade two">
         <div id="oy_graph_nonce" class="oy_center_hor oy_border oy_graph_nonce" style="top:0;width:50%;height:10%;background-color: #dbdbdb;"></div>
-        <div id="oy_interface_main" class="oy_center_hor" style="top:20%;width:50%;height:25%;">
-            <div id="oy_tab_store" class="oy_tab oy_left" style="position:fixed;top:-20%;height:20%;background-color: #14a2cc;z-index:-50;" onclick="oy_tab(this.id)">STORE DATA</div>
-            <div id="oy_tab_retrieve" class="oy_tab" style="position:fixed;top:-20%;height:20%;left: 50%;transform: translateX(-50%);background-color: #7A7A7A;z-index:-50;" onclick="oy_tab(this.id)">RETRIEVE DATA</div>
+        <div id="oy_interface_main" class="oy_center_hor" style="top:18%;width:50%;height:25%;">
+            <div id="oy_tab_push" class="oy_tab oy_left" style="position:fixed;top:-20%;height:20%;background-color: #14a2cc;z-index:-50;" onclick="oy_tab(this.id)">STORE DATA</div>
+            <div id="oy_tab_pull" class="oy_tab" style="position:fixed;top:-20%;height:20%;left: 50%;transform: translateX(-50%);background-color: #7A7A7A;z-index:-50;" onclick="oy_tab(this.id)">RETRIEVE DATA</div>
             <div id="oy_tab_refresh" class="oy_tab oy_right" style="position:fixed;top:-20%;height:20%;background-color: #7A7A7A;z-index:-50;" onclick="oy_tab(this.id)">REFRESH DATA</div>
             <div id="oy_interface_store" class="oy_center_hor oy_border oy_interface_main" style="top:0;width:100%;height:100%;background-color: #14a2cc;z-index:100;">
                 <div align="center" class="oy_border oy_superhandle" style="position:absolute;top:18%;left:5%;width:90%;height:12%;font-family: 'Courier New', sans-serif">
@@ -435,7 +440,7 @@
                 </div>
                 <div class="oy_border oy_superhandle" style="position:absolute;bottom:14%;left:5%;width:50%;height:30%;">
                     <div class="oy_description">FILE&nbsp;UPLOAD</div>
-                    <div style="position:absolute;top:25%;left:20%;">
+                    <div style="position:absolute;top:25%;left:5%;">
                         <input type="file" />
                     </div>
                 </div>
@@ -515,6 +520,39 @@
                 </div>
             </div>
         </div>
+        <div id="oy_graph_nodes" class="oy_center_hor oy_border oy_graph_nonce" style="bottom:0;width:99.7%;height:53%;background-color: #dbdbdb;"></div>
+        <div id="oy_graph_peers" class="oy_border oy_graph_nonce" style="position:absolute;top:0;left:0;width:23%;height:43%;background-color: #dbdbdb;"></div>
+        <div id="oy_stats" class="oy_border oy_graph_nonce" style="position:absolute;top:0;right:0;width:23%;height:43%;background-color: #dbdbdb;overflow:hidden;">
+            <div class="oy_center_both oy_stats" style="height:84%;width:100%;">
+                <div align="right" style="position:absolute;left:-2.5%;top:0;width:50%;height:100%;">
+                    AVG&nbsp;LATENCY<br>
+                    AVG&nbsp;PEERSHIP<br>
+                    PEER&nbsp;COUNT<br>
+                    BLACKLISTED<br>
+                    MESH&nbsp;SIZE<br>
+                    PUSH&nbsp;FLOW<br>
+                    PULL&nbsp;FLOW<br>
+                    SECTOR&nbsp;ALPHA<br>
+                    SECTOR&nbsp;BETA<br>
+                    SECTOR&nbsp;GMMA<br>
+                </div>
+                <div class="oy_center_hor" style="top:0;width:1%;height:100%;background-color: black;">
+                </div>
+                <div style="position:absolute;right:-2.5%;top:0;width:50%;height:100%;">
+                    <span>0</span>&nbsp;sec<br>
+                    <span>0</span>&nbsp;sec<br>
+                    <span>0</span>&nbsp;peers<br>
+                    <span>0</span>&nbsp;nodes<br>
+                    <span>0</span>&nbsp;nodes<br>
+                    <span>0</span>&nbsp;char/sec<br>
+                    <span>0</span>&nbsp;char/sec<br>
+                    <span>null</span><br>
+                    <span>null</span><br>
+                    <span>null</span><br>
+                </div>
+            </div>
+
+        </div>
     </div>
 </div>
 <script type="text/javascript">
@@ -522,33 +560,51 @@
     window.OY_EXECUTE_PULL = false;
     window.OY_EXECUTE_REFRESH = false;
     function oy_push_execute() {
-        if (window.OY_EXECUTE_PUSH===true) return false;
+        if (window.OY_EXECUTE_PUSH===true||window.OY_EXECUTE_PULL===true||window.OY_EXECUTE_REFRESH===true) return false;
         window.OY_EXECUTE_PUSH = true;
         document.getElementById("oy_push_execute").classList.remove("oy_button_execute_active");
         document.getElementById("oy_push_execute").classList.add("oy_button_execute_dull");
 
         document.getElementById("oy_push_halt").classList.remove("oy_button_halt_dull");
         document.getElementById("oy_push_halt").classList.add("oy_button_halt_active");
+
+        document.getElementById("oy_pull_execute").classList.remove("oy_button_execute_active");
+        document.getElementById("oy_pull_execute").classList.add("oy_button_execute_dull");
+
+        document.getElementById("oy_refresh_execute").classList.remove("oy_button_execute_active");
+        document.getElementById("oy_refresh_execute").classList.add("oy_button_execute_dull");
     }
 
     function oy_push_halt() {
-        if (window.OY_EXECUTE_PULL===false) return false;
-        window.OY_EXECUTE_PULL = false;
+        if (window.OY_EXECUTE_PUSH===false) return false;
+        window.OY_EXECUTE_PUSH = false;
         document.getElementById("oy_push_execute").classList.remove("oy_button_execute_dull");
         document.getElementById("oy_push_execute").classList.add("oy_button_execute_active");
 
         document.getElementById("oy_push_halt").classList.remove("oy_button_halt_active");
         document.getElementById("oy_push_halt").classList.add("oy_button_halt_dull");
+
+        document.getElementById("oy_pull_execute").classList.remove("oy_button_execute_dull");
+        document.getElementById("oy_pull_execute").classList.add("oy_button_execute_active");
+
+        document.getElementById("oy_refresh_execute").classList.remove("oy_button_execute_dull");
+        document.getElementById("oy_refresh_execute").classList.add("oy_button_execute_active");
     }
 
     function oy_pull_execute() {
-        if (window.OY_EXECUTE_PULL===true) return false;
+        if (window.OY_EXECUTE_PUSH===true||window.OY_EXECUTE_PULL===true||window.OY_EXECUTE_REFRESH===true) return false;
         window.OY_EXECUTE_PULL = true;
         document.getElementById("oy_pull_execute").classList.remove("oy_button_execute_active");
         document.getElementById("oy_pull_execute").classList.add("oy_button_execute_dull");
 
         document.getElementById("oy_pull_halt").classList.remove("oy_button_halt_dull");
         document.getElementById("oy_pull_halt").classList.add("oy_button_halt_active");
+
+        document.getElementById("oy_push_execute").classList.remove("oy_button_execute_active");
+        document.getElementById("oy_push_execute").classList.add("oy_button_execute_dull");
+
+        document.getElementById("oy_refresh_execute").classList.remove("oy_button_execute_active");
+        document.getElementById("oy_refresh_execute").classList.add("oy_button_execute_dull");
     }
 
     function oy_pull_halt() {
@@ -559,16 +615,28 @@
 
         document.getElementById("oy_pull_halt").classList.remove("oy_button_halt_active");
         document.getElementById("oy_pull_halt").classList.add("oy_button_halt_dull");
+
+        document.getElementById("oy_push_execute").classList.remove("oy_button_execute_dull");
+        document.getElementById("oy_push_execute").classList.add("oy_button_execute_active");
+
+        document.getElementById("oy_refresh_execute").classList.remove("oy_button_execute_dull");
+        document.getElementById("oy_refresh_execute").classList.add("oy_button_execute_active");
     }
 
     function oy_refresh_execute() {
-        if (window.OY_EXECUTE_REFRESH===true) return false;
+        if (window.OY_EXECUTE_PUSH===true||window.OY_EXECUTE_PULL===true||window.OY_EXECUTE_REFRESH===true) return false;
         window.OY_EXECUTE_REFRESH = true;
         document.getElementById("oy_refresh_execute").classList.remove("oy_button_execute_active");
         document.getElementById("oy_refresh_execute").classList.add("oy_button_execute_dull");
 
         document.getElementById("oy_refresh_halt").classList.remove("oy_button_halt_dull");
         document.getElementById("oy_refresh_halt").classList.add("oy_button_halt_active");
+
+        document.getElementById("oy_push_execute").classList.remove("oy_button_execute_active");
+        document.getElementById("oy_push_execute").classList.add("oy_button_execute_dull");
+
+        document.getElementById("oy_pull_execute").classList.remove("oy_button_execute_active");
+        document.getElementById("oy_pull_execute").classList.add("oy_button_execute_dull");
     }
 
     function oy_refresh_halt() {
@@ -579,31 +647,46 @@
 
         document.getElementById("oy_refresh_halt").classList.remove("oy_button_halt_active");
         document.getElementById("oy_refresh_halt").classList.add("oy_button_halt_dull");
+
+        document.getElementById("oy_push_execute").classList.remove("oy_button_execute_dull");
+        document.getElementById("oy_push_execute").classList.add("oy_button_execute_active");
+
+        document.getElementById("oy_pull_execute").classList.remove("oy_button_execute_dull");
+        document.getElementById("oy_pull_execute").classList.add("oy_button_execute_active");
     }
 
     function oy_tab(oy_tab_id) {
-        if (oy_tab_id==="oy_tab_store") {
-            document.getElementById('oy_tab_store').style.backgroundColor = "#14a2cc";
-            document.getElementById('oy_tab_retrieve').style.backgroundColor = "#7A7A7A";
+        if (oy_tab_id==="oy_tab_push") {
+            document.getElementById('oy_tab_push').style.backgroundColor = "#14a2cc";
+            document.getElementById('oy_tab_pull').style.backgroundColor = "#7A7A7A";
             document.getElementById('oy_tab_refresh').style.backgroundColor = "#7A7A7A";
+
+            if (window.OY_EXECUTE_PULL===true) document.getElementById('oy_tab_pull').style.backgroundColor = "#c37b2c";
+            if (window.OY_EXECUTE_REFRESH===true) document.getElementById('oy_tab_refresh').style.backgroundColor = "#c37b2c";
 
             document.getElementById('oy_interface_store').style.display = "block";
             document.getElementById('oy_interface_retrieve').style.display = "none";
             document.getElementById('oy_interface_refresh').style.display = "none";
         }
-        else if (oy_tab_id==="oy_tab_retrieve") {
-            document.getElementById('oy_tab_store').style.backgroundColor = "#7A7A7A";
-            document.getElementById('oy_tab_retrieve').style.backgroundColor = "#14a2cc";
+        else if (oy_tab_id==="oy_tab_pull") {
+            document.getElementById('oy_tab_push').style.backgroundColor = "#7A7A7A";
+            document.getElementById('oy_tab_pull').style.backgroundColor = "#14a2cc";
             document.getElementById('oy_tab_refresh').style.backgroundColor = "#7A7A7A";
+
+            if (window.OY_EXECUTE_PUSH===true) document.getElementById('oy_tab_push').style.backgroundColor = "#c37b2c";
+            if (window.OY_EXECUTE_REFRESH===true) document.getElementById('oy_tab_refresh').style.backgroundColor = "#c37b2c";
 
             document.getElementById('oy_interface_store').style.display = "none";
             document.getElementById('oy_interface_retrieve').style.display = "block";
             document.getElementById('oy_interface_refresh').style.display = "none";
         }
         else if (oy_tab_id==="oy_tab_refresh") {
-            document.getElementById('oy_tab_store').style.backgroundColor = "#7A7A7A";
-            document.getElementById('oy_tab_retrieve').style.backgroundColor = "#7A7A7A";
+            document.getElementById('oy_tab_push').style.backgroundColor = "#7A7A7A";
+            document.getElementById('oy_tab_pull').style.backgroundColor = "#7A7A7A";
             document.getElementById('oy_tab_refresh').style.backgroundColor = "#14a2cc";
+
+            if (window.OY_EXECUTE_PUSH===true) document.getElementById('oy_tab_push').style.backgroundColor = "#c37b2c";
+            if (window.OY_EXECUTE_PULL===true) document.getElementById('oy_tab_pull').style.backgroundColor = "#c37b2c";
 
             document.getElementById('oy_interface_store').style.display = "none";
             document.getElementById('oy_interface_retrieve').style.display = "none";
