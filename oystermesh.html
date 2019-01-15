@@ -249,6 +249,14 @@
                 border:0.2vh solid #14a2cc;
             }
 
+            .oy_peer {
+                position:absolute;
+                left:5%;
+                width:90%;
+                height:12%;
+                border:0.1vh dashed #4E4E4E;
+            }
+
             .oy_stats {
                 font-size:1.6vh;
             }
@@ -521,7 +529,13 @@
             </div>
         </div>
         <div id="oy_graph_nodes" class="oy_center_hor oy_border oy_graph_nonce" style="bottom:0;width:99.7%;height:53%;background-color: #dbdbdb;"></div>
-        <div id="oy_graph_peers" class="oy_border oy_graph_nonce" style="position:absolute;top:0;left:0;width:23%;height:43%;background-color: #dbdbdb;"></div>
+        <div id="oy_graph_peers" class="oy_border oy_graph_nonce" style="position:absolute;top:0;left:0;width:23%;height:43%;background-color: #dbdbdb;">
+            <div class="oy_peer" style="top:4%;"></div>
+            <div class="oy_peer" style="top:24%;"></div>
+            <div class="oy_peer" style="top:44%;"></div>
+            <div class="oy_peer" style="top:64%;"></div>
+            <div class="oy_peer" style="top:84%;"></div>
+        </div>
         <div id="oy_stats" class="oy_border oy_graph_nonce" style="position:absolute;top:0;right:0;width:23%;height:43%;background-color: #dbdbdb;overflow:hidden;">
             <div class="oy_center_both oy_stats" style="height:84%;width:100%;">
                 <div align="right" style="position:absolute;left:-2.5%;top:0;width:50%;height:100%;">
