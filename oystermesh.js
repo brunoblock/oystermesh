@@ -1,5 +1,5 @@
 // Bruno Block
-// v0.01
+// v0.1
 
 // GLOBAL VARS
 window.OY_MESH_DYNASTY = "BRUNO_GENESIS_TESTNET";//mesh dynasty definition
@@ -305,11 +305,17 @@ function oy_node_connect(oy_node_id, oy_callback) {
     if (typeof(window.OY_NODES[oy_node_id])==="undefined"||window.OY_NODES[oy_node_id].open===false) {
         oy_log("Connection warming up with node "+oy_node_id);
         let oy_local_conn = window.OY_CONN.connect(oy_node_id);
-        oy_local_conn.on('open', function() {
-            window.OY_NODES[oy_node_id] = oy_local_conn;
-            oy_log("Connection status: "+window.OY_NODES[oy_node_id].open+" with node "+oy_node_id);
-            if (typeof(oy_callback)==="function") oy_callback();
-        });
+        if (typeof(oy_local_conn)==="undefined") {
+              oy_log("Connection to node "+oy_node_id+" failed");
+              return false;
+        }
+        else {
+            oy_local_conn.on('open', function() {
+                window.OY_NODES[oy_node_id] = oy_local_conn;
+                oy_log("Connection status: "+window.OY_NODES[oy_node_id].open+" with node "+oy_node_id);
+                if (typeof(oy_callback)==="function") oy_callback();
+            });
+        }
         return oy_local_conn;
     }
     return window.OY_NODES[oy_node_id];

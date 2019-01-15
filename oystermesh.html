@@ -17,6 +17,7 @@
             font-family: 'geo_light';
             src: url('oy_resources/geo_light.ttf') format('truetype');
         }
+
         body, html {
             height: 100%;
             margin: 0;
@@ -25,6 +26,7 @@
             font-family: geo_light, Fallback, sans-serif;
             color: #2a2a2a;
         }
+
         @-webkit-keyframes fade_in {
             from {
                 opacity: 0;
@@ -69,6 +71,47 @@
                 transform: scale(1.1);
             }
         }
+
+        .oy_button_execute_active {
+            background-color: #2c49cc;
+            border:0.1vh solid #2c49cc;
+            color: #f3f3f3;
+        }
+
+        .oy_button_execute_active:hover {
+            cursor: pointer;
+        }
+
+        .oy_button_execute_dull {
+            background-color: #7A7A7A;
+            border:0.1vh solid #7A7A7A;
+            color: #4a4a4a;
+        }
+
+        .oy_button_execute_dull:hover {
+            cursor: not-allowed;
+        }
+
+        .oy_button_halt_active {
+            background-color: #c37b2c;
+            border:0.1vh solid #c37b2c;
+            color: #f3f3f3;
+        }
+
+        .oy_button_halt_active:hover {
+            cursor: pointer;
+        }
+
+        .oy_button_halt_dull {
+            background-color: #7A7A7A;
+            border:0.1vh solid #7A7A7A;
+            color: #4a4a4a;
+        }
+
+        .oy_button_halt_dull:hover {
+            cursor: not-allowed;
+        }
+
         .oy_slide {
             position: relative;
             top: 0;
@@ -86,13 +129,12 @@
         }
 
         .oy_fade.one {
-            animation-delay: 0.1s;
-            animation-duration: 0.4s;
+            animation-duration: 0.5s;
         }
 
         .oy_fade.two {
-            animation-delay: 0.7s;
-            animation-duration: 0.4s;
+            animation-delay: 0.3s;
+            animation-duration: 0.25s;
         }
         @media screen and (orientation: landscape) {
             .oy_shell_img {
@@ -126,6 +168,7 @@
                 animation-direction: alternate;
                 animation-delay: 0.1s;
             }
+
             .oy_holder {
                 position:absolute;
                 left:50%;
@@ -148,10 +191,49 @@
             }
 
             .oy_tab.oy_left {
-                left:-0.2vh;
+                left:2.2vh;
             }
             .oy_tab.oy_right {
-                right:-0.2vh;
+                right:2.2vh;
+            }
+
+            .oy_description {
+                position:absolute;
+                top:0;
+                left:0;
+                transform: translateY(-100%);
+                font-size:1.5vh;
+            }
+
+            .oy_description_handle {
+                position:absolute;
+                top:0;
+                left:0;
+                transform: translateY(-100%);
+                font-size:1.8vh;
+            }
+
+            .oy_superhandle {
+                border:0.1vh dashed #2b2b2b;
+                font-size:1vh;
+            }
+
+            .oy_rate {
+                position:absolute;
+                top:50%;
+                left:50%;
+                transform: translate(-50%, -50%);
+                font-family: geo_light, Fallback, sans-serif;
+                font-size:3vh;
+            }
+
+            .oy_button {
+                border-radius: 0.5vh;
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+                font-family: geo_med, Fallback, sans-serif;
+                font-size:1.5vh;
             }
 
             .oy_border {
@@ -313,10 +395,17 @@
                 transform: rotate(45deg);
             }
         }
-        .oy_center {
+        .oy_center_hor {
             position: absolute;
             left: 50%;
             transform: translateX(-50%);
+        }
+
+        .oy_center_both {
+            position: absolute;
+            top:50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
         }
     </style>
 </head>
@@ -332,24 +421,166 @@
         </div>
     </div>
     <div class="oy_holder oy_fade two" style="background-color: transparent">
-        <div id="oy_graph_nonce" class="oy_center oy_border oy_graph_nonce" style="top:0;width:50%;height:10%;background-color: #dbdbdb;"></div>
-        <div id="oy_interface_main" class="oy_center" style="top:20%;width:50%;height:30%;">
+        <div id="oy_graph_nonce" class="oy_center_hor oy_border oy_graph_nonce" style="top:0;width:50%;height:10%;background-color: #dbdbdb;"></div>
+        <div id="oy_interface_main" class="oy_center_hor" style="top:20%;width:50%;height:25%;">
             <div id="oy_tab_store" class="oy_tab oy_left" style="position:fixed;top:-20%;height:20%;background-color: #14a2cc;z-index:-50;" onclick="oy_tab(this.id)">STORE DATA</div>
             <div id="oy_tab_retrieve" class="oy_tab" style="position:fixed;top:-20%;height:20%;left: 50%;transform: translateX(-50%);background-color: #7A7A7A;z-index:-50;" onclick="oy_tab(this.id)">RETRIEVE DATA</div>
             <div id="oy_tab_refresh" class="oy_tab oy_right" style="position:fixed;top:-20%;height:20%;background-color: #7A7A7A;z-index:-50;" onclick="oy_tab(this.id)">REFRESH DATA</div>
-            <div id="oy_interface_store" class="oy_center oy_border oy_interface_main" style="top:0;width:100%;height:100%;background-color: #14a2cc;z-index:100;">
-                STORAGE
+            <div id="oy_interface_store" class="oy_center_hor oy_border oy_interface_main" style="top:0;width:100%;height:100%;background-color: #14a2cc;z-index:100;">
+                <div align="center" class="oy_border oy_superhandle" style="position:absolute;top:18%;left:5%;width:90%;height:12%;font-family: 'Courier New', sans-serif">
+                    <div class="oy_description_handle">HANDLE</div>
+                    <div id="oy_push_superhandle" class="oy_center_both">
+                        f59a54928db49033433e591c9f80d93b5ebf66e01@null
+                    </div>
+                </div>
+                <div class="oy_border oy_superhandle" style="position:absolute;bottom:14%;left:5%;width:50%;height:30%;">
+                    <div class="oy_description">FILE&nbsp;UPLOAD</div>
+                    <div style="position:absolute;top:25%;left:20%;">
+                        <input type="file" />
+                    </div>
+                </div>
+                <div class="oy_border oy_superhandle" style="position:absolute;bottom:14%;left:59%;width:14%;height:30%;">
+                    <div class="oy_description">MESH&nbsp;RATE</div>
+                    <div class="oy_rate">
+                        M-
+                    </div>
+                </div>
+                <div id="oy_push_execute" align="center" class="oy_button oy_button_execute_active" style="position:absolute;bottom:32%;right:5%;width:18%;height:14%;" onclick="oy_push_execute()">
+                    <div style="position:relative;top:-3%;">
+                        MESH&nbsp;PUSH
+                    </div>
+                </div>
+                <div id="oy_push_halt" align="center" class="oy_button oy_button_halt_dull" style="position:absolute;bottom:14%;right:5%;width:18%;height:14%;" onclick="oy_push_halt()">
+                    <div style="position:relative;top:-3%;">
+                        PUSH&nbsp;HALT
+                    </div>
+                </div>
             </div>
-            <div id="oy_interface_retrieve" class="oy_center oy_border oy_interface_main" style="top:0;width:100%;height:100%;background-color: #14a2cc;z-index:100;display:none">
-                RETRIEVE
+            <div id="oy_interface_retrieve" class="oy_center_hor oy_border oy_interface_main" style="top:0;width:100%;height:100%;background-color: #14a2cc;z-index:100;display:none">
+                <div align="center" class="oy_border oy_superhandle" style="position:absolute;top:18%;left:5%;width:90%;height:12%;font-family: 'Courier New', sans-serif">
+                    <div class="oy_description_handle">HANDLE</div>
+                    <div id="oy_pull_superhandle" class="oy_center_both">
+                        f59a54928db49033433e591c9f80d93b5ebf66e01@null
+                    </div>
+                </div>
+                <div class="oy_border oy_superhandle" style="position:absolute;bottom:14%;left:5%;width:50%;height:30%;">
+                    <div class="oy_description">PROGRESS</div>
+                    <div style="position:absolute;top:25%;left:20%;">
+                    </div>
+                </div>
+                <div class="oy_border oy_superhandle" style="position:absolute;bottom:14%;left:59%;width:14%;height:30%;">
+                    <div class="oy_description">MESH&nbsp;RATE</div>
+                    <div class="oy_rate">
+                        M-
+                    </div>
+                </div>
+                <div id="oy_pull_execute" align="center" class="oy_button oy_button_execute_active" style="position:absolute;bottom:32%;right:5%;width:18%;height:14%;" onclick="oy_pull_execute()">
+                    <div style="position:relative;top:-3%;">
+                        MESH&nbsp;PULL
+                    </div>
+                </div>
+                <div id="oy_pull_halt" align="center" class="oy_button oy_button_halt_dull" style="position:absolute;bottom:14%;right:5%;width:18%;height:14%;" onclick="oy_pull_halt()">
+                    <div style="position:relative;top:-3%;">
+                        PULL&nbsp;HALT
+                    </div>
+                </div>
             </div>
-            <div id="oy_interface_refresh" class="oy_center oy_border oy_interface_main" style="top:0;width:100%;height:100%;background-color: #14a2cc;z-index:100;display:none">
-                REFRESH
+            <div id="oy_interface_refresh" class="oy_center_hor oy_border oy_interface_main" style="top:0;width:100%;height:100%;background-color: #14a2cc;z-index:100;display:none">
+                <div align="center" class="oy_border oy_superhandle" style="position:absolute;top:18%;left:5%;width:90%;height:12%;font-family: 'Courier New', sans-serif">
+                    <div class="oy_description_handle">HANDLE</div>
+                    <div id="oy_refresh_superhandle" class="oy_center_both">
+                        f59a54928db49033433e591c9f80d93b5ebf66e01@null
+                    </div>
+                </div>
+                <div class="oy_border oy_superhandle" style="position:absolute;bottom:14%;left:5%;width:50%;height:30%;">
+                    <div class="oy_description">FILE&nbsp;COVERAGE</div>
+                    <div style="position:absolute;top:25%;left:20%;">
+                    </div>
+                </div>
+                <div class="oy_border oy_superhandle" style="position:absolute;bottom:14%;left:59%;width:14%;height:30%;">
+                    <div class="oy_description">MESH&nbsp;RATE</div>
+                    <div class="oy_rate">
+                        M-
+                    </div>
+                </div>
+                <div id="oy_refresh_execute" align="center" class="oy_button oy_button_execute_active" style="position:absolute;bottom:32%;right:5%;width:18%;height:14%;" onclick="oy_refresh_execute()">
+                    <div style="position:relative;top:-3%;">
+                        MESH&nbsp;REFR
+                    </div>
+                </div>
+                <div id="oy_refresh_halt" align="center" class="oy_button oy_button_halt_dull" style="position:absolute;bottom:14%;right:5%;width:18%;height:14%;" onclick="oy_refresh_halt()">
+                    <div style="position:relative;top:-3%;">
+                        REFR&nbsp;HALT
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 <script type="text/javascript">
+    window.OY_EXECUTE_PUSH = false;
+    window.OY_EXECUTE_PULL = false;
+    window.OY_EXECUTE_REFRESH = false;
+    function oy_push_execute() {
+        if (window.OY_EXECUTE_PUSH===true) return false;
+        window.OY_EXECUTE_PUSH = true;
+        document.getElementById("oy_push_execute").classList.remove("oy_button_execute_active");
+        document.getElementById("oy_push_execute").classList.add("oy_button_execute_dull");
+
+        document.getElementById("oy_push_halt").classList.remove("oy_button_halt_dull");
+        document.getElementById("oy_push_halt").classList.add("oy_button_halt_active");
+    }
+
+    function oy_push_halt() {
+        if (window.OY_EXECUTE_PULL===false) return false;
+        window.OY_EXECUTE_PULL = false;
+        document.getElementById("oy_push_execute").classList.remove("oy_button_execute_dull");
+        document.getElementById("oy_push_execute").classList.add("oy_button_execute_active");
+
+        document.getElementById("oy_push_halt").classList.remove("oy_button_halt_active");
+        document.getElementById("oy_push_halt").classList.add("oy_button_halt_dull");
+    }
+
+    function oy_pull_execute() {
+        if (window.OY_EXECUTE_PULL===true) return false;
+        window.OY_EXECUTE_PULL = true;
+        document.getElementById("oy_pull_execute").classList.remove("oy_button_execute_active");
+        document.getElementById("oy_pull_execute").classList.add("oy_button_execute_dull");
+
+        document.getElementById("oy_pull_halt").classList.remove("oy_button_halt_dull");
+        document.getElementById("oy_pull_halt").classList.add("oy_button_halt_active");
+    }
+
+    function oy_pull_halt() {
+        if (window.OY_EXECUTE_PULL===false) return false;
+        window.OY_EXECUTE_PULL = false;
+        document.getElementById("oy_pull_execute").classList.remove("oy_button_execute_dull");
+        document.getElementById("oy_pull_execute").classList.add("oy_button_execute_active");
+
+        document.getElementById("oy_pull_halt").classList.remove("oy_button_halt_active");
+        document.getElementById("oy_pull_halt").classList.add("oy_button_halt_dull");
+    }
+
+    function oy_refresh_execute() {
+        if (window.OY_EXECUTE_REFRESH===true) return false;
+        window.OY_EXECUTE_REFRESH = true;
+        document.getElementById("oy_refresh_execute").classList.remove("oy_button_execute_active");
+        document.getElementById("oy_refresh_execute").classList.add("oy_button_execute_dull");
+
+        document.getElementById("oy_refresh_halt").classList.remove("oy_button_halt_dull");
+        document.getElementById("oy_refresh_halt").classList.add("oy_button_halt_active");
+    }
+
+    function oy_refresh_halt() {
+        if (window.OY_EXECUTE_REFRESH===false) return false;
+        window.OY_EXECUTE_REFRESH = false;
+        document.getElementById("oy_refresh_execute").classList.remove("oy_button_execute_dull");
+        document.getElementById("oy_refresh_execute").classList.add("oy_button_execute_active");
+
+        document.getElementById("oy_refresh_halt").classList.remove("oy_button_halt_active");
+        document.getElementById("oy_refresh_halt").classList.add("oy_button_halt_dull");
+    }
+
     function oy_tab(oy_tab_id) {
         if (oy_tab_id==="oy_tab_store") {
             document.getElementById('oy_tab_store').style.backgroundColor = "#14a2cc";
