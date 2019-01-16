@@ -30,6 +30,8 @@ window.OY_DATA_MAX = 64000;//max size of data that can be sent to another node
 window.OY_DATA_CHUNK = 8000;//32000//chunk size by which data is split up and sent per transmission
 window.OY_DATA_PUSH_INTERVAL = 500;//ms per chunk per push loop iteration
 window.OY_DATA_PULL_INTERVAL = 250;//ms per chunk per pull loop iteration
+window.OY_DEPOSIT_MAX = 250000;//max character length capacity of data deposit
+window.OY_DEPOSIT_COMMIT = 5;//commit data to disk every 10 nonce pushes
 window.OY_ENGINE_INTERVAL = 2000;//ms interval for core mesh engine to run, the time must clear a reasonable latency round-about
 
 // INIT
@@ -37,8 +39,11 @@ window.OY_CONN = null;//global P2P connection handle
 window.OY_INIT = 0;//prevents multiple instances of oy_init() from running simultaneously
 window.OY_PEER_COUNT = 0;//how many active connections with mutual peers
 window.OY_MAIN = {};//tracks important information that is worth persisting between sessions such as self ID
+window.OY_MAIN['oy_deposit_size'] = 0;//aggregate size of current data deposit
+window.OY_MAIN['oy_deposit_counter'] = 0;//counter for tracking deposit commit
 window.OY_ENGINE = [{}, {}];//tracking object for core engine variables, [0] is latency tracking
 window.OY_DEPOSIT = {};//object for storing main payload data, crucial variable for mirroring to localStorage
+window.OY_PURGE = [];//track order of DEPOSIT to determine what data gets deleted ('purged') first
 window.OY_COLLECT = {};//object for tracking pull fulfillments
 window.OY_CONSTRUCT = {};//data considered valid from OY_COLLECT is stored here, awaiting for final data reconstruction
 window.OY_DATA_PUSH = {};//object for tracking data push threads
@@ -92,6 +97,24 @@ function oy_local_get(oy_local_name) {
     if (oy_local_data===null) return false;
     oy_log("Retrieved localStorage retention of "+oy_local_name);
     return oy_local_data;
+}
+
+//tests localstorage capacity, function ported from FrozenJar
+function oy_local_check() {
+    let oy_heavy = "0123456789".repeat(100000);
+    let oy_counter = 0;
+    while (function() {
+        try {
+            localStorage.setItem("oy_store_check_"+oy_counter, oy_heavy);
+            return true;
+        }
+        catch(e) {
+            return false;
+        }
+    }) oy_counter++;
+    oy_heavy = null;
+    localStorage.clear();
+    return oy_counter;
 }
 
 function oy_peer_add(oy_peer_id) {
@@ -194,10 +217,25 @@ function oy_peer_process(oy_peer_id, oy_data) {
             oy_log("Handle "+oy_data[5][0]+" at nonce "+oy_data[5][1]+" is already stored, forwarding chances boosted");
         }
         else {
-            //TODO implement old data removal for DEPOSIT, session and localStorage should have different values (session should handle more)
             window.OY_DEPOSIT[oy_data[5][0]][oy_data[5][1]] = oy_data[5][2];
-            oy_local_store("oy_deposit", window.OY_DEPOSIT);
+            window.OY_MAIN['oy_deposit_size'] += oy_data[5][2].length;
+            window.OY_PURGE = window.OY_PURGE.filter(oy_handle => oy_handle!==oy_data[5][0]);
+            window.OY_PURGE.push(oy_data[5][0]);
+            let oy_safety_overflow = 0;
+            while (window.OY_MAIN['oy_deposit_size']>window.OY_DEPOSIT_MAX) {
+                let oy_deposit_local = window.OY_PURGE.shift();
+                window.OY_MAIN['oy_deposit_size'] -= window.OY_DEPOSIT[oy_deposit_local].join("").length;
+                delete window.OY_DEPOSIT[oy_deposit_local];
+                if (oy_safety_overflow++>1000) break;
+            }
             oy_log("Stored handle "+oy_data[5][0]+" at nonce "+oy_data[5][1]);
+            if (window.OY_MAIN['oy_deposit_size']>=window.OY_DEPOSIT_COMMIT) {
+                oy_local_store("oy_deposit", window.OY_DEPOSIT);
+                oy_local_store("oy_purge", window.OY_PURGE);
+                window.OY_MAIN['oy_deposit_counter'] = 0;
+                oy_log("Committed data to disk");
+            }
+            else window.OY_MAIN['oy_deposit_counter']++;
         }
         let oy_peers_exception = [oy_peer_id];
         let oy_peer_select;
@@ -787,6 +825,7 @@ function oy_init() {
         return false
     }
     window.OY_DEPOSIT = oy_local_get("oy_deposit");
+    window.OY_PURGE = oy_local_get("oy_purge");
     window.OY_PEERS = oy_local_get("oy_peers");
     let oy_peer_local;
     for (oy_peer_local in window.OY_PEERS) {
