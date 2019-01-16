@@ -7,11 +7,11 @@ window.OY_MESH_VERSION = 1;//mesh version, increments every significant code upg
 window.OY_MESH_FLOW = 4000;//characters per second allowed per peer, and for all aggregate non-peer nodes//TODO
 window.OY_MESH_MEASURE = 30;//seconds by which to measure mesh flow, larger means more tracking of nearby node, peer and sector activity
 window.OY_MESH_PULL_BUFFER = 2.25;//multiplication factor for mesh inflow buffer, to give some leeway to compliant peers
-window.OY_MESH_PUSH_MAIN = 0.3;//probability that a peer will forward a data_push when the nonce was not previously stored on self
-window.OY_MESH_PUSH_BOOST = 0.5;//probability that a peer will forward a data_push when the nonce was previously stored on self
-window.OY_MESH_PULL_MAIN = 0.2;//probability that a peer will forward a data_pull when the nonce was found on self
-window.OY_MESH_PULL_BOOST = 0.5;//probability that a peer will forward a data_pull when the nonce was not found on self
-window.OY_MESH_FULLFILL = 0.15;//probability that data is stored whilst fulfilling a pull request, this makes data intelligently migrate overtime//TODO
+window.OY_MESH_PUSH_MAIN = 0.1;//probability that a peer will forward a data_push when the nonce was not previously stored on self
+window.OY_MESH_PUSH_BOOST = 0.3;//probability that a peer will forward a data_push when the nonce was previously stored on self
+window.OY_MESH_PULL_MAIN = 0.1;//probability that a peer will forward a data_pull when the nonce was found on self
+window.OY_MESH_PULL_BOOST = 0.4;//probability that a peer will forward a data_pull when the nonce was not found on self
+window.OY_MESH_FULLFILL = 0.05;//probability that data is stored whilst fulfilling a pull request, this makes data intelligently migrate and refresh overtime//TODO
 window.OY_MESH_SOURCE = 3;//node in route passport (from destination) that is assigned with defining the source variable
 window.OY_MESH_TOLERANCE = 2;//max version iterations until peering is refused (similar to hard-fork)
 window.OY_NODE_TOLERANCE = 3;//max amount of protocol communication violations until node is blacklisted
@@ -30,7 +30,8 @@ window.OY_DATA_MAX = 64000;//max size of data that can be sent to another node
 window.OY_DATA_CHUNK = 8000;//32000//chunk size by which data is split up and sent per transmission
 window.OY_DATA_PUSH_INTERVAL = 500;//ms per chunk per push loop iteration
 window.OY_DATA_PULL_INTERVAL = 250;//ms per chunk per pull loop iteration
-window.OY_DEPOSIT_MAX = 250000;//max character length capacity of data deposit
+window.OY_DEPOSIT_CHAR = 100000;//character rate for data deposit sizing, helps establish storage limits
+window.OY_DEPOSIT_MAX_BUFFER = 0.9;//max character length capacity factor of data deposit (0.9 means 10% buffer until hard limit is reached)
 window.OY_DEPOSIT_COMMIT = 5;//commit data to disk every 10 nonce pushes
 window.OY_ENGINE_INTERVAL = 2000;//ms interval for core mesh engine to run, the time must clear a reasonable latency round-about
 
@@ -38,6 +39,7 @@ window.OY_ENGINE_INTERVAL = 2000;//ms interval for core mesh engine to run, the 
 window.OY_CONN = null;//global P2P connection handle
 window.OY_INIT = 0;//prevents multiple instances of oy_init() from running simultaneously
 window.OY_PEER_COUNT = 0;//how many active connections with mutual peers
+window.OY_DEPOSIT_MAX = 0;//max localStorage capacity with buffer considered
 window.OY_MAIN = {};//tracks important information that is worth persisting between sessions such as self ID
 window.OY_MAIN['oy_deposit_size'] = 0;//aggregate size of current data deposit
 window.OY_MAIN['oy_deposit_counter'] = 0;//counter for tracking deposit commit
@@ -50,7 +52,7 @@ window.OY_DATA_PUSH = {};//object for tracking data push threads
 window.OY_DATA_PULL = {};//object for tracking data pull threads
 window.OY_PEERS = {};//optimization for quick and inexpensive checks for mutual peering
 window.OY_NODES = {};//P2P connection handling for individual nodes, is not mirrored in localStorage due to DOM restrictions
-window.OY_SECTORS = {};//handling and tracking sector allegiances TODO might turn into SECTOR_ALPHA, SECTOR_BETA and SECTOR GAMMA
+window.OY_SECTORS = {};//handling and tracking sector allegiances TODO might turn into SECTOR_ALPHA, SECTOR_BETA and SECTOR_GAMMA
 window.OY_LATENCY = {};//handle latency sessions
 window.OY_PROPOSED = {};//nodes that have been recently proposed to for mutual peering
 window.OY_REFER = {};//track when a node was asked by self for a recommendation
@@ -64,12 +66,11 @@ function oy_log(oy_log_msg, oy_log_flag) {
 }
 
 function oy_gen_rand(oy_gen_custom) {
+    function oy_gen_rand_sub() {
+        return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
+    }
     if (typeof(oy_gen_custom)==="undefined") return "xxxxxxxx".replace(/x/g, oy_gen_rand_sub);
     return "x".repeat(oy_gen_custom).replace(/x/g, oy_gen_rand_sub);
-}
-
-function oy_gen_rand_sub() {
-    return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
 }
 
 function oy_gen_hash(oy_data_value) {
@@ -101,9 +102,7 @@ function oy_local_get(oy_local_name) {
 
 //tests localstorage capacity, function ported from FrozenJar
 function oy_local_check() {
-    let oy_heavy = "0123456789".repeat(100000);
-    let oy_counter = 0;
-    while (function() {
+    function oy_local_check_sub(oy_counter, oy_heavy) {
         try {
             localStorage.setItem("oy_store_check_"+oy_counter, oy_heavy);
             return true;
@@ -111,7 +110,11 @@ function oy_local_check() {
         catch(e) {
             return false;
         }
-    }) oy_counter++;
+    }
+    localStorage.clear();
+    let oy_heavy = "0123456789".repeat(window.OY_DEPOSIT_CHAR/10);
+    let oy_counter = 0;
+    while (oy_local_check_sub(oy_counter, oy_heavy)) oy_counter++;
     oy_heavy = null;
     localStorage.clear();
     return oy_counter;
@@ -211,31 +214,9 @@ function oy_peer_process(oy_peer_id, oy_data) {
             return false;
         }
         let oy_fwd_chance = window.OY_MESH_PUSH_MAIN;
-        if (typeof(window.OY_DEPOSIT[oy_data[5][0]])==="undefined") window.OY_DEPOSIT[oy_data[5][0]] = [];
-        if (typeof(window.OY_DEPOSIT[oy_data[5][0]][oy_data[5][1]])!=="undefined") {
+        if (!oy_data_deposit(oy_data[5][0], oy_data[5][1], oy_data[5][2])) {
             oy_fwd_chance = window.OY_MESH_PUSH_BOOST;
             oy_log("Handle "+oy_data[5][0]+" at nonce "+oy_data[5][1]+" is already stored, forwarding chances boosted");
-        }
-        else {
-            window.OY_DEPOSIT[oy_data[5][0]][oy_data[5][1]] = oy_data[5][2];
-            window.OY_MAIN['oy_deposit_size'] += oy_data[5][2].length;
-            window.OY_PURGE = window.OY_PURGE.filter(oy_handle => oy_handle!==oy_data[5][0]);
-            window.OY_PURGE.push(oy_data[5][0]);
-            let oy_safety_overflow = 0;
-            while (window.OY_MAIN['oy_deposit_size']>window.OY_DEPOSIT_MAX) {
-                let oy_deposit_local = window.OY_PURGE.shift();
-                window.OY_MAIN['oy_deposit_size'] -= window.OY_DEPOSIT[oy_deposit_local].join("").length;
-                delete window.OY_DEPOSIT[oy_deposit_local];
-                if (oy_safety_overflow++>1000) break;
-            }
-            oy_log("Stored handle "+oy_data[5][0]+" at nonce "+oy_data[5][1]);
-            if (window.OY_MAIN['oy_deposit_size']>=window.OY_DEPOSIT_COMMIT) {
-                oy_local_store("oy_deposit", window.OY_DEPOSIT);
-                oy_local_store("oy_purge", window.OY_PURGE);
-                window.OY_MAIN['oy_deposit_counter'] = 0;
-                oy_log("Committed data to disk");
-            }
-            else window.OY_MAIN['oy_deposit_counter']++;
         }
         let oy_peers_exception = [oy_peer_id];
         let oy_peer_select;
@@ -296,6 +277,10 @@ function oy_peer_process(oy_peer_id, oy_data) {
             oy_log("Continuing fulfillment of handle "+oy_data[5][1]);
             if (oy_data[5][0].length===window.OY_MESH_SOURCE) oy_data[5][3] = oy_data[5][0].join();
             oy_data_route(["OY_LOGIC_REVERSE"], "OY_DATA_FULFILL", oy_data[5]);
+            if (Math.random()>window.OY_MESH_FULLFILL) {
+                oy_log("Data deposit upon mesh fulfill invoked");
+                oy_data_deposit(oy_data[5][1], oy_data[2], oy_data[4]);
+            }
         }
         return true;
     }
@@ -755,6 +740,32 @@ function oy_data_send(oy_node_id, oy_data_flag, oy_data_payload) {
     return true;
 }
 
+//deposits data for local retention
+function oy_data_deposit(oy_data_handle, oy_data_nonce, oy_data_value) {
+    if (typeof(window.OY_DEPOSIT[oy_data_handle])==="undefined") window.OY_DEPOSIT[oy_data_handle] = [];
+    if (typeof(window.OY_DEPOSIT[oy_data_handle][oy_data_nonce])!=="undefined") return false;
+    window.OY_DEPOSIT[oy_data_handle][oy_data_nonce] = oy_data_value;
+    window.OY_MAIN['oy_deposit_size'] += oy_data_value.length;
+    window.OY_PURGE = window.OY_PURGE.filter(oy_handle => oy_handle!==oy_data_handle);
+    window.OY_PURGE.push(oy_data_handle);
+    let oy_safety_overflow = 0;
+    while (window.OY_MAIN['oy_deposit_size']>window.OY_DEPOSIT_MAX) {
+        let oy_deposit_local = window.OY_PURGE.shift();
+        window.OY_MAIN['oy_deposit_size'] -= window.OY_DEPOSIT[oy_deposit_local].join("").length;//TODO check if join will work here
+        delete window.OY_DEPOSIT[oy_deposit_local];
+        if (oy_safety_overflow++>1000) break;
+    }
+    oy_log("Stored handle "+oy_data_handle+" at nonce "+oy_data_nonce);
+    if (window.OY_MAIN['oy_deposit_counter']>=window.OY_DEPOSIT_COMMIT) {
+        oy_local_store("oy_deposit", window.OY_DEPOSIT);
+        oy_local_store("oy_purge", window.OY_PURGE);
+        window.OY_MAIN['oy_deposit_counter'] = 0;
+        oy_log("Committed data to disk");
+    }
+    else window.OY_MAIN['oy_deposit_counter']++;
+    return true;
+}
+
 //incoming data validation
 //[0] is dynasty definition
 //[1] is version difference tolerance
@@ -834,12 +845,24 @@ function oy_init() {
         oy_node_connect(oy_peer_local);
         oy_latency_test(oy_peer_local, "OY_PEER_CONNECT", true);
     }
-    window.OY_ZONES = oy_local_get("oy_sectors");
+    window.OY_SECTORS = oy_local_get("oy_sectors");
     window.OY_LATENCY = oy_local_get("oy_latency");
     window.OY_PROPOSED = oy_local_get("oy_proposed");
     window.OY_BLACKLIST = oy_local_get("oy_blacklist");
-
     //TODO scroll through PROPOSED and BLACKLIST to remove expired elements
+
+    //resets localstorage and tests storage limit
+    window.OY_DEPOSIT_MAX = Math.floor((oy_local_check()*window.OY_DEPOSIT_CHAR)*window.OY_DEPOSIT_MAX_BUFFER);
+
+    //restore localstorage
+    oy_local_store("oy_main", window.OY_MAIN);
+    oy_local_store("oy_deposit", window.OY_DEPOSIT);
+    oy_local_store("oy_purge", window.OY_PURGE);
+    oy_local_store("oy_peers", window.OY_MAIN);
+    oy_local_store("oy_sectors", window.OY_SECTORS);
+    oy_local_store("oy_latency", window.OY_LATENCY);
+    oy_local_store("oy_proposed", window.OY_PROPOSED);
+    oy_local_store("oy_blacklist", window.OY_BLACKLIST);
 
     window.OY_CONN.on('open', function(oy_self_id) {
         oy_log("P2P connection ready with self ID "+oy_self_id);
