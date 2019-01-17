@@ -343,8 +343,28 @@ function oy_peer_process(oy_peer_id, oy_data) {
                 oy_node_punish(oy_peer_id);
                 return false;
             }
+            else if (window.OY_PEER_COUNT<window.OY_SECTOR_EXPOSURE) {
+                oy_log("Insufficient peer count to join sector "+oy_data[5][0]);
+                return false;
+            }
             else {
-
+                let oy_sector_peers = [];
+                let oy_sector_exposure_local = 0;
+                for (let oy_peer_local in window.OY_PEERS[oy_peer_id]) {
+                    if (oy_peer_local==="oy_aggregate_node") continue;
+                    if (window.OY_PEERS[oy_peer_id][oy_peer_local][6].indexOf(oy_data[5][0])!==-1) {
+                        oy_sector_peers.push(oy_peer_local);
+                        oy_sector_exposure_local++;
+                    }
+                }
+                if (oy_sector_exposure_local<window.OY_SECTOR_EXPOSURE) {
+                    oy_log("Self has insufficient exposure to join sector "+oy_data[5][0]);
+                    return false;
+                }
+                else {
+                    oy_log("Self has sufficient exposure to join sector "+oy_data[5][0]);
+                    oy_data_route(["OY_LOGIC_SECTOR_DIRECTOR", oy_data[5][0], oy_data[5][1]], "OY_SECTOR_JOIN", null, oy_sector_peers);
+                }
             }
         }
         else {
@@ -719,7 +739,7 @@ function oy_data_collect(oy_data_handle, oy_data_nonce, oy_data_source, oy_data_
 }
 
 //routes data pushes and data forwards to the intended destination
-function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_peers_exception) {
+function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_peers_define) {
     let oy_peer_select = false;
     if (oy_data_logic[0]==="OY_LOGIC_SPREAD") {
         let oy_peers_local = {};
@@ -727,7 +747,7 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_peers_ex
             if (oy_peer_local==="oy_aggregate_node") continue;
             oy_peers_local[oy_peer_local] = window.OY_PEERS[oy_peer_local];
         }
-        oy_peer_select = oy_peer_rand(oy_peers_local, oy_peers_exception);
+        oy_peer_select = oy_peer_rand(oy_peers_local, oy_peers_define);
         if (oy_peer_select===false) {
             oy_log("Data route doesn't have any available peers to send to");
             return false;
@@ -739,6 +759,19 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_peers_ex
         oy_peer_select = oy_data_payload[0].pop();//select the next peer on the passport
         if (oy_data_payload[0].length===0) oy_data_payload[0].push(oy_peer_select);
         oy_data_send(oy_peer_select, oy_data_flag, oy_data_payload);
+    }
+    else if (oy_data_logic[0]==="OY_LOGIC_SECTOR_DIRECTOR") {
+        if ((window.OY_SECTOR_ALPHA[0]===oy_data_logic[1]&&window.OY_SECTOR_ALPHA[1]===oy_data_logic[2])||(window.OY_SECTOR_BETA[0]===oy_data_logic[1]&&window.OY_SECTOR_BETA[1]===oy_data_logic[2])) {
+            oy_log("Recognized sector but wrong director is assigned");
+            return false;
+        }
+        let oy_director_find = oy_peers_define.indexOf(oy_data_logic[2]);
+        if (oy_director_find!==-1) oy_data_send(oy_peers_define[oy_director_find], oy_data_flag, oy_data_payload);
+        else {
+            for (let i in oy_peers_define) {
+                oy_data_send(oy_peers_define[i], oy_data_flag, oy_data_payload);
+            }
+        }
     }
     return oy_peer_select;
 }
@@ -869,7 +902,7 @@ function oy_engine() {
             }
         }
     }
-    if (window.OY_SECTOR_ALPHA[0]===null||window.OY_SECTOR_BETA[0]===null) {
+    if (window.OY_PEER_COUNT>=window.OY_SECTOR_EXPOSURE&&(window.OY_SECTOR_ALPHA[0]===null||window.OY_SECTOR_BETA[0]===null)) {
         oy_log("Engine initiating sector survey to discover unfulfilled sector(s)");
         oy_sector_survey();
     }
