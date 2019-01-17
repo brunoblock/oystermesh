@@ -350,25 +350,42 @@ function oy_peer_process(oy_peer_id, oy_data) {
             else {
                 let oy_sector_peers = [];
                 let oy_sector_exposure_local = 0;
-                for (let oy_peer_local in window.OY_PEERS[oy_peer_id]) {
+                for (let oy_peer_local in window.OY_PEERS) {
                     if (oy_peer_local==="oy_aggregate_node") continue;
-                    if (window.OY_PEERS[oy_peer_id][oy_peer_local][6].indexOf(oy_data[5][0])!==-1) {
+                    if (window.OY_PEERS[oy_peer_local][6].indexOf(oy_data[5][0])!==-1) {
                         oy_sector_peers.push(oy_peer_local);
                         oy_sector_exposure_local++;
                     }
                 }
                 if (oy_sector_exposure_local<window.OY_SECTOR_EXPOSURE) {
-                    oy_log("Self has insufficient exposure to join sector "+oy_data[5][0]);
+                    oy_log("Self does not have sufficient exposure to join sector "+oy_data[5][0]);
                     return false;
                 }
                 else {
                     oy_log("Self has sufficient exposure to join sector "+oy_data[5][0]);
-                    oy_data_route(["OY_LOGIC_SECTOR_DIRECTOR", oy_data[5][0], oy_data[5][1]], "OY_SECTOR_JOIN", null, oy_sector_peers);
+                    //TODO initiate sector session for joining
+                    oy_data_route(["OY_LOGIC_SECTOR_DIRECTOR"], "OY_SECTOR_JOIN", [[], oy_data[5][0], oy_data[5][1]], []);
                 }
             }
         }
         else {
             oy_log("Received sector response whilst sectors have already been established");
+            return false;
+        }
+    }
+    else if (oy_data[4]==="OY_SECTOR_JOIN") {
+        if ((window.OY_SECTOR_ALPHA[0]===oy_data[5][0]&&window.OY_SECTOR_ALPHA[1]===oy_data[5][1])||(window.OY_SECTOR_BETA[0]===oy_data[5][0]&&window.OY_SECTOR_BETA[1]===oy_data[5][1])) {
+            if (oy_data[5][1]===window.OY_MAIN['oy_self_id']) {
+                oy_log("Self is director of sector "+oy_data[5][0]+" will interpret join request");
+                //TODO here we need to track join requests in a sector session variable, if the exposure is sufficent and within a short time range then we announce acceptance to the asking node, upon affirmation the entire sector is notified
+            }
+            else {
+                oy_log("Received sector join request, will attempt to forward to director");
+                oy_data_route(["OY_LOGIC_SECTOR_DIRECTOR"], "OY_SECTOR_JOIN", oy_data[5], []);
+            }
+        }
+        else {
+            oy_log("Received sector join request to an unaffiliated sector");
             return false;
         }
     }
@@ -739,7 +756,7 @@ function oy_data_collect(oy_data_handle, oy_data_nonce, oy_data_source, oy_data_
 }
 
 //routes data pushes and data forwards to the intended destination
-function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_peers_define) {
+function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_peers_exception) {
     let oy_peer_select = false;
     if (oy_data_logic[0]==="OY_LOGIC_SPREAD") {
         let oy_peers_local = {};
@@ -747,7 +764,7 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_peers_de
             if (oy_peer_local==="oy_aggregate_node") continue;
             oy_peers_local[oy_peer_local] = window.OY_PEERS[oy_peer_local];
         }
-        oy_peer_select = oy_peer_rand(oy_peers_local, oy_peers_define);
+        oy_peer_select = oy_peer_rand(oy_peers_local, oy_peers_exception);
         if (oy_peer_select===false) {
             oy_log("Data route doesn't have any available peers to send to");
             return false;
@@ -758,18 +775,28 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_peers_de
     else if (oy_data_logic[0]==="OY_LOGIC_REVERSE") {
         oy_peer_select = oy_data_payload[0].pop();//select the next peer on the passport
         if (oy_data_payload[0].length===0) oy_data_payload[0].push(oy_peer_select);
+        oy_log("Routing data via peer "+oy_peer_select+" with flag "+oy_data_flag);
         oy_data_send(oy_peer_select, oy_data_flag, oy_data_payload);
     }
     else if (oy_data_logic[0]==="OY_LOGIC_SECTOR_DIRECTOR") {
-        if ((window.OY_SECTOR_ALPHA[0]===oy_data_logic[1]&&window.OY_SECTOR_ALPHA[1]===oy_data_logic[2])||(window.OY_SECTOR_BETA[0]===oy_data_logic[1]&&window.OY_SECTOR_BETA[1]===oy_data_logic[2])) {
+        if ((window.OY_SECTOR_ALPHA[0]===oy_data_payload[1]&&window.OY_SECTOR_ALPHA[1]===oy_data_payload[2])||(window.OY_SECTOR_BETA[0]===oy_data_payload[1]&&window.OY_SECTOR_BETA[1]===oy_data_payload[2])) {
             oy_log("Recognized sector but wrong director is assigned");
             return false;
         }
-        let oy_director_find = oy_peers_define.indexOf(oy_data_logic[2]);
-        if (oy_director_find!==-1) oy_data_send(oy_peers_define[oy_director_find], oy_data_flag, oy_data_payload);
+        oy_data_payload[0].push(window.OY_MAIN['oy_self_id']);
+        let oy_director_find = window.OY_PEERS.indexOf(oy_data_payload[2]);
+        if (oy_director_find!==-1) oy_data_send(window.OY_PEERS[oy_director_find], oy_data_flag, oy_data_payload);
         else {
-            for (let i in oy_peers_define) {
-                oy_data_send(oy_peers_define[i], oy_data_flag, oy_data_payload);
+            for (let oy_peer_local in window.OY_PEERS) {
+                if (oy_peer_local==="oy_aggregate_node") continue;
+                if (window.OY_PEERS[oy_peer_local][6].indexOf(oy_data_payload[1])!==-1) {
+                    if (oy_data_payload[0].indexOf(oy_peer_local)!==-1) {
+                        oy_log("Prevented sending a sector data sequence in a loop to peer "+oy_peer_local);
+                        continue;
+                    }
+                    oy_log("Routing data via peer "+oy_peer_local+" with flag "+oy_data_flag);
+                    oy_data_send(oy_peer_local, oy_data_flag, oy_data_payload);
+                }
             }
         }
     }
@@ -848,12 +875,14 @@ function oy_data_deposit(oy_data_handle, oy_data_nonce, oy_data_value) {
 //[3] is sending node's sector allegiances
 //[4] is payload definition
 //[5] is payload
-function oy_data_validate(oy_peer_id, oy_data_raw) {
+function oy_data_validate(oy_node_id, oy_data_raw) {
    try {
        let oy_data = JSON.parse(oy_data_raw);
-       if (oy_data&&typeof(oy_data)==="object"&&oy_data[2]===oy_peer_id&&oy_data[0]===window.OY_MESH_DYNASTY&&Math.abs(oy_data[1]-window.OY_MESH_VERSION)<=window.OY_MESH_TOLERANCE) {
-           window.OY_PEERS[oy_peer_id][6][0] = oy_data[3][0];
-           window.OY_PEERS[oy_peer_id][6][1] = oy_data[3][1];//no need to update localstorage, sector allegiances get updated frequently enough
+       if (oy_data&&typeof(oy_data)==="object"&&oy_data[2]===oy_node_id&&oy_data[0]===window.OY_MESH_DYNASTY&&Math.abs(oy_data[1]-window.OY_MESH_VERSION)<=window.OY_MESH_TOLERANCE) {
+           if (oy_peer_check(oy_node_id)) {
+               window.OY_PEERS[oy_node_id][6][0] = oy_data[3][0];
+               window.OY_PEERS[oy_node_id][6][1] = oy_data[3][1];//no need to update localstorage, sector allegiances get updated frequently enough
+           }
            return oy_data;//only continue if dynasty and version of node are compliant
        }
    }
