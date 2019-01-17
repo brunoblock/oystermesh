@@ -35,7 +35,8 @@ window.OY_DEPOSIT_MAX_BUFFER = 0.9;//max character length capacity factor of dat
 window.OY_DEPOSIT_COMMIT = 5;//commit data to disk every 10 nonce pushes
 //window.OY_SECTOR_PEERSHIP = 3600;//seconds required of continuous peership until a sector can be joined or formed
 window.OY_SECTOR_MAX = 50;//max amount of nodes that can belong to a single sector
-window.OY_SECTOR_EXPOSURE = 3;//minimum amount of peers to have belong to a designated sector for director to accept new member
+window.OY_SECTOR_EXPOSURE = 3;//minimum amount of peers to have belong to a designated sector for director to accept new member, value must be 2 or greater
+window.OY_SECTOR_JOINTIME = 4;//second interval a node has to send sector join requests to the director via its exposure peers
 window.OY_ENGINE_INTERVAL = 2000;//ms interval for core mesh engine to run, the time must clear a reasonable latency round-about
 
 // INIT
@@ -57,6 +58,7 @@ window.OY_PEERS = {"oy_aggregate_node":[-1, -1, -1, [], [], [], [null, null]]};/
 window.OY_NODES = {};//P2P connection handling for individual nodes, is not mirrored in localStorage due to DOM restrictions
 window.OY_SECTOR_ALPHA = [null, null, 0, 0, []];//handling and tracking of sector alpha allegiance
 window.OY_SECTOR_BETA = [null, null, 0, 0, []];//handling and tracking of sector beta allegiance
+window.OY_SECTOR_DIRECTOR = [null, {}];//handling and tracking of sector director duties, [0] id sector ID where assigned as director, [1] is sector_join requests
 window.OY_LATENCY = {};//handle latency sessions
 window.OY_PROPOSED = {};//nodes that have been recently proposed to for mutual peering
 window.OY_REFER = {};//track when a node was asked by self for a recommendation
@@ -374,10 +376,18 @@ function oy_peer_process(oy_peer_id, oy_data) {
         }
     }
     else if (oy_data[4]==="OY_SECTOR_JOIN") {
-        if ((window.OY_SECTOR_ALPHA[0]===oy_data[5][0]&&window.OY_SECTOR_ALPHA[1]===oy_data[5][1])||(window.OY_SECTOR_BETA[0]===oy_data[5][0]&&window.OY_SECTOR_BETA[1]===oy_data[5][1])) {
-            if (oy_data[5][1]===window.OY_MAIN['oy_self_id']) {
-                oy_log("Self is director of sector "+oy_data[5][0]+" will interpret join request");
-                //TODO here we need to track join requests in a sector session variable, if the exposure is sufficent and within a short time range then we announce acceptance to the asking node, upon affirmation the entire sector is notified
+        if ((window.OY_SECTOR_ALPHA[0]===oy_data[5][1]&&window.OY_SECTOR_ALPHA[1]===oy_data[5][2])||(window.OY_SECTOR_BETA[0]===oy_data[5][1]&&window.OY_SECTOR_BETA[1]===oy_data[5][2])) {
+            if (oy_data[5][1]===window.OY_SECTOR_DIRECTOR[0]&&oy_data[5][2]===window.OY_MAIN['oy_self_id']) {
+                oy_log("Self is director of sector "+oy_data[5][1]+" will interpret join request");
+                //TODO here we need to track join requests in a sector session variable, if the exposure is sufficient and within a short time range then we announce acceptance to the asking node,
+                // upon affirmation the entire sector is notified
+
+                if (typeof(window.OY_SECTOR_DIRECTOR[1][oy_data[5][0][0]])==="undefined") window.OY_SECTOR_DIRECTOR[1][oy_data[5][0][0]] = [Date.now/1000, []];
+                if (window.OY_SECTOR_DIRECTOR[1][oy_data[5][0][0]][1].indexOf(oy_data[5][0][1])===-1) window.OY_SECTOR_DIRECTOR[1][oy_data[5][0][0]][1].push(oy_data[5][0][1]);
+                if ((Date.now/1000)-window.OY_SECTOR_DIRECTOR[1][oy_data[5][0][0]][0]>window.OY_SECTOR_JOINTIME) {
+                    oy_log("Sector join requests came too far apart");
+                    return false;
+                }
             }
             else {
                 oy_log("Received sector join request, will attempt to forward to director");
@@ -385,7 +395,7 @@ function oy_peer_process(oy_peer_id, oy_data) {
             }
         }
         else {
-            oy_log("Received sector join request to an unaffiliated sector");
+            oy_log("Received sector join request to an unaffiliated sector "+oy_data[5][1]);
             return false;
         }
     }
@@ -889,7 +899,7 @@ function oy_data_validate(oy_node_id, oy_data_raw) {
    catch (oy_error) {
        oy_log("Data validation exception occurred: "+oy_error);
    }
-   oy_log("Node "+oy_peer_id+" failed validation");
+   oy_log("Node "+oy_node_id+" failed validation");
    return false
 }
 
@@ -935,6 +945,12 @@ function oy_engine() {
         oy_log("Engine initiating sector survey to discover unfulfilled sector(s)");
         oy_sector_survey();
     }
+    /*Put director condition and delete any join sessions that exceeded window.OY_SECTOR_JOINTIME
+    if ((Date.now/1000)-window.OY_SECTOR_DIRECTOR[1][oy_data[5][0][0]][0]>window.OY_SECTOR_JOINTIME) {
+        oy_log("Sector join requests came too far apart");
+        return false;
+    }
+    */
     setTimeout("oy_engine()", window.OY_ENGINE_INTERVAL);
 }
 
