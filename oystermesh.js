@@ -21,6 +21,7 @@ window.OY_PEER_LATENCYTIME = 60;//peers are expected to communicate with each ot
 window.OY_PEER_KEEPTIME = 8;//peers are expected to communicate with each other within this interval in seconds
 window.OY_PEER_REFERTIME = 20;//interval in which self asks peers for peer recommendations (as needed)
 window.OY_PEER_MAX = 5;//maximum mutual peers per zone (applicable difference is for gateway nodes)
+window.OY_PEER_MIN = 2;//minimum peers needed to perform pushes, this variable also causes engine to trigger oy_peer_assign()
 window.OY_LATENCY_SIZE = 100;//size of latency ping payload, larger is more accurate yet more taxing, vice-versa applies
 window.OY_LATENCY_LENGTH = 8;//length of rand sequence which is repeated for payload and signed for ID verification
 window.OY_LATENCY_REPEAT = 2;//how many ping round trips should be performed to conclude the latency test
@@ -656,6 +657,24 @@ function oy_node_initiate(oy_node_id) {
     return true;
 }
 
+function oy_node_assign() {
+    let oy_xhttp = new XMLHttpRequest();
+    oy_xhttp.onreadystatechange = function() {
+        if (this.readyState===4&&this.status===200) {
+            if (this.responseText.substr(0, 5)==="ERROR"||this.responseText.length===0) {
+                oy_log("Received error from peer_assign@central: "+this.responseText, 1);
+                return false;
+            }
+            let oy_node_array = JSON.parse(this.responseText);
+            for (let i in oy_node_array) {
+                oy_node_initiate(oy_node_array[i]);
+            }
+        }
+    };
+    oy_xhttp.open("GET", "central.oyster.org/oy_node_assign.php?oy_self_id="+window.OY_MAIN['oy_self_id'], true);
+    oy_xhttp.send();
+}
+
 //respond to a node that is not mutually peered with self
 function oy_node_negotiate(oy_node_id, oy_data) {
     if (oy_data[4]==="OY_BLACKLIST") {
@@ -844,6 +863,10 @@ function oy_data_measure(oy_data_push, oy_node_id, oy_data_length) {
 
 //pushes data onto the mesh, data_logic indicates strategy for data pushing
 function oy_data_push(oy_data_logic, oy_data_value, oy_data_handle) {
+    if (window.OY_PEER_COUNT<=window.OY_PEER_MIN) {
+        oy_log("Data push terminated, peer count is "+window.OY_PEER_COUNT+"/"+window.OY_PEER_MAX);
+        return false;
+    }
     let oy_data_superhandle = false;
     if (typeof(oy_data_handle)==="undefined") {
         oy_data_handle = oy_rand_gen(2)+oy_hash_gen(oy_data_value);
@@ -887,6 +910,10 @@ function oy_data_push(oy_data_logic, oy_data_value, oy_data_handle) {
 
 //pulls data from the mesh
 function oy_data_pull(oy_callback, oy_data_logic, oy_data_handle, oy_data_nonce_max, oy_crypt_pass) {
+    if (window.OY_PEER_COUNT<=window.OY_PEER_MIN) {
+        oy_log("Data pull terminated, peer count is "+window.OY_PEER_COUNT+"/"+window.OY_PEER_MAX);
+        return false;
+    }
     if (typeof(oy_data_nonce_max)==="undefined"||typeof(oy_crypt_pass)==="undefined") {
         oy_data_nonce_max = parseInt(oy_data_handle.substr(80));
         oy_crypt_pass = oy_data_handle.substr(0, 32);
@@ -1145,6 +1172,10 @@ function oy_engine() {
             oy_log("Sector join requests came too far apart");
             return false;
         }
+    }
+    if (window.OY_PEER_COUNT<=window.OY_PEER_MIN) {
+        oy_log("Engine initiating node_assign, peer count is "+window.OY_PEER_COUNT+"/"+window.OY_PEER_MAX);
+        oy_node_assign();
     }
     setTimeout("oy_engine()", window.OY_ENGINE_INTERVAL);
 }
