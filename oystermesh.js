@@ -121,6 +121,35 @@ function oy_buffer_decode(oy_buffer_buffer, oy_buffer_base64) {
     return binary;
 }
 
+function oy_crypt_encrypt(oy_crypt_data, oy_crypt_pass) {
+    let oy_crypt_salt = CryptoJS.lib.WordArray.random(128/8);
+    let oy_crypt_key = CryptoJS.PBKDF2(oy_crypt_pass, oy_crypt_salt, {
+        keySize: 8,
+        iterations: 100
+    });
+    let oy_crypt_iv = CryptoJS.lib.WordArray.random(128/8);
+    return oy_crypt_salt.toString()+oy_crypt_iv.toString()+CryptoJS.AES.encrypt(oy_crypt_data, oy_crypt_key, {
+        iv: oy_crypt_iv,
+        padding: CryptoJS.pad.Pkcs7,
+        mode: CryptoJS.mode.CBC
+    }).toString();
+}
+
+function oy_crypt_decrypt(oy_crypt_cipher, oy_crypt_pass) {
+    let oy_crypt_salt = CryptoJS.enc.Hex.parse(oy_crypt_cipher.substr(0, 32));
+    let oy_crypt_iv = CryptoJS.enc.Hex.parse(oy_crypt_cipher.substr(32, 32));
+    let oy_crypt_key = CryptoJS.PBKDF2(oy_crypt_pass, oy_crypt_salt, {
+        keySize: 8,
+        iterations: 100
+    });
+    return CryptoJS.AES.decrypt(oy_crypt_cipher.substring(64), oy_crypt_key, {
+        iv: oy_crypt_iv,
+        padding: CryptoJS.pad.Pkcs7,
+        mode: CryptoJS.mode.CBC
+
+    }).toString(CryptoJS.enc.Utf8);
+}
+
 function oy_key_verify(oy_key_public, oy_key_signature, oy_key_data, oy_callback) {
     window.crypto.subtle.importKey(
         "jwk",
@@ -818,8 +847,11 @@ function oy_data_push(oy_data_logic, oy_data_value, oy_data_handle) {
     console.log("LEMON");
     let oy_data_superhandle = false;
     if (typeof(oy_data_handle)==="undefined") {
-        oy_data_handle = oy_hash_gen(oy_data_value);
-        oy_data_superhandle = oy_data_handle+Math.ceil(oy_data_value.length/window.OY_DATA_CHUNK);
+        oy_data_value = oy_base_encode(oy_data_value);
+        oy_data_handle = oy_rand_gen(2)+oy_hash_gen(oy_data_value);
+        let oy_key_pass = oy_rand_gen();
+        oy_data_superhandle = oy_key_pass+oy_data_handle+Math.ceil(oy_data_value.length/window.OY_DATA_CHUNK);
+        oy_data_value = oy_crypt_encrypt(oy_data_value, oy_key_pass);
     }
     if (typeof(window.OY_PUSH_HOLD[oy_data_handle])==="undefined"&&oy_data_value!==null) {
         window.OY_PUSH_HOLD[oy_data_handle] = oy_data_value;
@@ -835,7 +867,7 @@ function oy_data_push(oy_data_logic, oy_data_value, oy_data_handle) {
     }
     let oy_push_delay = 0;
     if (window.OY_PUSH_HOLD[oy_data_handle].length<window.OY_DATA_CHUNK) {
-        oy_data_route(oy_data_logic, "OY_DATA_PUSH", [oy_data_handle, 0, oy_data_value], []);
+        oy_data_route(oy_data_logic, "OY_DATA_PUSH", [oy_data_handle, null, null], [], [0, 0, window.OY_PUSH_HOLD[oy_data_handle].length]);
     }
     else {
         let oy_data_array = [];
@@ -857,10 +889,11 @@ function oy_data_push(oy_data_logic, oy_data_value, oy_data_handle) {
 }
 
 //pulls data from the mesh
-function oy_data_pull(oy_callback, oy_data_logic, oy_data_handle, oy_data_nonce_max) {
-    if (typeof(oy_data_nonce_max)==="undefined") {
-        oy_data_nonce_max = parseInt(oy_data_handle.substr(40));
-        oy_data_handle = oy_data_handle.substr(0, 40);//40 is for length of SHA1
+function oy_data_pull(oy_callback, oy_data_logic, oy_data_handle, oy_data_nonce_max, oy_crypt_pass) {
+    if (typeof(oy_data_nonce_max)==="undefined"||typeof(oy_crypt_pass)==="undefined") {
+        oy_data_nonce_max = parseInt(oy_data_handle.substr(80));
+        oy_crypt_pass = oy_data_handle.substr(0, 32);
+        oy_data_handle = oy_data_handle.substr(32, 48);//32 is for encryption key, 48 is length of salt (8) integrity SHA1 (40), 32+48 = 80
     }
     oy_log("Pulling handle "+oy_data_handle+" with logic: "+oy_data_logic);
     if (typeof(window.OY_DATA_PULL[oy_data_handle])==="undefined") window.OY_DATA_PULL[oy_data_handle] = true;
@@ -891,19 +924,21 @@ function oy_data_pull(oy_callback, oy_data_logic, oy_data_handle, oy_data_nonce_
     }
     if (window.OY_CONSTRUCT[oy_data_handle].length===oy_data_nonce_max) {
         oy_log("Construct for "+oy_data_handle+" achieved all nonces");
-        let oy_data_construct = window.OY_CONSTRUCT[oy_data_handle].join("");
-        if (oy_data_handle===oy_hash_gen(oy_data_construct)) {
+        let oy_data_construct = oy_crypt_decrypt(window.OY_CONSTRUCT[oy_data_handle].join(""), oy_crypt_pass);
+        console.log("PEACHY"+oy_data_construct);
+        if (oy_data_handle.substr(8, 40)===oy_hash_gen(oy_data_construct)) {
             oy_log("Construct for "+oy_data_handle+" cleared hash check");
             delete window.OY_DATA_PULL[oy_data_handle];
             delete window.OY_COLLECT[oy_data_handle];
             delete window.OY_CONSTRUCT[oy_data_handle];
-            oy_callback(oy_data_handle+oy_data_nonce_max, oy_data_construct);
+            oy_callback(oy_data_handle+oy_data_nonce_max, window.oy_base_decode(oy_data_construct));
             return true;//end the pull loop
         }
         else oy_log("Construct for "+oy_data_handle+" failed hash check");
     }
+    else oy_log("Construct for "+oy_data_handle+" did not achieve all nonces");
     setTimeout(function() {
-        oy_data_pull(oy_callback, oy_data_logic, oy_data_handle, oy_data_nonce_max);
+        oy_data_pull(oy_callback, oy_data_logic, oy_data_handle, oy_data_nonce_max, oy_crypt_pass);
     }, window.OY_DATA_PULL_INTERVAL*oy_data_nonce_max);
 }
 
@@ -940,13 +975,13 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_peers_ex
             oy_log("Data route doesn't have any available peers to send to");
             return false;
         }
-        oy_log("Routing data via peer "+oy_peer_select+" with flag "+oy_data_flag);
+        oy_log("Routing data via peer "+oy_short(oy_peer_select)+" with flag "+oy_data_flag);
         oy_data_send(oy_peer_select, oy_data_flag, oy_data_payload);
     }
     else if (oy_data_logic[0]==="OY_LOGIC_REVERSE") {
         oy_peer_select = oy_data_payload[0].pop();//select the next peer on the passport
         if (oy_data_payload[0].length===0) oy_data_payload[0].push(oy_peer_select);
-        oy_log("Routing data via peer "+oy_peer_select+" with flag "+oy_data_flag);
+        oy_log("Routing data via peer "+oy_short(oy_peer_select)+" with flag "+oy_data_flag);
         oy_data_send(oy_peer_select, oy_data_flag, oy_data_payload);
     }
     else if (oy_data_logic[0]==="OY_LOGIC_SECTOR_DIRECTOR") {
@@ -996,8 +1031,8 @@ function oy_data_send(oy_node_id, oy_data_flag, oy_data_payload) {
             oy_log("System is misconfigured, almost sent an excessively sized data sequence", 1);
             return false;
         }
-        if (oy_data_flag==="OY_DATA_PUSH"&&oy_peer_check(oy_node_id)&&oy_data_measure(true, oy_node_id, null)===false) {
-            oy_log("Cooling off, skipping OY_DATA_PUSH to "+oy_short(oy_node_id));
+        if ((oy_data_flag==="OY_DATA_PUSH"||oy_data_flag==="OY_DATA_FULFILL")&&oy_peer_check(oy_node_id)&&oy_data_measure(true, oy_node_id, null)===false) {
+            oy_log("Cooling off, skipping "+oy_data_flag+" to "+oy_short(oy_node_id));
             return true;
         }
         oy_data_measure(true, oy_node_id, oy_data_raw.length);

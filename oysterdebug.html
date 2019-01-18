@@ -6,6 +6,8 @@
     <script src="oy_resources/sha1.js"></script>
     <script src="oystermesh.js"></script>
     <script src="oy_resources/peer.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/rollups/aes.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/rollups/pbkdf2.js"></script>
 </head>
 <body>
 Oyster Mesh<br>
@@ -66,7 +68,7 @@ CONSTRUCT:<br>
         document.getElementById("oy_push_handle").disabled = false;
         document.getElementById("oy_button_push").disabled = false;
         document.getElementById("oy_button_push_cancel").disabled = true;
-        window.OY_DATA_PUSH[document.getElementById('oy_push_handle').value.substr(0, 40)] = false;
+        window.OY_DATA_PUSH[document.getElementById('oy_push_handle').value.substr(32, 48)] = false;
     }
 
     function oy_button4() {
@@ -77,7 +79,12 @@ CONSTRUCT:<br>
             oy_button5();
             console.log("HANDLE: "+oy_superhandle);
             console.log("DATA: "+oy_data_value);
-            alert(oy_data_value);
+            var hiddenElement = document.createElement('a');
+
+            hiddenElement.href = 'data:attachment/image,' + encodeURI(oy_data_value);
+            hiddenElement.target = '_blank';
+            hiddenElement.download = 'myFile.png';
+            hiddenElement.click();
         }, ["OY_LOGIC_SPREAD"], document.getElementById('oy_pull_handle').value);
     }
 
@@ -85,7 +92,7 @@ CONSTRUCT:<br>
         document.getElementById("oy_pull_handle").disabled = false;
         document.getElementById("oy_button_pull").disabled = false;
         document.getElementById("oy_button_pull_cancel").disabled = true;
-        window.OY_DATA_PULL[document.getElementById('oy_pull_handle').value.substr(0, 40)] = false;
+        window.OY_DATA_PULL[document.getElementById('oy_pull_handle').value.substr(32, 48)] = false;
     }
 
     function oy_button6() {
@@ -101,7 +108,7 @@ CONSTRUCT:<br>
         }
         var reader = new FileReader();
         reader.onload = function(oy_file_object) {
-            oy_callback(oy_base_encode(oy_file_object.target.result));
+            oy_callback(oy_file_object.target.result);
         };
         reader.readAsText(file);
     }
