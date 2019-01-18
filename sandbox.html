@@ -4,26 +4,130 @@
     <meta charset="UTF-8">
     <title>Oyster Mesh</title>
     <script src="oystermesh.js"></script>
-    <script src="peer.min.js"></script>
+    <script src="oy_resources/peer.min.js"></script>
 </head>
 <body>
 Oyster Mesh Sandbox
 </body>
-<div id="control_buttons" style="display:none;">
-    <input type="button" value="START" onclick="start()" />
-    <input type="button" value="TEST" onclick="test()" />
-</div>
 <script type="text/javascript">
-    var test_array = [];
-    test_array.push([Date.now(), 50]);
-    test_array.push([Date.now(), 100]);
-    test_array.push([Date.now(), 300]);
-    test_array.push([Date.now(), 400]);
-    test_array.shift();
-    while (test_array[0][1]<200) {
-        test_array.shift();
+    function oy_buffer_decode(oy_buffer_buffer, oy_buffer_base64) {
+        let binary = '';
+        let bytes = new Uint8Array(oy_buffer_buffer);
+        let len = bytes.byteLength;
+        for (let i = 0; i < len; i++) {
+            binary += String.fromCharCode( bytes[ i ] );
+        }
+        if (oy_buffer_base64===true) return window.btoa(binary);
+        return binary;
     }
-    console.log(test_array[0]);
+    function oy_buffer_encode(oy_buffer_text, oy_buffer_base64) {
+        let binary_string;
+        if (oy_buffer_base64===true) binary_string =  window.atob(oy_buffer_text);
+        else binary_string =  oy_buffer_text;
+        let len = binary_string.length;
+        let bytes = new Uint8Array( len );
+        for (let i = 0; i < len; i++)        {
+            bytes[i] = binary_string.charCodeAt(i);
+        }
+        return bytes.buffer;
+    }
+    function oy_log(oy_log_msg, oy_log_flag) {
+        if (typeof(oy_log_flag)==="undefined") oy_log_flag = 0;
+        if (oy_log_flag===1) oy_log_msg = "FATAL ERROR: "+oy_log_msg;
+        //TODO add custom interface for HTML console
+        console.log(oy_log_msg);
+    }
+    function oy_key_verify(oy_key_public, oy_key_signature, oy_key_data, oy_callback) {
+        window.crypto.subtle.importKey(
+            "jwk",
+            {   //this is an example jwk key, other key types are Uint8Array objects
+                kty: "RSA",
+                e: "AQAB",
+                n: oy_key_public,
+                alg: "PS256",
+                ext: true,
+            },
+            {   //these are the algorithm options
+                name: "RSA-PSS",
+                hash: {name: "SHA-256"}, //can be "SHA-1", "SHA-256", "SHA-384", or "SHA-512"
+            },
+            false, //whether the key is extractable (i.e. can be used in exportKey)
+            ["verify"] //"verify" for public key import, "sign" for private key imports
+        ).then(function(oy_key_public) {
+            window.crypto.subtle.verify(
+                {
+                    name: "RSA-PSS",
+                    saltLength: 32, //the length of the salt
+                },
+                oy_key_public, //from generateKey or importKey above
+                oy_buffer_encode(oy_key_signature, true),
+                oy_buffer_encode(oy_key_data, false) //ArrayBuffer of data you want to sign
+            ).then(function(oy_key_valid) {
+                oy_callback(oy_key_valid);
+            }).catch(function(oy_error) {
+                oy_log("Cryptographic error "+oy_error, 1);
+            });
+        }).catch(function(oy_error) {
+            oy_log("Cryptographic error "+oy_error, 1);
+        });
+    }
+    function oy_key_sign(oy_key_private, oy_key_data, oy_callback) {
+        window.crypto.subtle.importKey(
+            "jwk", JSON.parse(oy_key_private),
+            {   //these are the algorithm options
+                name: "RSA-PSS",
+                hash: {name: "SHA-256"}, //can be "SHA-1", "SHA-256", "SHA-384", or "SHA-512"
+            },
+            false, //whether the key is extractable (i.e. can be used in exportKey)
+            ["sign"] //"verify" for public key import, "sign" for private key imports
+        ).then(function(oy_key_private_raw) {
+            window.crypto.subtle.sign(
+                {
+                    name: "RSA-PSS",
+                    saltLength: 32, //the length of the salt
+                },
+                oy_key_private_raw, //from generateKey or importKey above
+                oy_buffer_encode(oy_key_data, false) //ArrayBuffer of data you want to sign
+            ).then(function(oy_key_signature_raw) {
+                oy_callback(oy_buffer_decode(oy_key_signature_raw, true));
+            }).catch(function(oy_error) {
+                oy_log("Cryptographic error "+oy_error, 1);
+            });
+        }).catch(function(oy_error) {
+            oy_log("Cryptographic error "+oy_error, 1);
+        });
+    }
+    function oy_key_gen(oy_callback) {
+        window.crypto.subtle.generateKey(
+            {
+                name: "RSA-PSS",
+                modulusLength: 1024, //can be 1024, 2048, or 4096
+                publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
+                hash: {name: "SHA-256"}, //can be "SHA-1", "SHA-256", "SHA-384", or "SHA-512"
+            }, true, ["sign", "verify"]
+        ).then(function(key) {
+            window.crypto.subtle.exportKey("jwk", key.privateKey).then(function(oy_key_pass) {
+                oy_callback(JSON.stringify(oy_key_pass), oy_key_pass.n);
+            }).catch(function(oy_error) {
+                oy_log("Cryptographic error "+oy_error, 1);
+            });
+        }).catch(function(oy_error) {
+            oy_log("Cryptographic error "+oy_error, 1);
+        });
+    }
+    oy_key_gen(function(oy_key_private, oy_key_public) {
+        console.log(oy_key_private);
+        console.log(oy_key_public);
+        let oy_key_data = "CHINCHILLA";
+        oy_key_sign(oy_key_private, oy_key_data, function(oy_key_signature) {
+            console.log("SIGNATURE");
+            console.log(oy_key_signature);
+            oy_key_verify(oy_key_public, oy_key_signature, oy_key_data, function(oy_key_valid) {
+                console.log(oy_key_valid);
+            });
+        });
+    });
+
     /*
     function getQueryVariable(variable) {
         var query = window.location.search.substring(1);

@@ -44,8 +44,10 @@ CONSTRUCT:<br>
 
     //localStorage.clear();
 
-    oy_init();
-    document.getElementById("oy_field_id").innerHTML = window.OY_MAIN['oy_self_id'];
+    oy_init(function() {
+        document.getElementById("oy_field_id").innerHTML = window.OY_MAIN['oy_self_id'];
+        oy_maintain();
+    });
     function oy_button() {
         oy_node_initiate(document.getElementById('oy_input_node').value);
     }
@@ -121,7 +123,6 @@ CONSTRUCT:<br>
         document.getElementById("oy_construct_list").innerHTML = oy_construct_build;
         setTimeout("oy_maintain()", 200);
     }
-    oy_maintain();
 </script>
 </body>
 </html>
