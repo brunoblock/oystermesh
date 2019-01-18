@@ -79,12 +79,7 @@ CONSTRUCT:<br>
             oy_button5();
             console.log("HANDLE: "+oy_superhandle);
             console.log("DATA: "+oy_data_value);
-            var hiddenElement = document.createElement('a');
-
-            hiddenElement.href = 'data:attachment/image,' + encodeURI(oy_data_value);
-            hiddenElement.target = '_blank';
-            hiddenElement.download = 'myFile.png';
-            hiddenElement.click();
+            oy_file_download(oy_data_value);
         }, ["OY_LOGIC_SPREAD"], document.getElementById('oy_pull_handle').value);
     }
 
@@ -101,22 +96,62 @@ CONSTRUCT:<br>
         document.getElementById("oy_file_upload").value = "";
     }
 
-    function oy_file_reader(oy_file_object, oy_callback) {
+    function b64toBlob(b64Data, contentType, sliceSize) {
+        contentType = contentType || '';
+        sliceSize = sliceSize || 512;
+
+        var byteCharacters = atob(b64Data);
+        var byteArrays = [];
+
+        for (var offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+            var slice = byteCharacters.slice(offset, offset + sliceSize);
+
+            var byteNumbers = new Array(slice.length);
+            for (var i = 0; i < slice.length; i++) {
+                byteNumbers[i] = slice.charCodeAt(i);
+            }
+
+            var byteArray = new Uint8Array(byteNumbers);
+
+            byteArrays.push(byteArray);
+        }
+
+        var blob = new Blob(byteArrays, {type: contentType});
+        return blob;
+    }
+
+    function oy_file_read(oy_file_object, oy_callback) {
         var file = oy_file_object.target.files[0];
         if (!file) {
-            return;
+            return false;
         }
+        console.log(file);
+        console.log(file.type);
         var reader = new FileReader();
         reader.onload = function(oy_file_object) {
-            oy_callback(oy_file_object.target.result);
+            oy_callback(JSON.stringify([file.name, file.type, window.btoa(oy_file_object.target.result)]));
         };
-        reader.readAsText(file);
+        reader.readAsBinaryString(file)
     }
 
     function oy_file_change(oy_file_object) {
-        oy_file_reader(oy_file_object, function(oy_file_data) {
+        oy_file_read(oy_file_object, function(oy_file_data) {
             document.getElementById("oy_push_data").value = oy_file_data;
+            window.BOB = oy_file_data;
         });
+    }
+    function oy_file_download(oy_file_raw) {
+        let oy_file_data = JSON.parse(oy_file_raw);
+
+        var blob = b64toBlob(oy_file_data[2], oy_file_data[1]);
+        var blobUrl = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        document.body.appendChild(a);
+        a.style = "display: none";
+        a.href = blobUrl;
+        a.download = oy_file_data[0];
+        a.click();
+        window.URL.revokeObjectURL(blobUrl);
     }
 
     document.getElementById("oy_file_upload").addEventListener('change', oy_file_change, false);

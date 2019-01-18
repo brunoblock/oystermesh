@@ -844,14 +844,12 @@ function oy_data_measure(oy_data_push, oy_node_id, oy_data_length) {
 
 //pushes data onto the mesh, data_logic indicates strategy for data pushing
 function oy_data_push(oy_data_logic, oy_data_value, oy_data_handle) {
-    console.log("LEMON");
     let oy_data_superhandle = false;
     if (typeof(oy_data_handle)==="undefined") {
-        oy_data_value = oy_base_encode(oy_data_value);
         oy_data_handle = oy_rand_gen(2)+oy_hash_gen(oy_data_value);
         let oy_key_pass = oy_rand_gen();
-        oy_data_superhandle = oy_key_pass+oy_data_handle+Math.ceil(oy_data_value.length/window.OY_DATA_CHUNK);
         oy_data_value = oy_crypt_encrypt(oy_data_value, oy_key_pass);
+        oy_data_superhandle = oy_key_pass+oy_data_handle+Math.ceil(oy_data_value.length/window.OY_DATA_CHUNK);
     }
     if (typeof(window.OY_PUSH_HOLD[oy_data_handle])==="undefined"&&oy_data_value!==null) {
         window.OY_PUSH_HOLD[oy_data_handle] = oy_data_value;
@@ -881,7 +879,6 @@ function oy_data_push(oy_data_logic, oy_data_value, oy_data_handle) {
             oy_push_delay += window.OY_DATA_PUSH_INTERVAL;
         }
     }
-    console.log("LEMON"+oy_push_delay);
     setTimeout(function() {
         oy_data_push(oy_data_logic, oy_data_value, oy_data_handle);
     }, oy_push_delay);
@@ -925,13 +922,12 @@ function oy_data_pull(oy_callback, oy_data_logic, oy_data_handle, oy_data_nonce_
     if (window.OY_CONSTRUCT[oy_data_handle].length===oy_data_nonce_max) {
         oy_log("Construct for "+oy_data_handle+" achieved all nonces");
         let oy_data_construct = oy_crypt_decrypt(window.OY_CONSTRUCT[oy_data_handle].join(""), oy_crypt_pass);
-        console.log("PEACHY"+oy_data_construct);
         if (oy_data_handle.substr(8, 40)===oy_hash_gen(oy_data_construct)) {
             oy_log("Construct for "+oy_data_handle+" cleared hash check");
             delete window.OY_DATA_PULL[oy_data_handle];
             delete window.OY_COLLECT[oy_data_handle];
             delete window.OY_CONSTRUCT[oy_data_handle];
-            oy_callback(oy_data_handle+oy_data_nonce_max, window.oy_base_decode(oy_data_construct));
+            oy_callback(oy_crypt_pass+oy_data_handle+oy_data_nonce_max, oy_data_construct);
             return true;//end the pull loop
         }
         else oy_log("Construct for "+oy_data_handle+" failed hash check");
