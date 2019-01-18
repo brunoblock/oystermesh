@@ -4,7 +4,7 @@
 // GLOBAL VARS
 window.OY_MESH_DYNASTY = "BRUNO_GENESIS_TESTNET";//mesh dynasty definition
 window.OY_MESH_VERSION = 1;//mesh version, increments every significant code upgrade
-window.OY_MESH_FLOW = 4000;//characters per second allowed per peer, and for all aggregate non-peer nodes
+window.OY_MESH_FLOW = 8000;//characters per second allowed per peer, and for all aggregate non-peer nodes
 window.OY_MESH_MEASURE = 30;//seconds by which to measure mesh flow, larger means more tracking of nearby node, peer and sector activity
 window.OY_MESH_PULL_BUFFER = 2.25;//multiplication factor for mesh inflow buffer, to give some leeway to compliant peers
 window.OY_MESH_PUSH_MAIN = 0.1;//probability that a peer will forward a data_push when the nonce was not previously stored on self
@@ -65,6 +65,7 @@ window.OY_LATENCY = {};//handle latency sessions
 window.OY_PROPOSED = {};//nodes that have been recently proposed to for mutual peering
 window.OY_REFER = {};//track when a node was asked by self for a recommendation
 window.OY_BLACKLIST = {};//nodes to block for x amount of time
+window.OY_PUSH_HOLD = {};//holds data contents ready for pushing to mesh
 
 function oy_log(oy_log_msg, oy_log_flag) {
     if (typeof(oy_log_flag)==="undefined") oy_log_flag = 0;
@@ -89,16 +90,14 @@ function oy_hash_gen(oy_data_value) {
     return CryptoJS.SHA1(oy_data_value).toString()
 }
 
-function oy_buffer_decode(oy_buffer_buffer, oy_buffer_base64) {
-    let binary = '';
-    let bytes = new Uint8Array(oy_buffer_buffer);
-    let len = bytes.byteLength;
-    for (let i = 0; i < len; i++) {
-        binary += String.fromCharCode( bytes[ i ] );
-    }
-    if (oy_buffer_base64===true) return window.btoa(binary);
-    return binary;
+function oy_base_encode(oy_base_raw) {
+    return btoa(unescape(encodeURIComponent(oy_base_raw)));
 }
+
+function oy_base_decode(oy_base_base) {
+    return decodeURIComponent(escape(window.atob(oy_base_base)));
+}
+
 function oy_buffer_encode(oy_buffer_text, oy_buffer_base64) {
     let binary_string;
     if (oy_buffer_base64===true) binary_string =  window.atob(oy_buffer_text);
@@ -109,6 +108,17 @@ function oy_buffer_encode(oy_buffer_text, oy_buffer_base64) {
         bytes[i] = binary_string.charCodeAt(i);
     }
     return bytes.buffer;
+}
+
+function oy_buffer_decode(oy_buffer_buffer, oy_buffer_base64) {
+    let binary = '';
+    let bytes = new Uint8Array(oy_buffer_buffer);
+    let len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode( bytes[ i ] );
+    }
+    if (oy_buffer_base64===true) return window.btoa(binary);
+    return binary;
 }
 
 function oy_key_verify(oy_key_public, oy_key_signature, oy_key_data, oy_callback) {
@@ -805,32 +815,44 @@ function oy_data_measure(oy_data_push, oy_node_id, oy_data_length) {
 
 //pushes data onto the mesh, data_logic indicates strategy for data pushing
 function oy_data_push(oy_data_logic, oy_data_value, oy_data_handle) {
+    console.log("LEMON");
     let oy_data_superhandle = false;
     if (typeof(oy_data_handle)==="undefined") {
         oy_data_handle = oy_hash_gen(oy_data_value);
         oy_data_superhandle = oy_data_handle+Math.ceil(oy_data_value.length/window.OY_DATA_CHUNK);
     }
+    if (typeof(window.OY_PUSH_HOLD[oy_data_handle])==="undefined"&&oy_data_value!==null) {
+        window.OY_PUSH_HOLD[oy_data_handle] = oy_data_value;
+        oy_data_value = null;
+    }
     oy_log("Pushing handle "+oy_data_handle+" with logic: "+oy_data_logic);
     if (typeof(window.OY_DATA_PUSH[oy_data_handle])==="undefined") window.OY_DATA_PUSH[oy_data_handle] = true;
     else if (window.OY_DATA_PUSH[oy_data_handle]===false) {
         delete window.OY_DATA_PUSH[oy_data_handle];
+        delete window.OY_PUSH_HOLD[oy_data_handle];
         oy_log("Cancelled data push loop");
         return true;
     }
-    let oy_data_nonce = 0;
-    if (oy_data_value.length<window.OY_DATA_CHUNK) {
-        oy_data_route(oy_data_logic, "OY_DATA_PUSH", [oy_data_handle, oy_data_nonce, oy_data_value], []);
+    let oy_push_delay = 0;
+    if (window.OY_PUSH_HOLD[oy_data_handle].length<window.OY_DATA_CHUNK) {
+        oy_data_route(oy_data_logic, "OY_DATA_PUSH", [oy_data_handle, 0, oy_data_value], []);
     }
     else {
-        for (let i = 0; i < oy_data_value.length; i += window.OY_DATA_CHUNK) {
-            //TODO potentially stagger the timing of each nonce push
-            oy_data_route(oy_data_logic, "OY_DATA_PUSH", [oy_data_handle, oy_data_nonce, oy_data_value.slice(i, i+window.OY_DATA_CHUNK)], []);
-            oy_data_nonce++;
+        let oy_data_array = [];
+        for (let i = 0; i < window.OY_PUSH_HOLD[oy_data_handle].length; i += window.OY_DATA_CHUNK) {
+            oy_data_array.push([i, i+window.OY_DATA_CHUNK]);
+        }
+        for (let oy_data_nonce in oy_data_array) {
+            setTimeout(function() {
+                oy_data_route(oy_data_logic, "OY_DATA_PUSH", [oy_data_handle, null, null], [], [oy_data_nonce, oy_data_array[oy_data_nonce][0], oy_data_array[oy_data_nonce][1]]);
+            }, window.OY_DATA_PUSH_INTERVAL*oy_data_nonce);
+            oy_push_delay += window.OY_DATA_PUSH_INTERVAL;
         }
     }
+    console.log("LEMON"+oy_push_delay);
     setTimeout(function() {
         oy_data_push(oy_data_logic, oy_data_value, oy_data_handle);
-    }, window.OY_DATA_PUSH_INTERVAL*(oy_data_nonce+1));
+    }, oy_push_delay);
     if (oy_data_superhandle!==false) return oy_data_superhandle;
 }
 
@@ -897,7 +919,15 @@ function oy_data_collect(oy_data_handle, oy_data_nonce, oy_data_source, oy_data_
 }
 
 //routes data pushes and data forwards to the intended destination
-function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_peers_exception) {
+function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_peers_exception, oy_push_define) {
+    if (typeof(oy_push_define)!=="undefined") {
+        if (typeof(window.OY_DATA_PUSH[oy_data_payload[0]])==="undefined"||window.OY_DATA_PUSH[oy_data_payload[0]]===false||typeof(window.OY_PUSH_HOLD[oy_data_payload[0]])==="undefined") {
+            oy_log("Cancelled data route for handle "+oy_data_payload[0]+" due to push session cancellation");
+            return true;
+        }
+        oy_data_payload[1] = oy_push_define[0];
+        oy_data_payload[2] = window.OY_PUSH_HOLD[oy_data_payload[0]].slice(oy_push_define[1], oy_push_define[2]);
+    }
     let oy_peer_select = false;
     if (oy_data_logic[0]==="OY_LOGIC_SPREAD") {
         let oy_peers_local = {};
@@ -1101,6 +1131,7 @@ function oy_init(oy_callback) {
 
     if (typeof(window.OY_MAIN['oy_self_id'])==="undefined") {
         oy_key_gen(function(oy_key_private, oy_key_public) {
+            //TODO need to make sure every possible public ID is compatible with peerjs server
             window.OY_MAIN['oy_self_private'] = oy_key_private;
             window.OY_MAIN['oy_self_id'] = oy_key_public;
             oy_local_store("oy_main", window.OY_MAIN);
