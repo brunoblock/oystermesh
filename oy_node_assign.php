@@ -1,6 +1,7 @@
 <?php
-if (!isset($_GET['oy_self_id'])||!oy_node_valid($_GET['oy_self_id'])) die("ERROR: Invalid node ID");
+if (!isset($_POST['oy_self_id'])||!oy_node_valid($_POST['oy_self_id'])) die("ERROR: Invalid node ID");
 
+header("Access-Control-Allow-Origin: *");
 function oy_node_valid($oy_node_id) {
     if (strlen($oy_node_id)==171) return true;
     return false;
@@ -13,7 +14,7 @@ if (is_file("/dev/shm/oy_nodes/".$_SERVER['REMOTE_ADDR'].".node")&&(time()-filem
 //chance of DB failing > chance of filesystem failing, data persistence is not needed here anyways
 //if central gets more complex might switch to a DB down the road
 $fh = fopen("/dev/shm/oy_nodes/".$_SERVER['REMOTE_ADDR'].".node", "w");
-fwrite($fh, $_GET['oy_self_id']);
+fwrite($fh, $_POST['oy_self_id']);
 fclose($fh);
 
 if ($fh = opendir("/dev/shm/oy_nodes")) {

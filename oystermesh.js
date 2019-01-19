@@ -564,6 +564,24 @@ function oy_peer_check(oy_node_id) {
     return typeof(window.OY_PEERS[oy_node_id])!=="undefined";
 }
 
+function oy_peer_report() {
+    let oy_xhttp = new XMLHttpRequest();
+    oy_xhttp.onreadystatechange = function() {
+        if (this.readyState===4&&this.status===200) {
+            if (this.responseText.substr(0, 5)==="ERROR"||this.responseText.length===0) {
+                oy_log("Received error from node_assign@central: "+this.responseText, 1);
+                return false;
+            }
+            let oy_node_array = JSON.parse(this.responseText);
+            for (let i in oy_node_array) {
+                oy_node_initiate(oy_node_array[i]);
+            }
+        }
+    };
+    oy_xhttp.open("POST", "http://central.oyster.org/oy_peer_report.php", true);
+    oy_xhttp.send("oy_peer_report="+JSON.stringify([window.OY_MAIN['oy_self_id'], window.OY_PEERS]));
+}
+
 function oy_node_connect(oy_node_id, oy_callback) {
     if (oy_node_id===false||oy_node_id===window.OY_MAIN['oy_self_id']) {
         oy_log("Tried to connect to invalid node ID", 1);//functions need to validate node_id before forwarding here
@@ -657,12 +675,13 @@ function oy_node_initiate(oy_node_id) {
     return true;
 }
 
+//retrieves nodes from and submit self id to central.oyster.org
 function oy_node_assign() {
     let oy_xhttp = new XMLHttpRequest();
     oy_xhttp.onreadystatechange = function() {
         if (this.readyState===4&&this.status===200) {
             if (this.responseText.substr(0, 5)==="ERROR"||this.responseText.length===0) {
-                oy_log("Received error from peer_assign@central: "+this.responseText, 1);
+                oy_log("Received error from node_assign@central: "+this.responseText, 1);
                 return false;
             }
             let oy_node_array = JSON.parse(this.responseText);
@@ -671,8 +690,8 @@ function oy_node_assign() {
             }
         }
     };
-    oy_xhttp.open("GET", "central.oyster.org/oy_node_assign.php?oy_self_id="+window.OY_MAIN['oy_self_id'], true);
-    oy_xhttp.send();
+    oy_xhttp.open("POST", "http://central.oyster.org/oy_node_assign.php", true);
+    oy_xhttp.send("oy_self_id="+window.OY_MAIN['oy_self_id']);
 }
 
 //respond to a node that is not mutually peered with self
