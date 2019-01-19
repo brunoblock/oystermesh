@@ -1,7 +1,8 @@
 <?php
-if (!isset($_POST['oy_self_id'])||!oy_node_valid($_POST['oy_self_id'])) die("ERROR: Invalid node ID");
-
 header("Access-Control-Allow-Origin: *");
+$oy_node_id = str_replace("oy_node_id=", "", file_get_contents("php://input"));
+if (!$oy_node_id||!oy_node_valid($oy_node_id)) die("ERROR: Invalid node ID");
+
 function oy_node_valid($oy_node_id) {
     if (strlen($oy_node_id)==171) return true;
     return false;
@@ -9,12 +10,12 @@ function oy_node_valid($oy_node_id) {
 
 if (!is_dir("/dev/shm/oy_nodes")) mkdir("/dev/shm/oy_nodes");
 
-if (is_file("/dev/shm/oy_nodes/".$_SERVER['REMOTE_ADDR'].".node")&&(time()-filemtime("/dev/shm/oy_nodes/".$_SERVER['REMOTE_ADDR'].".node")) < 10) die("ERROR: Asked too recently");
+if (is_file("/dev/shm/oy_nodes/".$_SERVER['REMOTE_ADDR'].".node")&&(time()-filemtime("/dev/shm/oy_nodes/".$_SERVER['REMOTE_ADDR'].".node")) < 10) die("ERROR: Asked too early");
 
 //chance of DB failing > chance of filesystem failing, data persistence is not needed here anyways
 //if central gets more complex might switch to a DB down the road
 $fh = fopen("/dev/shm/oy_nodes/".$_SERVER['REMOTE_ADDR'].".node", "w");
-fwrite($fh, $_POST['oy_self_id']);
+fwrite($fh, $oy_node_id);
 fclose($fh);
 
 if ($fh = opendir("/dev/shm/oy_nodes")) {

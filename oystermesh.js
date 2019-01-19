@@ -17,9 +17,11 @@ window.OY_MESH_TOLERANCE = 2;//max version iterations until peering is refused (
 window.OY_NODE_TOLERANCE = 3;//max amount of protocol communication violations until node is blacklisted
 window.OY_NODE_BLACKTIME = 259200;//seconds to blacklist a punished node for
 window.OY_NODE_PROPOSETIME = 60;//seconds for peer proposal session duration
+window.OY_NODE_ASSIGNTTIME = 10;//minimum interval between node_assign instances to/from central
 window.OY_PEER_LATENCYTIME = 60;//peers are expected to communicate with each other within this interval in seconds
 window.OY_PEER_KEEPTIME = 8;//peers are expected to communicate with each other within this interval in seconds
 window.OY_PEER_REFERTIME = 20;//interval in which self asks peers for peer recommendations (as needed)
+window.OY_PEER_REPORTTIME = 10;//interval to report peer list to central
 window.OY_PEER_MAX = 5;//maximum mutual peers per zone (applicable difference is for gateway nodes)
 window.OY_PEER_MIN = 2;//minimum peers needed to perform pushes, this variable also causes engine to trigger oy_peer_assign()
 window.OY_LATENCY_SIZE = 100;//size of latency ping payload, larger is more accurate yet more taxing, vice-versa applies
@@ -569,13 +571,11 @@ function oy_peer_report() {
     oy_xhttp.onreadystatechange = function() {
         if (this.readyState===4&&this.status===200) {
             if (this.responseText.substr(0, 5)==="ERROR"||this.responseText.length===0) {
-                oy_log("Received error from node_assign@central: "+this.responseText, 1);
+                oy_log("Received error from peer_report@central: "+this.responseText, 1);
                 return false;
             }
-            let oy_node_array = JSON.parse(this.responseText);
-            for (let i in oy_node_array) {
-                oy_node_initiate(oy_node_array[i]);
-            }
+            if (this.responseText==="OY_REPORT_SUCCESS") oy_log("Peer report to central succeeded");
+            else oy_log("Peer report to central failed");
         }
     };
     oy_xhttp.open("POST", "http://central.oyster.org/oy_peer_report.php", true);
@@ -691,7 +691,7 @@ function oy_node_assign() {
         }
     };
     oy_xhttp.open("POST", "http://central.oyster.org/oy_node_assign.php", true);
-    oy_xhttp.send("oy_self_id="+window.OY_MAIN['oy_self_id']);
+    oy_xhttp.send("oy_node_id="+window.OY_MAIN['oy_self_id']);
 }
 
 //respond to a node that is not mutually peered with self
@@ -1142,10 +1142,11 @@ function oy_sector_survey() {
 }
 
 //core loop that runs critical functions and checks
-function oy_engine() {
+function oy_engine(oy_thread_track) {
     //TODO scroll through PROPOSED and BLACKLIST to remove expired elements
     //service check on all peers
     let oy_time_local = (Date.now()/1000);
+    if (typeof(oy_thread_track)==="undefined") oy_thread_track = [0, oy_time_local];
     let oy_time_diff_last;
     let oy_time_diff_latency;
     let oy_peer_local;
@@ -1192,11 +1193,19 @@ function oy_engine() {
             return false;
         }
     }
-    if (window.OY_PEER_COUNT<=window.OY_PEER_MIN) {
+    if (window.OY_PEER_COUNT<=window.OY_PEER_MIN&&(oy_time_local-oy_thread_track[0])>window.OY_NODE_ASSIGNTTIME) {
+        oy_thread_track[0] = oy_time_local;
         oy_log("Engine initiating node_assign, peer count is "+window.OY_PEER_COUNT+"/"+window.OY_PEER_MAX);
         oy_node_assign();
     }
-    setTimeout("oy_engine()", window.OY_ENGINE_INTERVAL);
+    if (window.OY_PEER_COUNT>0&&(oy_time_local-oy_thread_track[1])>window.OY_PEER_REPORTTIME) {
+        oy_thread_track[1] = oy_time_local;
+        oy_log("Engine initiating peer_report, peer count is "+window.OY_PEER_COUNT+"/"+window.OY_PEER_MAX);
+        oy_peer_report();
+    }
+    setTimeout(function() {
+        oy_engine(oy_thread_track);
+    }, window.OY_ENGINE_INTERVAL);
 }
 
 //initialize oyster mesh boot up sequence
