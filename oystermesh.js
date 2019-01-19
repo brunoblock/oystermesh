@@ -15,7 +15,7 @@ window.OY_MESH_FULLFILL = 0.05;//probability that data is stored whilst fulfilli
 window.OY_MESH_SOURCE = 3;//node in route passport (from destination) that is assigned with defining the source variable
 window.OY_MESH_TOLERANCE = 2;//max version iterations until peering is refused (similar to hard-fork)
 window.OY_NODE_TOLERANCE = 3;//max amount of protocol communication violations until node is blacklisted
-window.OY_NODE_BLACKTIME = 259200;//seconds to blacklist a punished node for
+window.OY_NODE_BLACKTIME = 3600;//seconds to blacklist a punished node for
 window.OY_NODE_PROPOSETIME = 60;//seconds for peer proposal session duration
 window.OY_NODE_ASSIGNTTIME = 10;//minimum interval between node_assign instances to/from central
 window.OY_PEER_LATENCYTIME = 60;//peers are expected to communicate with each other within this interval in seconds
@@ -43,15 +43,14 @@ window.OY_SECTOR_MAX = 50;//max amount of nodes that can belong to a single sect
 window.OY_SECTOR_EXPOSURE = 3;//minimum amount of peers to have belong to a designated sector for director to accept new member, value must be 2 or greater
 window.OY_SECTOR_JOINTIME = 4;//second interval a node has to send sector join requests to the director via its exposure peers
 window.OY_ENGINE_INTERVAL = 2000;//ms interval for core mesh engine to run, the time must clear a reasonable latency round-about
+window.OY_READY_RETRY = 3000;//ms interval to retry connection if READY is still false
 
 // INIT
 window.OY_CONN = null;//global P2P connection handle
 window.OY_INIT = 0;//prevents multiple instances of oy_init() from running simultaneously
 window.OY_PEER_COUNT = 0;//how many active connections with mutual peers
 window.OY_DEPOSIT_MAX = 0;//max localStorage capacity with buffer considered
-window.OY_MAIN = {};//tracks important information that is worth persisting between sessions such as self ID
-window.OY_MAIN['oy_deposit_size'] = 0;//aggregate size of current data deposit
-window.OY_MAIN['oy_deposit_counter'] = 0;//counter for tracking deposit commit
+window.OY_MAIN = {"oy_ready":false, "oy_deposit_size":0, "oy_deposit_counter":0};//tracks important information that is worth persisting between sessions such as self ID
 window.OY_ENGINE = [{}, {}];//tracking object for core engine variables, [0] is latency tracking
 window.OY_DEPOSIT = {};//object for storing main payload data, crucial variable for mirroring to localStorage
 window.OY_PURGE = [];//track order of DEPOSIT to determine what data gets deleted ('purged') first
@@ -91,14 +90,6 @@ function oy_rand_gen(oy_gen_custom) {
 
 function oy_hash_gen(oy_data_value) {
     return CryptoJS.SHA1(oy_data_value).toString()
-}
-
-function oy_base_encode(oy_base_raw) {
-    return btoa(unescape(encodeURIComponent(oy_base_raw)));
-}
-
-function oy_base_decode(oy_base_base) {
-    return decodeURIComponent(escape(window.atob(oy_base_base)));
 }
 
 function oy_buffer_encode(oy_buffer_text, oy_buffer_base64) {
@@ -249,7 +240,8 @@ function oy_local_store(oy_local_name, oy_local_data) {
 function oy_local_get(oy_local_name) {
     let oy_local_raw = localStorage.getItem(oy_local_name);
     if (oy_local_raw===null||oy_local_raw.length===0) {
-        if (oy_local_name==="oy_peers") return {"oy_aggregate_node":[-1, -1, -1, [], [], [], [null, null]]};
+        if (oy_local_name==="oy_main") return {"oy_ready":false, "oy_deposit_size":0, "oy_deposit_counter":0};
+        else if (oy_local_name==="oy_peers") return {"oy_aggregate_node":[-1, -1, -1, [], [], [], [null, null]]};
         else if (oy_local_name==="oy_purge") return [];
         return {};
     }
@@ -571,7 +563,7 @@ function oy_peer_report() {
     oy_xhttp.onreadystatechange = function() {
         if (this.readyState===4&&this.status===200) {
             if (this.responseText.substr(0, 5)==="ERROR"||this.responseText.length===0) {
-                oy_log("Received error from peer_report@central: "+this.responseText, 1);
+                oy_log("Received error from peer_report@central: "+this.responseText);
                 return false;
             }
             if (this.responseText==="OY_REPORT_SUCCESS") oy_log("Peer report to central succeeded");
@@ -681,7 +673,7 @@ function oy_node_assign() {
     oy_xhttp.onreadystatechange = function() {
         if (this.readyState===4&&this.status===200) {
             if (this.responseText.substr(0, 5)==="ERROR"||this.responseText.length===0) {
-                oy_log("Received error from node_assign@central: "+this.responseText, 1);
+                oy_log("Received error from node_assign@central: "+this.responseText);
                 return false;
             }
             let oy_node_array = JSON.parse(this.responseText);
@@ -1051,19 +1043,10 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_peers_ex
     return oy_peer_select;
 }
 
-//initiates and keeps alive the P2P connection session
-function oy_data_conn() {
-    if (window.OY_CONN===null||window.OY_CONN.disconnected!==false) {
-        oy_log("Initiating new P2P session");
-        window.OY_CONN = new Peer(window.OY_MAIN['oy_self_id'], {key: 'lwjd5qra8257b9'});
-    }
-    return !window.OY_CONN.disconnected;
-}
-
 //send data
 function oy_data_send(oy_node_id, oy_data_flag, oy_data_payload) {
-    if (!window.OY_CONN.disconnected&&!oy_data_conn()) {
-        oy_log("Connection handler was unable to create a persisting P2P session", 1);
+    if (window.OY_CONN===null||window.OY_CONN.disconnected!==false) {
+        oy_log("Connection handler crashed, skipping "+oy_data_flag+" to "+oy_short(oy_node_id));
         return false;
     }
     let oy_local_callback = function() {
@@ -1144,6 +1127,15 @@ function oy_sector_survey() {
 //core loop that runs critical functions and checks
 function oy_engine(oy_thread_track) {
     //TODO scroll through PROPOSED and BLACKLIST to remove expired elements
+    //reboot INIT if the connection was lost
+
+    if (window.OY_MAIN['oy_ready']===true&&(window.OY_CONN===null||window.OY_CONN.disconnected!==false)) {
+        oy_log("Engine found connection handler dead, will reboot INIT and kill engine chain");
+        window.OY_INIT = 0;
+        oy_init();
+        return true;
+    }
+
     //service check on all peers
     let oy_time_local = (Date.now()/1000);
     if (typeof(oy_thread_track)==="undefined") oy_thread_track = [0, oy_time_local];
@@ -1209,47 +1201,52 @@ function oy_engine(oy_thread_track) {
 }
 
 //initialize oyster mesh boot up sequence
-function oy_init(oy_callback) {
-    if (window.OY_INIT===1) {
-        oy_log("Clashing instance of INIT prevented from running", 1);
-        return false;
-    }
-    window.OY_INIT = 1;
+function oy_init(oy_callback, oy_passthru) {
+    if (typeof(oy_passthru)==="undefined") {
+        if (window.OY_INIT===1) {
+            oy_log("Clashing instance of INIT prevented from running", 1);
+            return false;
+        }
+        window.OY_INIT = 1;
+        oy_log("Oyster Mesh initializing...");
 
-    //recover session variables from localstorage
-    window.OY_MAIN = oy_local_get("oy_main");
+        //recover session variables from localstorage
+        window.OY_MAIN = oy_local_get("oy_main");
 
-    if (typeof(window.OY_MAIN['oy_self_id'])==="undefined") {
-        oy_key_gen(function(oy_key_private, oy_key_public) {
-            //TODO need to make sure every possible public ID is compatible with peerjs server
-            window.OY_MAIN['oy_self_private'] = oy_key_private;
-            window.OY_MAIN['oy_self_id'] = oy_key_public;
-            oy_local_store("oy_main", window.OY_MAIN);
-            oy_log("Generated self ID "+oy_short(window.OY_MAIN['oy_self_id']));
-            window.OY_INIT = 0;
-            oy_init(oy_callback);
-        });
-        return true;
+
+        if (window.OY_MAIN['oy_ready']===true) {
+            window.OY_MAIN['oy_ready'] = false;
+            oy_log("Recovering P2P session with recovered ID "+oy_short(window.OY_MAIN['oy_self_id']));
+        }
+        else {
+            oy_key_gen(function(oy_key_private, oy_key_public) {
+                //TODO need to make sure every possible public ID is compatible with peerjs server
+
+                //reset cryptographic node id for self, and any persisting variables that are related to the old self id (if any)
+                window.OY_MAIN['oy_self_private'] = oy_key_private;
+                window.OY_MAIN['oy_self_id'] = oy_key_public;
+                window.OY_PEERS = {"oy_aggregate_node":[-1, -1, -1, [], [], [], [null, null]]};
+                window.OY_SECTOR_ALPHA = {};
+                window.OY_SECTOR_BETA = {};
+                window.OY_PROPOSED = {};
+                oy_local_store("oy_main", window.OY_MAIN);
+                oy_local_store("oy_peers", window.OY_PEERS);
+                oy_local_store("oy_sector_alpha", window.OY_SECTOR_ALPHA);
+                oy_local_store("oy_sector_beta", window.OY_SECTOR_BETA);
+                oy_local_store("oy_proposed", window.OY_PROPOSED);
+                oy_log("Initiating new P2P session with new ID "+oy_short(window.OY_MAIN['oy_self_id']));
+                oy_init(oy_callback, true);
+            });
+            return true;
+        }
     }
 
-    if (!oy_data_conn()) {
-        oy_log("Connection handler was unable to create a persisting P2P session", 1);
-        return false
-    }
     window.OY_DEPOSIT = oy_local_get("oy_deposit");
     window.OY_PURGE = oy_local_get("oy_purge");
     window.OY_PEERS = oy_local_get("oy_peers");
-    let oy_peer_local;
-    for (oy_peer_local in window.OY_PEERS) {
-        if (oy_peer_local==="oy_aggregate_node") continue;
-        oy_log("Recovering peer "+oy_short(oy_peer_local));
-        window.OY_PEER_COUNT++;
-        oy_node_connect(oy_peer_local);
-        oy_latency_test(oy_peer_local, "OY_PEER_CONNECT", true);
-    }
     window.OY_SECTOR_ALPHA = oy_local_get("oy_sector_alpha");
     window.OY_SECTOR_BETA = oy_local_get("oy_sector_beta");
-    window.OY_LATENCY = oy_local_get("oy_latency");
+    //window.OY_LATENCY = oy_local_get("oy_latency");
     window.OY_PROPOSED = oy_local_get("oy_proposed");
     window.OY_BLACKLIST = oy_local_get("oy_blacklist");
 
@@ -1263,12 +1260,24 @@ function oy_init(oy_callback) {
     oy_local_store("oy_peers", window.OY_PEERS);
     oy_local_store("oy_sector_alpha", window.OY_SECTOR_ALPHA);
     oy_local_store("oy_sector_beta", window.OY_SECTOR_BETA);
-    oy_local_store("oy_latency", window.OY_LATENCY);
+    //oy_local_store("oy_latency", window.OY_LATENCY);
     oy_local_store("oy_proposed", window.OY_PROPOSED);
     oy_local_store("oy_blacklist", window.OY_BLACKLIST);
 
+    window.OY_CONN = new Peer(window.OY_MAIN['oy_self_id'], {key: 'lwjd5qra8257b9'});
     window.OY_CONN.on('open', function(oy_self_id) {
-        oy_log("P2P connection ready with self ID "+oy_self_id);
+        window.OY_MAIN['oy_ready'] = true;
+        oy_log("P2P connection ready with self ID "+oy_short(oy_self_id));
+        let oy_peer_local;
+        for (oy_peer_local in window.OY_PEERS) {
+            if (oy_peer_local==="oy_aggregate_node") continue;
+            oy_log("Recovering peer "+oy_short(oy_peer_local));
+            window.OY_PEER_COUNT++;
+            oy_node_connect(oy_peer_local);
+            oy_latency_test(oy_peer_local, "OY_PEER_CONNECT", true);
+        }
+        oy_local_store("oy_main", window.OY_MAIN);
+        if (typeof(oy_callback)==="function") oy_callback();
     });
     window.OY_CONN.on('connection', function(oy_conn) {
         // Receive messages
@@ -1310,6 +1319,15 @@ function oy_init(oy_callback) {
             }
         });
     });
-    setTimeout("oy_engine()", 1);
-    if (typeof(oy_callback)==="function") oy_callback();
+    setTimeout(function() {
+        if (window.OY_MAIN['oy_ready']===true) {
+            oy_log("Connection is now ready, sparking engine");
+            oy_engine();
+        }
+        else {
+            oy_log("Connection is was not established before the ready cutoff, re-sparking INIT");
+            window.OY_INIT = 0;
+            oy_init(oy_callback);
+        }
+    }, window.OY_READY_RETRY);
 }
