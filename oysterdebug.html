@@ -6,12 +6,13 @@
     <script src="oy_resources/sha1.js"></script>
     <script src="oystermesh.js"></script>
     <script src="oy_resources/peer.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/rollups/aes.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/rollups/pbkdf2.js"></script>
+    <script src="oy_resources/aes.js"></script>
+    <script src="oy_resources/pbkdf2.js"></script>
 </head>
 <body>
 Oyster Mesh<br>
-ID: <span id="oy_field_id"></span>
+ID: <span id="oy_field_id"></span><br>
+Storage limit: <span id="oy_storage_limit"></span><br>
 <br><br>
 <input id="oy_input_node" type="text" style="width:100px;" />
 <input type="button" value="NODE CONNECT" onclick="oy_button()" />
@@ -50,6 +51,7 @@ CONSTRUCT:<br>
 
     oy_init(function() {
         document.getElementById("oy_field_id").innerHTML = window.OY_MAIN['oy_self_id'];
+        document.getElementById("oy_storage_limit").innerHTML = window.OY_DEPOSIT_MAX;
         oy_maintain();
     });
     function oy_button() {

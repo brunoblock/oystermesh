@@ -16,27 +16,27 @@ window.OY_MESH_SOURCE = 3;//node in route passport (from destination) that is as
 window.OY_MESH_TOLERANCE = 2;//max version iterations until peering is refused (similar to hard-fork)
 window.OY_NODE_TOLERANCE = 3;//max amount of protocol communication violations until node is blacklisted
 window.OY_NODE_BLACKTIME = 3600;//seconds to blacklist a punished node for
-window.OY_NODE_PROPOSETIME = 60;//seconds for peer proposal session duration
+window.OY_NODE_PROPOSETIME = 12;//seconds for peer proposal session duration
 window.OY_NODE_ASSIGNTTIME = 10;//minimum interval between node_assign instances to/from central
-window.OY_PEER_LATENCYTIME = 60;//peers are expected to communicate with each other within this interval in seconds
+window.OY_PEER_LATENCYTIME = 60;//peers are expected to establish latency timing with each other within this interval in seconds
 window.OY_PEER_KEEPTIME = 8;//peers are expected to communicate with each other within this interval in seconds
 window.OY_PEER_REFERTIME = 20;//interval in which self asks peers for peer recommendations (as needed)
 window.OY_PEER_REPORTTIME = 10;//interval to report peer list to central
 window.OY_PEER_MAX = 5;//maximum mutual peers per zone (applicable difference is for gateway nodes)
 window.OY_PEER_MIN = 2;//minimum peers needed to perform pushes, this variable also causes engine to trigger oy_peer_assign()
-window.OY_LATENCY_SIZE = 100;//size of latency ping payload, larger is more accurate yet more taxing, vice-versa applies
+window.OY_LATENCY_SIZE = 400;//size of latency ping payload, larger is more accurate yet more taxing, vice-versa applies
 window.OY_LATENCY_LENGTH = 8;//length of rand sequence which is repeated for payload and signed for ID verification
 window.OY_LATENCY_REPEAT = 2;//how many ping round trips should be performed to conclude the latency test
 window.OY_LATENCY_TOLERANCE = 2;//tolerance buffer factor for receiving ping requested from a proposed-to node
-window.OY_LATENCY_MAX = 40;//max amount of seconds for latency test before peership is refused or starts breaking down
+window.OY_LATENCY_MAX = 6;//max amount of seconds for latency test before peership is refused or starts breaking down
 window.OY_LATENCY_TRACK = 200;//how many latency measurements to keep at a time per peer
 window.OY_DATA_MAX = 64000;//max size of data that can be sent to another node
-window.OY_DATA_CHUNK = 8000;//32000//chunk size by which data is split up and sent per transmission
-window.OY_DATA_PUSH_INTERVAL = 500;//ms per chunk per push loop iteration
-window.OY_DATA_PULL_INTERVAL = 250;//ms per chunk per pull loop iteration
+window.OY_DATA_CHUNK = 16000;//32000//chunk size by which data is split up and sent per transmission
+window.OY_DATA_PUSH_INTERVAL = 1500;//ms per chunk per push loop iteration
+window.OY_DATA_PULL_INTERVAL = 750;//ms per chunk per pull loop iteration
 window.OY_DEPOSIT_CHAR = 100000;//character rate for data deposit sizing, helps establish storage limits
 window.OY_DEPOSIT_MAX_BUFFER = 0.9;//max character length capacity factor of data deposit (0.9 means 10% buffer until hard limit is reached)
-window.OY_DEPOSIT_COMMIT = 5;//commit data to disk every 10 nonce pushes
+window.OY_DEPOSIT_COMMIT = 5;//commit data to disk every x nonce pushes
 window.OY_SECTOR_ROUTING = false;//true to enable sector routing (currently not stable)
 window.OY_SECTOR_PEERSHIP = 3600;//seconds required of continuous peership until a sector can be formed
 window.OY_SECTOR_MAX = 50;//max amount of nodes that can belong to a single sector
@@ -571,7 +571,7 @@ function oy_peer_report() {
         }
     };
     oy_xhttp.open("POST", "http://central.oyster.org/oy_peer_report.php", true);
-    oy_xhttp.send("oy_peer_report="+JSON.stringify([window.OY_MAIN['oy_self_id'], window.OY_PEERS]));
+    oy_xhttp.send("oy_peer_report="+JSON.stringify([window.OY_MAIN['oy_self_id'], window.OY_PEERS, window.OY_BLACKLIST]));
 }
 
 function oy_node_connect(oy_node_id, oy_callback) {
@@ -656,6 +656,10 @@ function oy_node_punish(oy_node_id) {
 function oy_node_initiate(oy_node_id) {
     if (oy_peer_check(oy_node_id)) {
         oy_log("Tried to initiate peership with an already agreed upon peer");
+        return false;
+    }
+    if (oy_node_blocked(oy_node_id)) {
+        oy_log("Tried to initiate peership with a blacklisted node");
         return false;
     }
     let oy_local_callback = function() {
@@ -908,7 +912,8 @@ function oy_data_push(oy_data_logic, oy_data_value, oy_data_handle) {
         }
         for (let oy_data_nonce in oy_data_array) {
             setTimeout(function() {
-                oy_data_route(oy_data_logic, "OY_DATA_PUSH", [oy_data_handle, null, null], [], [oy_data_nonce, oy_data_array[oy_data_nonce][0], oy_data_array[oy_data_nonce][1]]);
+                oy_data_route(oy_data_logic, "OY_DATA_PUSH", [oy_data_handle, null, null], [],
+                    [oy_data_nonce, oy_data_array[oy_data_nonce][0], oy_data_array[oy_data_nonce][1]]);
             }, window.OY_DATA_PUSH_INTERVAL*oy_data_nonce);
             oy_push_delay += window.OY_DATA_PUSH_INTERVAL;
         }
@@ -1062,7 +1067,7 @@ function oy_data_send(oy_node_id, oy_data_flag, oy_data_payload) {
         }
         oy_data_measure(true, oy_node_id, oy_data_raw.length);
         window.OY_NODES[oy_node_id].send(oy_data_raw);//send the JSON-converted data array to the destination node
-        oy_log("Sent data to node "+oy_short(oy_node_id)+": "+oy_data_raw);
+        oy_log("Sent data to node "+oy_short(oy_node_id)+" with size: "+oy_data_raw.length);
     };
     if (oy_node_connect(oy_node_id, oy_local_callback).open===true) oy_local_callback();
     return true;
