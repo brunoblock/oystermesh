@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Oyster Mesh Reset Node</title>
+    <script src="oystermesh.js"></script>
+</head>
+<body>
+<script>
+    window.OY_PEERS = {"oy_aggregate_node":[-1, -1, -1, [], [], [], [null, null]]};
+    window.OY_SECTOR_ALPHA = {};
+    window.OY_SECTOR_BETA = {};
+    window.OY_PROPOSED = {};
+    window.OY_BLACKLIST = {};
+    oy_local_store("oy_main", window.OY_MAIN);
+    oy_local_store("oy_peers", window.OY_PEERS);
+    oy_local_store("oy_sector_alpha", window.OY_SECTOR_ALPHA);
+    oy_local_store("oy_sector_beta", window.OY_SECTOR_BETA);
+    oy_local_store("oy_proposed", window.OY_PROPOSED);
+    oy_local_store("oy_blacklist", window.OY_BLACKLIST);
+</script>
+RESET PEERS, SECTORS, PROPOSALS, AND BLACKLIST
+</body>
+</html>

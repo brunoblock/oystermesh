@@ -54,6 +54,7 @@ CONSTRUCT:<br>
         document.getElementById("oy_storage_limit").innerHTML = window.OY_DEPOSIT_MAX;
         oy_maintain();
     });
+
     function oy_button() {
         oy_node_initiate(document.getElementById('oy_input_node').value);
     }
@@ -118,8 +119,7 @@ CONSTRUCT:<br>
             byteArrays.push(byteArray);
         }
 
-        var blob = new Blob(byteArrays, {type: contentType});
-        return blob;
+        return new Blob(byteArrays, {type: contentType});
     }
 
     function oy_file_read(oy_file_object, oy_callback) {
@@ -145,8 +145,7 @@ CONSTRUCT:<br>
     function oy_file_download(oy_file_raw) {
         let oy_file_data = JSON.parse(oy_file_raw);
 
-        var blob = b64toBlob(oy_file_data[2], oy_file_data[1]);
-        var blobUrl = URL.createObjectURL(blob);
+        var blobUrl = URL.createObjectURL(b64toBlob(oy_file_data[2], oy_file_data[1]));
         var a = document.createElement("a");
         document.body.appendChild(a);
         a.style = "display: none";
@@ -184,7 +183,7 @@ CONSTRUCT:<br>
             for (let x in window.OY_COLLECT[i]) {
                 oy_collect_build += "---"+x+"<br>";
                 for (let y in window.OY_COLLECT[i][x]) {
-                    oy_collect_build += "------"+y+":"+window.OY_COLLECT[i][x][y]+"<br>";
+                    oy_collect_build += "------"+y+":"+oy_hash_gen(window.OY_COLLECT[i][x][y])+"<br>";
                 }
             }
         }
@@ -197,7 +196,7 @@ CONSTRUCT:<br>
             }
         }
         document.getElementById("oy_construct_list").innerHTML = oy_construct_build;
-        setTimeout("oy_maintain()", 200);
+        setTimeout("oy_maintain()", 1000);
     }
 </script>
 </body>
