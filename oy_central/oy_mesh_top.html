@@ -17,13 +17,28 @@
         stroke: #999;
     }
 
+    #oy_stats {
+        position:absolute;
+        top:2%;
+        left:2%;
+        width:100vh;
+        height:22vh;
+        background-color: rgba(255, 255, 255, 0.99);
+        border-radius: 0.5vh;
+        opacity: 0.6;
+        z-index:900;
+    }
+
 </style>
 <body>
-<div id="oy_top_outer" style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);width:100%;height:100%;overflow:hidden;background-color: #2c49cc">
+<div id="oy_stats">
+    <img style="position:absolute;left:5%;width: auto;height: auto;max-height: 20vh;max-width: 28vh;" src="../oy_resources/oy_logo_shell.png"/>
+</div>
+<div id="oy_top_outer" style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);width:100%;height:100%;overflow:hidden;background-color: #2f70d8;z-index: 100;">
     <div id="oy_top_inner" style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);overflow:hidden;">
     </div>
 </div>
-<script src="oy_resources/d3.v3.min.js"></script>
+<script src="../oy_resources/d3.v3.min.js"></script>
 <script type="text/javascript">
     function oy_top_data() {
         let oy_xhttp = new XMLHttpRequest();
@@ -43,13 +58,16 @@
                 }
                 //deletes nodes and links
                 if (window.OY_MESH_TOP_PREV[0].length>0) {
-                    console.log("DELETING "+window.OY_MESH_TOP_PREV[0]+" NODE(S)");
+                    console.log("DELETING "+window.OY_MESH_TOP_PREV[0].length+" NODE(S)");
                     for (let i in window.OY_MESH_TOP_PREV[0]) {
                         for (let x in window.OY_TOP_NODES) {
                             if (window.OY_TOP_NODES[x].id===window.OY_MESH_TOP_PREV[0][i]) {
+                                /*
+                                This removes the links connected to the node that is about to be removed, became redundant with the improved link remover down a few lines
                                 window.OY_TOP_LINKS = window.OY_TOP_LINKS.filter(function(l) {
                                     return l.source.id !== window.OY_TOP_NODES[x].id && l.target.id !== window.OY_TOP_NODES[x].id;
                                 });
+                                */
                                 window.OY_TOP_NODES.splice(x, 1);
                                 oy_mesh_change = true;
                                 break;
@@ -57,7 +75,6 @@
                         }
                     }
                 }
-                let oy_link_keep = [];
                 for (let i in oy_mesh_top[1]) {
                     let oy_link_push = true;
                     for (let x in window.OY_MESH_TOP_PREV[1]) {
@@ -68,27 +85,47 @@
                         }
                     }
                     if (oy_link_push===true) {
-                        let node_collect = [];
+                        let oy_node_collect = [];
                         window.OY_TOP_NODES.forEach(function(target) {
-                            if (target.id===oy_mesh_top[1][i][0]||target.id===oy_mesh_top[1][i][1]) node_collect.push(target);
+                            if (target.id===oy_mesh_top[1][i][0]||target.id===oy_mesh_top[1][i][1]) oy_node_collect.push(target);
                         });
-                        if (node_collect.length===2) {
-                            console.log("LINK PUSH: "+node_collect[0].id+" <-> "+node_collect[1].id);
-                            window.OY_TOP_LINKS.push({source: node_collect[0], target: node_collect[1]});
+                        if (oy_node_collect.length===2) {
+                            console.log("LINK PUSH: "+oy_node_collect[0].id+" <-> "+oy_node_collect[1].id);
+                            window.OY_TOP_LINKS.push({source: oy_node_collect[0], target: oy_node_collect[1]});
                             oy_mesh_change = true;
                         }
                     }
-                    else oy_link_keep.push(i);//any keys in here are safe from link deletion
                 }
-                if (oy_link_keep.length>0) {
+                let oy_link_keep = [];
+                for (let i in window.OY_MESH_TOP_PREV[1]) {
+                    for (let x in oy_mesh_top[1]) {
+                        if ((window.OY_MESH_TOP_PREV[1][i][0]===oy_mesh_top[1][x][0]&&window.OY_MESH_TOP_PREV[1][i][1]===oy_mesh_top[1][x][1])||
+                            window.OY_MESH_TOP_PREV[1][i][0]===oy_mesh_top[1][x][1]&&window.OY_MESH_TOP_PREV[1][i][1]===oy_mesh_top[1][x][0]) {
+                            oy_link_keep.push(i);
+                            break;
+                        }
+                    }
+                }
+                if (window.OY_MESH_TOP_PREV[1].length>oy_link_keep.length) {
                     for (let i in window.OY_MESH_TOP_PREV[1]) {
                         if (oy_link_keep.indexOf(i)===-1) {
+                            console.log("LINK DELETE: "+window.OY_MESH_TOP_PREV[1][i][0]+" <-> "+window.OY_MESH_TOP_PREV[1][i][1]);
+                            /*
+                            //The for loop works, in case filter() causes issues later
+                            let oy_links_temp = window.OY_TOP_LINKS;
+                            for (let x in window.OY_TOP_LINKS) {
+                                if ((window.OY_TOP_LINKS[x].source.id===window.OY_MESH_TOP_PREV[1][i][0]&&window.OY_TOP_LINKS[x].target.id===window.OY_MESH_TOP_PREV[1][i][1])||
+                                    (window.OY_TOP_LINKS[x].source.id===window.OY_MESH_TOP_PREV[1][i][1]&&window.OY_TOP_LINKS[x].target.id===window.OY_MESH_TOP_PREV[1][i][0])) {
+                                    oy_links_temp.splice(x, 1);
+                                }
+                            }
+                            window.OY_TOP_LINKS = oy_links_temp;
+                            */
                             window.OY_TOP_LINKS = window.OY_TOP_LINKS.filter(function(l) {
-                                return (l.source.id !== window.OY_MESH_TOP_PREV[1][i][0] && l.target.id !== window.OY_MESH_TOP_PREV[1][i][1])||
-                                    (l.source.id !== window.OY_MESH_TOP_PREV[1][i][1] && l.target.id !== window.OY_MESH_TOP_PREV[1][i][0]);
+                                return !((l.source.id===window.OY_MESH_TOP_PREV[1][i][0]&&l.target.id===window.OY_MESH_TOP_PREV[1][i][1])||
+                                    (l.source.id===window.OY_MESH_TOP_PREV[1][i][1]&&l.target.id===window.OY_MESH_TOP_PREV[1][i][0]));
                             });
                             oy_mesh_change = true;
-                            console.log("LINK DELETE: "+window.OY_MESH_TOP_PREV[1][i][0]+" <-> "+window.OY_MESH_TOP_PREV[1][i][1]);
                         }
                     }
                 }
