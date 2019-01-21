@@ -558,6 +558,7 @@ function oy_peer_check(oy_node_id) {
     return typeof(window.OY_PEERS[oy_node_id])!=="undefined";
 }
 
+//reports peership data to central, leads to seeing mesh big picture, mesh stability development
 function oy_peer_report() {
     let oy_xhttp = new XMLHttpRequest();
     oy_xhttp.onreadystatechange = function() {
@@ -1190,7 +1191,7 @@ function oy_engine(oy_thread_track) {
             return false;
         }
     }
-    if (window.OY_PEER_COUNT<=window.OY_PEER_MIN&&(oy_time_local-oy_thread_track[0])>window.OY_NODE_ASSIGNTTIME) {
+    if (window.OY_PEER_COUNT<window.OY_PEER_MAX&&(oy_time_local-oy_thread_track[0])>window.OY_NODE_ASSIGNTTIME) {
         oy_thread_track[0] = oy_time_local;
         oy_log("Engine initiating node_assign, peer count is "+window.OY_PEER_COUNT+"/"+window.OY_PEER_MAX);
         oy_node_assign();

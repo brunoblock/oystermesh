@@ -15,7 +15,14 @@ foreach ($oy_mesh_keep as $oy_mesh_data) {
         unset($oy_null);
         $oy_mesh_peer = sha1($oy_mesh_peer);
         if ($oy_mesh_peer!="oy_aggregate_node"&&in_array($oy_mesh_peer, $oy_mesh_top[0])) {
-            $oy_mesh_top[1][] = [$oy_mesh_data[0], $oy_mesh_peer];
+            $oy_peer_add = true;
+            foreach ($oy_mesh_top[1] as $oy_mesh_unique) {
+                if ($oy_mesh_unique[0]===$oy_mesh_peer&&$oy_mesh_unique[1]===$oy_mesh_data[0]) {
+                    $oy_peer_add = false;
+                    break;
+                }
+            }
+            if ($oy_peer_add===true) $oy_mesh_top[1][] = [$oy_mesh_data[0], $oy_mesh_peer];
         }
     }
 }
