@@ -19,14 +19,13 @@
 
 </style>
 <body>
-<div style="position:absolute;right:0">
-    <input type="button" value="ALPHA" onclick="oy_button()" />
-    <input type="button" value="BETA" onclick="oy_button2()" />
+<div id="oy_top_outer" style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);width:100%;height:100%;overflow:hidden;background-color: #2c49cc">
+    <div id="oy_top_inner" style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);overflow:hidden;">
+    </div>
 </div>
-<script src="https://d3js.org/d3.v3.min.js"></script>
-<script>
-    window.OY_MESH_TOP_PREV = [[], []];
-    function oy_mesh_top() {
+<script src="oy_resources/d3.v3.min.js"></script>
+<script type="text/javascript">
+    function oy_top_data() {
         let oy_xhttp = new XMLHttpRequest();
         oy_xhttp.onreadystatechange = function() {
             if (this.readyState===4&&this.status===200) {
@@ -35,9 +34,9 @@
                 for (let i in oy_mesh_top[0]) {
                     let oy_node_prev = window.OY_MESH_TOP_PREV[0].indexOf(oy_mesh_top[0][i]);
                     if (oy_node_prev===-1) {
-                        let node = {id:oy_mesh_top[0][i], x: 0, y: 0};
+                        let node = {id:oy_mesh_top[0][i], x: Math.random()*window.OY_TOP_WIDTH|0, y: Math.random()*window.OY_TOP_HEIGHT|0,};
                         console.log("NODE PUSH: "+node.id);
-                        nodes.push(node);
+                        window.OY_TOP_NODES.push(node);
                         oy_mesh_change = true;
                     }
                     else window.OY_MESH_TOP_PREV[0].splice(oy_node_prev, 1);
@@ -45,14 +44,13 @@
                 //deletes nodes and links
                 if (window.OY_MESH_TOP_PREV[0].length>0) {
                     console.log("DELETING "+window.OY_MESH_TOP_PREV[0]+" NODE(S)");
-                    console.log(window.OY_MESH_TOP_PREV[0]);
                     for (let i in window.OY_MESH_TOP_PREV[0]) {
-                        for (let x in nodes) {
-                            if (nodes[x].id===window.OY_MESH_TOP_PREV[0][i]) {
-                                links = links.filter(function(l) {
-                                    return l.source.id !== nodes[x].id && l.target.id !== nodes[x].id;
+                        for (let x in window.OY_TOP_NODES) {
+                            if (window.OY_TOP_NODES[x].id===window.OY_MESH_TOP_PREV[0][i]) {
+                                window.OY_TOP_LINKS = window.OY_TOP_LINKS.filter(function(l) {
+                                    return l.source.id !== window.OY_TOP_NODES[x].id && l.target.id !== window.OY_TOP_NODES[x].id;
                                 });
-                                nodes.splice(x, 1);
+                                window.OY_TOP_NODES.splice(x, 1);
                                 oy_mesh_change = true;
                                 break;
                             }
@@ -71,12 +69,12 @@
                     }
                     if (oy_link_push===true) {
                         let node_collect = [];
-                        nodes.forEach(function(target) {
+                        window.OY_TOP_NODES.forEach(function(target) {
                             if (target.id===oy_mesh_top[1][i][0]||target.id===oy_mesh_top[1][i][1]) node_collect.push(target);
                         });
                         if (node_collect.length===2) {
                             console.log("LINK PUSH: "+node_collect[0].id+" <-> "+node_collect[1].id);
-                            links.push({source: node_collect[0], target: node_collect[1]});
+                            window.OY_TOP_LINKS.push({source: node_collect[0], target: node_collect[1]});
                             oy_mesh_change = true;
                         }
                     }
@@ -85,7 +83,7 @@
                 if (oy_link_keep.length>0) {
                     for (let i in window.OY_MESH_TOP_PREV[1]) {
                         if (oy_link_keep.indexOf(i)===-1) {
-                            links = links.filter(function(l) {
+                            window.OY_TOP_LINKS = window.OY_TOP_LINKS.filter(function(l) {
                                 return (l.source.id !== window.OY_MESH_TOP_PREV[1][i][0] && l.target.id !== window.OY_MESH_TOP_PREV[1][i][1])||
                                     (l.source.id !== window.OY_MESH_TOP_PREV[1][i][1] && l.target.id !== window.OY_MESH_TOP_PREV[1][i][0]);
                             });
@@ -94,144 +92,73 @@
                         }
                     }
                 }
-                if (oy_mesh_change===true) restart();
+                if (oy_mesh_change===true) oy_top_restart();
                 window.OY_MESH_TOP_PREV = oy_mesh_top;
-                setTimeout("oy_mesh_top()", 1000);
+                setTimeout("oy_top_data()", 1000);
             }
         };
         oy_xhttp.open("GET", "http://central.oyster.org/oy_mesh_top.php", true);
         oy_xhttp.send();
     }
 
-    window.COUNTER = 0;
-    var width = 400,
-        height = 400;
+    function oy_top_init() {
+        window.OY_MESH_TOP_PREV = [[], []];
+        window.OY_TOP_WIDTH = screen.width;
+        window.OY_TOP_HEIGHT = screen.height;
 
-    var fill = d3.scale.category20();
+        window.OY_TOP_FORCE = d3.layout.force()
+            .size([window.OY_TOP_WIDTH, window.OY_TOP_HEIGHT])
+            .nodes([])
+            .linkDistance(55)
+            .charge(-75)
+            .on("tick", oy_top_tick);
 
-    var force = d3.layout.force()
-        .size([width, height])
-        .nodes([]) // initialize with a single node
-        .linkDistance(30)
-        .charge(-60)
-        .on("tick", tick);
+        let oy_svg = d3.select("#oy_top_inner").append("svg")
+            .attr("width", window.OY_TOP_WIDTH)
+            .attr("height", window.OY_TOP_HEIGHT);
 
-    var svg = d3.select("body").append("svg")
-        .attr("width", width)
-        .attr("height", height)
+        oy_svg.append("rect")
+            .attr("width", window.OY_TOP_WIDTH)
+            .attr("height", window.OY_TOP_HEIGHT);
 
-    svg.append("rect")
-        .attr("width", width)
-        .attr("height", height);
+        window.OY_TOP_NODES = window.OY_TOP_FORCE.nodes();
+        window.OY_TOP_LINKS = window.OY_TOP_FORCE.links();
+        window.OY_TOP_NODE = oy_svg.selectAll(".node");
+        window.OY_TOP_LINK = oy_svg.selectAll(".link");
 
-    var nodes = force.nodes(),
-        links = force.links(),
-        node = svg.selectAll(".node"),
-        link = svg.selectAll(".link");
-
-    restart();
-
-    function oy_button() {
-        for (let x in nodes) {
-            if (nodes[x].id==="06d246e0965a40f4760adabe3a62c88bdff7af46") {
-                links = links.filter(function(l) {
-                    return l.source.id !== nodes[x].id && l.target.id !== nodes[x].id;
-                });
-                nodes.splice(x, 1);
-                break;
-            }
-        }
-        restart();
+        oy_top_restart();
+        oy_top_data();
     }
 
-    function oy_button2() {
-        let node_collect = [];
-        nodes.forEach(function(target) {
-            if (target.id===3||target.id===4) node_collect.push(target);
-        });
-        links.push({source: node_collect[0], target: node_collect[1]});
-        console.log(links);
-        restart();
-        console.log(links);
-    }
-    function mousedownCanvas() {
-
-        /*
-        var point = d3.mouse(this),
-            node = {x: point[0], y: point[1]},
-            n = nodes.push(node);
-
-        // add links to any nearby nodes
-        nodes.forEach(function(target) {
-            var x = target.x - node.x,
-                y = target.y - node.y;
-            if (Math.sqrt(x * x + y * y) < 30) {
-                links.push({source: node, target: target});
-            }
-        });
-
-        restart();
-*/
-
-        let node1 = {id:"bob", x: 200, y: 200};
-        n = nodes.push(node);
-
-        /*
-        nodes.forEach(function(target) {
-            if (target.id==="bob") {
-                nodes.push(node);
-                links.push({source: node, target: target});
-            }
-        });
-        */
-        links.push({source: node1, target: node2});
-
-        restart();
-        console.log(nodes);
-        console.log(links);
-
-    }
-
-    function mousedownNode(d, i) {
-        nodes.splice(i, 1);
-        links = links.filter(function(l) {
-            return l.source !== d && l.target !== d;
-        });
-        d3.event.stopPropagation();
-
-        restart();
-    }
-
-    function tick() {
-        link.attr("x1", function(d) { return d.source.x; })
+    function oy_top_tick() {
+        window.OY_TOP_LINK.attr("x1", function(d) { return d.source.x; })
             .attr("y1", function(d) { return d.source.y; })
             .attr("x2", function(d) { return d.target.x; })
             .attr("y2", function(d) { return d.target.y; });
 
-        node.attr("cx", function(d) { return d.x; })
+        window.OY_TOP_NODE.attr("cx", function(d) { return d.x; })
             .attr("cy", function(d) { return d.y; });
     }
 
-    function restart() {
-        node = node.data(nodes);
+    function oy_top_restart() {
+        window.OY_TOP_NODE = window.OY_TOP_NODE.data(window.OY_TOP_NODES);
 
-        node.enter().insert("circle", ".cursor")
+        window.OY_TOP_NODE.enter().insert("circle")
             .attr("class", "node")
-            .attr("r", 5)
-            .on("mousedown", mousedownNode);
+            .attr("r", 5);
 
-        node.exit()
+        window.OY_TOP_NODE.exit()
             .remove();
 
-        link = link.data(links);
+        window.OY_TOP_LINK = window.OY_TOP_LINK.data(window.OY_TOP_LINKS);
 
-        link.enter().insert("line", ".node")
+        window.OY_TOP_LINK.enter().insert("line", ".node")
             .attr("class", "link");
-        link.exit()
+        window.OY_TOP_LINK.exit()
             .remove();
 
-        force.start();
+        window.OY_TOP_FORCE.start();
     }
-    oy_mesh_top();
+    oy_top_init();
 
 </script>
