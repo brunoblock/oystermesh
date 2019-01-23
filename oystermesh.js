@@ -22,13 +22,15 @@ window.OY_PEER_LATENCYTIME = 60;//peers are expected to establish latency timing
 window.OY_PEER_KEEPTIME = 8;//peers are expected to communicate with each other within this interval in seconds
 window.OY_PEER_REFERTIME = 20;//interval in which self asks peers for peer recommendations (as needed)
 window.OY_PEER_REPORTTIME = 10;//interval to report peer list to central
+window.OY_PEER_REMOVETIME = 4000;//ms to wait before peer removal is complete, so that the termination flag can be sent properly
+window.OY_PEER_PRETIME = 20;//seconds which a node is waiting as 'pre-peer'
 window.OY_PEER_MAX = 5;//maximum mutual peers per zone (applicable difference is for gateway nodes)
 window.OY_PEER_MIN = 2;//minimum peers needed to perform pushes, this variable also causes engine to trigger oy_peer_assign()
 window.OY_LATENCY_SIZE = 80;//size of latency ping payload, larger is more accurate yet more taxing, vice-versa applies
 window.OY_LATENCY_LENGTH = 8;//length of rand sequence which is repeated for payload and signed for ID verification
 window.OY_LATENCY_REPEAT = 2;//how many ping round trips should be performed to conclude the latency test
 window.OY_LATENCY_TOLERANCE = 2;//tolerance buffer factor for receiving ping requested from a proposed-to node
-window.OY_LATENCY_MAX = 6;//max amount of seconds for latency test before peership is refused or starts breaking down
+window.OY_LATENCY_MAX = 20;//max amount of seconds for latency test before peership is refused or starts breaking down
 window.OY_LATENCY_TRACK = 200;//how many latency measurements to keep at a time per peer
 window.OY_DATA_MAX = 64000;//max size of data that can be sent to another node
 window.OY_DATA_CHUNK = 16000;//32000//chunk size by which data is split up and sent per transmission
@@ -44,6 +46,7 @@ window.OY_SECTOR_EXPOSURE = 3;//minimum amount of peers to have belong to a desi
 window.OY_SECTOR_JOINTIME = 4;//second interval a node has to send sector join requests to the director via its exposure peers
 window.OY_ENGINE_INTERVAL = 2000;//ms interval for core mesh engine to run, the time must clear a reasonable latency round-about
 window.OY_READY_RETRY = 3000;//ms interval to retry connection if READY is still false
+window.OY_DEBUG_MODE = true;//oy_debug() is captured and data is sent to central for analysis
 
 // INIT
 window.OY_CONN = null;//global P2P connection handle
@@ -59,6 +62,7 @@ window.OY_CONSTRUCT = {};//data considered valid from OY_COLLECT is stored here,
 window.OY_DATA_PUSH = {};//object for tracking data push threads
 window.OY_DATA_PULL = {};//object for tracking data pull threads
 window.OY_PEERS = {"oy_aggregate_node":[-1, -1, -1, [], [], [], [null, null]]};//optimization for quick and inexpensive checks for mutual peering
+window.OY_PEERS_PRE = {};//tracks nodes that are almost peers, will become peers once PEER_AFFIRM is received from other node
 window.OY_NODES = {};//P2P connection handling for individual nodes, is not mirrored in localStorage due to DOM restrictions
 window.OY_SECTOR_ALPHA = [null, null, 0, 0, []];//handling and tracking of sector alpha allegiance
 window.OY_SECTOR_BETA = [null, null, 0, 0, []];//handling and tracking of sector beta allegiance
@@ -68,13 +72,24 @@ window.OY_PROPOSED = {};//nodes that have been recently proposed to for mutual p
 window.OY_REFER = {};//track when a node was asked by self for a recommendation
 window.OY_BLACKLIST = {};//nodes to block for x amount of time
 window.OY_PUSH_HOLD = {};//holds data contents ready for pushing to mesh
+window.OY_DEBUG = [];//holds custom debug data during a debug session
 
 function oy_log(oy_log_msg, oy_log_flag) {
     if (typeof(oy_log_flag)==="undefined") oy_log_flag = 0;
+    oy_log_msg = "["+(Date.now()/1000|0)+"] "+oy_log_msg;
     if (oy_log_flag===1) oy_log_msg = "FATAL ERROR: "+oy_log_msg;
     //TODO add custom interface for HTML console
     console.log(oy_log_msg);
+    if (window.OY_DEBUG_MODE===true) oy_log_catch(oy_log_msg);
 }
+
+function oy_log_catch(oy_log_msg) {
+    if (typeof(window.OY_MAIN['oy_self_id'])==="undefined") return false;
+    let oy_xhttp = new XMLHttpRequest();
+    oy_xhttp.open("POST", "http://central.oyster.org/oy_log_catch.php", true);
+    oy_xhttp.send("oy_log_catch="+JSON.stringify([oy_short(window.OY_MAIN['oy_self_id']), oy_log_msg]));
+}
+
 
 function oy_short(oy_message) {
     return oy_message.substr(0, 6);
@@ -272,13 +287,10 @@ function oy_local_check() {
 }
 
 function oy_peer_add(oy_peer_id) {
+    delete window.OY_PEERS_PRE[oy_peer_id];
     if (oy_peer_check(oy_peer_id)) {
         oy_log("Failed to add node "+oy_short(oy_peer_id)+" to peer list that already exists in peer list");
         return false;//cancel if peer already exists in list
-    }
-    if (window.OY_PEER_COUNT>=window.OY_PEER_MAX) {
-        oy_log("Failed to add node "+oy_short(oy_peer_id)+" whilst peer list is saturated");
-        return false;//cancel if peer list is saturated
     }
     window.OY_PEERS[oy_peer_id] = [-1, -1, -1, [], [], [], [null, null]];//[last msg timestamp, last latency timestamp, latency avg, latency history, data push history, data pull history, sector allegiances]
     window.OY_PEER_COUNT++;
@@ -297,11 +309,23 @@ function oy_peer_remove(oy_peer_id) {
     window.OY_PEER_COUNT--;
     delete window.OY_PEERS[oy_peer_id];
     oy_local_store("oy_peers", window.OY_PEERS);
-    oy_node_disconnect(oy_peer_id);
+    delete window.OY_LATENCY[oy_peer_id];
     if (window.OY_PEER_COUNT<0) {
         oy_log("Peer management system failed", 1);
         return false;
     }
+    setTimeout(function() {
+        oy_node_disconnect(oy_peer_id);
+    }, window.OY_PEER_REMOVETIME);
+}
+
+function oy_peer_pre_add(oy_node_id) {
+    window.OY_PEERS_PRE[oy_node_id] = Date.now()/1000;
+    return true;
+}
+
+function oy_peer_pre_check(oy_node_id) {
+    return typeof window.OY_PEERS_PRE[oy_node_id]!=="undefined"&&Date.now()/1000-window.OY_PEERS_PRE[oy_node_id]<window.OY_PEER_PRETIME;
 }
 
 //remove all peer relationships, this function might only get used in manual instances
@@ -354,7 +378,8 @@ function oy_peer_process(oy_peer_id, oy_data) {
         oy_log("Tried to call peer_process on a non-existent peer", 1);
         return false;
     }
-    window.OY_PEERS[oy_peer_id][0] = (Date.now()/1000);//update last msg timestamp for peer, no need to update localstorage via oy_local_store() (could be expensive)
+    let oy_time_local = Date.now()/1000;
+    window.OY_PEERS[oy_peer_id][0] = oy_time_local;//update last msg timestamp for peer, no need to update localstorage via oy_local_store() (could be expensive)
     oy_log("Mutual peer "+oy_short(oy_peer_id)+" sent data sequence with flag: "+oy_data[4]);
     //I've decided it's better that nodes do not respond with acknowledgement packets for DATA_PUSH, to ease on mesh congestion. oy_engine() will make sure that peers are compliant anyways.
     if (oy_data[4]==="OY_DATA_PUSH") {//store received data and potentially forward the push request to peers
@@ -362,7 +387,7 @@ function oy_peer_process(oy_peer_id, oy_data) {
         //oy_data[5] = [oy_data_handle, oy_data_nonce, oy_data_value]
         if (oy_data[5].length!==3||oy_handle_check(oy_data[5][0])===false||oy_data[5][2].length>window.OY_DATA_CHUNK) {
             oy_log("Peer "+oy_short(oy_peer_id)+" sent invalid DATA_PUSH data sequence, will punish");
-            oy_node_punish(oy_peer_id);
+            oy_node_punish(oy_peer_id, "OY_PUNISH_PUSH_INVALID");
             return false;
         }
         let oy_fwd_chance = window.OY_MESH_PUSH_MAIN;
@@ -385,7 +410,7 @@ function oy_peer_process(oy_peer_id, oy_data) {
         //oy_data[5] = [oy_route_passport, oy_data_handle]
         if (oy_data[5].length!==2||oy_handle_check(oy_data[5][1])===false) {
             oy_log("Peer "+oy_short(oy_peer_id)+" sent invalid DATA_PULL data sequence, will punish");
-            oy_node_punish(oy_peer_id);
+            oy_node_punish(oy_peer_id, "OY_PUNISH_PULL_INVALID");
             return false;
         }
         if (oy_data[5][0].indexOf(window.OY_MAIN['oy_self_id'])!==-1) {
@@ -419,7 +444,7 @@ function oy_peer_process(oy_peer_id, oy_data) {
         //oy_data[5] = [oy_route_passport, oy_data_handle, oy_data_nonce, oy_data_source, oy_data_value]
         if (oy_data[5].length!==5||oy_handle_check(oy_data[5][1])===false||oy_data[5][0].length===0) {
             oy_log("Peer "+oy_short(oy_peer_id)+" sent invalid DATA_FULFILL data sequence, will punish");
-            oy_node_punish(oy_peer_id);
+            oy_node_punish(oy_peer_id, "OY_PUNISH_FULFILL_INVALID");
             return false;
         }
         if (oy_data[5][0][0]===window.OY_MAIN['oy_self_id']) {
@@ -445,10 +470,15 @@ function oy_peer_process(oy_peer_id, oy_data) {
             oy_data_send(oy_peer_id, "OY_LATENCY_RESPONSE", oy_data[5]);
         });
     }
-    else if (oy_data[4]==="OY_PEER_TERMINATE"||oy_data[4]==="OY_BLACKLIST") {
+    else if (oy_data[4]==="OY_PEER_TERMINATE") {
         oy_peer_remove(oy_peer_id);//return the favour
-        oy_node_punish(oy_peer_id);
-        oy_log("Removed and punished peer "+oy_short(oy_peer_id)+" who terminated peership first");
+        oy_log("Removed peer "+oy_short(oy_peer_id)+" who terminated peership first");
+        return true;
+    }
+    else if (oy_data[4]==="OY_BLACKLIST") {
+        oy_peer_remove(oy_peer_id);//return the favour
+        oy_node_punish(oy_peer_id, "OY_PUNISH_BLACKLIST_RETURN");
+        oy_log("Punished peer "+oy_short(oy_peer_id)+" who blacklisted self");
         return true;
     }
     else if (oy_data[4]==="OY_PEER_REFER") {//is self's peer asking for self to refer some of self's other peers
@@ -467,7 +497,7 @@ function oy_peer_process(oy_peer_id, oy_data) {
     else if (oy_data[4]==="OY_PEER_RECOMMEND") {
         if (oy_peer_id===oy_data[5]) {
             oy_log("Peer "+oy_short(oy_peer_id)+" recommended themselves, will punish");
-            oy_node_punish(oy_peer_id);
+            oy_node_punish(oy_peer_id, "OY_PUNISH_RECOMMEND_SELF");
         }
         oy_node_initiate(oy_data[5]);
     }
@@ -487,7 +517,7 @@ function oy_peer_process(oy_peer_id, oy_data) {
             //[0] is sector ID, [1] is director ID, [2] is sector size, [3] is sector genesis date [4] is sector itinerary
             if (oy_data[5][2]>=window.OY_SECTOR_MAX) {
                 oy_log("Received a sector that is already full, will punish");
-                oy_node_punish(oy_peer_id);
+                oy_node_punish(oy_peer_id, "OY_PUNISH_SECTOR_FULL");
                 return false;
             }
             else if (window.OY_PEER_COUNT<window.OY_SECTOR_EXPOSURE) {
@@ -527,9 +557,9 @@ function oy_peer_process(oy_peer_id, oy_data) {
                 //TODO here we need to track join requests in a sector session variable, if the exposure is sufficient and within a short time range then we announce acceptance to the asking node,
                 // upon affirmation the entire sector is notified
 
-                if (typeof(window.OY_SECTOR_DIRECTOR[1][oy_data[5][0][0]])==="undefined") window.OY_SECTOR_DIRECTOR[1][oy_data[5][0][0]] = [Date.now/1000, []];
+                if (typeof(window.OY_SECTOR_DIRECTOR[1][oy_data[5][0][0]])==="undefined") window.OY_SECTOR_DIRECTOR[1][oy_data[5][0][0]] = [oy_time_local, []];
                 if (window.OY_SECTOR_DIRECTOR[1][oy_data[5][0][0]][1].indexOf(oy_data[5][0][1])===-1) window.OY_SECTOR_DIRECTOR[1][oy_data[5][0][0]][1].push(oy_data[5][0][1]);
-                if ((Date.now/1000)-window.OY_SECTOR_DIRECTOR[1][oy_data[5][0][0]][0]>window.OY_SECTOR_JOINTIME) {
+                if (oy_time_local-window.OY_SECTOR_DIRECTOR[1][oy_data[5][0][0]][0]>window.OY_SECTOR_JOINTIME) {
                     oy_log("Sector join requests came too far apart");
                     return false;
                 }
@@ -638,17 +668,18 @@ function oy_node_blocked(oy_node_id) {
 
 //increments a node's status in the blacklist subsystem
 //might add some 'forgiveness buffer' for important nodes such as zone gateway nodes
-function oy_node_punish(oy_node_id) {
+function oy_node_punish(oy_node_id, oy_punish_reason) {
+    if (typeof(oy_punish_reason)==="undefined") oy_punish_reason = null;
     if (typeof(window.OY_BLACKLIST[oy_node_id])==="undefined") {
-        window.OY_BLACKLIST[oy_node_id] = [1, (Date.now()/1000)+window.OY_NODE_BLACKTIME, false];//ban expiration time is defined here since we do not know if OY_NODE_TOLERANCE will change in the future
+        //[0] is inform count, [1] is blacklist expiration time, [2] is inform boolean (if node was informed of blacklist), [3] is punish reason tracking (for diagnostics, reported to central)
+        window.OY_BLACKLIST[oy_node_id] = [1, (Date.now()/1000)+window.OY_NODE_BLACKTIME, false, [oy_punish_reason]];//ban expiration time is defined here since we do not know if OY_NODE_TOLERANCE will change in the future
     }
     else {
         window.OY_BLACKLIST[oy_node_id][0]++;
         window.OY_BLACKLIST[oy_node_id][1] = (Date.now()/1000)+window.OY_NODE_BLACKTIME;
+        window.OY_BLACKLIST[oy_node_id][3].push(oy_punish_reason);
     }
-    if (window.OY_BLACKLIST[oy_node_id][0]>window.OY_NODE_TOLERANCE&&oy_peer_check(oy_node_id)) {
-        oy_peer_remove(oy_node_id);
-    }
+    if (window.OY_BLACKLIST[oy_node_id][0]>window.OY_NODE_TOLERANCE&&oy_peer_check(oy_node_id)) oy_peer_remove(oy_node_id);
     oy_local_store("oy_blacklist", window.OY_BLACKLIST);
     return true;
 }
@@ -656,19 +687,35 @@ function oy_node_punish(oy_node_id) {
 //where the aggregate connectivity of the entire mesh begins
 function oy_node_initiate(oy_node_id) {
     if (oy_peer_check(oy_node_id)) {
-        oy_log("Tried to initiate peership with an already agreed upon peer");
+        oy_log("Halted initiation with agreed upon peer "+oy_short(oy_node_id));
         return false;
     }
-    if (oy_node_blocked(oy_node_id)) {
-        oy_log("Tried to initiate peership with a blacklisted node");
+    else if (oy_peer_pre_check(oy_node_id)) {
+        oy_log("Halted initiation with pre peer "+oy_short(oy_node_id));
         return false;
     }
-    let oy_local_callback = function() {
+    else if (oy_node_proposed(oy_node_id)) {
+        oy_log("Halted initiation with proposed-to node "+oy_short(oy_node_id));
+        return false;
+    }
+    else if (oy_node_blocked(oy_node_id)) {
+        oy_log("Halted initiation with blacklisted node "+oy_short(oy_node_id));
+        return false;
+    }
+    else if (oy_latency_check(oy_node_id)) {
+        oy_log("Halted initiation with node "+oy_short(oy_node_id)+" during a latency session");
+        return false;
+    }
+    else if (window.OY_PEER_COUNT>=window.OY_PEER_MAX) {
+        oy_log("Halted initiation whilst peer list is saturated");
+        return false;
+    }
+    let oy_callback_local = function() {
         oy_data_send(oy_node_id, "OY_PEER_REQUEST", null);
         window.OY_PROPOSED[oy_node_id] = (Date.now()/1000)+window.OY_NODE_PROPOSETIME;//set proposal session with expiration timestamp
         oy_local_store("oy_proposed", window.OY_PROPOSED);
     };
-    if (oy_node_connect(oy_node_id, oy_local_callback).open===true) oy_local_callback();
+    if (oy_node_connect(oy_node_id, oy_callback_local).open===true) oy_callback_local();
     return true;
 }
 
@@ -695,7 +742,7 @@ function oy_node_assign() {
 function oy_node_negotiate(oy_node_id, oy_data) {
     if (oy_data[4]==="OY_BLACKLIST") {
         oy_log("Node "+oy_short(oy_node_id)+" blacklisted us, will return the favour");
-        oy_node_punish(oy_node_id);
+        oy_node_punish(oy_node_id, "OY_PUNISH_BLACKLIST_RETURN");
         return false;
     }
     else if (oy_data[4]==="OY_PEER_TERMINATE") {
@@ -703,34 +750,41 @@ function oy_node_negotiate(oy_node_id, oy_data) {
         return false;
     }
     else if (oy_data[4]==="OY_PEER_AFFIRM") {
-        oy_log("Received a peership affirmation notice from a non-peer, something went wrong");
-        oy_node_punish(oy_node_id);
-        return false;
+        if (oy_peer_pre_check(oy_node_id)) {
+            oy_peer_add(oy_node_id);
+            oy_log("Confirmed mutual peer "+oy_short(oy_node_id));
+            return true;
+        }
+        else {
+            oy_log("Received a peership affirmation notice from a non-peer, will punish");
+            oy_node_punish(oy_node_id, "OY_PUNISH_FALSE_AFFIRM");
+            return false;
+        }
+    }
+    else if (oy_data[4]==="OY_PEER_LATENCY"&&(oy_node_proposed(oy_node_id)||oy_peer_pre_check(oy_node_id))) {//respond to latency ping from node with peer proposal arrangement
+        oy_key_sign(window.OY_MAIN['oy_self_private'], oy_data[5][0], function(oy_key_signature) {
+            oy_log("Signed peer latency sequence from "+oy_short(oy_node_id));
+            oy_data[5][0] = oy_key_signature;
+            oy_data_send(oy_node_id, "OY_LATENCY_RESPONSE", oy_data[5]);
+        });
     }
     else if (oy_node_proposed(oy_node_id)) {//check if this node was previously proposed to for peering by self
-        if (oy_data[4]==="OY_PEER_LATENCY") {//respond to latency ping from node with peer proposal arrangement
-            oy_key_sign(window.OY_MAIN['oy_self_private'], oy_data[5][0], function(oy_key_signature) {
-                oy_log("Signed peer latency sequence from "+oy_short(oy_node_id));
-                oy_data[5][0] = oy_key_signature;
-                oy_data_send(oy_node_id, "OY_LATENCY_RESPONSE", oy_data[5]);
-            });
-        }
-        else if (oy_data[4]==="OY_PEER_ACCEPT") {//node has accepted self's peer request
+        if (oy_data[4]==="OY_PEER_ACCEPT") {//node has accepted self's peer request
             oy_latency_test(oy_node_id, "OY_PEER_ACCEPT", true);
             //oy_peer_add(oy_node_id);
             //oy_data_send(oy_node_id, "OY_PEER_AFFIRM", null);//as of now, is not crucial nor mandatory
         }
         else if (oy_data[4]==="OY_PEER_REJECT") {//node has rejected self's peer request
             oy_log("Node "+oy_short(oy_node_id)+" rejected peer request with reason: "+oy_data[5]);
-            oy_node_punish(oy_node_id);//we need to prevent nodes with far distances/long latencies from repeatedly communicating
+            oy_node_punish(oy_node_id, "OY_PUNISH_REJECT_RETURN");//we need to prevent nodes with far distances/long latencies from repeatedly communicating
             return true;
         }
     }
     else if (oy_data[4]==="OY_PEER_REQUEST") {
-        let oy_local_callback = function() {
+        let oy_callback_local = function() {
             oy_latency_test(oy_node_id, "OY_PEER_REQUEST", true);
         };
-        if (oy_node_connect(oy_node_id, oy_local_callback).open===true) oy_local_callback();
+        if (oy_node_connect(oy_node_id, oy_callback_local).open===true) oy_callback_local();
         return true;
     }
     else if (oy_data[4]==="OY_PEER_LATENCY") {
@@ -748,10 +802,11 @@ function oy_latency_response(oy_node_id, oy_data) {
         oy_log("Node "+oy_short(oy_node_id)+" sent a latency response whilst no latency session exists");
         return false;
     }
+    let oy_time_local = Date.now()/1000;
     oy_key_verify(oy_node_id, oy_data[5][0], window.OY_LATENCY[oy_node_id][0], function(oy_key_valid) {
         if (oy_key_valid===false) {
             oy_log("Node "+oy_short(oy_node_id)+" failed to sign latency sequence, will punish");
-            oy_node_punish(oy_node_id);
+            oy_node_punish(oy_node_id, "OY_PUNISH_SIGN_FAIL");
             delete window.OY_LATENCY[oy_node_id];
             return false;
         }
@@ -759,30 +814,37 @@ function oy_latency_response(oy_node_id, oy_data) {
         if (window.OY_LATENCY[oy_node_id][0].repeat(window.OY_LATENCY_SIZE)===oy_data[5][1]) {//check if payload data matches latency session definition
             oy_log("Node "+oy_short(oy_node_id)+" sent a valid latency ping");
 
-            if (oy_peer_check(oy_node_id)) window.OY_PEERS[oy_node_id][0] = (Date.now()/1000);//update last msg timestamp for peer, no need to update localstorage via oy_local_store() (could be expensive)
+            if (oy_peer_check(oy_node_id)) window.OY_PEERS[oy_node_id][0] = oy_time_local;//update last msg timestamp for peer, no need to update localstorage via oy_local_store() (could be expensive)
 
             window.OY_LATENCY[oy_node_id][2]++;
-            window.OY_LATENCY[oy_node_id][4] += (Date.now()/1000)-window.OY_LATENCY[oy_node_id][3];//calculate how long the round trip took, and add it to aggregate time
+            window.OY_LATENCY[oy_node_id][4] += oy_time_local-window.OY_LATENCY[oy_node_id][3];//calculate how long the round trip took, and add it to aggregate time
             if (window.OY_LATENCY[oy_node_id][1]!==window.OY_LATENCY[oy_node_id][2]) {
                 oy_log("There was a problem with the latency test with node "+oy_short(oy_node_id)+", perhaps simultaneous instances");
                 return false;
             }
             if (window.OY_LATENCY[oy_node_id][2]>=window.OY_LATENCY_REPEAT) {
                 let oy_latency_result = window.OY_LATENCY[oy_node_id][4]/window.OY_LATENCY[oy_node_id][2];
-                oy_log("Finished latency test with node "+oy_short(oy_node_id)+" with average round-about: "+oy_latency_result+" seconds");
-                if (oy_peer_check(oy_node_id)) window.OY_PEERS[oy_node_id][1] = (Date.now()/1000);
+                oy_log("Finished latency test ("+window.OY_LATENCY[oy_node_id][5]+") with node "+oy_short(oy_node_id)+" with average round-about: "+oy_latency_result+" seconds");
                 if (window.OY_LATENCY[oy_node_id][5]==="OY_PEER_REQUEST"||window.OY_LATENCY[oy_node_id][5]==="OY_PEER_ACCEPT") {
                     //logic for accepting a peer request begins here
                     if (oy_latency_result>window.OY_LATENCY_MAX) {
-                        if (window.OY_LATENCY[oy_node_id][5]==="OY_PEER_ACCEPT") oy_data_send(oy_node_id, "OY_PEER_TERMINATE", "OY_REASON_LATENCY_BREACHES_MAX");
-                        else oy_data_send(oy_node_id, "OY_PEER_REJECT", "OY_REASON_LATENCY_BREACHES_MAX");
-                        oy_node_punish(oy_node_id);
+                        oy_log("Node "+oy_short(oy_node_id)+" has latency that breaches max, will punish");
+                        if (window.OY_LATENCY[oy_node_id][5]==="OY_PEER_ACCEPT") oy_data_send(oy_node_id, "OY_PEER_TERMINATE", "OY_PUNISH_LATENCY_BREACH");
+                        else oy_data_send(oy_node_id, "OY_PEER_REJECT", "OY_PUNISH_LATENCY_BREACH");
+                        oy_node_punish(oy_node_id, "OY_PUNISH_LATENCY_BREACH");
                     }
                     else if (window.OY_PEER_COUNT<window.OY_PEER_MAX) {
-                        oy_data_send(oy_node_id, "OY_PEER_ACCEPT", null);
-                        oy_peer_add(oy_node_id);
+                        if (window.OY_LATENCY[oy_node_id][5]==="OY_PEER_ACCEPT") {
+                            oy_peer_add(oy_node_id);
+                            oy_data_send(oy_node_id, "OY_PEER_AFFIRM", null);
+                            oy_log("Added node "+oy_short(oy_node_id)+" as a peer");
+                        }
+                        else {
+                            oy_peer_pre_add(oy_node_id);
+                            oy_data_send(oy_node_id, "OY_PEER_ACCEPT", null);
+                            oy_log("Added node "+oy_short(oy_node_id)+" to pre peer list");
+                        }
                         oy_peer_latency(oy_node_id, oy_latency_result);
-                        if (window.OY_LATENCY[oy_node_id][5]==="OY_PEER_ACCEPT") oy_data_send(oy_node_id, "OY_PEER_AFFIRM", null);//as of now, is not crucial nor mandatory
                     }
                     else {
                         let oy_peer_weak = [false, -1];
@@ -793,35 +855,44 @@ function oy_latency_response(oy_node_id, oy_data) {
                                 oy_peer_weak = [oy_peer_local, window.OY_PEERS[oy_peer_local][2]];
                             }
                         }
-                        oy_log("Current weakest peer is "+oy_peer_weak[0]+" with latency of "+oy_peer_weak[1]);
+                        oy_log("Current weakest peer is "+oy_short(oy_peer_weak[0])+" with latency of "+oy_peer_weak[1]);
                         if (oy_latency_result<oy_peer_weak[1]) {
                             oy_log("New peer request has better latency than current weakest peer");
                             oy_peer_remove(oy_peer_weak[0]);
-                            oy_peer_add(oy_node_id);
+                            if (window.OY_LATENCY[oy_node_id][5]==="OY_PEER_ACCEPT") {
+                                oy_peer_add(oy_node_id);
+                                oy_data_send(oy_node_id, "OY_PEER_AFFIRM", null);
+                                oy_log("Added node "+oy_short(oy_node_id)+" as a peer");
+                            }
+                            else {
+                                oy_peer_pre_add(oy_node_id);
+                                oy_data_send(oy_node_id, "OY_PEER_ACCEPT", null);
+                                oy_log("Added node "+oy_short(oy_node_id)+" to pre peer list");
+                            }
                             oy_peer_latency(oy_node_id, oy_latency_result);
-                            if (window.OY_LATENCY[oy_node_id][5]==="OY_PEER_ACCEPT") oy_data_send(oy_node_id, "OY_PEER_AFFIRM", null);//as of now, is not crucial nor mandatory
-                            oy_log("Removed peer "+oy_peer_weak[0]+" and added peer "+oy_short(oy_node_id));
+                            oy_log("Removed peer "+oy_short(oy_peer_weak[0])+" and potentially added peer "+oy_short(oy_node_id));
                         }
                         else {
                             oy_log("New peer request has insufficient latency");
-                            if (window.OY_LATENCY[oy_node_id][5]==="OY_PEER_ACCEPT") oy_data_send(oy_node_id, "OY_PEER_TERMINATE", "OY_REASON_LATENCY_INSUFFICIENT");
-                            else oy_data_send(oy_node_id, "OY_PEER_REJECT", "OY_REASON_LATENCY_INSUFFICIENT");
-                            oy_node_punish(oy_node_id);
+                            if (window.OY_LATENCY[oy_node_id][5]==="OY_PEER_ACCEPT") oy_data_send(oy_node_id, "OY_PEER_TERMINATE", "OY_PUNISH_LATENCY_WEAK");
+                            else oy_data_send(oy_node_id, "OY_PEER_REJECT", "OY_PUNISH_LATENCY_WEAK");
+                            oy_node_punish(oy_node_id, "OY_PUNISH_LATENCY_WEAK");
                         }
                     }
-                    delete window.OY_LATENCY[oy_node_id];
-                    return true;
                 }
-                else if (window.OY_LATENCY[oy_node_id][5]==="OY_PEER_CONNECT"||window.OY_LATENCY[oy_node_id][5]==="OY_PEER_ROUTINE") {
+                else if (oy_peer_check(oy_node_id)&&(window.OY_LATENCY[oy_node_id][5]==="OY_PEER_CONNECT"||window.OY_LATENCY[oy_node_id][5]==="OY_PEER_ROUTINE")) {
                     oy_data_send(oy_node_id, "OY_PEER_AFFIRM", null);
                     oy_peer_latency(oy_node_id, oy_latency_result);
-                    delete window.OY_LATENCY[oy_node_id];
-                    return true;
                 }
+                if (oy_peer_check(oy_node_id)) window.OY_PEERS[oy_node_id][1] = oy_time_local;
                 delete window.OY_LATENCY[oy_node_id];
-                return false;
+                return true
             }
             oy_latency_test(oy_node_id, window.OY_LATENCY[oy_node_id][5], false);
+        }
+        else {
+            oy_log("Node "+oy_short(oy_node_id)+" sent an invalid latency ping, will punish");
+            oy_node_punish(oy_node_id, "OY_PUNISH_LATENCY_INVALID");
         }
     });
 }
@@ -830,12 +901,12 @@ function oy_latency_response(oy_node_id, oy_data) {
 function oy_latency_test(oy_node_id, oy_latency_followup, oy_latency_new) {
     if (typeof(window.OY_LATENCY[oy_node_id])==="undefined") {
         //[0] is pending payload unique string
-        //[1] is pings sent
+        //[1] is ping stage (multiple pings per stage)
         //[2] is valid pings received back
-        //[3] is most start time for latency test timer
+        //[3] is start time for latency test timer
         //[4] is aggregate time taken (between all received pings)
         //[5] is followup flag i.e. what logic should follow after the latency test concludes
-        window.OY_LATENCY[oy_node_id] = [0, 0, 0, 0, 0, oy_latency_followup];
+        window.OY_LATENCY[oy_node_id] = [null, 0, 0, 0, 0, oy_latency_followup];
     }
     else if (oy_latency_new===true) {
         oy_log("New duplicate latency instance was blocked");
@@ -849,12 +920,17 @@ function oy_latency_test(oy_node_id, oy_latency_followup, oy_latency_new) {
     window.OY_LATENCY[oy_node_id][0] = oy_rand_gen(window.OY_LATENCY_LENGTH);
     if (oy_data_send(oy_node_id, "OY_PEER_LATENCY", [window.OY_LATENCY[oy_node_id][0], window.OY_LATENCY[oy_node_id][0].repeat(window.OY_LATENCY_SIZE)])) {
         window.OY_LATENCY[oy_node_id][1]++;
-        window.OY_LATENCY[oy_node_id][3] = (Date.now()/1000);
+        window.OY_LATENCY[oy_node_id][3] = Date.now()/1000;
         oy_log("Latency ping sent to node "+oy_short(oy_node_id));
         return true;
     }
+    delete window.OY_LATENCY[oy_node_id];
     oy_log("Latency ping to node "+oy_short(oy_node_id)+" failed", 1);
     return false;
+}
+
+function oy_latency_check(oy_node_id) {
+    return typeof(window.OY_LATENCY[oy_node_id])!=="undefined";
 }
 
 //measures data flow on the mesh in either push or pull direction
@@ -1055,7 +1131,7 @@ function oy_data_send(oy_node_id, oy_data_flag, oy_data_payload) {
         oy_log("Connection handler crashed, skipping "+oy_data_flag+" to "+oy_short(oy_node_id));
         return false;
     }
-    let oy_local_callback = function() {
+    let oy_callback_local = function() {
         let oy_data = [window.OY_MESH_DYNASTY, window.OY_MESH_VERSION, window.OY_MAIN['oy_self_id'], [window.OY_SECTOR_ALPHA[0], window.OY_SECTOR_BETA[0]], oy_data_flag, oy_data_payload];
         let oy_data_raw = JSON.stringify(oy_data);//convert data array to JSON
         if (oy_data_raw.length>window.OY_DATA_MAX) {
@@ -1070,7 +1146,7 @@ function oy_data_send(oy_node_id, oy_data_flag, oy_data_payload) {
         window.OY_NODES[oy_node_id].send(oy_data_raw);//send the JSON-converted data array to the destination node
         oy_log("Sent data to node "+oy_short(oy_node_id)+" with size: "+oy_data_raw.length);
     };
-    if (oy_node_connect(oy_node_id, oy_local_callback).open===true) oy_local_callback();
+    if (oy_node_connect(oy_node_id, oy_callback_local).open===true) oy_callback_local();
     return true;
 }
 
@@ -1132,9 +1208,7 @@ function oy_sector_survey() {
 
 //core loop that runs critical functions and checks
 function oy_engine(oy_thread_track) {
-    //TODO scroll through PROPOSED and BLACKLIST to remove expired elements
     //reboot INIT if the connection was lost
-
     if (window.OY_MAIN['oy_ready']===true&&(window.OY_CONN===null||window.OY_CONN.disconnected!==false)) {
         oy_log("Engine found connection handler dead, will reboot INIT and kill engine chain");
         window.OY_INIT = 0;
@@ -1143,7 +1217,7 @@ function oy_engine(oy_thread_track) {
     }
 
     //service check on all peers
-    let oy_time_local = (Date.now()/1000);
+    let oy_time_local = Date.now()/1000;
     if (typeof(oy_thread_track)==="undefined") oy_thread_track = [0, oy_time_local];
     let oy_time_diff_last;
     let oy_time_diff_latency;
@@ -1154,14 +1228,15 @@ function oy_engine(oy_thread_track) {
         oy_time_diff_latency = oy_time_local-window.OY_PEERS[oy_peer_local][1];
         if (oy_time_diff_last>window.OY_PEER_KEEPTIME||oy_time_diff_latency>window.OY_PEER_LATENCYTIME) {
             if (typeof(window.OY_ENGINE[0][oy_peer_local])==="undefined") {
-                oy_log("Engine initiating latency test with peer "+oy_short(oy_peer_local)+"):" +
+                oy_log("Engine initiating latency test with peer "+oy_short(oy_peer_local)+":" +
                     "time_diff_last: "+oy_time_diff_last+"/"+window.OY_PEER_KEEPTIME+", time_diff_latency: "+oy_time_diff_latency+"/"+window.OY_PEER_LATENCYTIME);
-                window.OY_ENGINE[0][oy_peer_local] = oy_time_local;
-                oy_latency_test(oy_peer_local, "OY_PEER_CONNECT", true);
+                if (oy_latency_test(oy_peer_local, "OY_PEER_ROUTINE", true)) window.OY_ENGINE[0][oy_peer_local] = oy_time_local;
+                else oy_log("Latency test with peer "+oy_short(oy_peer_local)+" was unable to launch");
             }
             else if (oy_time_local-window.OY_ENGINE[0][oy_peer_local]>window.OY_LATENCY_MAX) {
-                oy_log("Engine found non-responsive peer "+oy_short(oy_peer_local)+" with latency lag: "+(oy_time_local-window.OY_ENGINE[0][oy_peer_local])+", will punish");
-                oy_node_punish(oy_peer_local);
+                oy_log("Engine found non-responsive peer "+oy_short(oy_peer_local)+" with latency lag: "+(oy_time_local-window.OY_ENGINE[0][oy_peer_local])+", will remove and punish");
+                oy_peer_remove(oy_peer_local);
+                oy_node_punish(oy_peer_local, "OY_PUNISH_LATENCY_LAG");
             }
         }
         else delete window.OY_ENGINE[0][oy_peer_local];
@@ -1180,18 +1255,20 @@ function oy_engine(oy_thread_track) {
         }
         if (window.OY_SECTOR_DIRECTOR[0]!==null) {
             for (let oy_node_local in window.OY_SECTOR_DIRECTOR[1]) {
-                if ((Date.now/1000)-window.OY_SECTOR_DIRECTOR[1][oy_node_local][0]>window.OY_SECTOR_JOINTIME) {
+                if (oy_time_local-window.OY_SECTOR_DIRECTOR[1][oy_node_local][0]>window.OY_SECTOR_JOINTIME) {
                     delete window.OY_SECTOR_DIRECTOR[1][oy_node_local];
                     oy_log("Engine deleted sector join session for "+oy_node_local);
                 }
             }
         }
-        if ((Date.now/1000)-window.OY_SECTOR_DIRECTOR[1][oy_data[5][0][0]][0]>window.OY_SECTOR_JOINTIME) {
+        /*
+        if (oy_time_local-window.OY_SECTOR_DIRECTOR[1][oy_data[5][0][0]][0]>window.OY_SECTOR_JOINTIME) {
             oy_log("Sector join requests came too far apart");
             return false;
         }
+        */
     }
-    if (window.OY_PEER_COUNT<window.OY_PEER_MAX&&(oy_time_local-oy_thread_track[0])>window.OY_NODE_ASSIGNTTIME) {
+    if (window.OY_PEER_COUNT<=window.OY_PEER_MIN&&(oy_time_local-oy_thread_track[0])>window.OY_NODE_ASSIGNTTIME) {
         oy_thread_track[0] = oy_time_local;
         oy_log("Engine initiating node_assign, peer count is "+window.OY_PEER_COUNT+"/"+window.OY_PEER_MAX);
         oy_node_assign();
@@ -1201,6 +1278,9 @@ function oy_engine(oy_thread_track) {
         oy_log("Engine initiating peer_report, peer count is "+window.OY_PEER_COUNT+"/"+window.OY_PEER_MAX);
         oy_peer_report();
     }
+
+    //TODO scroll through PROPOSED and BLACKLIST to remove expired elements
+
     setTimeout(function() {
         oy_engine(oy_thread_track);
     }, window.OY_ENGINE_INTERVAL);
@@ -1288,16 +1368,16 @@ function oy_init(oy_callback, oy_passthru) {
     window.OY_CONN.on('connection', function(oy_conn) {
         // Receive messages
         oy_conn.on('data', function (oy_data_raw) {
-            oy_log("Data with size "+oy_data_raw.length+" received from node "+oy_short(oy_conn.peer));
+            oy_log("Data with size "+oy_data_raw.length+" received from node "+oy_short(oy_conn.peer)+" DATA: "+oy_data_raw);
             if (oy_data_raw.length>window.OY_DATA_MAX) {
                 oy_log("Node "+oy_short(oy_conn.peer)+" sent an excessively sized data sequence, will punish and cease session");
-                oy_node_punish(oy_conn.peer);
+                oy_node_punish(oy_conn.peer, "OY_PUNISH_DATA_BREACH");
                 return false;
             }
             let oy_data = oy_data_validate(oy_conn.peer, oy_data_raw);
             if (oy_data===false) {
                 oy_log("Node "+oy_short(oy_conn.peer)+" sent invalid data, will punish and cease session");
-                oy_node_punish(oy_conn.peer);
+                oy_node_punish(oy_conn.peer, "OY_PUNISH_DATA_INVALID");
                 return false;
             }
             if (oy_data[4]==="OY_LATENCY_RESPONSE") {
@@ -1307,7 +1387,7 @@ function oy_init(oy_callback, oy_passthru) {
                 oy_log("Node "+oy_short(oy_conn.peer)+" is mutually peered");
                 if (oy_data_measure(false, oy_conn.peer, oy_data_raw.length)===false) {
                     oy_log("Peer "+oy_short(oy_conn.peer)+" exceeded mesh flow compliance limits, will punish");
-                    oy_node_punish(oy_conn.peer);
+                    oy_node_punish(oy_conn.peer, "OY_PUNISH_MESH_FLOW");
                 }
                 oy_peer_process(oy_conn.peer, oy_data);
             }

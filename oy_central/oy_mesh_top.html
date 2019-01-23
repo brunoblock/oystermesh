@@ -1,8 +1,23 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
 <style>
-    body{
-        background-color: #ffffff;
+    @font-face {
+        font-family: 'geo_med';
+        src: url('../oy_resources/geo_med.ttf') format('truetype');
+    }
+
+    @font-face {
+        font-family: 'geo_light';
+        src: url('../oy_resources/geo_light.ttf') format('truetype');
+    }
+
+    body, html {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        background-color: #f7f7f7;
+        font-family: geo_light, Fallback, sans-serif;
+        color: #2a2a2a;
     }
     rect {
         fill: none;
@@ -29,10 +44,51 @@
         z-index:900;
     }
 
+    .oy_center_hor {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    .oy_center_both {
+        position: absolute;
+        top:50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+
 </style>
 <body>
 <div id="oy_stats">
-    <img style="position:absolute;left:5%;width: auto;height: auto;max-height: 20vh;max-width: 28vh;" src="../oy_resources/oy_logo_shell.png"/>
+    <img style="position:absolute;left:4%;top:4%;width: auto;height: auto;max-height: 20vh;max-width: 28vh;" src="../oy_resources/oy_logo_shadow.png" alt="Oyster"/>
+    <div id="oy_stats_alpha" style="position:absolute;top:4%;left:22%;width:35%;height:90%;background-color: #c37b2c">
+        <div class="oy_center_both oy_stats" style="height:84%;width:100%;">
+            <div align="right" style="position:absolute;left:-2.5%;top:0;width:50%;height:100%;">
+                AVG&nbsp;LATENCY<br>
+                AVG&nbsp;PEERSHIP<br>
+                MESH&nbsp;SIZE<br>
+                PUSH&nbsp;FLOW<br>
+                PULL&nbsp;FLOW<br>
+                SECTOR&nbsp;COUNT
+            </div>
+            <div class="oy_center_hor" style="top:0;width:1%;height:100%;background-color: black;">
+            </div>
+            <div style="position:absolute;right:-2.5%;top:0;width:50%;height:100%;">
+                <span>0</span>&nbsp;sec<br>
+                <span>0</span>&nbsp;sec<br>
+                <span>0</span>&nbsp;nodes<br>
+                <span>0</span>&nbsp;nodes<br>
+                <span>0</span>&nbsp;nodes<br>
+                <span>0</span>&nbsp;char/sec<br>
+                <span>0</span>&nbsp;char/sec<br>
+                <span>null</span><br>
+                <span>null</span><br>
+            </div>
+        </div>
+    </div>
+    <div id="oy_stats_beta" style="position:absolute;top:4%;right:4%;width:35%;height:90%;background-color:#71ff6a">
+
+    </div>
 </div>
 <div id="oy_top_outer" style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);width:100%;height:100%;overflow:hidden;background-color: #2f70d8;z-index: 100;">
     <div id="oy_top_inner" style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);overflow:hidden;">
@@ -45,6 +101,15 @@
         oy_xhttp.onreadystatechange = function() {
             if (this.readyState===4&&this.status===200) {
                 let oy_mesh_top = JSON.parse(this.responseText);
+
+                let oy_punish_build = "";
+                if (oy_mesh_top[2].length>0) {
+                    for (let i in oy_mesh_top[2]) {
+                        oy_punish_build += oy_mesh_top[2][i][2]+"% ["+oy_mesh_top[2][i][1]+"] - "+oy_mesh_top[2][i][0]+"<br>";
+                    }
+                }
+                document.getElementById("oy_stats_beta").innerHTML = oy_punish_build;
+
                 let oy_mesh_change = false;
                 for (let i in oy_mesh_top[0]) {
                     let oy_node_prev = window.OY_MESH_TOP_PREV[0].indexOf(oy_mesh_top[0][i]);

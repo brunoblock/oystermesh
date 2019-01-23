@@ -15,7 +15,7 @@ ID: <span id="oy_field_id"></span><br>
 Storage limit: <span id="oy_storage_limit"></span><br>
 <br><br>
 <input id="oy_input_node" type="text" style="width:100px;" />
-<input type="button" value="PEER REMOVE" onclick="oy_button()" />
+<input type="button" value="ADD PEER" onclick="oy_button()" />
 <br><br>
 <input id="oy_push_handle" type="text" style="width:100px;" disabled="disabled" />
 <input id="oy_push_data" type="text" style="width:100px;" />
@@ -56,7 +56,7 @@ CONSTRUCT:<br>
     });
 
     function oy_button() {
-        oy_peer_remove(document.getElementById('oy_input_node').value);
+        oy_node_initiate(document.getElementById('oy_input_node').value);
     }
 
     function oy_button2() {
@@ -160,7 +160,7 @@ CONSTRUCT:<br>
     function oy_maintain() {
         let oy_peer_build = "";
         for (let i in window.OY_PEERS) {
-            oy_peer_build += i+" LAT: "+window.OY_PEERS[i][2];
+            oy_peer_build += oy_short(i)+" LAT: "+window.OY_PEERS[i][2];
             let oy_time_local = Date.now()/1000|0;
             if (window.OY_PEERS[i][4].length>5) {
                 while ((oy_time_local-window.OY_PEERS[i][4][0][0])>window.OY_MESH_MEASURE) window.OY_PEERS[i][4].shift();
@@ -196,7 +196,7 @@ CONSTRUCT:<br>
             }
         }
         document.getElementById("oy_construct_list").innerHTML = oy_construct_build;
-        setTimeout("oy_maintain()", 10000);
+        setTimeout("oy_maintain()", 1000);
     }
 </script>
 </body>
