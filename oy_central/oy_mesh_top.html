@@ -15,9 +15,9 @@
         height: 100%;
         margin: 0;
         padding: 0;
-        background-color: #f7f7f7;
+        background-color: #0f0f0f;
         font-family: geo_light, Fallback, sans-serif;
-        color: #2a2a2a;
+        color: #191919;
     }
     rect {
         fill: none;
@@ -25,11 +25,11 @@
     }
 
     .node {
-        fill: #212121;
+        fill: #348fab;
     }
 
     .link {
-        stroke: #999;
+        stroke: #262b9d;
     }
 
     #oy_stats {
@@ -38,7 +38,7 @@
         left:2%;
         width:100vh;
         height:22vh;
-        background-color: rgba(255, 255, 255, 0.99);
+        background-color: rgb(255, 255, 255);
         border-radius: 0.5vh;
         opacity: 0.6;
         z-index:900;
@@ -61,36 +61,29 @@
 <body>
 <div id="oy_stats">
     <img style="position:absolute;left:4%;top:4%;width: auto;height: auto;max-height: 20vh;max-width: 28vh;" src="../oy_resources/oy_logo_shadow.png" alt="Oyster"/>
-    <div id="oy_stats_alpha" style="position:absolute;top:4%;left:22%;width:35%;height:90%;background-color: #c37b2c">
+    <div id="oy_stats_alpha" style="position:absolute;top:4%;left:22%;width:35%;height:90%;">
         <div class="oy_center_both oy_stats" style="height:84%;width:100%;">
             <div align="right" style="position:absolute;left:-2.5%;top:0;width:50%;height:100%;">
                 AVG&nbsp;LATENCY<br>
                 AVG&nbsp;PEERSHIP<br>
                 MESH&nbsp;SIZE<br>
-                PUSH&nbsp;FLOW<br>
-                PULL&nbsp;FLOW<br>
+                MESH&nbsp;FLOW<br>
                 SECTOR&nbsp;COUNT
             </div>
             <div class="oy_center_hor" style="top:0;width:1%;height:100%;background-color: black;">
             </div>
             <div style="position:absolute;right:-2.5%;top:0;width:50%;height:100%;">
-                <span>0</span>&nbsp;sec<br>
-                <span>0</span>&nbsp;sec<br>
-                <span>0</span>&nbsp;nodes<br>
-                <span>0</span>&nbsp;nodes<br>
-                <span>0</span>&nbsp;nodes<br>
-                <span>0</span>&nbsp;char/sec<br>
-                <span>0</span>&nbsp;char/sec<br>
-                <span>null</span><br>
-                <span>null</span><br>
+                <span id="oy_stat_avg_latency">0</span>&nbsp;sec<br>
+                <span id="oy_stat_avg_peership">0</span>&nbsp;days<br>
+                <span id="oy_stat_mesh_size">0</span>&nbsp;nodes<br>
+                <span id="oy_stat_mesh_flow">0</span>&nbsp;char/sec<br>
+                <span id="oy_stat_sector_count">0</span>&nbsp;sectors<br>
             </div>
         </div>
     </div>
-    <div id="oy_stats_beta" style="position:absolute;top:4%;right:4%;width:35%;height:90%;background-color:#71ff6a">
-
-    </div>
+    <div id="oy_stats_beta" style="position:absolute;top:4%;right:4%;width:35%;height:90%;"></div>
 </div>
-<div id="oy_top_outer" style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);width:100%;height:100%;overflow:hidden;background-color: #2f70d8;z-index: 100;">
+<div id="oy_top_outer" style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);width:100%;height:100%;overflow:hidden;z-index: 100;">
     <div id="oy_top_inner" style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);overflow:hidden;">
     </div>
 </div>
@@ -102,10 +95,16 @@
             if (this.readyState===4&&this.status===200) {
                 let oy_mesh_top = JSON.parse(this.responseText);
 
+                document.getElementById("oy_stat_avg_latency").innerHTML = oy_mesh_top[2][0]["oy_stat_avg_latency"];
+                document.getElementById("oy_stat_avg_peership").innerHTML = oy_mesh_top[2][0]["oy_stat_avg_peership"];
+                document.getElementById("oy_stat_mesh_size").innerHTML = oy_mesh_top[2][0]["oy_stat_mesh_size"];
+                document.getElementById("oy_stat_mesh_flow").innerHTML = oy_mesh_top[2][0]["oy_stat_mesh_flow"];
+                //document.getElementById("oy_stat_sector_count").innerHTML = oy_mesh_top[2][0]["oy_stat_sector_count"];
+
                 let oy_punish_build = "";
-                if (oy_mesh_top[2].length>0) {
-                    for (let i in oy_mesh_top[2]) {
-                        oy_punish_build += oy_mesh_top[2][i][2]+"% ["+oy_mesh_top[2][i][1]+"] - "+oy_mesh_top[2][i][0]+"<br>";
+                if (oy_mesh_top[2][1].length>0) {
+                    for (let i in oy_mesh_top[2][1]) {
+                        oy_punish_build += oy_mesh_top[2][1][i][2]+"% ["+oy_mesh_top[2][1][i][1]+"] - "+oy_mesh_top[2][1][i][0]+"<br>";
                     }
                 }
                 document.getElementById("oy_stats_beta").innerHTML = oy_punish_build;
@@ -196,11 +195,11 @@
                 }
                 if (oy_mesh_change===true) oy_top_restart();
                 window.OY_MESH_TOP_PREV = oy_mesh_top;
-                setTimeout("oy_top_data()", 1000);
             }
         };
         oy_xhttp.open("GET", "http://central.oyster.org/oy_mesh_top.php", true);
         oy_xhttp.send();
+        setTimeout("oy_top_data()", 1000);
     }
 
     function oy_top_init() {
