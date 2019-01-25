@@ -4,6 +4,7 @@ header("Access-Control-Allow-Origin: *");
 $oy_mesh_top = [[], [], [["oy_stat_avg_latency"=>[], "oy_stat_avg_peership"=>[], "oy_stat_mesh_size"=>0, "oy_stat_mesh_flow"=>0, "oy_stat_sector_count"=>[]], []]];
 $oy_mesh_keep = [];
 $oy_mesh_file_array = glob("/dev/shm/oy_peers/*.peer");
+if (count($oy_mesh_file_array)<=2) die(json_encode($oy_mesh_top));
 foreach ($oy_mesh_file_array as $oy_mesh_file_unique) {
     $oy_mesh_data = json_decode(file_get_contents($oy_mesh_file_unique), true);
     //var_dump($oy_mesh_data);

@@ -1,7 +1,7 @@
 <?php
 header("Access-Control-Allow-Origin: *");
 $oy_peer_report = str_replace("oy_peer_report=", "", file_get_contents("php://input"));
-if (!$oy_peer_report||strlen($oy_peer_report)>50000) die("ERROR: Invalid input, input length: ".strlen($oy_peer_report));
+if (!$oy_peer_report||strlen($oy_peer_report)>200000) die("ERROR: Invalid input, input length: ".strlen($oy_peer_report));
 
 if (is_file("/dev/shm/oy_peers/".$_SERVER['REMOTE_ADDR'].".peer")&&(time()-filemtime("/dev/shm/oy_peers/".$_SERVER['REMOTE_ADDR'].".peer")) < 8) die("ERROR: Told too early");
 
