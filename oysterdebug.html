@@ -157,24 +157,24 @@ CONSTRUCT:<br>
         let oy_peer_build = "";
         for (let i in window.OY_PEERS) {
             oy_peer_build += oy_short(i)+" LAT: "+window.OY_PEERS[i][2];
-            let oy_time_local = Date.now()/1000|0;
             if (typeof(window.OY_PEERS[i][5])!=="undefined") oy_peer_build += " PUSH: "+(window.OY_PEERS[i][5]);
             if (typeof(window.OY_PEERS[i][7])!=="undefined") oy_peer_build += " PULL: "+(window.OY_PEERS[i][7]);
             oy_peer_build +="<br>";
         }
         document.getElementById("oy_peer_list").innerHTML = oy_peer_build;
-        let oy_collect_build = "";
+        console.log(window.OY_COLLECT);
+        let oy_collect_build = "***";
         for (let i in window.OY_COLLECT) {
             oy_collect_build += i+"<br>";
             for (let x in window.OY_COLLECT[i]) {
                 oy_collect_build += "---"+x+"<br>";
                 for (let y in window.OY_COLLECT[i][x]) {
-                    oy_collect_build += "------"+y+":"+oy_hash_gen(window.OY_COLLECT[i][x][y])+"<br>";
+                    oy_collect_build += "------"+y+":"+window.OY_COLLECT[i][x][y]+"<br>";
                 }
             }
         }
         document.getElementById("oy_collect_list").innerHTML = oy_collect_build;
-        let oy_construct_build = "";
+        let oy_construct_build = "***";
         for (let i in window.OY_CONSTRUCT) {
             oy_construct_build += i+"<br>";
             for (let x in window.OY_CONSTRUCT[i]) {
