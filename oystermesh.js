@@ -150,7 +150,7 @@ function oy_crypt_encrypt(oy_crypt_data, oy_crypt_pass) {
         iterations: 100
     });
     let oy_crypt_iv = CryptoJS.lib.WordArray.random(128/8);
-    return oy_crypt_salt.toString()+oy_crypt_iv.toString()+CryptoJS.AES.encrypt(oy_crypt_data.toString(), oy_crypt_key, {
+    return oy_crypt_salt.toString()+oy_crypt_iv.toString()+CryptoJS.AES.encrypt(oy_crypt_data.toString(CryptoJS.enc.Utf8), oy_crypt_key, {
         iv: oy_crypt_iv,
         padding: CryptoJS.pad.Pkcs7,
         mode: CryptoJS.mode.CBC
@@ -169,7 +169,7 @@ function oy_crypt_decrypt(oy_crypt_cipher, oy_crypt_pass) {
         padding: CryptoJS.pad.Pkcs7,
         mode: CryptoJS.mode.CBC
 
-    }).toString();
+    }).toString(CryptoJS.enc.Utf8);
 }
 
 function oy_key_verify(oy_key_public, oy_key_signature, oy_key_data, oy_callback) {
@@ -856,7 +856,7 @@ function oy_latency_response(oy_node_id, oy_data) {
             }
             if (window.OY_LATENCY[oy_node_id][2]>=window.OY_LATENCY_REPEAT) {
                 let oy_latency_result = window.OY_LATENCY[oy_node_id][4]/window.OY_LATENCY[oy_node_id][2];
-                oy_log("Finished latency test ("+window.OY_LATENCY[oy_node_id][5]+") with node "+oy_short(oy_node_id)+" with average round-about: "+oy_latency_result+" seconds");
+                oy_log("Finished latency test ["+window.OY_LATENCY[oy_node_id][5]+"] with node "+oy_short(oy_node_id)+" with average round-about: "+oy_latency_result+" seconds");
                 if (window.OY_LATENCY[oy_node_id][5]==="OY_PEER_REQUEST"||window.OY_LATENCY[oy_node_id][5]==="OY_PEER_ACCEPT") {
                     //logic for accepting a peer request begins here
                     if (oy_latency_result>window.OY_LATENCY_MAX) {
@@ -1096,7 +1096,7 @@ function oy_data_collect(oy_data_source, oy_data_handle, oy_data_nonce, oy_data_
             delete window.OY_COLLECT[oy_data_handle];
             delete window.OY_CONSTRUCT[oy_data_handle];
             window.OY_DATA_PULL[oy_data_handle][0](window.OY_DATA_PULL[oy_data_handle][2]+oy_data_handle+window.OY_DATA_PULL[oy_data_handle][1], oy_base_decode(oy_data_construct));
-            window.OY_DATA_PULL[oy_data_handle] = true;
+            window.OY_DATA_PULL[oy_data_handle] = false;
             return true;
         }
         else oy_log("Construct for "+oy_data_handle+" failed hash check");
