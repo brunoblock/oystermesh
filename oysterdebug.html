@@ -127,6 +127,8 @@ CONSTRUCT:<br>
         console.log(file.type);
         var reader = new FileReader();
         reader.onload = function(oy_file_object) {
+            console.log(oy_file_object.target.result);
+            console.log(oy_base_encode(oy_file_object.target.result));
             oy_callback(JSON.stringify([file.name, file.type, window.btoa(oy_file_object.target.result)]));
         };
         reader.readAsBinaryString(file)
@@ -162,7 +164,6 @@ CONSTRUCT:<br>
             oy_peer_build +="<br>";
         }
         document.getElementById("oy_peer_list").innerHTML = oy_peer_build;
-        console.log(window.OY_COLLECT);
         let oy_collect_build = "***";
         for (let i in window.OY_COLLECT) {
             oy_collect_build += i+"<br>";

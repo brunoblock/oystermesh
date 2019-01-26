@@ -4,15 +4,16 @@
 // GLOBAL VARS
 window.OY_MESH_DYNASTY = "BRUNO_GENESIS_TESTNET";//mesh dynasty definition
 window.OY_MESH_VERSION = 1;//mesh version, increments every significant code upgrade
-window.OY_MESH_FLOW = 8000;//characters per second allowed per peer, and for all aggregate non-peer nodes
+window.OY_MESH_FLOW = 16000;//characters per second allowed per peer, and for all aggregate non-peer nodes
 window.OY_MESH_MEASURE = 60;//seconds by which to measure mesh flow, larger means more tracking of nearby node, peer and sector activity
-window.OY_MESH_SAMPLE = 20;//time/data measurements to determine mesh flow required to state a result, too low can lead to volatile and inaccurate readings
-window.OY_MESH_PULL_BUFFER = 2.25;//multiplication factor for mesh inflow buffer, to give some leeway to compliant peers
-window.OY_MESH_PUSH_MAIN = 0.2;//probability that self will forward a data_push when the nonce was not previously stored on self
-window.OY_MESH_PUSH_BOOST = 0.5;//probability that self will forward a data_push when the nonce was previously stored on self
-window.OY_MESH_PULL_MAIN = 0.1;//probability that self will forward a data_pull when the nonce was found on self
-window.OY_MESH_PULL_BOOST = 0.4;//probability that self will forward a data_pull when the nonce was not found on self
-window.OY_MESH_DEPOSIT_MAIN = 0.3;//probability that self will deposit pushed data
+window.OY_MESH_SAMPLE_PUSH = 5;//time/data measurements to determine mesh push flow required to state a result, too low can lead to volatile and inaccurate readings
+window.OY_MESH_SAMPLE_PULL = 30;//time/data measurements to determine mesh push flow required to state a result, too low can lead to volatile and inaccurate readings
+window.OY_MESH_PULL_BUFFER = 1.5;//multiplication factor for mesh inflow buffer, to give some leeway to compliant peers
+window.OY_MESH_PUSH_MAIN = 0.5;//probability that self will forward a data_push when the nonce was not previously stored on self
+window.OY_MESH_PUSH_BOOST = 0.8;//probability that self will forward a data_push when the nonce was previously stored on self
+window.OY_MESH_PULL_MAIN = 0.2;//probability that self will forward a data_pull when the nonce was found on self
+window.OY_MESH_PULL_BOOST = 0.8;//probability that self will forward a data_pull when the nonce was not found on self
+window.OY_MESH_DEPOSIT_MAIN = 0.5;//probability that self will deposit pushed data
 window.OY_MESH_FULLFILL_MAIN = 0.2;//probability that data is stored whilst fulfilling a pull request, this makes data intelligently migrate and refresh overtime
 window.OY_MESH_SOURCE = 3;//node in route passport (from destination) that is assigned with defining the source variable
 window.OY_MESH_TOLERANCE = 2;//max version iterations until peering is refused (similar to hard-fork)
@@ -25,7 +26,7 @@ window.OY_PEER_KEEPTIME = 8;//peers are expected to communicate with each other 
 window.OY_PEER_REFERTIME = 480;//interval in which self asks peers for peer recommendations (as needed)
 window.OY_PEER_REPORTTIME = 10;//interval to report peer list to central
 window.OY_PEER_REMOVETIME = 4000;//ms to wait before peer removal is complete, so that the termination flag can be sent properly
-window.OY_PEER_PRETIME = 20;//seconds which a node is waiting as 'pre-peer'
+window.OY_PEER_PRETIME = 20;//seconds which a node is waiting as a 'pre-peer'
 window.OY_PEER_MAX = 5;//maximum mutual peers per zone (applicable difference is for gateway nodes)
 window.OY_PEER_MIN = 2;//minimum peers needed to perform pushes
 window.OY_LATENCY_SIZE = 80;//size of latency ping payload, larger is more accurate yet more taxing, vice-versa applies
@@ -36,9 +37,9 @@ window.OY_LATENCY_MAX = 20;//max amount of seconds for latency test before peers
 window.OY_LATENCY_TRACK = 200;//how many latency measurements to keep at a time per peer
 window.OY_LATENCY_WEAK_BUFFER = 0.8;//percentage buffer for comparing latency with peers, higher means less likely the weakest peer will be dropped and hence less peer turnover
 window.OY_DATA_MAX = 64000;//max size of data that can be sent to another node
-window.OY_DATA_CHUNK = 16000;//32000//chunk size by which data is split up and sent per transmission
-window.OY_DATA_PUSH_INTERVAL = 750;//ms per chunk per push loop iteration
-window.OY_DATA_PULL_INTERVAL = 500;//ms per chunk per pull loop iteration
+window.OY_DATA_CHUNK = 48000;//chunk size by which data is split up and sent per transmission
+window.OY_DATA_PUSH_INTERVAL = 300;//ms per chunk per push loop iteration
+window.OY_DATA_PULL_INTERVAL = 300;//ms per chunk per pull loop iteration
 window.OY_DEPOSIT_CHAR = 100000;//character rate for data deposit sizing, helps establish storage limits
 window.OY_DEPOSIT_MAX_BUFFER = 0.9;//max character length capacity factor of data deposit (0.9 means 10% buffer until hard limit is reached)
 window.OY_DEPOSIT_COMMIT = 5;//commit data to disk every x nonce pushes
@@ -112,6 +113,14 @@ function oy_hash_gen(oy_data_value) {
     return CryptoJS.SHA1(oy_data_value).toString()
 }
 
+function oy_base_encode(oy_base_raw) {
+    return window.btoa(unescape(encodeURIComponent(oy_base_raw)));
+}
+
+function oy_base_decode(oy_base_base) {
+    return decodeURIComponent(escape(window.atob(oy_base_base)));
+}
+
 function oy_buffer_encode(oy_buffer_text, oy_buffer_base64) {
     let binary_string;
     if (oy_buffer_base64===true) binary_string =  window.atob(oy_buffer_text);
@@ -142,7 +151,7 @@ function oy_crypt_encrypt(oy_crypt_data, oy_crypt_pass) {
         iterations: 100
     });
     let oy_crypt_iv = CryptoJS.lib.WordArray.random(128/8);
-    return oy_crypt_salt.toString()+oy_crypt_iv.toString()+CryptoJS.AES.encrypt(oy_crypt_data, oy_crypt_key, {
+    return oy_crypt_salt.toString()+oy_crypt_iv.toString()+CryptoJS.AES.encrypt(oy_crypt_data.toString(CryptoJS.enc.Utf8), oy_crypt_key, {
         iv: oy_crypt_iv,
         padding: CryptoJS.pad.Pkcs7,
         mode: CryptoJS.mode.CBC
@@ -313,7 +322,7 @@ function oy_peer_remove(oy_peer_id) {
         oy_log("Tried to remove non-existent peer", 1);
         return false;
     }
-    oy_data_send(oy_peer_id, "OY_PEER_TERMINATE", null);
+    oy_data_send(oy_peer_id, "OY_PEER_TERMINATE", "OY_REASON_PEER_REMOVE");
     window.OY_PEER_COUNT--;
     delete window.OY_PEERS[oy_peer_id];
     oy_local_store("oy_peers", window.OY_PEERS);
@@ -328,12 +337,12 @@ function oy_peer_remove(oy_peer_id) {
 }
 
 function oy_peer_pre_add(oy_node_id) {
-    window.OY_PEERS_PRE[oy_node_id] = Date.now()/1000;
+    window.OY_PEERS_PRE[oy_node_id] = (Date.now()/1000|0)+window.OY_PEER_PRETIME;
     return true;
 }
 
 function oy_peer_pre_check(oy_node_id) {
-    return typeof window.OY_PEERS_PRE[oy_node_id]!=="undefined"&&Date.now()/1000-window.OY_PEERS_PRE[oy_node_id]<window.OY_PEER_PRETIME;
+    return typeof window.OY_PEERS_PRE[oy_node_id]!=="undefined"&&window.OY_PEERS_PRE[oy_node_id]>=(Date.now()/1000|0);
 }
 
 //remove all peer relationships, this function might only get used in manual instances
@@ -341,7 +350,7 @@ function oy_peers_reset() {
     let oy_peer_local;
     for (oy_peer_local in window.OY_PEERS) {
         if (oy_peer_local==="oy_aggregate_node") continue;
-        oy_data_send(oy_peer_local, "OY_PEER_TERMINATE", null);
+        oy_data_send(oy_peer_local, "OY_PEER_TERMINATE", "OY_REASON_PEER_RESET");
         oy_node_disconnect(oy_peer_local);
     }
     window.OY_PEERS = {};
@@ -435,7 +444,7 @@ function oy_peer_process(oy_peer_id, oy_data) {
             for (let oy_data_nonce in window.OY_DEPOSIT[oy_data[5][1]]) {//scroll through all available nonces of the requested handle
                 setTimeout(function() {
                     oy_data_route("OY_LOGIC_FOLLOW", "OY_DATA_FULFILL", [[], oy_data[5][0], "oy_source_void", oy_data[5][1], oy_data_nonce, window.OY_DEPOSIT[oy_data[5][1]][oy_data_nonce]]);
-                }, oy_data_nonce*500);
+                }, oy_data_nonce*window.OY_DATA_PUSH_INTERVAL);//push interval is used here since the direction is reversing from pull to push (fulfill)
             }
             oy_fwd_chance = window.OY_MESH_PULL_MAIN;
         }
@@ -466,7 +475,7 @@ function oy_peer_process(oy_peer_id, oy_data) {
             oy_data_route("OY_LOGIC_FOLLOW", "OY_DATA_FULFILL", oy_data[5]);
             if (Math.random()<=window.OY_MESH_FULLFILL_MAIN) {
                 oy_log("Data deposit upon mesh fulfill invoked for handle");
-                oy_data_deposit(oy_data[5][3], oy_data[4], oy_data[5]);
+                oy_data_deposit(oy_data[5][3], oy_data[5][4], oy_data[5][5]);
             }
         }
         return true;
@@ -481,7 +490,7 @@ function oy_peer_process(oy_peer_id, oy_data) {
     }
     else if (oy_data[4]==="OY_PEER_TERMINATE") {
         oy_peer_remove(oy_peer_id);//return the favour
-        oy_log("Removed peer "+oy_short(oy_peer_id)+" who terminated peership first");
+        oy_log("Removed peer "+oy_short(oy_peer_id)+" who terminated peership first with reason: "+oy_data[5]);
         return true;
     }
     else if (oy_data[4]==="OY_BLACKLIST") {
@@ -630,17 +639,16 @@ function oy_node_connect(oy_node_id, oy_callback) {
     if (typeof(window.OY_NODES[oy_node_id])==="undefined"||window.OY_NODES[oy_node_id].open===false) {
         oy_log("Connection warming up with node "+oy_short(oy_node_id));
         let oy_local_conn = window.OY_CONN.connect(oy_node_id);
-        if (typeof(oy_local_conn)==="undefined") {
-              oy_log("Connection to node "+oy_short(oy_node_id)+" failed");
-              return false;
-        }
-        else {
-            oy_local_conn.on('open', function() {
-                window.OY_NODES[oy_node_id] = oy_local_conn;
-                oy_log("Connection status: "+window.OY_NODES[oy_node_id].open+" with node "+oy_short(oy_node_id));
-                if (typeof(oy_callback)==="function") oy_callback();
-            });
-        }
+        oy_local_conn.on('open', function() {
+            window.OY_NODES[oy_node_id] = oy_local_conn;
+            oy_log("Connection status: "+window.OY_NODES[oy_node_id].open+" with node "+oy_short(oy_node_id));
+            if (typeof(oy_callback)==="function") oy_callback();
+        });
+        oy_local_conn.on('error', function() {
+            delete window.OY_NODES[oy_node_id];
+            oy_log("Connection to node "+oy_short(oy_node_id)+" failed, will punish");
+            oy_node_punish(oy_node_id, "OY_PUNISH_CONNECT_FAIL");
+        });
         return oy_local_conn;
     }
     return window.OY_NODES[oy_node_id];
@@ -764,7 +772,7 @@ function oy_node_negotiate(oy_node_id, oy_data) {
         return false;
     }
     else if (oy_data[4]==="OY_PEER_TERMINATE") {
-        oy_log("Received termination notice from non-peer, most likely we terminated him first");
+        oy_log("Received termination notice with reason: "+oy_data[5]+" from non-peer, most likely we terminated him first");
         oy_node_reset(oy_node_id);
         return false;
     }
@@ -969,14 +977,14 @@ function oy_data_measure(oy_data_push, oy_node_id, oy_data_length) {
     if (oy_data_push===false) oy_array_select = 8;
     else oy_array_select = 6;
     if (oy_data_length!==null) window.OY_PEERS[oy_node_id][oy_array_select].push([oy_time_local, oy_data_length]);
-    if (typeof(window.OY_PEERS[oy_node_id][oy_array_select][0][0])==="undefined") return true;
+    if (typeof(window.OY_PEERS[oy_node_id][oy_array_select][0])==="undefined"||typeof(window.OY_PEERS[oy_node_id][oy_array_select][0][0])==="undefined") return true;
     while ((oy_time_local-window.OY_PEERS[oy_node_id][oy_array_select][0][0])>window.OY_MESH_MEASURE) window.OY_PEERS[oy_node_id][oy_array_select].shift();
     //do not punish node if there is an insufficient survey to determine accurate mesh flow
-    if (window.OY_PEERS[oy_node_id][oy_array_select].length<window.OY_MESH_SAMPLE||window.OY_PEERS[oy_node_id][oy_array_select][0][0]===oy_time_local) return true;
+    if (window.OY_PEERS[oy_node_id][oy_array_select].length<((oy_data_push===false)?window.OY_MESH_SAMPLE_PULL:window.OY_MESH_SAMPLE_PUSH)||window.OY_PEERS[oy_node_id][oy_array_select][0][0]===oy_time_local) return true;
     let oy_measure_total = 0;
     for (let i in window.OY_PEERS[oy_node_id][oy_array_select]) oy_measure_total += window.OY_PEERS[oy_node_id][oy_array_select][i][1];
     //either mesh overflow has occurred (parent function will respond accordingly), or mesh flow is in compliance
-    window.OY_PEERS[oy_node_id][oy_array_select-1] = (oy_measure_total/(oy_time_local-window.OY_PEERS[oy_node_id][oy_array_select][0][0]));
+    window.OY_PEERS[oy_node_id][oy_array_select-1] = Math.round(oy_measure_total/(oy_time_local-window.OY_PEERS[oy_node_id][oy_array_select][0][0]));
     return !(window.OY_PEERS[oy_node_id][oy_array_select-1]>(window.OY_MESH_FLOW*((oy_data_push===false)?window.OY_MESH_PULL_BUFFER:1)));
 }
 
@@ -1040,7 +1048,7 @@ function oy_data_pull(oy_callback, oy_data_logic, oy_data_handle, oy_data_nonce_
         oy_data_handle = oy_data_handle.substr(32, 48);//32 is for encryption key, 48 is length of salt (8) integrity SHA1 (40), 32+48 = 80
     }
     oy_log("Pulling handle "+oy_data_handle+" with logic: "+oy_data_logic);
-    if (typeof(window.OY_DATA_PULL[oy_data_handle])==="undefined") window.OY_DATA_PULL[oy_data_handle] = true;
+    if (typeof(window.OY_DATA_PULL[oy_data_handle])==="undefined") window.OY_DATA_PULL[oy_data_handle] = [oy_callback, oy_data_nonce_max, oy_crypt_pass];
     else if (window.OY_DATA_PULL[oy_data_handle]===false) {
         delete window.OY_DATA_PULL[oy_data_handle];
         delete window.OY_COLLECT[oy_data_handle];
@@ -1049,12 +1057,28 @@ function oy_data_pull(oy_callback, oy_data_logic, oy_data_handle, oy_data_nonce_
         return false;
     }
     oy_data_route(oy_data_logic, "OY_DATA_PULL", [[], oy_data_handle]);
+    setTimeout(function() {
+        oy_data_pull(oy_callback, oy_data_logic, oy_data_handle, oy_data_nonce_max, oy_crypt_pass);
+    }, window.OY_DATA_PULL_INTERVAL);
+}
 
-    //check OY_COLLECT to see if anything came back
+function oy_data_collect(oy_data_source, oy_data_handle, oy_data_nonce, oy_data_value) {
+    if (!oy_handle_check(oy_data_handle)) {
+        oy_log("Collect received an invalid handle: "+oy_data_handle+", will not process");
+        return false;
+    }
+    if (typeof(window.OY_DATA_PULL[oy_data_handle])==="undefined"||window.OY_DATA_PULL[oy_data_handle]===false) {
+        oy_log("Collect could not find a pull session for handle: "+oy_data_handle+", will not process");
+        return false;
+    }
     if (typeof(window.OY_COLLECT[oy_data_handle])==="undefined") window.OY_COLLECT[oy_data_handle] = {};
+    if (typeof(window.OY_COLLECT[oy_data_handle][oy_data_nonce])==="undefined") window.OY_COLLECT[oy_data_handle][oy_data_nonce] = {};
+    if (typeof(window.OY_COLLECT[oy_data_handle][oy_data_nonce][oy_data_value])==="undefined") window.OY_COLLECT[oy_data_handle][oy_data_nonce][oy_data_value] = [oy_data_source];
+    else if (window.OY_COLLECT[oy_data_handle][oy_data_nonce][oy_data_value].indexOf(oy_data_source)===-1) window.OY_COLLECT[oy_data_handle][oy_data_nonce][oy_data_value].push(oy_data_source);
+
     if (typeof(window.OY_CONSTRUCT[oy_data_handle])==="undefined") window.OY_CONSTRUCT[oy_data_handle] = [];
     for (let oy_data_nonce in window.OY_COLLECT[oy_data_handle]) {
-        if (oy_data_nonce>=oy_data_nonce_max) continue;
+        if (oy_data_nonce>=window.OY_DATA_PULL[oy_data_handle][1]) continue;
         let oy_source_highest = 0;
         let oy_source_data = null;
         for (let oy_data_value in window.OY_COLLECT[oy_data_handle][oy_data_nonce]) {
@@ -1066,34 +1090,21 @@ function oy_data_pull(oy_callback, oy_data_logic, oy_data_handle, oy_data_nonce_
         window.OY_CONSTRUCT[oy_data_handle][oy_data_nonce] = oy_source_data;
         oy_log("Committed construct for "+oy_data_handle+" at nonce "+oy_data_nonce);
     }
-    if (window.OY_CONSTRUCT[oy_data_handle].length===oy_data_nonce_max) {
-        oy_log("Construct for "+oy_data_handle+" achieved all nonces");
-        let oy_data_construct = oy_crypt_decrypt(window.OY_CONSTRUCT[oy_data_handle].join(""), oy_crypt_pass);
+
+    if (Object.keys(window.OY_CONSTRUCT[oy_data_handle]).length===window.OY_DATA_PULL[oy_data_handle][1]) {
+        oy_log("Construct for "+oy_data_handle+" achieved all "+window.OY_DATA_PULL[oy_data_handle][1]+" nonce(s)");
+        let oy_data_construct = oy_crypt_decrypt(window.OY_CONSTRUCT[oy_data_handle].join(""), window.OY_DATA_PULL[oy_data_handle][2]);
         if (oy_data_handle.substr(8, 40)===oy_hash_gen(oy_data_construct)) {
             oy_log("Construct for "+oy_data_handle+" cleared hash check");
-            delete window.OY_DATA_PULL[oy_data_handle];
             delete window.OY_COLLECT[oy_data_handle];
             delete window.OY_CONSTRUCT[oy_data_handle];
-            oy_callback(oy_crypt_pass+oy_data_handle+oy_data_nonce_max, oy_data_construct);
-            return true;//end the pull loop
+            window.OY_DATA_PULL[oy_data_handle][0](window.OY_DATA_PULL[oy_data_handle][2]+oy_data_handle+window.OY_DATA_PULL[oy_data_handle][1], oy_data_construct);
+            window.OY_DATA_PULL[oy_data_handle] = true;
+            return true;
         }
         else oy_log("Construct for "+oy_data_handle+" failed hash check");
     }
     else oy_log("Construct for "+oy_data_handle+" did not achieve all nonces");
-    setTimeout(function() {
-        oy_data_pull(oy_callback, oy_data_logic, oy_data_handle, oy_data_nonce_max, oy_crypt_pass);
-    }, window.OY_DATA_PULL_INTERVAL*oy_data_nonce_max);
-}
-
-function oy_data_collect(oy_data_source, oy_data_handle, oy_data_nonce, oy_data_value) {
-    if (!oy_handle_check(oy_data_handle)) {
-        oy_log("Collect received an invalid handle, will not process");
-        return false;
-    }
-    if (typeof(window.OY_COLLECT[oy_data_handle])==="undefined") window.OY_COLLECT[oy_data_handle] = {};
-    if (typeof(window.OY_COLLECT[oy_data_handle][oy_data_nonce])==="undefined") window.OY_COLLECT[oy_data_handle][oy_data_nonce] = {};
-    if (typeof(window.OY_COLLECT[oy_data_handle][oy_data_nonce][oy_data_value])==="undefined") window.OY_COLLECT[oy_data_handle][oy_data_nonce][oy_data_value] = [oy_data_source];
-    else if (window.OY_COLLECT[oy_data_handle][oy_data_nonce][oy_data_value].indexOf(oy_data_source)===-1) window.OY_COLLECT[oy_data_handle][oy_data_nonce][oy_data_value].push(oy_data_source);
 }
 
 //routes data pushes and data forwards to the intended destination
@@ -1219,7 +1230,8 @@ function oy_data_validate(oy_node_id, oy_data_raw) {
 
 //deposits data for local retention
 function oy_data_deposit(oy_data_handle, oy_data_nonce, oy_data_value) {
-    if (typeof(window.OY_DEPOSIT[oy_data_handle][oy_data_nonce])!=="undefined") return false;
+    oy_log_debug("Reached handle "+oy_data_handle+" at nonce "+oy_data_nonce);
+    if (typeof(window.OY_DEPOSIT[oy_data_handle])!=="undefined"&&typeof(window.OY_DEPOSIT[oy_data_handle][oy_data_nonce])!=="undefined") return false;
     if (Math.random()>window.OY_MESH_DEPOSIT_MAIN) return true;
     if (typeof(window.OY_DEPOSIT[oy_data_handle])==="undefined") window.OY_DEPOSIT[oy_data_handle] = [];
     window.OY_DEPOSIT[oy_data_handle][oy_data_nonce] = oy_data_value;
@@ -1234,11 +1246,12 @@ function oy_data_deposit(oy_data_handle, oy_data_nonce, oy_data_value) {
         if (oy_safety_overflow++>1000) break;
     }
     oy_log("Stored handle "+oy_data_handle+" at nonce "+oy_data_nonce);
+    oy_log_debug("Stored handle "+oy_data_handle+" at nonce "+oy_data_nonce);
     if (window.OY_MAIN['oy_deposit_counter']>=window.OY_DEPOSIT_COMMIT) {
         oy_local_store("oy_deposit", window.OY_DEPOSIT);
         oy_local_store("oy_purge", window.OY_PURGE);
         window.OY_MAIN['oy_deposit_counter'] = 0;
-        oy_log("Committed data to disk");
+        oy_log("Committed data to disk with handle "+oy_data_handle+" at nonce "+oy_data_nonce);
     }
     else window.OY_MAIN['oy_deposit_counter']++;
     return true;
@@ -1327,6 +1340,13 @@ function oy_engine(oy_thread_track) {
         if (oy_time_local-window.OY_LATENCY[oy_node_select]>window.OY_LATENCY_MAX) {
             delete window.OY_LATENCY[oy_node_select];
             oy_log("Cleaned up expired latency session for node: "+oy_short(oy_node_select));
+        }
+    }
+
+    for (let oy_node_select in window.OY_PEERS_PRE) {
+        if (window.OY_PEERS_PRE[oy_node_select]<oy_time_local) {
+            delete window.OY_PEERS_PRE[oy_node_select];
+            oy_log("Cleaned up expired pre peer session for node: "+oy_short(oy_node_select));
         }
     }
 
@@ -1451,8 +1471,8 @@ function oy_init(oy_callback, oy_passthru) {
                 oy_log("Node "+oy_short(oy_conn.peer)+" is mutually peered");
                 if (oy_data_measure(false, oy_conn.peer, oy_data_raw.length)===false) {
                     oy_log("Peer "+oy_short(oy_conn.peer)+" exceeded mesh flow compliance limits, will punish");
-                    oy_node_punish(oy_conn.peer, "OY_PUNISH_MESH_FLOW");
                     oy_log_debug("MESH FLOW PUNISH FOR "+oy_short(oy_conn.peer)+" AT PULL "+window.OY_PEERS[oy_conn.peer][7]+" DATA: "+JSON.stringify(window.OY_PEERS[oy_conn.peer][8]));
+                    oy_node_punish(oy_conn.peer, "OY_PUNISH_MESH_FLOW");
                 }
                 oy_peer_process(oy_conn.peer, oy_data);
             }

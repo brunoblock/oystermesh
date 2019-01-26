@@ -1,5 +1,13 @@
 <?php
 header("Access-Control-Allow-Origin: *");
+
+function oy_flow_format($oy_bytes, $oy_precision = 2) {
+    $oy_base = log($oy_bytes, 1000);
+    $oy_suffixes = array('', 'kbps', 'mbps', 'gbps', 'tbps');
+
+    return round(pow(1000, $oy_base - floor($oy_base)), $oy_precision)." ".$oy_suffixes[intval(floor($oy_base))];
+}
+
 //[0] is nodes, [1] is peer relationships [2] is stats
 $oy_mesh_top = [[], [], [["oy_stat_avg_latency"=>[], "oy_stat_avg_peership"=>[], "oy_stat_mesh_size"=>0, "oy_stat_mesh_flow"=>0, "oy_stat_sector_count"=>[]], []]];
 $oy_mesh_keep = [];
@@ -42,7 +50,7 @@ foreach ($oy_mesh_keep as $oy_mesh_data) {
 $oy_mesh_top[2][0]["oy_stat_avg_latency"] = round(array_sum($oy_mesh_top[2][0]["oy_stat_avg_latency"])/count($oy_mesh_top[2][0]["oy_stat_avg_latency"]), 4);
 $oy_mesh_top[2][0]["oy_stat_avg_peership"] = round((((array_sum($oy_mesh_top[2][0]["oy_stat_avg_peership"])/count($oy_mesh_top[2][0]["oy_stat_avg_peership"])/60)/60)/24), 2);
 $oy_mesh_top[2][0]["oy_stat_mesh_size"] = count($oy_mesh_top[0]);
-$oy_mesh_top[2][0]["oy_stat_mesh_flow"] = round($oy_mesh_top[2][0]["oy_stat_mesh_flow"]);
+$oy_mesh_top[2][0]["oy_stat_mesh_flow"] = oy_flow_format($oy_mesh_top[2][0]["oy_stat_mesh_flow"]);
 arsort($oy_punish_track);
 $oy_punish_total = array_sum($oy_punish_track);
 foreach ($oy_punish_track as $oy_punish_type => $oy_punish_count) {
