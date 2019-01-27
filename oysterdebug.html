@@ -83,7 +83,7 @@ CONSTRUCT:<br>
             console.log("HANDLE: "+oy_superhandle);
             console.log("DATA: "+oy_data_value);
             oy_file_download(oy_data_value);
-        }, "OY_LOGIC_CHAOS", document.getElementById('oy_pull_handle').value);
+        }, document.getElementById('oy_pull_handle').value);
     }
 
     function oy_button5() {
@@ -172,9 +172,9 @@ CONSTRUCT:<br>
         for (let i in window.OY_COLLECT) {
             oy_collect_build += i+"<br>";
             for (let x in window.OY_COLLECT[i]) {
-                oy_collect_build += "---"+x+"<br>";
+                oy_collect_build += "---NONCE: "+x+"<br>";
                 for (let y in window.OY_COLLECT[i][x]) {
-                    oy_collect_build += "------"+y+":"+window.OY_COLLECT[i][x][y]+"<br>";
+                    oy_collect_build += "------"+oy_short(y)+":"+window.OY_COLLECT[i][x][y]+"<br>";
                 }
             }
         }

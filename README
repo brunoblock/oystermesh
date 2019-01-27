@@ -1,0 +1,16 @@
+Oyster
+
+The Oyster mesh protocol provides:
+
+- Decentralized and immutable data storage, hosting, retrieval and sharing.
+- Automated geolocation-aware load balancing of data.
+- Proof of Latency (PoL) anti-spam mechanism has low and sustainable CPU/energy requirements.
+- Implicitly DDOS-proof data hosting, service denial requires physical proximity to the data’s location whilst the location is obfuscated.
+- Built-in redundancy algorithm maintains data integrity without counter-party risk.
+- Secure and untraceable access to data like a decentralized VPN.
+- Decentralized application (dApp) platform to run immutable JavaScript code.
+- Peer-to-peer topology forms a node mesh which can circumvent centralized legacy communication lines.
+- Efficient data routing between any devices across the mesh via intelligent sector routing algorithm.
+- IoT-compatible ultra-low power consumption, anti-spam and integrity-upkeep mechanisms consume network bandwidth instead of CPU cycles.
+- Decentralized GPS (DGPS) system allows trust-less location triangulation.
+- Decentralized .mesh domain name resolving system.
