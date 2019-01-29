@@ -63,7 +63,7 @@ CONSTRUCT:<br>
         document.getElementById("oy_push_data").disabled = true;
         document.getElementById("oy_button_push").disabled = true;
         document.getElementById("oy_button_push_cancel").disabled = false;
-        document.getElementById("oy_push_handle").value = oy_data_push("OY_LOGIC_CHAOS", document.getElementById('oy_push_data').value);
+        document.getElementById("oy_push_handle").value = oy_data_push(document.getElementById('oy_push_data').value);
     }
 
     function oy_button3() {
@@ -174,7 +174,7 @@ CONSTRUCT:<br>
             for (let x in window.OY_COLLECT[i]) {
                 oy_collect_build += "---NONCE: "+x+"<br>";
                 for (let y in window.OY_COLLECT[i][x]) {
-                    oy_collect_build += "------"+oy_short(y)+":"+window.OY_COLLECT[i][x][y]+"<br>";
+                    oy_collect_build += "------"+oy_short(y)+":"+JSON.stringify(window.OY_COLLECT[i][x][y])+"<br>";
                 }
             }
         }
