@@ -50,6 +50,7 @@ window.OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inp
 
 // INIT
 window.OY_CONN = null;//global P2P connection handle
+window.OY_CONSOLE = null;//custom function for handling console
 window.OY_INIT = 0;//prevents multiple instances of oy_init() from running simultaneously
 window.OY_PEER_COUNT = 0;//how many active connections with mutual peers
 window.OY_REFER_LAST = 0;//last time self asked a peer for a peer recommendation
@@ -72,16 +73,14 @@ window.OY_LATENCY = {};//handle latency sessions
 window.OY_PROPOSED = {};//nodes that have been recently proposed to for mutual peering
 window.OY_BLACKLIST = {};//nodes to block for x amount of time
 window.OY_PUSH_HOLD = {};//holds data contents ready for pushing to mesh
-window.OY_DEBUG = [];//holds custom debug data during a debug session
 
 function oy_log(oy_log_msg, oy_log_flag) {
     //oy_log_debug(oy_log_msg);
     if (window.OY_PASSIVE_MODE===true) return false;
     if (typeof(oy_log_flag)==="undefined") oy_log_flag = 0;
     if (oy_log_flag===1) oy_log_msg = "FATAL ERROR: "+oy_log_msg;
-    oy_log_msg = "["+(Date.now()/1000|0)+"] "+oy_log_msg;
-    //TODO add custom interface for HTML console
-    console.log(oy_log_msg);
+    if (window.OY_CONSOLE===null) console.log(oy_log_msg);
+    else window.OY_CONSOLE(oy_log_msg);
 }
 
 function oy_log_debug(oy_log_msg) {
@@ -410,7 +409,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             return false;
         }
         if (Math.random()<=((oy_data_deposit(oy_data_payload[1], oy_data_payload[2], oy_data_payload[3]))?window.OY_MESH_PUSH_CHANCE_STORED:window.OY_MESH_PUSH_CHANCE)) {
-            oy_log("Randomness led to pushing handle "+oy_data_payload[1]+" forward along the mesh");
+            oy_log("Randomness led to pushing handle "+oy_short(oy_data_payload[1])+" forward along the mesh");
             oy_data_route("OY_LOGIC_CHAOS", "OY_DATA_PUSH", oy_data_payload);
         }
         return true;
@@ -973,7 +972,7 @@ function oy_data_push(oy_data_value, oy_data_handle) {
     }
     let oy_push_delay = 0;
     if (window.OY_PUSH_HOLD[oy_data_handle].length<window.OY_DATA_CHUNK) {
-        oy_log("Pushing handle "+oy_data_handle+" at exclusive nonce: 0");
+        oy_log("Pushing handle "+oy_short(oy_data_handle)+" at exclusive nonce: 0");
         oy_data_route("OY_LOGIC_CHAOS", "OY_DATA_PUSH", [[], oy_data_handle, 0, null], [0, window.OY_PUSH_HOLD[oy_data_handle].length]);
         oy_push_delay += window.OY_DATA_PUSH_INTERVAL;
     }
@@ -989,7 +988,7 @@ function oy_data_push(oy_data_value, oy_data_handle) {
         oy_nonce_array.sort(function(){return 0.5 - Math.random()});
         for (let i in oy_nonce_array) {
             setTimeout(function() {
-                oy_log("Pushing handle "+oy_data_handle+" at nonce: "+oy_nonce_array[i]);
+                oy_log("Pushing handle "+oy_short(oy_data_handle)+" at nonce: "+oy_nonce_array[i]);
                 oy_data_route("OY_LOGIC_CHAOS", "OY_DATA_PUSH", [[], oy_data_handle, oy_nonce_array[i], null], [oy_data_array[oy_nonce_array[i]][0], oy_data_array[oy_nonce_array[i]][1]]);
             }, oy_push_delay);
             oy_push_delay += window.OY_DATA_PUSH_INTERVAL;
@@ -1168,7 +1167,7 @@ function oy_data_send(oy_node_id, oy_data_flag, oy_data_payload) {
             oy_log("Cooling off, skipping "+oy_data_flag+" to "+oy_short(oy_node_id));
             return true;
         }
-        oy_data_measure(true, oy_node_id, oy_data_raw.length);
+        if (oy_peer_check(oy_node_id)) oy_data_measure(true, oy_node_id, oy_data_raw.length);
         window.OY_NODES[oy_node_id].send(oy_data_raw);//send the JSON-converted data array to the destination node
         oy_log("Sent data to node "+oy_short(oy_node_id)+" with size: "+oy_data_raw.length);
     };
@@ -1343,8 +1342,12 @@ function oy_engine(oy_thread_track) {
 }
 
 //initialize oyster mesh boot up sequence
-function oy_init(oy_callback, oy_passthru) {
-    if (typeof(oy_passthru)==="undefined") {
+function oy_init(oy_callback, oy_passthru, oy_console) {
+    if (typeof(oy_console)==="function") {
+        console.log("Console redirected to custom function");
+        window.OY_CONSOLE = oy_console;
+    }
+    if (typeof(oy_passthru)==="undefined"||oy_passthru===null) {
         if (window.OY_INIT===1) {
             oy_log("Clashing instance of INIT prevented from running", 1);
             return false;
@@ -1354,16 +1357,12 @@ function oy_init(oy_callback, oy_passthru) {
 
         //recover session variables from localstorage
         window.OY_MAIN = oy_local_get("oy_main");
-
-
         if (window.OY_MAIN['oy_ready']===true) {
             window.OY_MAIN['oy_ready'] = false;
             oy_log("Recovering P2P session with recovered ID "+window.OY_MAIN['oy_self_short']);
         }
         else {
             oy_key_gen(function(oy_key_private, oy_key_public) {
-                //TODO need to make sure every possible public ID is compatible with peerjs server
-
                 //reset cryptographic node id for self, and any persisting variables that are related to the old self id (if any)
                 window.OY_MAIN['oy_self_private'] = oy_key_private;
                 window.OY_MAIN['oy_self_public'] = oy_key_public;

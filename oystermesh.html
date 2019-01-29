@@ -26,7 +26,7 @@
             padding: 0;
             font-family: geo_light, Fallback, sans-serif;
             color: #d7d7d7;
-            background-image: radial-gradient(circle, #d0d0d0, #727272, #404040);
+            background-image: radial-gradient(circle, #ababab, #727272, #404040);
         }
 
         @-webkit-keyframes fade_in {
@@ -177,8 +177,8 @@
                 left:50%;
                 transform:translateX(-50%);
                 top:35vh;
-                width: 105vh;
-                height: 55vh;
+                width: 110vh;
+                height: 58vh;
                 z-index: 10000;
             }
 
@@ -210,7 +210,33 @@
             }
 
             .oy_superhandle {
-                border:0.1vh dashed #2b2b2b;
+                position:absolute;
+                top:18%;
+                left:5%;
+                width:90%;
+                height:20%;
+                font-family: 'Courier New', sans-serif;
+                border:0.1vh dashed #4E4E4E;
+                font-size:1vh;
+            }
+
+            .oy_input_corner {
+                position:absolute;
+                bottom:14%;
+                left:5%;
+                width:50%;
+                height:30%;
+                border:0.1vh dashed #4E4E4E;
+                font-size:1vh;
+            }
+
+            .oy_mesh_rate {
+                position:absolute;
+                bottom:14%;
+                left:59%;
+                width:14%;
+                height:30%;
+                border:0.1vh dashed #4E4E4E;
                 font-size:1vh;
             }
 
@@ -254,6 +280,14 @@
 
             .oy_stats {
                 font-size:1.6vh;
+            }
+
+            #oy_console {
+                width:96%;
+                height:99%;
+                overflow: scroll;
+                font-family:'Courier New', sans-serif;
+                font-size: 1vh;
             }
 
             #oy_github_ribbon a:hover {
@@ -421,7 +455,7 @@
 <span id="oy_github_ribbon" class="oy_fade two"><a href="https://github.com/brunoblock/oystermesh" target="_blank">GITHUB REPO</a></span>
 <div id="front" class="oy_slide" style="height:100%">
     <div class="oy_fade one oy_shell_cont_img">
-        <img class="oy_shell_img" src="oy_resources/oy_logo_shell.png"/>
+        <img alt="Oyster" class="oy_shell_img" src="oy_resources/oy_logo_shell.png"/>
         <div class="oy_shadow">
             <div style="position:relative;width:100%;height:100%;background: rgba(48, 48, 48, 0.20);border-radius:50%;filter: blur(8px);">
                 <div style="position:absolute;left:50%;top:50%;transform: translateX(-50%) translateY(-50%);width:75%;height:50%;background: rgba(70, 70, 70, 0.40);border-radius:50%;z-index:20"></div>
@@ -432,24 +466,24 @@
         <div id="oy_graph_nonce" class="oy_center_hor oy_border oy_graph_nonce" style="top:0;width:50%;height:10%;background-color: #404040;"></div>
         <div id="oy_interface_main" class="oy_center_hor" style="top:18%;width:50%;height:25%;">
             <div id="oy_tab_push" class="oy_tab oy_left" style="position:fixed;top:-20%;left:1.5%;height:20%;background-color: #404040;z-index:-50;" onclick="oy_tab(this.id)">UPLOAD</div>
-            <div id="oy_tab_pull" class="oy_tab" style="position:fixed;top:-20%;height:20%;left: 31%;transform: translateX(-50%);background-color: #7A7A7A;z-index:-50;" onclick="oy_tab(this.id)">DOWNLOAD</div>
-            <div id="oy_tab_recommit" class="oy_tab" style="position:fixed;top:-20%;height:20%;left: 55.5%;transform: translateX(-50%);background-color: #7A7A7A;z-index:-50;" onclick="oy_tab(this.id)">RECOMMIT</div>
-            <div id="oy_tab_send" class="oy_tab" style="position:fixed;top:-20%;height:20%;left: 74.5%;transform: translateX(-50%);background-color: #7A7A7A;z-index:-50;" onclick="oy_tab(this.id)">SEND</div>
-            <div id="oy_tab_receive" class="oy_tab oy_right" style="position:fixed;top:-20%;right:1.5%;height:20%;background-color: #7A7A7A;z-index:-50;" onclick="oy_tab(this.id)">RECEIVE</div>
+            <div id="oy_tab_pull" class="oy_tab" style="position:fixed;top:-20%;height:20%;left: 31%;transform: translateX(-50%);background-color: #7A7A7A;color:#232323;z-index:-50;" onclick="oy_tab(this.id)">DOWNLOAD</div>
+            <div id="oy_tab_recommit" class="oy_tab" style="position:fixed;top:-20%;height:20%;left: 55.5%;transform: translateX(-50%);background-color: #7A7A7A;color:#232323;z-index:-50;" onclick="oy_tab(this.id)">RECOMMIT</div>
+            <div id="oy_tab_send" class="oy_tab" style="position:fixed;top:-20%;height:20%;left: 74.5%;transform: translateX(-50%);background-color: #7A7A7A;color:#232323;z-index:-50;" onclick="oy_tab(this.id)">SEND</div>
+            <div id="oy_tab_receive" class="oy_tab oy_right" style="position:fixed;top:-20%;right:1.5%;height:20%;background-color: #7A7A7A;color:#232323;z-index:-50;" onclick="oy_tab(this.id)">RECEIVE</div>
             <div id="oy_interface_store" class="oy_center_hor oy_border oy_interface_main" style="top:0;width:100%;height:100%;background-color: #404040;z-index:100;">
-                <div align="center" class="oy_border oy_superhandle" style="position:absolute;top:18%;left:5%;width:90%;height:12%;font-family: 'Courier New', sans-serif">
+                <div align="center" class="oy_border oy_superhandle">
                     <div class="oy_description_handle">HANDLE</div>
-                    <div id="oy_push_superhandle" class="oy_center_both">
-                        f59a54928db49033433e591c9f80d93b5ebf66e01@null
+                    <div class="oy_center_both" style="width:100%;">
+                        <input id="oy_push_superhandle" type="text" style="width:98%;" disabled="disabled" value="------------------------------------------------------------------------" />
                     </div>
                 </div>
-                <div class="oy_border oy_superhandle" style="position:absolute;bottom:14%;left:5%;width:50%;height:30%;">
+                <div class="oy_border oy_input_corner">
                     <div class="oy_description">FILE&nbsp;UPLOAD</div>
                     <div style="position:absolute;top:25%;left:5%;">
-                        <input type="file" />
+                        <input type="file" id="oy_file_upload" />
                     </div>
                 </div>
-                <div class="oy_border oy_superhandle" style="position:absolute;bottom:14%;left:59%;width:14%;height:30%;">
+                <div class="oy_border oy_mesh_rate" style="position:absolute;bottom:14%;left:59%;width:14%;height:30%;">
                     <div class="oy_description">MESH&nbsp;RATE</div>
                     <div class="oy_rate">
                         M-
@@ -467,18 +501,18 @@
                 </div>
             </div>
             <div id="oy_interface_retrieve" class="oy_center_hor oy_border oy_interface_main" style="top:0;width:100%;height:100%;background-color: #404040;z-index:100;display:none">
-                <div align="center" class="oy_border oy_superhandle" style="position:absolute;top:18%;left:5%;width:90%;height:12%;font-family: 'Courier New', sans-serif">
+                <div align="center" class="oy_border oy_superhandle">
                     <div class="oy_description_handle">HANDLE</div>
-                    <div id="oy_pull_superhandle" class="oy_center_both">
-                        f59a54928db49033433e591c9f80d93b5ebf66e01@null
+                    <div class="oy_center_both" style="width:100%;">
+                        <input id="oy_pull_superhandle" type="text" style="width:98%;" value="------------------------------------------------------------------------" />
                     </div>
                 </div>
-                <div class="oy_border oy_superhandle" style="position:absolute;bottom:14%;left:5%;width:50%;height:30%;">
+                <div class="oy_border oy_input_corner" style="position:absolute;bottom:14%;left:5%;width:50%;height:30%;">
                     <div class="oy_description">PROGRESS</div>
                     <div style="position:absolute;top:25%;left:20%;">
                     </div>
                 </div>
-                <div class="oy_border oy_superhandle" style="position:absolute;bottom:14%;left:59%;width:14%;height:30%;">
+                <div class="oy_border oy_mesh_rate">
                     <div class="oy_description">MESH&nbsp;RATE</div>
                     <div class="oy_rate">
                         M-
@@ -496,18 +530,18 @@
                 </div>
             </div>
             <div id="oy_interface_recommit" class="oy_center_hor oy_border oy_interface_main" style="top:0;width:100%;height:100%;background-color: #404040;z-index:100;display:none">
-                <div align="center" class="oy_border oy_superhandle" style="position:absolute;top:18%;left:5%;width:90%;height:12%;font-family: 'Courier New', sans-serif">
+                <div align="center" class="oy_border oy_superhandle">
                     <div class="oy_description_handle">HANDLE</div>
-                    <div id="oy_recommit_superhandle" class="oy_center_both">
-                        f59a54928db49033433e591c9f80d93b5ebf66e01@null
+                    <div class="oy_center_both" style="width:100%;">
+                        <input id="oy_recommit_superhandle" type="text" style="width:98%;" value="------------------------------------------------------------------------" />
                     </div>
                 </div>
-                <div class="oy_border oy_superhandle" style="position:absolute;bottom:14%;left:5%;width:50%;height:30%;">
+                <div class="oy_border oy_input_corner" style="position:absolute;bottom:14%;left:5%;width:50%;height:30%;">
                     <div class="oy_description">FILE&nbsp;COVERAGE</div>
                     <div style="position:absolute;top:25%;left:20%;">
                     </div>
                 </div>
-                <div class="oy_border oy_superhandle" style="position:absolute;bottom:14%;left:59%;width:14%;height:30%;">
+                <div class="oy_border oy_mesh_rate">
                     <div class="oy_description">MESH&nbsp;RATE</div>
                     <div class="oy_rate">
                         M-
@@ -527,7 +561,7 @@
             <div id="oy_interface_send" class="oy_center_hor oy_border oy_interface_main" style="top:0;width:100%;height:100%;background-color: #404040;z-index:100;display:none">
                 <div align="center" class="oy_border oy_superhandle" style="position:absolute;top:18%;left:5%;width:90%;height:12%;font-family: 'Courier New', sans-serif">
                     <div class="oy_description_handle">HANDLE</div>
-                    <div id="oy_recommit_superhandle" class="oy_center_both">
+                    <div id="oy_send_channel" class="oy_center_both">
                         f59a54928db49033433e591c9f80d93b5ebf66e01@null
                     </div>
                 </div>
@@ -544,19 +578,14 @@
                 </div>
                 <div id="oy_send_execute" align="center" class="oy_button oy_button_execute_active" style="position:absolute;bottom:32%;right:5%;width:18%;height:14%;" onclick="oy_send_execute()">
                     <div style="position:relative;top:-3%;">
-                        MESH&nbsp;REFR
-                    </div>
-                </div>
-                <div id="oy_send_halt" align="center" class="oy_button oy_button_halt_dull" style="position:absolute;bottom:14%;right:5%;width:18%;height:14%;" onclick="oy_send_halt()">
-                    <div style="position:relative;top:-3%;">
-                        REFR&nbsp;HALT
+                        SEND DATA
                     </div>
                 </div>
             </div>
             <div id="oy_interface_receive" class="oy_center_hor oy_border oy_interface_main" style="top:0;width:100%;height:100%;background-color: #404040;z-index:100;display:none">
                 <div align="center" class="oy_border oy_superhandle" style="position:absolute;top:18%;left:5%;width:90%;height:12%;font-family: 'Courier New', sans-serif">
                     <div class="oy_description_handle">HANDLE</div>
-                    <div id="oy_recommit_superhandle" class="oy_center_both">
+                    <div id="oy_receive_channel" class="oy_center_both">
                         f59a54928db49033433e591c9f80d93b5ebf66e01@null
                     </div>
                 </div>
@@ -576,17 +605,16 @@
                         MESH&nbsp;REFR
                     </div>
                 </div>
-                <div id="oy_recommit_halt" align="center" class="oy_button oy_button_halt_dull" style="position:absolute;bottom:14%;right:5%;width:18%;height:14%;" onclick="oy_receive_halt()">
-                    <div style="position:relative;top:-3%;">
-                        REFR&nbsp;HALT
-                    </div>
-                </div>
             </div>
         </div>
-        <div id="oy_console" class="oy_border oy_graph_nonce" style="position:absolute;bottom:0;left:0;width:49%;height:53%;background-color: #404040;"></div>
+        <div class="oy_border oy_graph_nonce" style="position:absolute;bottom:0;left:0;width:49%;height:53%;background-color: #404040;overflow: hidden">
+            <div id="oy_console" class="oy_center_both">
+
+            </div>
+        </div>
         <div id="oy_graph_nodes" class="oy_border oy_graph_nonce" style="position:absolute;bottom:0;right:0;width:49%;height:53%;background-color: #404040;"></div>
         <div id="oy_stats" class="oy_border oy_graph_nonce" style="position:absolute;top:0;left:0;width:23%;height:43%;background-color: #404040;overflow:hidden;">
-            <div class="oy_center_both oy_stats" style="height:84%;width:100%;">
+            <div class="oy_center_both oy_stats" style="height:70%;width:100%;">
                 <div align="right" style="position:absolute;left:-2.5%;top:0;width:50%;height:100%;">
                     AVG&nbsp;LATENCY<br>
                     AVG&nbsp;PEERSHIP<br>
@@ -597,9 +625,9 @@
                     SOAK&nbsp;FLOW<br>
                     STORAGE&nbsp;LIMIT<br>
                 </div>
-                <div class="oy_center_hor" style="top:0;width:1%;height:100%;background-color: black;">
+                <div class="oy_center_hor" style="top:0;width:0.7%;height:100%;background-color: #2a2a2a;">
                 </div>
-                <div style="position:absolute;right:-2.5%;top:0;width:50%;height:100%;">
+                <div style="position:absolute;right:-2.5%;top:0;width:50%;height:100%;font-weight:bold;">
                     <span id="oy_avg_latency">0</span>&nbsp;sec<br>
                     <span id="oy_avg_peership">0</span>&nbsp;sec<br>
                     <span id="oy_peer_count">0</span>&nbsp;peer(s)<br>
@@ -628,16 +656,83 @@
         window.OY_EXECUTE_SEND = false;
         window.OY_EXECUTE_RECEIVE = false;
 
+        document.getElementById("oy_file_upload").addEventListener('change', oy_file_change, false);
+
         oy_init(function() {
             document.getElementById("oy_storage_limit").innerHTML = window.OY_DEPOSIT_MAX;
             oy_maintain();
-            setTimeout("oy_maintain()", 500);
+        }, null,
+        function(oy_console_msg) {
+            oy_console_local(oy_console_msg);
         });
     };
 
     function oy_maintain() {
         document.getElementById("oy_peer_count").innerHTML = ""+window.OY_PEER_COUNT;
         document.getElementById("oy_blacklisted").innerHTML = ""+Object.keys(window.OY_BLACKLIST).length;
+        setTimeout("oy_maintain()", 200);
+    }
+
+    function oy_console_local(oy_console_msg) {
+        let oy_msg_build = "<span>";
+        if (typeof(window.OY_MAIN['oy_self_short'])==="undefined") oy_msg_build += "null@mesh$ ";
+        else oy_msg_build += window.OY_MAIN['oy_self_short']+"@mesh$ ";
+        document.getElementById("oy_console").innerHTML = document.getElementById("oy_console").innerHTML+oy_msg_build+oy_console_msg+"</span><br>";
+        document.getElementById("oy_console").scrollTo(0, 9000);
+    }
+
+    function b64toBlob(b64Data, contentType, sliceSize) {
+        contentType = contentType || '';
+        sliceSize = sliceSize || 512;
+
+        var byteCharacters = atob(b64Data);
+        var byteArrays = [];
+
+        for (var offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+            var slice = byteCharacters.slice(offset, offset + sliceSize);
+
+            var byteNumbers = new Array(slice.length);
+            for (var i = 0; i < slice.length; i++) {
+                byteNumbers[i] = slice.charCodeAt(i);
+            }
+
+            var byteArray = new Uint8Array(byteNumbers);
+
+            byteArrays.push(byteArray);
+        }
+
+        return new Blob(byteArrays, {type: contentType});
+    }
+
+    function oy_file_read(oy_file_object, oy_callback) {
+        let file = oy_file_object.target.files[0];
+        if (!file) {
+            return false;
+        }
+        let reader = new FileReader();
+        reader.onload = function(oy_file_object) {
+            oy_callback(JSON.stringify([file.name, file.type, oy_file_object.target.result]));
+        };
+        reader.readAsBinaryString(file);
+    }
+
+    function oy_file_change(oy_file_object) {
+        oy_file_read(oy_file_object, function(oy_file_data) {
+            window.OY_FILE_DATA = oy_file_data;
+        });
+    }
+
+    function oy_file_download(oy_file_raw) {
+        let oy_file_data = JSON.parse(oy_file_raw);
+
+        var blobUrl = URL.createObjectURL(b64toBlob(window.btoa(oy_file_data[2]), oy_file_data[1]));
+        var a = document.createElement("a");
+        document.body.appendChild(a);
+        a.style = "display: none";
+        a.href = blobUrl;
+        a.download = oy_file_data[0];
+        a.click();
+        window.URL.revokeObjectURL(blobUrl);
     }
 
     function oy_push_execute() {
@@ -660,6 +755,8 @@
 
         document.getElementById("oy_receive_execute").classList.remove("oy_button_execute_active");
         document.getElementById("oy_receive_execute").classList.add("oy_button_execute_dull");
+
+        document.getElementById("oy_push_superhandle").value = oy_data_push(window.OY_FILE_DATA);
     }
 
     function oy_push_halt() {
@@ -682,6 +779,9 @@
 
         document.getElementById("oy_receive_execute").classList.remove("oy_button_execute_dull");
         document.getElementById("oy_receive_execute").classList.add("oy_button_execute_active");
+
+        window.OY_DATA_PUSH[document.getElementById('oy_push_superhandle').value.substr(32, 48)] = false;
+        window.OY_FILE_DATA = null;
     }
 
     function oy_pull_execute() {
@@ -824,6 +924,12 @@
             document.getElementById('oy_tab_send').style.backgroundColor = "#7A7A7A";
             document.getElementById('oy_tab_receive').style.backgroundColor = "#7A7A7A";
 
+            document.getElementById('oy_tab_push').style.color = "#d7d7d7";
+            document.getElementById('oy_tab_pull').style.color = "#232323";
+            document.getElementById('oy_tab_recommit').style.color = "#232323";
+            document.getElementById('oy_tab_send').style.color = "#232323";
+            document.getElementById('oy_tab_receive').style.color = "#232323";
+
             if (window.OY_EXECUTE_PULL===true) document.getElementById('oy_tab_pull').style.backgroundColor = "#c37b2c";
             if (window.OY_EXECUTE_RECOMMIT===true) document.getElementById('oy_tab_recommit').style.backgroundColor = "#c37b2c";
 
@@ -839,6 +945,12 @@
             document.getElementById('oy_tab_recommit').style.backgroundColor = "#7A7A7A";
             document.getElementById('oy_tab_send').style.backgroundColor = "#7A7A7A";
             document.getElementById('oy_tab_receive').style.backgroundColor = "#7A7A7A";
+
+            document.getElementById('oy_tab_push').style.color = "#232323";
+            document.getElementById('oy_tab_pull').style.color = "#d7d7d7";
+            document.getElementById('oy_tab_recommit').style.color = "#232323";
+            document.getElementById('oy_tab_send').style.color = "#232323";
+            document.getElementById('oy_tab_receive').style.color = "#232323";
 
             if (window.OY_EXECUTE_PUSH===true) document.getElementById('oy_tab_push').style.backgroundColor = "#c37b2c";
             if (window.OY_EXECUTE_RECOMMIT===true) document.getElementById('oy_tab_recommit').style.backgroundColor = "#c37b2c";
@@ -856,6 +968,12 @@
             document.getElementById('oy_tab_send').style.backgroundColor = "#7A7A7A";
             document.getElementById('oy_tab_receive').style.backgroundColor = "#7A7A7A";
 
+            document.getElementById('oy_tab_push').style.color = "#232323";
+            document.getElementById('oy_tab_pull').style.color = "#232323";
+            document.getElementById('oy_tab_recommit').style.color = "#d7d7d7";
+            document.getElementById('oy_tab_send').style.color = "#232323";
+            document.getElementById('oy_tab_receive').style.color = "#232323";
+
             if (window.OY_EXECUTE_PUSH===true) document.getElementById('oy_tab_push').style.backgroundColor = "#c37b2c";
             if (window.OY_EXECUTE_PULL===true) document.getElementById('oy_tab_pull').style.backgroundColor = "#c37b2c";
 
@@ -869,8 +987,14 @@
             document.getElementById('oy_tab_push').style.backgroundColor = "#7A7A7A";
             document.getElementById('oy_tab_pull').style.backgroundColor = "#7A7A7A";
             document.getElementById('oy_tab_recommit').style.backgroundColor = "#7A7A7A";
-            document.getElementById('oy_tab_send').style.backgroundColor = "#14a2cc";
+            document.getElementById('oy_tab_send').style.backgroundColor = "#404040";
             document.getElementById('oy_tab_receive').style.backgroundColor = "#7A7A7A";
+
+            document.getElementById('oy_tab_push').style.color = "#232323";
+            document.getElementById('oy_tab_pull').style.color = "#232323";
+            document.getElementById('oy_tab_recommit').style.color = "#232323";
+            document.getElementById('oy_tab_send').style.color = "#d7d7d7";
+            document.getElementById('oy_tab_receive').style.color = "#232323";
 
             if (window.OY_EXECUTE_PUSH===true) document.getElementById('oy_tab_push').style.backgroundColor = "#c37b2c";
             if (window.OY_EXECUTE_PULL===true) document.getElementById('oy_tab_pull').style.backgroundColor = "#c37b2c";
@@ -887,7 +1011,13 @@
             document.getElementById('oy_tab_pull').style.backgroundColor = "#7A7A7A";
             document.getElementById('oy_tab_recommit').style.backgroundColor = "#7A7A7A";
             document.getElementById('oy_tab_send').style.backgroundColor = "#7A7A7A";
-            document.getElementById('oy_tab_receive').style.backgroundColor = "#14a2cc";
+            document.getElementById('oy_tab_receive').style.backgroundColor = "#404040";
+
+            document.getElementById('oy_tab_push').style.color = "#232323";
+            document.getElementById('oy_tab_pull').style.color = "#232323";
+            document.getElementById('oy_tab_recommit').style.color = "#232323";
+            document.getElementById('oy_tab_send').style.color = "#232323";
+            document.getElementById('oy_tab_receive').style.color = "#d7d7d7";
 
             if (window.OY_EXECUTE_PUSH===true) document.getElementById('oy_tab_push').style.backgroundColor = "#c37b2c";
             if (window.OY_EXECUTE_PULL===true) document.getElementById('oy_tab_pull').style.backgroundColor = "#c37b2c";
