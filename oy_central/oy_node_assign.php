@@ -4,7 +4,7 @@ $oy_node_id = str_replace("oy_node_id=", "", file_get_contents("php://input"));
 if (!$oy_node_id||!oy_node_valid($oy_node_id)) die("ERROR: Invalid node ID");
 
 function oy_node_valid($oy_node_id) {
-    if (strlen($oy_node_id)==171) return true;
+    if (strlen($oy_node_id)==40) return true;
     return false;
 }
 

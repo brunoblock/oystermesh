@@ -18,7 +18,6 @@ Storage limit: <span id="oy_storage_limit"></span><br>
 <input type="button" value="ADD PEER" onclick="oy_button()" />
 <br><br>
 <input id="oy_push_handle" type="text" style="width:100px;" disabled="disabled" />
-<input id="oy_push_data" type="text" style="width:100px;" />
 <input type="file" id="oy_file_upload" /><br>
 <input id="oy_button_push" type="button" value="DATA PUSH" onclick="oy_button2()" />
 <input id="oy_button_push_cancel" type="button" disabled="disabled" value="CANCEL" onclick="oy_button3()" />
@@ -60,18 +59,19 @@ CONSTRUCT:<br>
     }
 
     function oy_button2() {
-        document.getElementById("oy_push_data").disabled = true;
-        document.getElementById("oy_button_push").disabled = true;
-        document.getElementById("oy_button_push_cancel").disabled = false;
-        document.getElementById("oy_push_handle").value = oy_data_push(document.getElementById('oy_push_data').value);
+        if (typeof(window.OY_FILE_DATA)!=="undefined"&&window.OY_FILE_DATA!==null) {//the second part might be redundant
+            document.getElementById("oy_button_push").disabled = true;
+            document.getElementById("oy_button_push_cancel").disabled = false;
+            document.getElementById("oy_push_handle").value = oy_data_push(window.OY_FILE_DATA);
+        }
     }
 
     function oy_button3() {
-        document.getElementById("oy_push_data").disabled = false;
         document.getElementById("oy_push_handle").disabled = false;
         document.getElementById("oy_button_push").disabled = false;
         document.getElementById("oy_button_push_cancel").disabled = true;
         window.OY_DATA_PUSH[document.getElementById('oy_push_handle').value.substr(32, 48)] = false;
+        window.OY_FILE_DATA = null;
     }
 
     function oy_button4() {
@@ -80,8 +80,6 @@ CONSTRUCT:<br>
         document.getElementById("oy_button_pull_cancel").disabled = false;
         oy_data_pull(function(oy_superhandle, oy_data_value) {
             oy_button5();
-            console.log("HANDLE: "+oy_superhandle);
-            console.log("DATA: "+oy_data_value);
             oy_file_download(oy_data_value);
         }, document.getElementById('oy_pull_handle').value);
     }
@@ -136,7 +134,7 @@ CONSTRUCT:<br>
 
     function oy_file_change(oy_file_object) {
         oy_file_read(oy_file_object, function(oy_file_data) {
-            document.getElementById("oy_push_data").value = oy_file_data;
+            window.OY_FILE_DATA = oy_file_data;
         });
     }
     function oy_file_download(oy_file_raw) {
