@@ -216,7 +216,7 @@
                 width:90%;
                 height:20%;
                 font-family: 'Courier New', sans-serif;
-                border:0.1vh dashed #4E4E4E;
+                border:0.1vh dashed #727272;
                 font-size:1vh;
             }
 
@@ -226,7 +226,7 @@
                 left:5%;
                 width:50%;
                 height:30%;
-                border:0.1vh dashed #4E4E4E;
+                border:0.1vh dashed #727272;
                 font-size:1vh;
             }
 
@@ -236,7 +236,7 @@
                 left:59%;
                 width:14%;
                 height:30%;
-                border:0.1vh dashed #4E4E4E;
+                border:0.1vh dashed #727272;
                 font-size:1vh;
             }
 
@@ -275,7 +275,7 @@
                 left:5%;
                 width:90%;
                 height:12%;
-                border:0.1vh dashed #4E4E4E;
+                border:0.1vh dashed #727272;
             }
 
             .oy_stats {
@@ -608,9 +608,7 @@
             </div>
         </div>
         <div class="oy_border oy_graph_nonce" style="position:absolute;bottom:0;left:0;width:49%;height:53%;background-color: #404040;overflow: hidden">
-            <div id="oy_console" class="oy_center_both">
-
-            </div>
+            <div id="oy_console" class="oy_center_both">***<br></div>
         </div>
         <div id="oy_graph_nodes" class="oy_border oy_graph_nonce" style="position:absolute;bottom:0;right:0;width:49%;height:53%;background-color: #404040;"></div>
         <div id="oy_stats" class="oy_border oy_graph_nonce" style="position:absolute;top:0;left:0;width:23%;height:43%;background-color: #404040;overflow:hidden;">
@@ -635,7 +633,7 @@
                     <span id="oy_mesh_size">0</span>&nbsp;nodes<br>
                     <span id="oy_beam_flow">0</span>&nbsp;bytes/sec<br>
                     <span id="oy_soak_flow">0</span>&nbsp;bytes/sec<br>
-                    <span id="oy_storage_limit">0</span>&nbsp;mb<br>
+                    <span id="oy_storage_limit">0</span>&nbsp;MB<br>
                 </div>
             </div>
         </div>
@@ -650,16 +648,21 @@
 </div>
 <script type="text/javascript">
     window.onload = function() {
+        window.OY_CONSOLE_SIZE = 200;
+
         window.OY_EXECUTE_PUSH = false;
         window.OY_EXECUTE_PULL = false;
         window.OY_EXECUTE_RECOMMIT = false;
         window.OY_EXECUTE_SEND = false;
         window.OY_EXECUTE_RECEIVE = false;
+        window.OY_CONSOLE_COUNTER = 0;
+
+        oy_console_local("Loading console...");
 
         document.getElementById("oy_file_upload").addEventListener('change', oy_file_change, false);
 
         oy_init(function() {
-            document.getElementById("oy_storage_limit").innerHTML = window.OY_DEPOSIT_MAX;
+            document.getElementById("oy_storage_limit").innerHTML = window.OY_DEPOSIT_MAX/1000000;
             oy_maintain();
         }, null,
         function(oy_console_msg) {
@@ -677,8 +680,22 @@
         let oy_msg_build = "<span>";
         if (typeof(window.OY_MAIN['oy_self_short'])==="undefined") oy_msg_build += "null@mesh$ ";
         else oy_msg_build += window.OY_MAIN['oy_self_short']+"@mesh$ ";
-        document.getElementById("oy_console").innerHTML = document.getElementById("oy_console").innerHTML+oy_msg_build+oy_console_msg+"</span><br>";
+        oy_element_add("oy_console", "span", "oy_console_line_"+window.OY_CONSOLE_COUNTER, oy_msg_build+oy_console_msg+"<br>");
+        window.OY_CONSOLE_COUNTER++;
+        if (window.OY_CONSOLE_COUNTER>=window.OY_CONSOLE_SIZE) oy_element_remove("oy_console_line_"+(window.OY_CONSOLE_COUNTER-window.OY_CONSOLE_SIZE));
         document.getElementById("oy_console").scrollTo(0, 9000);
+    }
+
+    function oy_element_add(oy_parent_id, oy_element_tag, oy_element_id, oy_element_html) {
+        let oy_element = document.createElement(oy_element_tag);
+        oy_element.setAttribute('id', oy_element_id);
+        oy_element.innerHTML = oy_element_html;
+        document.getElementById(oy_parent_id).appendChild(oy_element);
+    }
+
+    function oy_element_remove(oy_element_id) {
+        let oy_element = document.getElementById(oy_element_id);
+        oy_element.parentNode.removeChild(oy_element);
     }
 
     function b64toBlob(b64Data, contentType, sliceSize) {
