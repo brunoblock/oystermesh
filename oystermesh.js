@@ -302,7 +302,7 @@ function oy_peer_add(oy_peer_id) {
         return false;//cancel if peer already exists in list
     }
     let oy_callback_local = function() {
-        //[peership timestamp, last msg timestamp, last latency timestamp, latency avg, latency history, data push, data push history, data pull, data pull history]
+        //[peership timestamp, last msg timestamp, last latency timestamp, latency avg, latency history, data beam, data beam history, data soak, data soak history]
         window.OY_PEERS[oy_peer_id] = [Date.now()/1000|0, -1, -1, -1, [], -1, [], -1, []];
         window.OY_PEER_COUNT++;
         oy_local_store("oy_peers", window.OY_PEERS);

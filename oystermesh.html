@@ -294,7 +294,7 @@
                 top:0;
                 width:100%;
                 height:100%;
-                background-color: #4d4d4d;
+                background-color: #626262;
             }
 
             .oy_peer_soak {
@@ -658,7 +658,7 @@
                     AVG&nbsp;PEERSHIP<br>
                     PEER&nbsp;COUNT<br>
                     BLACKLISTED<br>
-                    MESH&nbsp;SIZE<br>
+                    MESH&nbsp;RANGE<br>
                     BEAM&nbsp;FLOW<br>
                     SOAK&nbsp;FLOW<br>
                     STORAGE&nbsp;LIMIT<br>
@@ -714,7 +714,27 @@
     };
 
     function oy_maintain() {
-        oy_graph_peer(0, "bob123", Math.random()*100|0)
+        let oy_peer_keep = [];
+        for (let oy_peer_local in window.OY_PEERS) {
+            if (oy_peer_local==="oy_aggregate_node") continue;
+            oy_peer_keep.push([oy_short(oy_peer_local), window.OY_PEERS[oy_peer_local][3], window.OY_PEERS[oy_peer_local][5], window.OY_PEERS[oy_peer_local][7]]);
+        }
+
+        oy_peer_keep.sort(function(a, b) {
+            return b[1] - a[1];
+        });
+
+        let i;
+        for (i in oy_peer_keep) {
+            if (i>4) break;
+            oy_graph_peer(i, oy_peer_keep[i][0]+" - "+oy_peer_keep[i][1].toFixed(3)+"s", Math.round((oy_peer_keep[i][2]/(oy_peer_keep[i][2]+oy_peer_keep[i][3]))*100));
+        }
+        i++;
+        while (i <= 4) {
+            oy_graph_peer(i, null, 0);
+            i++;
+        }
+
         document.getElementById("oy_self_short").innerHTML = ""+window.OY_MAIN['oy_self_short'];
         document.getElementById("oy_peer_count").innerHTML = ""+window.OY_PEER_COUNT;
         document.getElementById("oy_blacklisted").innerHTML = ""+Object.keys(window.OY_BLACKLIST).length;
@@ -755,17 +775,32 @@
     }
 
     function oy_graph_peer(oy_graph_slot, oy_peer_short, oy_beam_ratio) {
-        if (window.OY_GRAPH_PEERS[oy_graph_slot]===false) {
+        if (window.OY_GRAPH_PEERS[oy_graph_slot]===false&&oy_peer_short!==null) {
             window.OY_GRAPH_PEERS[oy_graph_slot] = true;
-            oy_element_add("oy_graph_slot_"+oy_graph_slot, "div", "oy_graph_slot_"+oy_graph_slot+"_base", "<div id='oy_graph_slot_"+oy_graph_slot+"_front' style='z-index:300;'><div id='oy_graph_slot_"+oy_graph_slot+"_name'>"+oy_peer_short+"</div></div><div id='oy_graph_slot_"+oy_graph_slot+"_beam' style='z-index:200;'></div><div id='oy_graph_slot_"+oy_graph_slot+"_soak' style='z-index:100;'></div>");
+            oy_element_add("oy_graph_slot_"+oy_graph_slot, "div", "oy_graph_slot_"+oy_graph_slot+"_base", "<div id='oy_graph_slot_"+oy_graph_slot+"_front' style='transition: all .3s ease-out;z-index:300;'><div id='oy_graph_slot_"+oy_graph_slot+"_name'>"+oy_peer_short+"</div></div><div id='oy_graph_slot_"+oy_graph_slot+"_beam' style='transition: all .3s ease-out;z-index:200;'></div><div id='oy_graph_slot_"+oy_graph_slot+"_soak' style='z-index:100;'></div>");
             document.getElementById("oy_graph_slot_"+oy_graph_slot+"_name").classList.add("oy_center_both");
             document.getElementById("oy_graph_slot_"+oy_graph_slot+"_front").classList.add("oy_peer_sub");
             document.getElementById("oy_graph_slot_"+oy_graph_slot+"_base").classList.add("oy_peer_sub");
             document.getElementById("oy_graph_slot_"+oy_graph_slot+"_soak").classList.add("oy_peer_soak");
             document.getElementById("oy_graph_slot_"+oy_graph_slot+"_beam").classList.add("oy_peer_beam");
-
-            //document.getElementById();
-            //background-color: #8a3789;
+            document.getElementById("oy_graph_slot_"+oy_graph_slot+"_beam").style.width = oy_beam_ratio+"%";
+            document.getElementById("oy_graph_slot_"+oy_graph_slot+"_front").style.backgroundColor = "#8a3789";
+            setTimeout(function() {
+                document.getElementById("oy_graph_slot_"+oy_graph_slot+"_front").style.backgroundColor = "transparent";
+            }, 400);
+        }
+        else if (window.OY_GRAPH_PEERS[oy_graph_slot]===true) {
+            if (oy_peer_short===null) {
+                window.OY_GRAPH_PEERS[oy_graph_slot] = false;
+                document.getElementById("oy_graph_slot_"+oy_graph_slot+"_front").style.backgroundColor = "#8a1e26";
+                setTimeout(function() {
+                    oy_element_remove("oy_graph_slot_"+oy_graph_slot+"_base");
+                }, 400);
+            }
+            else {
+                document.getElementById("oy_graph_slot_"+oy_graph_slot+"_name").innerHTML = oy_peer_short;
+                document.getElementById("oy_graph_slot_"+oy_graph_slot+"_beam").style.width = oy_beam_ratio+"%";
+            }
         }
     }
 

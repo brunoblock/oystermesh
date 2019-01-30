@@ -59,7 +59,7 @@
 
 </style>
 <body>
-<div id="oy_stats">
+<div id="oy_stats" style="overflow:hidden;">
     <img style="position:absolute;left:4%;top:4%;width: auto;height: auto;max-height: 20vh;max-width: 28vh;" src="../oy_resources/oy_logo_shadow.png" alt="Oyster"/>
     <div id="oy_stats_alpha" style="position:absolute;top:4%;left:22%;width:35%;height:90%;">
         <div class="oy_center_both oy_stats" style="height:84%;width:100%;">
@@ -70,7 +70,7 @@
                 MESH&nbsp;FLOW<br>
                 SECTOR&nbsp;COUNT
             </div>
-            <div class="oy_center_hor" style="top:0;width:1%;height:100%;background-color: black;">
+            <div class="oy_center_hor" style="top:0;width:1%;height:100%;background-color:black;">
             </div>
             <div style="position:absolute;right:-2.5%;top:0;width:50%;height:100%;">
                 <span id="oy_stat_avg_latency">0</span>&nbsp;sec<br>
@@ -84,8 +84,7 @@
     <div id="oy_stats_beta" style="position:absolute;top:4%;right:4%;width:35%;height:90%;"></div>
 </div>
 <div id="oy_top_outer" style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);width:100%;height:100%;overflow:hidden;z-index: 100;">
-    <div id="oy_top_inner" style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);overflow:hidden;">
-    </div>
+    <div id="oy_top_inner" style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);overflow:hidden;"></div>
 </div>
 <script src="../oy_resources/d3.v3.min.js"></script>
 <script type="text/javascript">
