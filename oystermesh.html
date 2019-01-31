@@ -84,16 +84,6 @@
             cursor: pointer;
         }
 
-        .oy_button_execute_dull {
-            background-color: #7A7A7A;
-            border:0.1vh solid #7A7A7A;
-            color: #4a4a4a;
-        }
-
-        .oy_button_execute_dull:hover {
-            cursor: not-allowed;
-        }
-
         .oy_button_halt_active {
             background-color: #c37b2c;
             border:0.1vh solid #c37b2c;
@@ -104,13 +94,23 @@
             cursor: pointer;
         }
 
-        .oy_button_halt_dull {
+        .oy_button_reset_active {
+            background-color: #525252;
+            border:0.1vh solid #525252;
+            color: #f3f3f3;
+        }
+
+        .oy_button_reset_active:hover {
+            cursor: pointer;
+        }
+
+        .oy_button_all_dull {
             background-color: #7A7A7A;
             border:0.1vh solid #7A7A7A;
             color: #4a4a4a;
         }
 
-        .oy_button_halt_dull:hover {
+        .oy_button_all_dull:hover {
             cursor: not-allowed;
         }
 
@@ -215,9 +215,12 @@
                 left:5%;
                 width:90%;
                 height:20%;
-                font-family: 'Courier New', sans-serif;
                 border:0.1vh dashed #727272;
-                font-size:1vh;
+            }
+
+            .oy_superhandle_sub {
+                font-size:0.95vh;
+                font-family: 'Courier New', sans-serif;
             }
 
             .oy_input_corner {
@@ -316,6 +319,44 @@
                 overflow: scroll;
                 font-family:'Courier New', sans-serif;
                 font-size: 1vh;
+            }
+
+            .tooltip {
+                position: relative;
+                display: inline-block;
+            }
+
+            .tooltip .tooltiptext {
+                visibility: hidden;
+                width: 140px;
+                background-color: #555;
+                color: #fff;
+                text-align: center;
+                border-radius: 6px;
+                padding: 5px;
+                position: absolute;
+                z-index: 1;
+                bottom: 150%;
+                left: 50%;
+                margin-left: -75px;
+                opacity: 0;
+                transition: opacity 0.3s;
+            }
+
+            .tooltip .tooltiptext::after {
+                content: "";
+                position: absolute;
+                top: 100%;
+                left: 50%;
+                margin-left: -5px;
+                border-width: 5px;
+                border-style: solid;
+                border-color: #555 transparent transparent transparent;
+            }
+
+            .tooltip:hover .tooltiptext {
+                visibility: visible;
+                opacity: 1;
             }
 
             #oy_github_ribbon a:hover {
@@ -500,9 +541,10 @@
             <div id="oy_tab_receive" class="oy_tab oy_right" style="position:fixed;top:-20%;right:1.5%;height:20%;background-color: #7A7A7A;color:#232323;z-index:-50;" onclick="oy_tab(this.id)">RECEIVE</div>
             <div id="oy_interface_store" class="oy_center_hor oy_border oy_interface_main" style="top:0;width:100%;height:100%;background-color: #404040;z-index:100;">
                 <div align="center" class="oy_border oy_superhandle">
-                    <div class="oy_description_handle">HANDLE</div>
+                    <div class="oy_description_handle" onclick="oy_push_superhandle_copy()" onmouseout="oy_push_superhandle_reset()">HANDLE</div>
                     <div class="oy_center_both" style="width:100%;">
-                        <input id="oy_push_superhandle" type="text" style="width:98%;" disabled="disabled" value="------------------------------------------------------------------------" />
+                        <span class="tooltiptext" id="myTooltip">Copy to clipboard</span>
+                        <input id="oy_push_superhandle" type="text" class="oy_superhandle_sub" style="text-align:center;width:98%;" readonly="readonly" value="" />
                     </div>
                 </div>
                 <div class="oy_border oy_input_corner">
@@ -517,17 +559,17 @@
                         M-
                     </div>
                 </div>
-                <div id="oy_push_execute" align="center" class="oy_button oy_button_execute_dull" style="position:absolute;bottom:32%;right:5%;width:18%;height:14%;" onclick="oy_push_execute()">
+                <div id="oy_push_execute" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:32%;right:5%;width:18%;height:14%;" onclick="oy_push_execute()">
                     <div style="position:relative;top:-3%;">
                         MESH&nbsp;PUSH
                     </div>
                 </div>
-                <div id="oy_push_halt" align="center" class="oy_button oy_button_halt_dull" style="position:absolute;bottom:14%;right:15.5%;width:7.5%;height:14%;" onclick="oy_push_halt()">
+                <div id="oy_push_halt" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:14%;right:15.5%;width:7.5%;height:14%;" onclick="oy_push_halt()">
                     <div style="position:relative;top:-3%;">
                         HALT
                     </div>
                 </div>
-                <div id="oy_push_reset" align="center" class="oy_button oy_button_halt_dull" style="position:absolute;bottom:14%;right:5%;width:9.5%;height:14%;" onclick="oy_push_halt()">
+                <div id="oy_push_reset" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:14%;right:5%;width:9.5%;height:14%;" onclick="oy_push_reset()">
                     <div style="position:relative;top:-3%;">
                         RESET
                     </div>
@@ -537,7 +579,7 @@
                 <div align="center" class="oy_border oy_superhandle">
                     <div class="oy_description_handle">HANDLE</div>
                     <div class="oy_center_both" style="width:100%;">
-                        <input id="oy_pull_superhandle" type="text" style="width:98%;" value="------------------------------------------------------------------------" />
+                        <input id="oy_pull_superhandle" type="text" class="oy_superhandle_sub" style="text-align:center;width:98%;" onclick="this.value=''" value="" />
                     </div>
                 </div>
                 <div class="oy_border oy_input_corner" style="position:absolute;bottom:14%;left:5%;width:50%;height:30%;">
@@ -551,17 +593,17 @@
                         M-
                     </div>
                 </div>
-                <div id="oy_pull_execute" align="center" class="oy_button oy_button_execute_dull" style="position:absolute;bottom:32%;right:5%;width:18%;height:14%;" onclick="oy_pull_execute()">
+                <div id="oy_pull_execute" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:32%;right:5%;width:18%;height:14%;" onclick="oy_pull_execute()">
                     <div style="position:relative;top:-3%;">
                         MESH&nbsp;PULL
                     </div>
                 </div>
-                <div id="oy_pull_halt" align="center" class="oy_button oy_button_halt_dull" style="position:absolute;bottom:14%;right:15.5%;width:7.5%;height:14%;" onclick="oy_pull_halt()">
+                <div id="oy_pull_halt" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:14%;right:15.5%;width:7.5%;height:14%;" onclick="oy_pull_halt()">
                     <div style="position:relative;top:-3%;">
                         HALT
                     </div>
                 </div>
-                <div id="oy_pull_reset" align="center" class="oy_button oy_button_halt_dull" style="position:absolute;bottom:14%;right:5%;width:9.5%;height:14%;" onclick="oy_pull_halt()">
+                <div id="oy_pull_reset" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:14%;right:5%;width:9.5%;height:14%;" onclick="oy_pull_halt()">
                     <div style="position:relative;top:-3%;">
                         RESET
                     </div>
@@ -571,7 +613,7 @@
                 <div align="center" class="oy_border oy_superhandle">
                     <div class="oy_description_handle">HANDLE</div>
                     <div class="oy_center_both" style="width:100%;">
-                        <input id="oy_recommit_superhandle" type="text" style="width:98%;" value="------------------------------------------------------------------------" />
+                        <input id="oy_recommit_superhandle" type="text" class="oy_superhandle_sub" style="text-align:center;width:98%;" value="" />
                     </div>
                 </div>
                 <div class="oy_border oy_input_corner" style="position:absolute;bottom:14%;left:5%;width:50%;height:30%;">
@@ -585,12 +627,12 @@
                         M-
                     </div>
                 </div>
-                <div id="oy_recommit_execute" align="center" class="oy_button oy_button_execute_dull" style="position:absolute;bottom:32%;right:5%;width:18%;height:14%;" onclick="oy_recommit_execute()">
+                <div id="oy_recommit_execute" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:32%;right:5%;width:18%;height:14%;" onclick="oy_recommit_execute()">
                     <div style="position:relative;top:-3%;">
                         MESH&nbsp;RCMT
                     </div>
                 </div>
-                <div id="oy_recommit_halt" align="center" class="oy_button oy_button_halt_dull" style="position:absolute;bottom:14%;right:5%;width:18%;height:14%;" onclick="oy_recommit_halt()">
+                <div id="oy_recommit_halt" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:14%;right:5%;width:18%;height:14%;" onclick="oy_recommit_halt()">
                     <div style="position:relative;top:-3%;">
                         REFR&nbsp;HALT
                     </div>
@@ -691,6 +733,8 @@
     window.onload = function() {
         window.OY_CONSOLE_SIZE = 200;
 
+        window.OY_FILE_HANDLE = null;
+        window.OY_FILE_DATA = null;
         window.OY_EXECUTE_PUSH = false;
         window.OY_EXECUTE_PULL = false;
         window.OY_EXECUTE_RECOMMIT = false;
@@ -699,6 +743,10 @@
         window.OY_CONSOLE_COUNTER = 0;
         window.OY_CONSOLE_HOVER = false;
         window.OY_GRAPH_PEERS = [false, false, false, false, false];
+
+        document.getElementById("oy_push_superhandle").value = "-".repeat(82);
+        document.getElementById("oy_pull_superhandle").value = "-".repeat(82);
+        document.getElementById("oy_recommit_superhandle").value = "-".repeat(82);
 
         oy_console_local("Loading console...");
 
@@ -842,8 +890,11 @@
     function oy_file_change(oy_file_object) {
         oy_file_read(oy_file_object, function(oy_file_data) {
             window.OY_FILE_DATA = oy_file_data;
-            document.getElementById("oy_push_execute").classList.remove("oy_button_execute_dull");
+            document.getElementById("oy_push_execute").classList.remove("oy_button_all_dull");
             document.getElementById("oy_push_execute").classList.add("oy_button_execute_active");
+
+            document.getElementById("oy_push_reset").classList.remove("oy_button_all_dull");
+            document.getElementById("oy_push_reset").classList.add("oy_button_reset_active");
         });
     }
 
@@ -860,98 +911,146 @@
         window.URL.revokeObjectURL(blobUrl);
     }
 
+    function oy_push_superhandle_copy() {
+        let copyText = document.getElementById("oy_push_superhandle");
+        copyText.select();
+        document.execCommand("copy");
+
+        let tooltip = document.getElementById("myTooltip");
+        tooltip.innerHTML = "Copied: " + copyText.value;
+    }
+
+    function oy_push_superhandle_reset() {
+        let tooltip = document.getElementById("myTooltip");
+        tooltip.innerHTML = "Copy to clipboard";
+    }
+
     function oy_push_execute() {
         if (window.OY_EXECUTE_PUSH===true||window.OY_EXECUTE_PULL===true||window.OY_EXECUTE_RECOMMIT===true||window.OY_FILE_DATA===null) return false;
         window.OY_EXECUTE_PUSH = true;
-        if (window.OY_FILE_DATA!==null) {
-            document.getElementById("oy_push_execute").classList.remove("oy_button_execute_active");
-            document.getElementById("oy_push_execute").classList.add("oy_button_execute_dull");
-        }
+        document.getElementById("oy_push_execute").classList.remove("oy_button_execute_active");
+        document.getElementById("oy_push_execute").classList.add("oy_button_all_dull");
 
-        document.getElementById("oy_push_halt").classList.remove("oy_button_halt_dull");
+        document.getElementById("oy_push_halt").classList.remove("oy_button_all_dull");
         document.getElementById("oy_push_halt").classList.add("oy_button_halt_active");
 
+        document.getElementById("oy_push_reset").classList.remove("oy_button_reset_active");
+        document.getElementById("oy_push_reset").classList.add("oy_button_all_dull");
+
         document.getElementById("oy_pull_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_pull_execute").classList.add("oy_button_execute_dull");
+        document.getElementById("oy_pull_execute").classList.add("oy_button_all_dull");
 
         document.getElementById("oy_recommit_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_recommit_execute").classList.add("oy_button_execute_dull");
+        document.getElementById("oy_recommit_execute").classList.add("oy_button_all_dull");
 
         document.getElementById("oy_send_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_send_execute").classList.add("oy_button_execute_dull");
+        document.getElementById("oy_send_execute").classList.add("oy_button_all_dull");
 
         document.getElementById("oy_receive_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_receive_execute").classList.add("oy_button_execute_dull");
+        document.getElementById("oy_receive_execute").classList.add("oy_button_all_dull");
 
-        document.getElementById("oy_push_superhandle").value = oy_data_push(window.OY_FILE_DATA);
+        if (window.OY_FILE_HANDLE===null) {
+            let oy_superhandle = oy_data_push(window.OY_FILE_DATA);
+            document.getElementById("oy_push_superhandle").value = oy_superhandle;
+            window.OY_FILE_HANDLE = oy_superhandle.substr(32, 48);
+        }
+        else oy_data_push(window.OY_FILE_DATA, window.OY_FILE_HANDLE);
     }
 
     function oy_push_halt() {
         if (window.OY_EXECUTE_PUSH===false) return false;
         window.OY_EXECUTE_PUSH = false;
-        document.getElementById("oy_push_execute").classList.remove("oy_button_execute_dull");
+        document.getElementById("oy_push_execute").classList.remove("oy_button_all_dull");
         document.getElementById("oy_push_execute").classList.add("oy_button_execute_active");
 
         document.getElementById("oy_push_halt").classList.remove("oy_button_halt_active");
-        document.getElementById("oy_push_halt").classList.add("oy_button_halt_dull");
+        document.getElementById("oy_push_halt").classList.add("oy_button_all_dull");
 
-        document.getElementById("oy_pull_execute").classList.remove("oy_button_execute_dull");
+        document.getElementById("oy_push_reset").classList.remove("oy_button_all_dull");
+        document.getElementById("oy_push_reset").classList.add("oy_button_reset_active");
+
+        document.getElementById("oy_pull_execute").classList.remove("oy_button_all_dull");
         document.getElementById("oy_pull_execute").classList.add("oy_button_execute_active");
 
-        document.getElementById("oy_recommit_execute").classList.remove("oy_button_execute_dull");
+        document.getElementById("oy_recommit_execute").classList.remove("oy_button_all_dull");
         document.getElementById("oy_recommit_execute").classList.add("oy_button_execute_active");
 
-        document.getElementById("oy_send_execute").classList.remove("oy_button_execute_dull");
+        document.getElementById("oy_send_execute").classList.remove("oy_button_all_dull");
         document.getElementById("oy_send_execute").classList.add("oy_button_execute_active");
 
-        document.getElementById("oy_receive_execute").classList.remove("oy_button_execute_dull");
+        document.getElementById("oy_receive_execute").classList.remove("oy_button_all_dull");
         document.getElementById("oy_receive_execute").classList.add("oy_button_execute_active");
 
-        window.OY_DATA_PUSH[document.getElementById('oy_push_superhandle').value.substr(32, 48)] = false;
+        window.OY_DATA_PUSH[window.OY_FILE_HANDLE] = false;
+    }
+
+    function oy_push_reset() {
+        if (window.OY_EXECUTE_PUSH===true||window.OY_FILE_DATA===null) return false;
+        document.getElementById("oy_push_execute").classList.remove("oy_button_execute_active");
+        document.getElementById("oy_push_execute").classList.add("oy_button_all_dull");
+
+        document.getElementById("oy_push_reset").classList.remove("oy_button_reset_active");
+        document.getElementById("oy_push_reset").classList.add("oy_button_all_dull");
+
+        document.getElementById("oy_pull_execute").classList.remove("oy_button_all_dull");
+        document.getElementById("oy_pull_execute").classList.add("oy_button_execute_active");
+
+        document.getElementById("oy_recommit_execute").classList.remove("oy_button_all_dull");
+        document.getElementById("oy_recommit_execute").classList.add("oy_button_execute_active");
+
+        document.getElementById("oy_send_execute").classList.remove("oy_button_all_dull");
+        document.getElementById("oy_send_execute").classList.add("oy_button_execute_active");
+
+        document.getElementById("oy_receive_execute").classList.remove("oy_button_all_dull");
+        document.getElementById("oy_receive_execute").classList.add("oy_button_execute_active");
+
+        window.OY_FILE_HANDLE = null;
         window.OY_FILE_DATA = null;
+        document.getElementById("oy_file_upload").value = "";
+        document.getElementById("oy_push_superhandle").value = "-".repeat(82);
     }
 
     function oy_pull_execute() {
         if (window.OY_EXECUTE_PUSH===true||window.OY_EXECUTE_PULL===true||window.OY_EXECUTE_RECOMMIT===true) return false;
         window.OY_EXECUTE_PULL = true;
         document.getElementById("oy_pull_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_pull_execute").classList.add("oy_button_execute_dull");
+        document.getElementById("oy_pull_execute").classList.add("oy_button_all_dull");
 
-        document.getElementById("oy_pull_halt").classList.remove("oy_button_halt_dull");
+        document.getElementById("oy_pull_halt").classList.remove("oy_button_all_dull");
         document.getElementById("oy_pull_halt").classList.add("oy_button_halt_active");
 
         document.getElementById("oy_push_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_push_execute").classList.add("oy_button_execute_dull");
+        document.getElementById("oy_push_execute").classList.add("oy_button_all_dull");
 
         document.getElementById("oy_recommit_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_recommit_execute").classList.add("oy_button_execute_dull");
+        document.getElementById("oy_recommit_execute").classList.add("oy_button_all_dull");
 
         document.getElementById("oy_send_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_send_execute").classList.add("oy_button_execute_dull");
+        document.getElementById("oy_send_execute").classList.add("oy_button_all_dull");
 
         document.getElementById("oy_receive_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_receive_execute").classList.add("oy_button_execute_dull");
+        document.getElementById("oy_receive_execute").classList.add("oy_button_all_dull");
     }
 
     function oy_pull_halt() {
         if (window.OY_EXECUTE_PULL===false) return false;
         window.OY_EXECUTE_PULL = false;
-        document.getElementById("oy_pull_execute").classList.remove("oy_button_execute_dull");
+        document.getElementById("oy_pull_execute").classList.remove("oy_button_all_dull");
         document.getElementById("oy_pull_execute").classList.add("oy_button_execute_active");
 
         document.getElementById("oy_pull_halt").classList.remove("oy_button_halt_active");
-        document.getElementById("oy_pull_halt").classList.add("oy_button_halt_dull");
+        document.getElementById("oy_pull_halt").classList.add("oy_button_all_dull");
 
-        document.getElementById("oy_push_execute").classList.remove("oy_button_execute_dull");
+        document.getElementById("oy_push_execute").classList.remove("oy_button_all_dull");
         document.getElementById("oy_push_execute").classList.add("oy_button_execute_active");
 
-        document.getElementById("oy_recommit_execute").classList.remove("oy_button_execute_dull");
+        document.getElementById("oy_recommit_execute").classList.remove("oy_button_all_dull");
         document.getElementById("oy_recommit_execute").classList.add("oy_button_execute_active");
 
-        document.getElementById("oy_send_execute").classList.remove("oy_button_execute_dull");
+        document.getElementById("oy_send_execute").classList.remove("oy_button_all_dull");
         document.getElementById("oy_send_execute").classList.add("oy_button_execute_active");
 
-        document.getElementById("oy_receive_execute").classList.remove("oy_button_execute_dull");
+        document.getElementById("oy_receive_execute").classList.remove("oy_button_all_dull");
         document.getElementById("oy_receive_execute").classList.add("oy_button_execute_active");
     }
 
@@ -959,43 +1058,43 @@
         if (window.OY_EXECUTE_PUSH===true||window.OY_EXECUTE_PULL===true||window.OY_EXECUTE_RECOMMIT===true) return false;
         window.OY_EXECUTE_RECOMMIT = true;
         document.getElementById("oy_recommit_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_recommit_execute").classList.add("oy_button_execute_dull");
+        document.getElementById("oy_recommit_execute").classList.add("oy_button_all_dull");
 
-        document.getElementById("oy_recommit_halt").classList.remove("oy_button_halt_dull");
+        document.getElementById("oy_recommit_halt").classList.remove("oy_button_all_dull");
         document.getElementById("oy_recommit_halt").classList.add("oy_button_halt_active");
 
         document.getElementById("oy_push_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_push_execute").classList.add("oy_button_execute_dull");
+        document.getElementById("oy_push_execute").classList.add("oy_button_all_dull");
 
         document.getElementById("oy_pull_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_pull_execute").classList.add("oy_button_execute_dull");
+        document.getElementById("oy_pull_execute").classList.add("oy_button_all_dull");
 
         document.getElementById("oy_send_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_send_execute").classList.add("oy_button_execute_dull");
+        document.getElementById("oy_send_execute").classList.add("oy_button_all_dull");
 
         document.getElementById("oy_receive_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_receive_execute").classList.add("oy_button_execute_dull");
+        document.getElementById("oy_receive_execute").classList.add("oy_button_all_dull");
     }
 
     function oy_recommit_halt() {
         if (window.OY_EXECUTE_RECOMMIT===false) return false;
         window.OY_EXECUTE_RECOMMIT = false;
-        document.getElementById("oy_recommit_execute").classList.remove("oy_button_execute_dull");
+        document.getElementById("oy_recommit_execute").classList.remove("oy_button_all_dull");
         document.getElementById("oy_recommit_execute").classList.add("oy_button_execute_active");
 
         document.getElementById("oy_recommit_halt").classList.remove("oy_button_halt_active");
-        document.getElementById("oy_recommit_halt").classList.add("oy_button_halt_dull");
+        document.getElementById("oy_recommit_halt").classList.add("oy_button_all_dull");
 
-        document.getElementById("oy_push_execute").classList.remove("oy_button_execute_dull");
+        document.getElementById("oy_push_execute").classList.remove("oy_button_all_dull");
         document.getElementById("oy_push_execute").classList.add("oy_button_execute_active");
 
-        document.getElementById("oy_pull_execute").classList.remove("oy_button_execute_dull");
+        document.getElementById("oy_pull_execute").classList.remove("oy_button_all_dull");
         document.getElementById("oy_pull_execute").classList.add("oy_button_execute_active");
 
-        document.getElementById("oy_send_execute").classList.remove("oy_button_execute_dull");
+        document.getElementById("oy_send_execute").classList.remove("oy_button_all_dull");
         document.getElementById("oy_send_execute").classList.add("oy_button_execute_active");
 
-        document.getElementById("oy_receive_execute").classList.remove("oy_button_execute_dull");
+        document.getElementById("oy_receive_execute").classList.remove("oy_button_all_dull");
         document.getElementById("oy_receive_execute").classList.add("oy_button_execute_active");
     }
 
@@ -1003,44 +1102,44 @@
         if (window.OY_EXECUTE_PUSH===true||window.OY_EXECUTE_PULL===true||window.OY_EXECUTE_RECOMMIT===true) return false;
         window.OY_EXECUTE_SEND = true;
         document.getElementById("oy_recommit_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_recommit_execute").classList.add("oy_button_execute_dull");
+        document.getElementById("oy_recommit_execute").classList.add("oy_button_all_dull");
 
-        document.getElementById("oy_recommit_halt").classList.remove("oy_button_halt_dull");
+        document.getElementById("oy_recommit_halt").classList.remove("oy_button_all_dull");
         document.getElementById("oy_recommit_halt").classList.add("oy_button_halt_active");
 
         document.getElementById("oy_push_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_push_execute").classList.add("oy_button_execute_dull");
+        document.getElementById("oy_push_execute").classList.add("oy_button_all_dull");
 
         document.getElementById("oy_pull_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_pull_execute").classList.add("oy_button_execute_dull");
+        document.getElementById("oy_pull_execute").classList.add("oy_button_all_dull");
 
         document.getElementById("oy_send_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_send_execute").classList.add("oy_button_execute_dull");
+        document.getElementById("oy_send_execute").classList.add("oy_button_all_dull");
 
         document.getElementById("oy_receive_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_receive_execute").classList.add("oy_button_execute_dull");
+        document.getElementById("oy_receive_execute").classList.add("oy_button_all_dull");
     }
 
     function oy_receive_execute() {
         if (window.OY_EXECUTE_PUSH===true||window.OY_EXECUTE_PULL===true||window.OY_EXECUTE_RECOMMIT===true) return false;
         window.OY_EXECUTE_RECEIVE = true;
         document.getElementById("oy_recommit_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_recommit_execute").classList.add("oy_button_execute_dull");
+        document.getElementById("oy_recommit_execute").classList.add("oy_button_all_dull");
 
-        document.getElementById("oy_recommit_halt").classList.remove("oy_button_halt_dull");
+        document.getElementById("oy_recommit_halt").classList.remove("oy_button_all_dull");
         document.getElementById("oy_recommit_halt").classList.add("oy_button_halt_active");
 
         document.getElementById("oy_push_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_push_execute").classList.add("oy_button_execute_dull");
+        document.getElementById("oy_push_execute").classList.add("oy_button_all_dull");
 
         document.getElementById("oy_pull_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_pull_execute").classList.add("oy_button_execute_dull");
+        document.getElementById("oy_pull_execute").classList.add("oy_button_all_dull");
 
         document.getElementById("oy_send_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_send_execute").classList.add("oy_button_execute_dull");
+        document.getElementById("oy_send_execute").classList.add("oy_button_all_dull");
 
         document.getElementById("oy_receive_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_receive_execute").classList.add("oy_button_execute_dull");
+        document.getElementById("oy_receive_execute").classList.add("oy_button_all_dull");
     }
 
     function oy_tab(oy_tab_id) {
