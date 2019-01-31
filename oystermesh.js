@@ -442,7 +442,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         if (oy_nonce_purge.length>0) {
             oy_data_payload[3] = oy_nonce_purge;
 
-            oy_log("Pulling handle "+oy_data_payload[2]+" forward along the mesh");
+            oy_log("Pulling handle "+oy_short(oy_data_payload[2])+" forward along the mesh");
             oy_data_route("OY_LOGIC_ALL", "OY_DATA_PULL", oy_data_payload);
         }
         return true;
@@ -1028,7 +1028,7 @@ function oy_data_pull(oy_callback, oy_data_handle, oy_data_nonce_max, oy_crypt_p
     }
     oy_data_nonce_set.sort(function(){return 0.5 - Math.random()});
     while (oy_data_nonce_set.length>window.OY_DATA_PULL_NONCE_MAX) oy_data_nonce_set.pop();
-    oy_log("Pulling handle "+oy_data_handle+" with nonce max: "+oy_data_nonce_max+" and nonce set: "+JSON.stringify(oy_data_nonce_set));
+    oy_log("Pulling handle "+oy_short(oy_data_handle)+" with nonce max: "+oy_data_nonce_max+" and nonce set: "+JSON.stringify(oy_data_nonce_set));
     oy_data_route("OY_LOGIC_ALL", "OY_DATA_PULL", [[], oy_rand_gen(), oy_data_handle, oy_data_nonce_set]);
     setTimeout(function() {
         oy_data_pull(oy_callback, oy_data_handle, oy_data_nonce_max, oy_crypt_pass);
@@ -1048,7 +1048,7 @@ function oy_data_collect(oy_data_source, oy_data_handle, oy_data_nonce, oy_data_
     if (typeof(window.OY_COLLECT[oy_data_handle])==="undefined") window.OY_COLLECT[oy_data_handle] = {};
     if (typeof(window.OY_COLLECT[oy_data_handle][oy_data_nonce])==="undefined") window.OY_COLLECT[oy_data_handle][oy_data_nonce] = {};
     if (typeof(window.OY_COLLECT[oy_data_handle][oy_data_nonce][oy_data_value])==="undefined") window.OY_COLLECT[oy_data_handle][oy_data_nonce][oy_data_value] = [oy_data_source];
-    else if (window.OY_COLLECT[oy_data_handle][oy_data_nonce][oy_data_value].indexOf(oy_data_source)===-1) {//TODO there seems to be a problem here
+    else if (window.OY_COLLECT[oy_data_handle][oy_data_nonce][oy_data_value].indexOf(oy_data_source)===-1) {
         let oy_source_local;
         for (let oy_data_value_sub in window.OY_COLLECT[oy_data_handle][oy_data_nonce]) {
             if (oy_data_value===oy_data_value_sub) continue;
