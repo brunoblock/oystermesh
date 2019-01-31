@@ -23,7 +23,7 @@ Storage limit: <span id="oy_storage_limit"></span><br>
 <input id="oy_button_push_cancel" type="button" disabled="disabled" value="CANCEL" onclick="oy_button3()" />
 <input id="oy_button_push_reset" type="button" value="RESET" onclick="oy_button6()" />
 <br><br>
-<input id="OY_HANDLE_PULL" type="text" style="width:100px;" /><br>
+<input id="oy_handle_pull" type="text" style="width:100px;" /><br>
 <input id="oy_button_pull" type="button" value="DATA PULL" onclick="oy_button4()" />
 <input id="oy_button_pull_cancel" type="button" disabled="disabled" value="CANCEL" onclick="oy_button5()" />
 <br><br>
@@ -79,7 +79,7 @@ CONSTRUCT:<br>
     }
 
     function oy_button4() {
-        document.getElementById("OY_HANDLE_PULL").disabled = true;
+        document.getElementById("oy_handle_pull").disabled = true;
         document.getElementById("oy_button_pull").disabled = true;
         document.getElementById("oy_button_pull_cancel").disabled = false;
         oy_data_pull(function(oy_superhandle, oy_data_value) {
@@ -92,12 +92,12 @@ CONSTRUCT:<br>
         document.getElementById("OY_HANDLE_PULL").disabled = false;
         document.getElementById("oy_button_pull").disabled = false;
         document.getElementById("oy_button_pull_cancel").disabled = true;
-        window.OY_DATA_PULL[document.getElementById('OY_HANDLE_PULL').value.substr(32, 48)] = false;
+        window.OY_DATA_PULL[document.getElementById('oy_handle_pull').value.substr(32, 48)] = false;
     }
 
     function oy_button6() {
+        oy_data_push_reset(document.getElementById('oy_push_handle').value.substr(32, 48));
         document.getElementById("oy_push_handle").value = "";
-        document.getElementById("oy_push_data").value = "";
         document.getElementById("oy_file_upload").value = "";
     }
 
