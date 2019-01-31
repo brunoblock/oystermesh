@@ -223,6 +223,10 @@
                 font-family: 'Courier New', sans-serif;
             }
 
+            .oy_superhandle_sub:hover {
+                cursor: pointer;
+            }
+
             .oy_input_corner {
                 position:absolute;
                 bottom:14%;
@@ -321,42 +325,68 @@
                 font-size: 1vh;
             }
 
-            .tooltip {
-                position: relative;
-                display: inline-block;
+            .oy_tooltip {
+                position: absolute;
             }
 
-            .tooltip .tooltiptext {
-                visibility: hidden;
-                width: 140px;
+            .oy_tooltip .oy_tooltip_text {
+                position: absolute;
+                width: 11vh;
                 background-color: #555;
                 color: #fff;
                 text-align: center;
-                border-radius: 6px;
-                padding: 5px;
-                position: absolute;
+                border-radius: 0.6vh;
+                padding: 0.6vh;
                 z-index: 1;
                 bottom: 150%;
                 left: 50%;
-                margin-left: -75px;
+                margin-left: -5.5vh;
                 opacity: 0;
-                transition: opacity 0.3s;
             }
 
-            .tooltip .tooltiptext::after {
+            .oy_tooltip .oy_tooltip_text::after {
                 content: "";
                 position: absolute;
                 top: 100%;
                 left: 50%;
-                margin-left: -5px;
-                border-width: 5px;
+                margin-left: -0.6vh;
+                border-width: 0.6vh;
                 border-style: solid;
                 border-color: #555 transparent transparent transparent;
             }
 
-            .tooltip:hover .tooltiptext {
-                visibility: visible;
+            .oy_tooltip:hover .oy_tooltip_text {
                 opacity: 1;
+            }
+
+            .oy_tooltip_warn {
+                position: absolute;
+            }
+
+            .oy_tooltip_warn .oy_tooltip_text_warn {
+                position: absolute;
+                width: 12vh;
+                background-color: #c37b2c;
+                color: #151515;
+                text-align: center;
+                border-radius: 0.6vh;
+                padding: 0.6vh;
+                z-index: 1;
+                bottom: 150%;
+                left: 50%;
+                margin-left: -5.5vh;
+                opacity: 0;
+            }
+
+            .oy_tooltip_warn .oy_tooltip_text_warn::after {
+                content: "";
+                position: absolute;
+                top: 100%;
+                left: 50%;
+                margin-left: -0.6vh;
+                border-width: 0.6vh;
+                border-style: solid;
+                border-color: #c37b2c transparent transparent transparent;
             }
 
             #oy_github_ribbon a:hover {
@@ -540,17 +570,18 @@
             <div id="oy_tab_send" class="oy_tab" style="position:fixed;top:-20%;height:20%;left: 74.5%;transform: translateX(-50%);background-color: #7A7A7A;color:#232323;z-index:-50;" onclick="oy_tab(this.id)">SEND</div>
             <div id="oy_tab_receive" class="oy_tab oy_right" style="position:fixed;top:-20%;right:1.5%;height:20%;background-color: #7A7A7A;color:#232323;z-index:-50;" onclick="oy_tab(this.id)">RECEIVE</div>
             <div id="oy_interface_store" class="oy_center_hor oy_border oy_interface_main" style="top:0;width:100%;height:100%;background-color: #404040;z-index:100;">
-                <div align="center" class="oy_border oy_superhandle">
-                    <div class="oy_description_handle" onclick="oy_push_superhandle_copy()" onmouseout="oy_push_superhandle_reset()">HANDLE</div>
+                <div align="center" class="oy_border oy_superhandle oy_tooltip oy_tooltip_warn">
+                    <div class="oy_description_handle">HANDLE</div>
                     <div class="oy_center_both" style="width:100%;">
-                        <span class="tooltiptext" id="myTooltip">Copy to clipboard</span>
-                        <input id="oy_push_superhandle" type="text" class="oy_superhandle_sub" style="text-align:center;width:98%;" readonly="readonly" value="" />
+                        <div class="oy_tooltip_text" id="oy_tooltip_push">Copy to clipboard</div>
+                        <div class="oy_tooltip_text_warn" id="oy_tooltip_push_warn">Handle not copied!</div>
+                        <input id="oy_push_superhandle" type="text" class="oy_superhandle_sub" style="text-align:center;width:98%;" onclick="oy_push_superhandle_copy()" onmouseout="oy_push_superhandle_reset()" readonly="readonly" value="" />
                     </div>
                 </div>
                 <div class="oy_border oy_input_corner">
                     <div class="oy_description">FILE&nbsp;UPLOAD</div>
                     <div style="position:absolute;top:25%;left:5%;">
-                        <input type="file" id="oy_file_upload" />
+                        <input type="file" id="oy_file_upload" onmouseenter="oy_push_reset_handle_enter()" onmouseleave="oy_push_reset_handle_leave()" />
                     </div>
                 </div>
                 <div class="oy_border oy_mesh_rate" style="position:absolute;bottom:14%;left:59%;width:14%;height:30%;">
@@ -569,7 +600,7 @@
                         HALT
                     </div>
                 </div>
-                <div id="oy_push_reset" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:14%;right:5%;width:9.5%;height:14%;" onclick="oy_push_reset()">
+                <div id="oy_push_reset" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:14%;right:5%;width:9.5%;height:14%;" onclick="oy_push_reset()" onmouseenter="oy_push_reset_handle_enter()" onmouseleave="oy_push_reset_handle_leave()">
                     <div style="position:relative;top:-3%;">
                         RESET
                     </div>
@@ -912,17 +943,13 @@
     }
 
     function oy_push_superhandle_copy() {
-        let copyText = document.getElementById("oy_push_superhandle");
-        copyText.select();
+        document.getElementById("oy_push_superhandle").select();
         document.execCommand("copy");
-
-        let tooltip = document.getElementById("myTooltip");
-        tooltip.innerHTML = "Copied: " + copyText.value;
+        document.getElementById("oy_tooltip_push").innerHTML = "Copied handle";
     }
 
     function oy_push_superhandle_reset() {
-        let tooltip = document.getElementById("myTooltip");
-        tooltip.innerHTML = "Copy to clipboard";
+        document.getElementById("oy_tooltip_push").innerHTML = "Copy to clipboard";
     }
 
     function oy_push_execute() {
@@ -1008,6 +1035,14 @@
         window.OY_FILE_DATA = null;
         document.getElementById("oy_file_upload").value = "";
         document.getElementById("oy_push_superhandle").value = "-".repeat(82);
+    }
+
+    function oy_push_reset_handle_enter() {
+        document.getElementById("oy_tooltip_push_warn").style.opacity = "1";
+    }
+
+    function oy_push_reset_handle_leave() {
+        document.getElementById("oy_tooltip_push_warn").style.opacity = null;
     }
 
     function oy_pull_execute() {
