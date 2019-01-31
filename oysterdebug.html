@@ -37,6 +37,10 @@ LATENCY:<br>
 <div id="oy_latency_list">
     BLANK
 </div><br>
+TALLY:<br>
+<div id="oy_tally_list">
+    BLANK
+</div><br>
 COLLECT:<br>
 <div id="oy_collect_list">
     BLANK
@@ -166,6 +170,14 @@ CONSTRUCT:<br>
             oy_latency_build += oy_short(i)+": "+window.OY_LATENCY[i][1]+", "+window.OY_LATENCY[i][2]+", "+window.OY_LATENCY[i][3]+", "+window.OY_LATENCY[i][4]+", "+window.OY_LATENCY[i][5]+"<br>";
         }
         document.getElementById("oy_latency_list").innerHTML = oy_latency_build;
+        let oy_tally_build = "";
+        for (let i in window.OY_PUSH_TALLY) {
+            oy_tally_build += i+"<br>";
+            for (let x in window.OY_PUSH_TALLY[i]) {
+                oy_tally_build += "---NONCE: "+x+" CONTENTS: "+JSON.stringify(window.OY_PUSH_TALLY[i][x])+"<br>";
+            }
+        }
+        document.getElementById("oy_tally_list").innerHTML = oy_tally_build;
         let oy_collect_build = "";
         for (let i in window.OY_COLLECT) {
             oy_collect_build += i+"<br>";

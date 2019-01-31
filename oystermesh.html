@@ -581,7 +581,7 @@
         </div>
     </div>
     <div class="oy_holder oy_fade two">
-        <div id="oy_graph_nonce" class="oy_center_hor oy_border oy_graph_nonce" style="top:0;width:50%;height:10%;background-color: #404040;"></div>
+        <div id="oy_graph_nonce" class="oy_center_hor oy_border oy_graph_nonce" style="top:0;width:50%;height:10%;background-color: #404040;overflow: hidden"></div>
         <div id="oy_interface_main" class="oy_center_hor" style="top:18%;width:50%;height:25%;">
             <div id="oy_tab_push" class="oy_tab oy_left" style="position:fixed;top:-20%;left:1.5%;height:20%;background-color: #404040;z-index:-50;" onclick="oy_tab(this.id)">UPLOAD</div>
             <div id="oy_tab_pull" class="oy_tab" style="position:fixed;top:-20%;height:20%;left: 31%;transform: translateX(-50%);background-color: #7A7A7A;color:#232323;z-index:-50;" onclick="oy_tab(this.id)">DOWNLOAD</div>
@@ -802,6 +802,13 @@
         document.getElementById("oy_pull_superhandle").value = "-".repeat(82);
         document.getElementById("oy_recommit_superhandle").value = "-".repeat(82);
 
+        //oy_graph_nonce_set(50);
+        setTimeout(function() {
+
+            //oy_graph_nonce_set(null);
+        }, 2000);
+        //oy_graph_nonce_fill(8, [0, 80, 255]);
+
         oy_console_local("Loading console...");
 
         document.getElementById("oy_file_upload").addEventListener('change', oy_file_change, false);
@@ -874,6 +881,40 @@
     function oy_element_remove(oy_element_id) {
         let oy_element = document.getElementById(oy_element_id);
         oy_element.parentNode.removeChild(oy_element);
+    }
+
+    function oy_graph_nonce_set(oy_nonce_max) {
+        if (oy_nonce_max===null) {
+            let oy_parent = document.getElementById("oy_graph_nonce");
+            while (oy_parent.firstChild) oy_parent.removeChild(oy_parent.firstChild);
+            return true;
+        }
+        let oy_nonce_counter = 0;
+        let oy_nonce_buffer = 0.2;
+        let oy_nonce_left = 0;
+        let oy_nonce_width = 100/oy_nonce_max;
+        while (oy_nonce_counter<oy_nonce_max) {
+            oy_element_add("oy_graph_nonce", "div", "oy_graph_nonce_"+oy_nonce_counter, "");
+            let oy_nonce_local = document.getElementById("oy_graph_nonce_"+oy_nonce_counter);
+            oy_nonce_local.style.position = "absolute";
+            oy_nonce_local.style.top = "-5%";
+            oy_nonce_local.style.left = oy_nonce_left+"%";
+            oy_nonce_local.style.height = "110%";
+            oy_nonce_local.style.width = (oy_nonce_width+oy_nonce_buffer)+"%";
+            oy_nonce_local.style.zIndex = ""+oy_nonce_counter;
+            oy_nonce_local.style.transition = "all .6s ease-out";
+            oy_nonce_left += oy_nonce_width;
+            oy_nonce_counter++;
+            setTimeout(function() {
+                oy_nonce_local.style.backgroundColor = "#828282";
+            }, 1);
+        }
+    }
+
+    function oy_graph_nonce_fill(oy_nonce, oy_colour) {
+        if (!document.getElementById("oy_graph_nonce_"+oy_nonce)) return false;
+        if (oy_colour===null) document.getElementById("oy_graph_nonce_"+oy_nonce).style.backgroundColor = "#828282";
+        else document.getElementById("oy_graph_nonce_"+oy_nonce).style.backgroundColor = "rgb(+"+oy_colour[0]+", "+oy_colour[1]+", "+oy_colour[2]+")";
     }
 
     function oy_graph_peer(oy_graph_slot, oy_peer_short, oy_beam_ratio) {
@@ -1004,12 +1045,13 @@
 
         if (window.OY_HANDLE_PUSH===null) {
             let oy_superhandle = oy_data_push(window.OY_FILE_DATA);
+            window.OY_FILE_DATA = "oy_null";
             document.getElementById("oy_push_superhandle").value = oy_superhandle;
             window.OY_HANDLE_PUSH = oy_superhandle.substr(32, 48);
             window.OY_HANDLE_PUSH_COPY = false;
             document.getElementById("oy_tooltip_push").style.display = "block";
         }
-        else oy_data_push(window.OY_FILE_DATA, window.OY_HANDLE_PUSH);
+        else oy_data_push(null, window.OY_HANDLE_PUSH);
     }
 
     function oy_push_halt() {
@@ -1053,6 +1095,7 @@
         document.getElementById("oy_recommit_execute").classList.remove("oy_button_all_dull");
         document.getElementById("oy_recommit_execute").classList.add("oy_button_execute_active");
 
+        oy_data_push_reset(window.OY_HANDLE_PUSH);
         window.OY_HANDLE_PUSH = null;
         window.OY_HANDLE_PUSH_COPY = null;
         window.OY_FILE_DATA = null;
