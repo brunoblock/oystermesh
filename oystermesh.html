@@ -606,7 +606,7 @@
                 <div class="oy_border oy_mesh_glue" style="position:absolute;bottom:14%;left:59%;width:14%;height:30%;">
                     <div class="oy_description">MESH&nbsp;GLUE</div>
                     <div id="oy_mesh_glue_sub" class="oy_mesh_glue_sub">
-                        M-
+                        G-
                     </div>
                 </div>
                 <div id="oy_push_execute" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:32%;right:5%;width:18%;height:14%;" onclick="oy_push_execute()">
@@ -668,12 +668,6 @@
                 <div class="oy_border oy_input_corner" style="position:absolute;bottom:14%;left:5%;width:50%;height:30%;">
                     <div class="oy_description">FILE&nbsp;COVERAGE</div>
                     <div style="position:absolute;top:25%;left:20%;">
-                    </div>
-                </div>
-                <div class="oy_border oy_mesh_rate">
-                    <div class="oy_description">MESH&nbsp;RATE</div>
-                    <div class="oy_rate">
-                        M-
                     </div>
                 </div>
                 <div id="oy_recommit_execute" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:32%;right:5%;width:18%;height:14%;" onclick="oy_recommit_execute()">
@@ -783,7 +777,7 @@
 </div>
 <script type="text/javascript">
     window.onload = function() {
-        window.OY_CONSOLE_SIZE = 200;
+        window.OY_CONSOLE_SIZE = 400;
 
         window.OY_FILE_DATA = null;
         window.OY_MESH_GLUE = [];
@@ -906,15 +900,16 @@
     }
 
     function oy_graph_nonce_colour(oy_tally_count) {
-        let oy_intensity = 40;
+        let oy_brightness = 200;
+        let oy_intensity = 30;
         let oy_green = 10;
-        let oy_blue = 255;
+        let oy_blue = oy_brightness;
 
         oy_green += oy_tally_count*oy_intensity;
 
-        if (oy_green>255) {
-            oy_blue -= oy_green-255;
-            oy_green = 255;
+        if (oy_green>oy_brightness) {
+            oy_blue -= oy_green-oy_brightness;
+            oy_green = oy_brightness;
         }
         if (oy_blue<0) oy_blue = 0;
 
@@ -1060,8 +1055,7 @@
             for (let oy_data_nonce_sub in window.OY_MESH_GLUE) {
                 if (window.OY_MESH_GLUE[oy_data_nonce_sub]<oy_glue_lowest) oy_glue_lowest = window.OY_MESH_GLUE[oy_data_nonce_sub];
             }
-            console.log("M"+oy_glue_lowest);
-            document.getElementById("oy_mesh_glue_sub").innerHTML = "M"+oy_glue_lowest;
+            document.getElementById("oy_mesh_glue_sub").innerHTML = "G"+oy_glue_lowest;
         };
         if (window.OY_HANDLE_PUSH===null) {
             let oy_superhandle = oy_data_push(window.OY_FILE_DATA, null, oy_callback_tally);
@@ -1129,6 +1123,7 @@
         window.OY_FILE_DATA = null;
         document.getElementById("oy_file_upload").value = "";
         document.getElementById("oy_push_superhandle").value = "-".repeat(82);
+        document.getElementById("oy_mesh_glue_sub").innerHTML = "G-";
         document.getElementById("oy_tooltip_push").style.display = "none";
     }
 
