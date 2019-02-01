@@ -251,9 +251,10 @@
                 position:absolute;
                 top:50%;
                 left:50%;
-                transform: translate(-50%, -50%);
-                font-family: geo_light, Fallback, sans-serif;
-                font-size:3vh;
+                transform: translate(-37%, -50%);
+                width:90%;
+                font-family: "Courier New", Fallback, sans-serif;
+                font-size:1.5vh;
             }
 
             .oy_button {
@@ -606,7 +607,7 @@
                 <div class="oy_border oy_mesh_glue" style="position:absolute;bottom:14%;left:59%;width:14%;height:30%;">
                     <div class="oy_description">MESH&nbsp;GLUE</div>
                     <div id="oy_mesh_glue_sub" class="oy_mesh_glue_sub">
-                        G-
+                        G-/--%
                     </div>
                 </div>
                 <div id="oy_push_execute" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:32%;right:5%;width:18%;height:14%;" onclick="oy_push_execute()">
@@ -739,6 +740,7 @@
             <div class="oy_center_both oy_stats" style="height:77%;width:100%;">
                 <div align="right" style="position:absolute;left:-2.5%;top:0;width:50%;height:100%;">
                     SELF&nbsp;SHORT&nbsp;ID<br>
+                    SELF CAPACITY<br>
                     AVG&nbsp;LATENCY<br>
                     AVG&nbsp;PEERSHIP<br>
                     PEER&nbsp;COUNT<br>
@@ -746,12 +748,12 @@
                     MESH&nbsp;RANGE<br>
                     BEAM&nbsp;FLOW<br>
                     SOAK&nbsp;FLOW<br>
-                    STORAGE&nbsp;LIMIT<br>
                 </div>
                 <div class="oy_center_hor" style="top:0;width:0.7%;height:100%;background-color: #2a2a2a;">
                 </div>
                 <div style="position:absolute;right:-2.5%;top:0;width:50%;height:100%;font-weight:bold;">
                     <span id="oy_self_short">null</span><br>
+                    <span id="oy_storage_limit">0</span>&nbsp;MB<br>
                     <span id="oy_avg_latency">0</span>&nbsp;sec<br>
                     <span id="oy_avg_peership">0</span>&nbsp;sec<br>
                     <span id="oy_peer_count">0</span>&nbsp;peer(s)<br>
@@ -759,7 +761,6 @@
                     <span id="oy_mesh_size">0</span>&nbsp;nodes<br>
                     <span id="oy_beam_flow">0</span>&nbsp;bytes/sec<br>
                     <span id="oy_soak_flow">0</span>&nbsp;bytes/sec<br>
-                    <span id="oy_storage_limit">0</span>&nbsp;MB<br>
                 </div>
             </div>
         </div>
@@ -783,6 +784,8 @@
         window.OY_MESH_GLUE = [];
         window.OY_HANDLE_PUSH = null;
         window.OY_HANDLE_PUSH_COPY = null;
+        window.OY_NONCE_MAX_PUSH = null;
+        window.OY_NONCE_MAX_PULL = null;
         window.OY_HANDLE_PULL = null;
         window.OY_EXECUTE_PUSH = false;
         window.OY_EXECUTE_PULL = false;
@@ -917,9 +920,18 @@
     }
 
     function oy_graph_nonce_fill(oy_nonce, oy_colour) {
+        if (oy_nonce===true) {
+            let oy_children = document.getElementById("oy_graph_nonce").children;
+            for (let i = 0; i < oy_children.length; i++) {
+                let oy_graph_nonce_sub = oy_children[i];
+                oy_graph_nonce_sub.style.backgroundColor = "rgb(+"+oy_colour[0]+", "+oy_colour[1]+", "+oy_colour[2]+")";
+            }
+            return true;
+        }
         if (!document.getElementById("oy_graph_nonce_"+oy_nonce)) return false;
         if (oy_colour===null) document.getElementById("oy_graph_nonce_"+oy_nonce).style.backgroundColor = "#828282";
         else document.getElementById("oy_graph_nonce_"+oy_nonce).style.backgroundColor = "rgb(+"+oy_colour[0]+", "+oy_colour[1]+", "+oy_colour[2]+")";
+        return true;
     }
 
     function oy_graph_peer(oy_graph_slot, oy_peer_short, oy_beam_ratio) {
@@ -1048,14 +1060,28 @@
         document.getElementById("oy_recommit_execute").classList.remove("oy_button_execute_active");
         document.getElementById("oy_recommit_execute").classList.add("oy_button_all_dull");
 
+        document.getElementById("oy_mesh_glue_sub").innerHTML = "G0/00%";
+        setTimeout(function() {
+            oy_push_execute_post();
+        }, 100);
+    }
+
+    function oy_push_execute_post() {
         let oy_callback_tally = function(oy_data_nonce, oy_tally_count) {
             oy_graph_nonce_fill(oy_data_nonce, oy_graph_nonce_colour(oy_tally_count));
             window.OY_MESH_GLUE[oy_data_nonce] = oy_tally_count;
+            let oy_data_nonce_count = 0;
             let oy_glue_lowest = 9;
             for (let oy_data_nonce_sub in window.OY_MESH_GLUE) {
                 if (window.OY_MESH_GLUE[oy_data_nonce_sub]<oy_glue_lowest) oy_glue_lowest = window.OY_MESH_GLUE[oy_data_nonce_sub];
             }
-            document.getElementById("oy_mesh_glue_sub").innerHTML = "G"+oy_glue_lowest;
+            for (let oy_data_nonce_sub in window.OY_MESH_GLUE) {
+                if (window.OY_MESH_GLUE[oy_data_nonce_sub]===oy_glue_lowest) oy_data_nonce_count++;
+            }
+            let oy_data_nonce_percent = Math.floor(((window.OY_NONCE_MAX_PUSH-oy_data_nonce_count)/window.OY_NONCE_MAX_PUSH)*100);
+            if (oy_data_nonce_percent===100) oy_data_nonce_percent = 99;
+            if (oy_data_nonce_percent<10) oy_data_nonce_percent = "0"+oy_data_nonce_percent;
+            document.getElementById("oy_mesh_glue_sub").innerHTML = "G"+oy_glue_lowest+"/"+oy_data_nonce_percent+"%";
         };
         if (window.OY_HANDLE_PUSH===null) {
             let oy_superhandle = oy_data_push(window.OY_FILE_DATA, null, oy_callback_tally);
@@ -1064,10 +1090,10 @@
             window.OY_HANDLE_PUSH = oy_superhandle.substr(32, 48);
             window.OY_HANDLE_PUSH_COPY = false;
             document.getElementById("oy_tooltip_push").style.display = "block";
-            let oy_data_nonce_max = parseInt(oy_superhandle.substr(80));
-            oy_graph_nonce_set(oy_data_nonce_max);
+            window.OY_NONCE_MAX_PUSH = parseInt(oy_superhandle.substr(80));
+            oy_graph_nonce_set(window.OY_NONCE_MAX_PUSH);
             let oy_nonce_counter = 0;
-            while (oy_nonce_counter<oy_data_nonce_max) {
+            while (oy_nonce_counter<window.OY_NONCE_MAX_PUSH) {
                 window.OY_MESH_GLUE[oy_nonce_counter] = 0;
                 oy_nonce_counter++;
             }
@@ -1120,10 +1146,11 @@
         oy_graph_nonce_set(null);
         window.OY_HANDLE_PUSH = null;
         window.OY_HANDLE_PUSH_COPY = null;
+        window.OY_NONCE_MAX_PUSH = null;
         window.OY_FILE_DATA = null;
         document.getElementById("oy_file_upload").value = "";
         document.getElementById("oy_push_superhandle").value = "-".repeat(82);
-        document.getElementById("oy_mesh_glue_sub").innerHTML = "G-";
+        document.getElementById("oy_mesh_glue_sub").innerHTML = "G-/--%";
         document.getElementById("oy_tooltip_push").style.display = "none";
     }
 
@@ -1155,11 +1182,17 @@
         document.getElementById("oy_recommit_execute").classList.add("oy_button_all_dull");
 
         window.OY_HANDLE_PULL = document.getElementById('oy_pull_superhandle').value.substr(32, 48);
+        window.OY_NONCE_MAX_PULL =parseInt(document.getElementById('oy_pull_superhandle').value.substr(80));
+        oy_graph_nonce_set(window.OY_NONCE_MAX_PULL);
 
         oy_data_pull(function(oy_superhandle, oy_data_value) {
             oy_pull_halt();
+            oy_graph_nonce_fill(true, oy_graph_nonce_colour(100));
             oy_file_download(oy_data_value);
-        }, document.getElementById('oy_pull_superhandle').value);
+        }, document.getElementById('oy_pull_superhandle').value,
+        function(oy_data_nonce, oy_collect_count) {
+            oy_graph_nonce_fill(oy_data_nonce, oy_graph_nonce_colour(oy_collect_count));
+        });
     }
 
     function oy_pull_halt() {
@@ -1208,6 +1241,10 @@
 
         document.getElementById("oy_recommit_execute").classList.remove("oy_button_all_dull");
         document.getElementById("oy_recommit_execute").classList.add("oy_button_execute_active");
+
+        oy_data_pull_reset(window.OY_HANDLE_PULL);
+        oy_graph_nonce_set(null);
+        window.OY_HANDLE_PULL = null;
     }
 
     function oy_pull_reset_handle_click() {
