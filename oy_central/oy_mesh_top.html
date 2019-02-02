@@ -1,63 +1,68 @@
 <!DOCTYPE html>
-<meta charset="utf-8">
-<style>
-    @font-face {
-        font-family: 'geo_med';
-        src: url('../oy_resources/geo_med.ttf') format('truetype');
-    }
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Oyster Mesh</title>
+    <style>
+        @font-face {
+            font-family: 'geo_med';
+            src: url('../oy_resources/geo_med.ttf') format('truetype');
+        }
 
-    @font-face {
-        font-family: 'geo_light';
-        src: url('../oy_resources/geo_light.ttf') format('truetype');
-    }
+        @font-face {
+            font-family: 'geo_light';
+            src: url('../oy_resources/geo_light.ttf') format('truetype');
+        }
 
-    body, html {
-        height: 100%;
-        margin: 0;
-        padding: 0;
-        background-color: #393939;
-        font-family: geo_light, Fallback, sans-serif;
-        color: #191919;
-    }
-    rect {
-        fill: none;
-        pointer-events: all;
-    }
+        body, html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: #393939;
+            font-family: geo_light, Fallback, sans-serif;
+            color: #191919;
+        }
+        rect {
+            fill: none;
+            pointer-events: all;
+        }
 
-    .node {
-        fill: #348fab;
-    }
+        .node {
+            fill: #348fab;
+        }
 
-    .link {
-        stroke: #314a91;
-    }
+        .link {
+            stroke: #314a91;
+        }
 
-    #oy_stats {
-        position:absolute;
-        top:2%;
-        left:2%;
-        width:100vh;
-        height:22vh;
-        background-color: rgb(255, 255, 255);
-        border-radius: 0.5vh;
-        opacity: 0.6;
-        z-index:900;
-    }
+        #oy_stats {
+            position:absolute;
+            top:2%;
+            left:2%;
+            width:100vh;
+            height:22vh;
+            background-color: rgb(255, 255, 255);
+            border-radius: 0.5vh;
+            opacity: 0.6;
+            z-index:900;
+        }
 
-    .oy_center_hor {
-        position: absolute;
-        left: 50%;
-        transform: translateX(-50%);
-    }
+        .oy_center_hor {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
 
-    .oy_center_both {
-        position: absolute;
-        top:50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-    }
+        .oy_center_both {
+            position: absolute;
+            top:50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
 
-</style>
+    </style>
+    <script src="../oy_resources/d3.v3.min.js"></script>
+</head>
 <body>
 <div id="oy_stats" style="overflow:hidden;">
     <img style="position:absolute;left:4%;top:4%;width: auto;height: auto;max-height: 20vh;max-width: 28vh;" src="../oy_resources/oy_logo_shadow.png" alt="Oyster"/>
@@ -86,7 +91,6 @@
 <div id="oy_top_outer" style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);width:100%;height:100%;overflow:hidden;z-index: 100;">
     <div id="oy_top_inner" style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);overflow:hidden;"></div>
 </div>
-<script src="../oy_resources/d3.v3.min.js"></script>
 <script type="text/javascript">
     function oy_top_data() {
         let oy_xhttp = new XMLHttpRequest();
@@ -260,5 +264,6 @@
         window.OY_TOP_FORCE.start();
     }
     oy_top_init();
-
 </script>
+</body>
+</html>

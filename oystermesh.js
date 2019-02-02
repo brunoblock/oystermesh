@@ -53,6 +53,7 @@ window.OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inp
 // INIT
 window.OY_CONN = null;//global P2P connection handle
 window.OY_CONSOLE = null;//custom function for handling console
+window.OY_MAP = null;//custom function for tracking passive passports
 window.OY_INIT = 0;//prevents multiple instances of oy_init() from running simultaneously
 window.OY_PEER_COUNT = 0;//how many active connections with mutual peers
 window.OY_REFER_LAST = 0;//last time self asked a peer for a peer recommendation
@@ -470,7 +471,6 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         }
         else {//carry on reversing the passport until the data reaches the intended destination
             oy_log("Continuing deposit confirmation of handle "+oy_data_payload[3]);
-            //if (oy_data_payload[1].length===window.OY_MESH_SOURCE) oy_data_payload[2] = oy_data_payload[1].join("!");
             oy_data_route("OY_LOGIC_FOLLOW", "OY_DATA_DEPOSIT", oy_data_payload);
         }
     }
@@ -1275,13 +1275,23 @@ function oy_data_validate(oy_node_id, oy_data_raw) {
                    oy_node_punish(oy_node_id, "OY_PUNISH_PASSPORT_ALREADY");
                    return false;
                }
-               if (oy_data[0]==="OY_DATA_PULL") {
-                   if (window.OY_ROUTE_DYNAMIC.indexOf(oy_data[1][1])!==-1) {
-                       oy_log("We already processed route dynamic "+oy_data[1][1]+", will cease routing");
+               if (oy_data[0]==="OY_DATA_DEPOSIT"||oy_data[0]==="OY_DATA_FULFILL") {
+                   if (typeof(window.OY_MAP)==="function") window.OY_MAP(oy_data[0], oy_data[1][0], oy_data[1][1])
+               }
+               else {
+                   if (typeof(window.OY_MAP)==="function") window.OY_MAP(oy_data[0], oy_data[1][0], null);
+                   if (oy_data[1][0].length>1&&!!oy_peer_find(oy_data[1][0][0])) {
+                       oy_log_debug("We are peers with the origination node "+oy_data[1][0][0]+", will cease routing");
                        return true;
                    }
-                   window.OY_ROUTE_DYNAMIC.push(oy_data[1][1]);
-                   while (window.OY_ROUTE_DYNAMIC.length>window.OY_ROUTE_DYNAMIC_KEEP) window.OY_ROUTE_DYNAMIC.shift();
+                   if (oy_data[0]==="OY_DATA_PULL") {
+                       if (window.OY_ROUTE_DYNAMIC.indexOf(oy_data[1][1])!==-1) {
+                           oy_log("We already processed route dynamic "+oy_data[1][1]+", will cease routing");
+                           return true;
+                       }
+                       window.OY_ROUTE_DYNAMIC.push(oy_data[1][1]);
+                       while (window.OY_ROUTE_DYNAMIC.length>window.OY_ROUTE_DYNAMIC_KEEP) window.OY_ROUTE_DYNAMIC.shift();
+                   }
                }
            }
            return oy_data;
