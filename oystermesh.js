@@ -256,8 +256,8 @@ function oy_reduce_sum(oy_reduce_total, oy_reduce_num) {
     return oy_reduce_total + oy_reduce_num;
 }
 
-function oy_handle_check() {
-    return true;//TODO
+function oy_handle_check(oy_data_handle) {
+    return typeof(oy_data_handle)==="string"&&oy_data_handle.length>20;
 }
 
 function oy_local_store(oy_local_name, oy_local_data) {
@@ -984,7 +984,8 @@ function oy_data_push(oy_data_value, oy_data_handle, oy_callback_tally) {
         oy_data_handle = oy_rand_gen(2)+oy_hash_gen(oy_data_value);
         let oy_key_pass = oy_rand_gen();
         oy_data_value = oy_crypt_encrypt(oy_data_value, oy_key_pass);
-        oy_data_superhandle = oy_key_pass+oy_data_handle+Math.ceil(oy_data_value.length/window.OY_DATA_CHUNK);
+        oy_data_superhandle = oy_data_handle+Math.ceil(oy_data_value.length/window.OY_DATA_CHUNK)+"@"+oy_key_pass;
+        oy_key_pass = null;
     }
     if (typeof(window.OY_PUSH_HOLD[oy_data_handle])==="undefined") {
         if (oy_data_value===null) {
@@ -1067,9 +1068,10 @@ function oy_data_tally(oy_data_source, oy_data_handle, oy_data_nonce, oy_data_sh
 //pulls data from the mesh
 function oy_data_pull(oy_callback, oy_data_handle, oy_callback_collect, oy_data_nonce_max, oy_crypt_pass) {
     if (typeof(oy_data_nonce_max)==="undefined"||typeof(oy_crypt_pass)==="undefined") {
-        oy_data_nonce_max = parseInt(oy_data_handle.substr(80));
-        oy_crypt_pass = oy_data_handle.substr(0, 32);
-        oy_data_handle = oy_data_handle.substr(32, 48);//32 is for encryption key, 48 is for length of salt (8) integrity SHA1 (40), 32+48 = 80
+        let oy_data_handle_split = oy_data_handle.split("@");
+        oy_data_nonce_max = parseInt(oy_data_handle_split[0].substr(48));
+        oy_crypt_pass = oy_data_handle_split[1];
+        oy_data_handle = oy_data_handle_split[0].substr(0, 48);//32 is for encryption key, 48 is for length of salt (8) integrity SHA1 (40), 32+48 = 80
     }
     if (typeof(oy_callback_collect)!=="function") oy_callback_collect = null;
     if (typeof(window.OY_DATA_PULL[oy_data_handle])==="undefined") window.OY_DATA_PULL[oy_data_handle] = [oy_callback, oy_callback_collect, oy_data_nonce_max, oy_crypt_pass];
@@ -1275,11 +1277,8 @@ function oy_data_validate(oy_node_id, oy_data_raw) {
                    oy_node_punish(oy_node_id, "OY_PUNISH_PASSPORT_ALREADY");
                    return false;
                }
-               if (oy_data[0]==="OY_DATA_DEPOSIT"||oy_data[0]==="OY_DATA_FULFILL") {
-                   if (typeof(window.OY_MAP)==="function") window.OY_MAP(oy_data[0], oy_data[1][0], oy_data[1][1])
-               }
-               else {
-                   if (typeof(window.OY_MAP)==="function") window.OY_MAP(oy_data[0], oy_data[1][0], null);
+               if (typeof(window.OY_MAP)==="function") window.OY_MAP(oy_data[0], oy_data[1][0]);
+               if (oy_data[0]==="OY_DATA_PUSH"||oy_data[0]==="OY_DATA_PULL") {
                    if (oy_data[1][0].length>1&&!!oy_peer_find(oy_data[1][0][0])) {
                        oy_log_debug("We are peers with the origination node "+oy_data[1][0][0]+", will cease routing");
                        return true;
@@ -1548,7 +1547,7 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
     setTimeout(function() {
         if (window.OY_MAIN['oy_ready']===true) {
             oy_log("Connection is now ready, sparking engine");
-            setTimeout("oy_engine()", window.OY_NODE_DELAYTIME*1000);
+            setTimeout("oy_engine()", 200);
         }
         else {
             oy_log("Connection is was not established before the ready cutoff, re-sparking INIT");

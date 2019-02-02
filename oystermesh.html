@@ -104,6 +104,17 @@
             }
         }
 
+        @-webkit-keyframes flash {
+            0% { opacity: 1; }
+            50% { opacity: .25; }
+            100% { opacity: 1; }
+        }
+        @keyframes flash {
+            0% { opacity: 1; }
+            50% { opacity: .25; }
+            100% { opacity: 1; }
+        }
+
         .oy_button_execute_active {
             background-color: #14a2cc;
             border:0.1vh solid #14a2cc;
@@ -663,7 +674,7 @@
                         HALT
                     </div>
                 </div>
-                <div id="oy_push_reset" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:14%;right:5%;width:9.5%;height:14%;" onclick="oy_top_refresh()" onmouseenter="oy_push_reset_handle_enter()" onmouseleave="oy_push_reset_handle_leave()">
+                <div id="oy_push_reset" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:14%;right:5%;width:9.5%;height:14%;" onclick="oy_push_reset()" onmouseenter="oy_push_reset_handle_enter()" onmouseleave="oy_push_reset_handle_leave()">
                     <div style="position:relative;top:-3%;">
                         RESET
                     </div>
@@ -753,10 +764,11 @@
 <script type="text/javascript">
     window.onload = function() {
         window.OY_CONSOLE_SIZE = 400;
+        window.OY_NODE_MAX = 30;
         window.OY_NODE_ADDTIME = 40;
-        window.OY_NODE_ACTIVETIME = 50;
+        window.OY_NODE_ACTIVETIME = 250;
         window.OY_LINK_ADDTIME = 60;
-        window.OY_LINK_ACTIVETIME = 10;
+        window.OY_LINK_ACTIVETIME = 110;
 
         window.OY_FILE_DATA = null;
         window.OY_MESH_GLUE = [];
@@ -777,6 +789,7 @@
         window.OY_NODE_KEEP = {};
         window.OY_NODE_CHECK = {};
         window.OY_LINK_KEEP = {};
+        window.OY_TOP_REFRESH = false;
 
         document.getElementById("oy_push_superhandle").value = "-".repeat(82);
         document.getElementById("oy_pull_superhandle").value = "-".repeat(82);
@@ -791,46 +804,41 @@
             window.OY_NODE_KEEP[window.OY_MAIN['oy_self_short']] = true;
             oy_top_node_add(window.OY_MAIN['oy_self_short'], "self");
             oy_maintain();
-            window.OY_MAP = function(oy_data_flag, oy_passport_passive, oy_passport_active) {
-                let oy_time_local = Date.now()/1000|0;
-                //console.log("FLAG: "+oy_data_flag+" PASSPORT: "+oy_passport_passive.length);
-                let oy_node_prev = false;
-                for (let i in oy_passport_passive) {
-                    if (!oy_peer_find(oy_passport_passive[i])) {
-                        if (typeof(window.OY_NODE_KEEP[oy_passport_passive[i]])==="undefined") {
-                            //console.log("MAP ADD: "+oy_passport_passive[i]);
-                            window.OY_NODE_KEEP[oy_passport_passive[i]] = oy_time_local+window.OY_NODE_ADDTIME;
-                        }
-                        else if (window.OY_NODE_KEEP[oy_passport_passive[i]]!==true) {
-                            if (window.OY_NODE_KEEP[oy_passport_passive[i]]<oy_time_local) window.OY_NODE_KEEP[oy_passport_passive[i]] = oy_time_local+window.OY_NODE_ADDTIME;
-                            else {
-                                window.OY_NODE_KEEP[oy_passport_passive[i]] += window.OY_NODE_ADDTIME;
-                                //console.log("TIME FOR "+oy_passport_passive[i]+" is "+(window.OY_NODE_KEEP[oy_passport_passive[i]]-oy_time_local));
-                                if (window.OY_NODE_KEEP[oy_passport_passive[i]]-oy_time_local>window.OY_NODE_ACTIVETIME) oy_top_node_add(oy_passport_passive[i], "node");
+            window.OY_MAP = function(oy_data_flag, oy_passport_passive) {
+                if (Object.keys(window.OY_NODE_KEEP).length<=window.OY_NODE_MAX) {
+                    let oy_time_local = Date.now()/1000|0;
+                    let oy_node_prev = false;
+                    for (let i in oy_passport_passive) {
+                        if (!oy_peer_find(oy_passport_passive[i])) {
+                            if (typeof(window.OY_NODE_KEEP[oy_passport_passive[i]])==="undefined") window.OY_NODE_KEEP[oy_passport_passive[i]] = oy_time_local+window.OY_NODE_ADDTIME;
+                            else if (window.OY_NODE_KEEP[oy_passport_passive[i]]!==true) {
+                                if (window.OY_NODE_KEEP[oy_passport_passive[i]]<oy_time_local) window.OY_NODE_KEEP[oy_passport_passive[i]] = oy_time_local+window.OY_NODE_ADDTIME;
+                                else window.OY_NODE_KEEP[oy_passport_passive[i]] += window.OY_NODE_ADDTIME;
                             }
                         }
-                    }
 
-                    if (oy_node_prev!==false&&(window.OY_NODE_KEEP[oy_node_prev]-oy_time_local>window.OY_NODE_ACTIVETIME||window.OY_NODE_KEEP[oy_node_prev]===true)&&(window.OY_NODE_KEEP[oy_passport_passive[i]]-oy_time_local>window.OY_NODE_ACTIVETIME||window.OY_NODE_KEEP[oy_passport_passive[i]]===true)&&oy_node_prev!==window.OY_MAIN['oy_self_short']&&oy_passport_passive[i]!==window.OY_MAIN['oy_self_short']) {
-                        let oy_link_found = false;
-                        for (let i in window.OY_TOP_LINKS) {
-                            if ((window.OY_TOP_LINKS[i].source.short===oy_node_prev&&window.OY_TOP_LINKS[i].target.short===oy_passport_passive[i])||(window.OY_TOP_LINKS[i].target.short===oy_node_prev&&window.OY_TOP_LINKS[i].source.short===oy_passport_passive[i])) {
-                                oy_link_found = true;
-                                break;
+                        if (oy_node_prev!==false&&(window.OY_NODE_KEEP[oy_node_prev]-oy_time_local>window.OY_NODE_ACTIVETIME||window.OY_NODE_KEEP[oy_node_prev]===true)&&(window.OY_NODE_KEEP[oy_passport_passive[i]]-oy_time_local>window.OY_NODE_ACTIVETIME||window.OY_NODE_KEEP[oy_passport_passive[i]]===true)&&oy_node_prev!==window.OY_MAIN['oy_self_short']&&oy_passport_passive[i]!==window.OY_MAIN['oy_self_short']) {
+                            let oy_link_found = false;
+                            for (let i in window.OY_TOP_LINKS) {
+                                if ((window.OY_TOP_LINKS[i].source.short===oy_node_prev&&window.OY_TOP_LINKS[i].target.short===oy_passport_passive[i])||(window.OY_TOP_LINKS[i].target.short===oy_node_prev&&window.OY_TOP_LINKS[i].source.short===oy_passport_passive[i])) {
+                                    oy_link_found = true;
+                                    break;
+                                }
+                            }
+                            let oy_local_sort = [oy_node_prev, oy_passport_passive[i]];
+                            oy_local_sort.sort();
+                            let oy_link_key = oy_local_sort.join("@");
+                            if (typeof(window.OY_LINK_KEEP[oy_link_key])==="undefined") window.OY_LINK_KEEP[oy_link_key] = oy_time_local+window.OY_LINK_ADDTIME;
+                            else window.OY_LINK_KEEP[oy_link_key] += window.OY_LINK_ADDTIME;
+                            if (oy_link_found===false&&window.OY_TOP_REFRESH===false&&window.OY_LINK_KEEP[oy_link_key]-oy_time_local>window.OY_LINK_ACTIVETIME) {
+                                oy_top_node_add(oy_node_prev, "node");
+                                oy_top_node_add(oy_passport_passive[i], "node");
+                                oy_top_link_add(oy_node_prev, oy_passport_passive[i], "#314a91");
                             }
                         }
-                        let oy_local_sort = [oy_node_prev, oy_passport_passive[i]];
-                        oy_local_sort.sort();
-                        let oy_link_key = oy_local_sort.join("@");
-                        if (typeof(window.OY_LINK_KEEP[oy_link_key])==="undefined") window.OY_LINK_KEEP[oy_link_key] = oy_time_local+window.OY_LINK_ADDTIME;
-                        else window.OY_LINK_KEEP[oy_link_key] += window.OY_LINK_ADDTIME;
-                        if (oy_link_found===false&&window.OY_LINK_KEEP[oy_link_key]-oy_time_local>window.OY_LINK_ACTIVETIME) oy_top_link_add(oy_node_prev, oy_passport_passive[i], "#314a91");
+                        oy_node_prev = oy_passport_passive[i];
                     }
-                    oy_node_prev = oy_passport_passive[i];
                 }
-                //console.log(oy_data_flag);
-                //console.log(oy_passport_passive);
-                //console.log(oy_passport_active);
             }
         }, null,
         function(oy_console_msg) {
@@ -862,58 +870,49 @@
             i++;
         }
 
-        for (let i in window.OY_GRAPH_PEERS) {
-            if (window.OY_GRAPH_PEERS[i]===false) continue;
-            if (window.OY_GRAPH_PEERS_PREV.indexOf(window.OY_GRAPH_PEERS[i])===-1) {
-                //console.log("PEER ADD: "+window.OY_GRAPH_PEERS[i]+" - "+typeof(window.OY_NODE_KEEP[window.OY_GRAPH_PEERS[i]]));
-                if (typeof(window.OY_NODE_KEEP[window.OY_GRAPH_PEERS[i]])!=="undefined") oy_top_node_remove(window.OY_GRAPH_PEERS[i]);
-                window.OY_NODE_KEEP[window.OY_GRAPH_PEERS[i]] = true;
-                oy_top_node_add(window.OY_GRAPH_PEERS[i], "peer");
-                oy_top_link_add(window.OY_MAIN['oy_self_short'], window.OY_GRAPH_PEERS[i], "#7a3479");
-                let oy_node_present = false;
-                for (let oy_node_short in window.OY_NODE_KEEP) {
-                    if (window.OY_NODE_KEEP[oy_node_short]!==true) {
-                        oy_node_present = true;
-                        break;
+        if (window.OY_TOP_REFRESH===false) {
+            for (let i in window.OY_GRAPH_PEERS) {
+                if (window.OY_GRAPH_PEERS[i]===false) continue;
+                if (window.OY_GRAPH_PEERS_PREV.indexOf(window.OY_GRAPH_PEERS[i])===-1) {
+                    if (typeof(window.OY_NODE_KEEP[window.OY_GRAPH_PEERS[i]])!=="undefined") oy_top_node_remove(window.OY_GRAPH_PEERS[i]);
+                    window.OY_NODE_KEEP[window.OY_GRAPH_PEERS[i]] = true;
+                    oy_top_node_add(window.OY_GRAPH_PEERS[i], "peer");
+                    oy_top_link_add(window.OY_MAIN['oy_self_short'], window.OY_GRAPH_PEERS[i], "#314a91");
+                    let oy_node_present = false;
+                    for (let oy_node_short in window.OY_NODE_KEEP) {
+                        if (window.OY_NODE_KEEP[oy_node_short]!==true) {
+                            oy_node_present = true;
+                            break;
+                        }
                     }
                 }
-                console.log("ADD@"+oy_node_present);
-                console.log(Object.keys(window.OY_NODE_KEEP).length);
-                if (oy_node_present===true) oy_top_refresh();
             }
-        }
 
-        for (let i in window.OY_GRAPH_PEERS_PREV) {
-            if (window.OY_GRAPH_PEERS_PREV[i]===false) continue;
-            if (window.OY_GRAPH_PEERS.indexOf(window.OY_GRAPH_PEERS_PREV[i])===-1) {
-                //console.log("PEER REMOVE: "+window.OY_GRAPH_PEERS_PREV[i]);
-                oy_top_node_remove(window.OY_GRAPH_PEERS_PREV[i]);
-                let oy_node_present = false;
-                for (let oy_node_short in window.OY_NODE_KEEP) {
-                    if (window.OY_NODE_KEEP[oy_node_short]!==true) {
-                        oy_node_present = true;
-                        break;
+            for (let i in window.OY_GRAPH_PEERS_PREV) {
+                if (window.OY_GRAPH_PEERS_PREV[i]===false) continue;
+                if (window.OY_GRAPH_PEERS.indexOf(window.OY_GRAPH_PEERS_PREV[i])===-1) {
+                    oy_top_node_remove(window.OY_GRAPH_PEERS_PREV[i]);
+                    let oy_node_present = false;
+                    for (let oy_node_short in window.OY_NODE_KEEP) {
+                        if (window.OY_NODE_KEEP[oy_node_short]!==true) {
+                            oy_node_present = true;
+                            break;
+                        }
                     }
                 }
-                console.log("REMOVE@"+oy_node_present);
-                if (oy_node_present===true) oy_top_refresh();
             }
-        }
 
-        for (let i in window.OY_GRAPH_PEERS) {
-            window.OY_GRAPH_PEERS_PREV[i] = window.OY_GRAPH_PEERS[i];
-        }
+            for (let i in window.OY_GRAPH_PEERS) {
+                window.OY_GRAPH_PEERS_PREV[i] = window.OY_GRAPH_PEERS[i];
+            }
 
-        for (let oy_node_short in window.OY_NODE_KEEP) {
-            if (window.OY_NODE_KEEP[oy_node_short]!==true&&oy_time_local>window.OY_NODE_KEEP[oy_node_short]) {
-                //console.log("MAINTAIN REMOVE NODE: "+oy_node_short+" WITH DIFF "+(oy_time_local-window.OY_NODE_KEEP[oy_node_short]));
-                oy_top_node_remove(oy_node_short);
+            for (let oy_node_short in window.OY_NODE_KEEP) {
+                if (window.OY_NODE_KEEP[oy_node_short]!==true&&oy_time_local>window.OY_NODE_KEEP[oy_node_short]) oy_top_node_remove(oy_node_short);
             }
         }
 
         for (let oy_link_key in window.OY_LINK_KEEP) {
             if (oy_time_local>window.OY_LINK_KEEP[oy_link_key]) {
-                //console.log("MAINTAIN REMOVE LINK: "+oy_link_key+" WITH DIFF "+(oy_time_local-window.OY_LINK_KEEP[oy_link_key]));
                 delete window.OY_LINK_KEEP[oy_link_key];
                 let oy_split = oy_link_key.split("@");
                 oy_top_link_remove(oy_split[0], oy_split[1]);
@@ -923,7 +922,7 @@
         document.getElementById("oy_self_short").innerHTML = ""+window.OY_MAIN['oy_self_short'];
         document.getElementById("oy_peer_count").innerHTML = ""+window.OY_PEER_COUNT;
         document.getElementById("oy_blacklisted").innerHTML = ""+Object.keys(window.OY_BLACKLIST).length;
-        setTimeout("oy_maintain()", 900);
+        setTimeout("oy_maintain()", 1000);
     }
 
     function oy_console_local(oy_console_msg) {
@@ -949,15 +948,16 @@
 
     function oy_top_init() {
         window.OY_MESH_TOP_PREV = [[], []];
-        window.OY_TOP_WIDTH = screen.width;
-        window.OY_TOP_HEIGHT = screen.height;
+        window.OY_TOP_WIDTH = screen.width/3;
+        window.OY_TOP_HEIGHT = screen.height/3;
 
         window.OY_TOP_FORCE = d3.layout.force()
             .size([window.OY_TOP_WIDTH, window.OY_TOP_HEIGHT])
             .nodes([])
-            .gravity(.20)
-            .linkDistance(55)
-            .charge(-75)
+            .gravity(.1)
+            .linkDistance(35)
+            .linkStrength(0.7)
+            .charge(-35)
             .on("tick", oy_top_tick);
 
         let oy_svg = d3.select("#oy_top_inner").append("svg")
@@ -980,9 +980,7 @@
         if (typeof(window.OY_NODE_CHECK[oy_node_short])==="undefined") {
             window.OY_NODE_CHECK[oy_node_short] = true;
             window.OY_TOP_NODES.push({short:oy_node_short, x: Math.random()*window.OY_TOP_WIDTH|0, y: Math.random()*window.OY_TOP_HEIGHT|0,});
-            if (oy_type==="self") oy_top_restart("#ca2465");
-            else if (oy_type==="peer") oy_top_restart("#8a3789");
-            //else if (oy_type==="yellow") oy_top_restart("#bdb931");
+            if (oy_type==="self") oy_top_restart("#24ab26");
             else oy_top_restart("#348fab");
         }
     }
@@ -993,24 +991,17 @@
             delete window.OY_NODE_CHECK[oy_node_short];
             for (let i in window.OY_TOP_NODES) {
                 if (window.OY_TOP_NODES[i].short===oy_node_short) {
-                    //console.log("DELETE: "+oy_node_short);
-                    //console.log("["+oy_node_short+"] LINKS BEFORE: "+Object.keys(window.OY_TOP_LINKS).length);
                     let oy_links_remove = [];
                     window.OY_TOP_LINKS = window.OY_TOP_LINKS.filter(function (l) {
                         let oy_condition = l.source.short !== window.OY_TOP_NODES[i].short && l.target.short !== window.OY_TOP_NODES[i].short;
                         if (!oy_condition) oy_links_remove.push([l.source.short, l.target.short]);
                         return oy_condition;
                     });
-                    //console.log("["+oy_node_short+"] LINKS AFTER: "+Object.keys(window.OY_TOP_LINKS).length);
-                    //console.log("["+oy_node_short+"] NODES BEFORE: "+Object.keys(window.OY_TOP_NODES).length);
                     window.OY_TOP_NODES.splice(i, 1);
-                    //console.log("["+oy_node_short+"] NODES AFTER: "+Object.keys(window.OY_TOP_NODES).length);
                     oy_top_restart("#348fab");
-                    return oy_links_remove;
                 }
             }
         }
-        return [];
     }
 
     function oy_top_link_add(oy_node_a, oy_node_b, oy_fill) {
@@ -1031,22 +1022,32 @@
         });
     }
 
-    function oy_top_refresh() {
-        let oy_time_local = Date.now()/1000|0;
-        console.log("----------------------------------------------------");
-        let oy_refresh_track = {};
-        for (let oy_node_short in window.OY_NODE_KEEP) {
-            if (oy_node_short===window.OY_MAIN['oy_self_short']||typeof(window.OY_NODE_CHECK[oy_node_short])==="undefined") continue;
-            let oy_local_node = window.OY_NODE_KEEP[oy_node_short];
-            let oy_local_links = oy_top_node_remove(oy_node_short);
-            window.OY_NODE_KEEP[oy_node_short] = oy_local_node;
-            oy_refresh_track[oy_node_short] = oy_local_links;
+    function oy_top_refresh(oy_refresh_track) {
+        if (typeof(oy_refresh_track)==="undefined") {
+            if (window.OY_TOP_REFRESH===true) return false;
+            window.OY_TOP_REFRESH = true;
+            if (typeof(oy_refresh_track)!=="undefined"&&window.OY_TOP_REFRESH===false) return false;
+            oy_refresh_track = {};
+            for (let oy_node_short in window.OY_NODE_KEEP) {
+                if (oy_node_short===window.OY_MAIN['oy_self_short']||typeof(window.OY_NODE_CHECK[oy_node_short])==="undefined"||window.OY_NODE_KEEP[oy_node_short]===true) continue;
+                let oy_local_node = window.OY_NODE_KEEP[oy_node_short];
+                let oy_local_links = oy_top_node_remove(oy_node_short);
+                window.OY_NODE_KEEP[oy_node_short] = oy_local_node;
+                oy_refresh_track[oy_node_short] = oy_local_links;
+            }
+            oy_top_restart("#348fab");
+            setTimeout(function() {
+                oy_top_refresh(oy_refresh_track);
+            }, 50);
+            return true;
         }
-        oy_top_restart("#348fab");
+
+        let oy_time_local = Date.now()/1000|0;
+
         for (let oy_node_short in oy_refresh_track) {
             oy_top_node_add(oy_node_short, (window.OY_NODE_KEEP[oy_node_short]===true) ? "peer" : "node");
             if (window.OY_NODE_KEEP[oy_node_short]===true) {
-                oy_top_link_add(window.OY_MAIN['oy_self_short'], oy_node_short, "#7a3479");
+                oy_top_link_add(window.OY_MAIN['oy_self_short'], oy_node_short, "#314a91");
             }
         }
         for (let oy_link_key in window.OY_LINK_KEEP) {
@@ -1055,18 +1056,10 @@
                 oy_top_link_add(oy_split[0], oy_split[1], "#314a91");
             }
         }
-        /*
-        console.log(oy_refresh_track);
-        for (let oy_node_short in oy_refresh_track) {
-            oy_top_node_add(oy_node_short, (window.OY_NODE_KEEP[oy_node_short]===true)?"peer":"node");
-            console.log("SHORT: "+oy_node_short+" - "+window.OY_NODE_KEEP[oy_node_short]);
-            for (let i in oy_refresh_track[oy_node_short]) {
-                oy_top_link_add(oy_refresh_track[oy_node_short][i][0], oy_refresh_track[oy_node_short][i][1], (window.OY_NODE_KEEP[oy_node_short]===true)?"#7a3479":"#314a91");
-                if (window.OY_NODE_KEEP[oy_node_short]===true) console.log("LINK: "+oy_refresh_track[oy_node_short][i][0]+" - "+oy_refresh_track[oy_node_short][i][1]);
-            }
-        }
-        */
         oy_top_restart("#348fab");
+        setTimeout(function() {
+            window.OY_TOP_REFRESH = false;
+        }, 10);
     }
 
     function oy_top_tick() {
@@ -1080,7 +1073,6 @@
     }
 
     function oy_top_restart(oy_fill) {
-        //console.log(oy_fill);
         window.OY_TOP_NODE = window.OY_TOP_NODE.data(window.OY_TOP_NODES);
 
         window.OY_TOP_NODE.enter().insert("circle")
@@ -1185,7 +1177,7 @@
             document.getElementById("oy_graph_slot_"+oy_graph_slot+"_soak").classList.add("oy_peer_soak");
             document.getElementById("oy_graph_slot_"+oy_graph_slot+"_beam").classList.add("oy_peer_beam");
             document.getElementById("oy_graph_slot_"+oy_graph_slot+"_beam").style.width = oy_beam_ratio+"%";
-            document.getElementById("oy_graph_slot_"+oy_graph_slot+"_front").style.backgroundColor = "#8a3789";
+            document.getElementById("oy_graph_slot_"+oy_graph_slot+"_front").style.backgroundColor = "#348fab";
             setTimeout(function() {
                 document.getElementById("oy_graph_slot_"+oy_graph_slot+"_front").style.backgroundColor = "transparent";
             }, 400);
@@ -1290,15 +1282,15 @@
         document.getElementById("oy_push_execute").classList.remove("oy_button_execute_active");
         document.getElementById("oy_push_execute").classList.add("oy_button_all_dull");
 
-        document.getElementById("oy_push_halt").classList.remove("oy_button_all_dull");
-        document.getElementById("oy_push_halt").classList.add("oy_button_halt_active");
+        document.getElementById("oy_push_execute").style.backgroundColor = "#cbba3c";
+        document.getElementById("oy_push_execute").style.animation = "flash linear 0.3s infinite";
 
         document.getElementById("oy_push_reset").classList.remove("oy_button_reset_active");
         document.getElementById("oy_push_reset").classList.add("oy_button_all_dull");
 
         oy_pull_reset_handle_partial();
 
-        document.getElementById("oy_mesh_glue_sub").innerHTML = "G0/00%";
+        if (document.getElementById("oy_mesh_glue_sub").innerHTML.substr(1, 1)==="-") document.getElementById("oy_mesh_glue_sub").innerHTML = "G0/00%";
         setTimeout(function() {
             oy_push_execute_post();
         }, 100);
@@ -1325,10 +1317,11 @@
             let oy_superhandle = oy_data_push(window.OY_FILE_DATA, null, oy_callback_tally);
             window.OY_FILE_DATA = "oy_null";
             document.getElementById("oy_push_superhandle").value = oy_superhandle;
-            window.OY_HANDLE_PUSH = oy_superhandle.substr(32, 48);
+            let oy_superhandle_split = oy_superhandle.split("@");
+            window.OY_HANDLE_PUSH = oy_superhandle_split[0].substr(0, 48);
             window.OY_HANDLE_PUSH_COPY = false;
             document.getElementById("oy_tooltip_push").style.display = "block";
-            window.OY_NONCE_MAX_PUSH = parseInt(oy_superhandle.substr(80));
+            window.OY_NONCE_MAX_PUSH = parseInt(oy_superhandle_split[0].substr(48));
             oy_graph_nonce_set(window.OY_NONCE_MAX_PUSH);
             let oy_nonce_counter = 0;
             while (oy_nonce_counter<window.OY_NONCE_MAX_PUSH) {
@@ -1336,7 +1329,15 @@
                 oy_nonce_counter++;
             }
         }
-        else oy_data_push(null, window.OY_HANDLE_PUSH, oy_callback_tally);
+        else {
+            window.OY_DATA_PUSH[window.OY_HANDLE_PUSH] = oy_callback_tally;
+            oy_data_push(null, window.OY_HANDLE_PUSH, oy_callback_tally);
+        }
+        document.getElementById("oy_push_halt").classList.remove("oy_button_all_dull");
+        document.getElementById("oy_push_halt").classList.add("oy_button_halt_active");
+
+        document.getElementById("oy_push_execute").style.backgroundColor = null;
+        document.getElementById("oy_push_execute").style.animation = null;
     }
 
     function oy_push_halt() {
@@ -1366,12 +1367,13 @@
         document.getElementById("oy_push_reset").classList.remove("oy_button_reset_active");
         document.getElementById("oy_push_reset").classList.add("oy_button_all_dull");
 
-        oy_data_push_reset(window.OY_HANDLE_PUSH);
+        if (window.OY_HANDLE_PUSH===null) oy_data_push_reset(window.OY_HANDLE_PUSH);
         if (window.OY_EXECUTE_PULL===false&&window.OY_EXECUTE_RECOMMIT===false) oy_graph_nonce_set(null);
         window.OY_HANDLE_PUSH = null;
         window.OY_HANDLE_PUSH_COPY = null;
         window.OY_NONCE_MAX_PUSH = null;
         window.OY_FILE_DATA = null;
+        window.OY_MESH_GLUE = [];
         document.getElementById("oy_file_upload").value = "";
         document.getElementById("oy_push_superhandle").value = "-".repeat(82);
         document.getElementById("oy_mesh_glue_sub").innerHTML = "G-/--%";
@@ -1403,8 +1405,8 @@
         document.getElementById("oy_push_execute").classList.remove("oy_button_execute_active");
         document.getElementById("oy_push_execute").classList.add("oy_button_all_dull");
 
-        window.OY_HANDLE_PULL = document.getElementById('oy_pull_superhandle').value.substr(32, 48);
-        window.OY_NONCE_MAX_PULL =parseInt(document.getElementById('oy_pull_superhandle').value.substr(80));
+        window.OY_HANDLE_PULL = document.getElementById('oy_pull_superhandle').value.substr(0, 48);
+        window.OY_NONCE_MAX_PULL = parseInt(document.getElementById('oy_pull_superhandle').value.split("@")[0].substr(48));
         oy_graph_nonce_set(window.OY_NONCE_MAX_PULL);
 
         oy_data_pull(function(oy_superhandle, oy_data_value) {
