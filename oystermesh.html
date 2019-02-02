@@ -663,7 +663,7 @@
                         HALT
                     </div>
                 </div>
-                <div id="oy_push_reset" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:14%;right:5%;width:9.5%;height:14%;" onclick="oy_push_reset()" onmouseenter="oy_push_reset_handle_enter()" onmouseleave="oy_push_reset_handle_leave()">
+                <div id="oy_push_reset" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:14%;right:5%;width:9.5%;height:14%;" onclick="oy_top_refresh()" onmouseenter="oy_push_reset_handle_enter()" onmouseleave="oy_push_reset_handle_leave()">
                     <div style="position:relative;top:-3%;">
                         RESET
                     </div>
@@ -753,7 +753,10 @@
 <script type="text/javascript">
     window.onload = function() {
         window.OY_CONSOLE_SIZE = 400;
-        window.OY_NODE_KEEPTIME = 60;//seconds to keep a node
+        window.OY_NODE_ADDTIME = 40;
+        window.OY_NODE_ACTIVETIME = 50;
+        window.OY_LINK_ADDTIME = 60;
+        window.OY_LINK_ACTIVETIME = 10;
 
         window.OY_FILE_DATA = null;
         window.OY_MESH_GLUE = [];
@@ -772,6 +775,8 @@
         window.OY_GRAPH_PEERS = [false, false, false, false, false];
         window.OY_GRAPH_PEERS_PREV = [false, false, false, false, false];
         window.OY_NODE_KEEP = {};
+        window.OY_NODE_CHECK = {};
+        window.OY_LINK_KEEP = {};
 
         document.getElementById("oy_push_superhandle").value = "-".repeat(82);
         document.getElementById("oy_pull_superhandle").value = "-".repeat(82);
@@ -783,23 +788,43 @@
         oy_init(function() {
             document.getElementById("oy_storage_limit").innerHTML = window.OY_DEPOSIT_MAX/1000000;
             oy_top_init();
+            window.OY_NODE_KEEP[window.OY_MAIN['oy_self_short']] = true;
             oy_top_node_add(window.OY_MAIN['oy_self_short'], "self");
             oy_maintain();
             window.OY_MAP = function(oy_data_flag, oy_passport_passive, oy_passport_active) {
+                let oy_time_local = Date.now()/1000|0;
+                //console.log("FLAG: "+oy_data_flag+" PASSPORT: "+oy_passport_passive.length);
                 let oy_node_prev = false;
                 for (let i in oy_passport_passive) {
-                    if (typeof(window.OY_NODE_KEEP[oy_passport_passive[i]])==="undefined"&&oy_peer_find(oy_passport_passive[i])===false) oy_top_node_add(oy_passport_passive[i], "node");
-                    else if (window.OY_NODE_KEEP[oy_passport_passive[i]]!==true) window.OY_NODE_KEEP[oy_passport_passive[i]] = Date.now()/1000|0;
+                    if (!oy_peer_find(oy_passport_passive[i])) {
+                        if (typeof(window.OY_NODE_KEEP[oy_passport_passive[i]])==="undefined") {
+                            //console.log("MAP ADD: "+oy_passport_passive[i]);
+                            window.OY_NODE_KEEP[oy_passport_passive[i]] = oy_time_local+window.OY_NODE_ADDTIME;
+                        }
+                        else if (window.OY_NODE_KEEP[oy_passport_passive[i]]!==true) {
+                            if (window.OY_NODE_KEEP[oy_passport_passive[i]]<oy_time_local) window.OY_NODE_KEEP[oy_passport_passive[i]] = oy_time_local+window.OY_NODE_ADDTIME;
+                            else {
+                                window.OY_NODE_KEEP[oy_passport_passive[i]] += window.OY_NODE_ADDTIME;
+                                //console.log("TIME FOR "+oy_passport_passive[i]+" is "+(window.OY_NODE_KEEP[oy_passport_passive[i]]-oy_time_local));
+                                if (window.OY_NODE_KEEP[oy_passport_passive[i]]-oy_time_local>window.OY_NODE_ACTIVETIME) oy_top_node_add(oy_passport_passive[i], "node");
+                            }
+                        }
+                    }
 
-                    if (oy_node_prev!==false&&oy_node_prev!==window.OY_MAIN['oy_self_short']&&oy_passport_passive[i]!==window.OY_MAIN['oy_self_short']) {
+                    if (oy_node_prev!==false&&(window.OY_NODE_KEEP[oy_node_prev]-oy_time_local>window.OY_NODE_ACTIVETIME||window.OY_NODE_KEEP[oy_node_prev]===true)&&(window.OY_NODE_KEEP[oy_passport_passive[i]]-oy_time_local>window.OY_NODE_ACTIVETIME||window.OY_NODE_KEEP[oy_passport_passive[i]]===true)&&oy_node_prev!==window.OY_MAIN['oy_self_short']&&oy_passport_passive[i]!==window.OY_MAIN['oy_self_short']) {
                         let oy_link_found = false;
                         for (let i in window.OY_TOP_LINKS) {
-                            if ((window.OY_TOP_LINKS[i].source.id===oy_node_prev&&window.OY_TOP_LINKS[i].target.id===oy_passport_passive[i])||(window.OY_TOP_LINKS[i].target.id===oy_node_prev&&window.OY_TOP_LINKS[i].source.id===oy_passport_passive[i])) {
+                            if ((window.OY_TOP_LINKS[i].source.short===oy_node_prev&&window.OY_TOP_LINKS[i].target.short===oy_passport_passive[i])||(window.OY_TOP_LINKS[i].target.short===oy_node_prev&&window.OY_TOP_LINKS[i].source.short===oy_passport_passive[i])) {
                                 oy_link_found = true;
                                 break;
                             }
                         }
-                        if (oy_link_found===false) oy_top_link_add(oy_node_prev, oy_passport_passive[i], "link");
+                        let oy_local_sort = [oy_node_prev, oy_passport_passive[i]];
+                        oy_local_sort.sort();
+                        let oy_link_key = oy_local_sort.join("@");
+                        if (typeof(window.OY_LINK_KEEP[oy_link_key])==="undefined") window.OY_LINK_KEEP[oy_link_key] = oy_time_local+window.OY_LINK_ADDTIME;
+                        else window.OY_LINK_KEEP[oy_link_key] += window.OY_LINK_ADDTIME;
+                        if (oy_link_found===false&&window.OY_LINK_KEEP[oy_link_key]-oy_time_local>window.OY_LINK_ACTIVETIME) oy_top_link_add(oy_node_prev, oy_passport_passive[i], "#314a91");
                     }
                     oy_node_prev = oy_passport_passive[i];
                 }
@@ -840,18 +865,38 @@
         for (let i in window.OY_GRAPH_PEERS) {
             if (window.OY_GRAPH_PEERS[i]===false) continue;
             if (window.OY_GRAPH_PEERS_PREV.indexOf(window.OY_GRAPH_PEERS[i])===-1) {
-                console.log("ADD: "+window.OY_GRAPH_PEERS[i]+" - "+typeof(window.OY_NODE_KEEP[window.OY_GRAPH_PEERS[i]]));
+                //console.log("PEER ADD: "+window.OY_GRAPH_PEERS[i]+" - "+typeof(window.OY_NODE_KEEP[window.OY_GRAPH_PEERS[i]]));
                 if (typeof(window.OY_NODE_KEEP[window.OY_GRAPH_PEERS[i]])!=="undefined") oy_top_node_remove(window.OY_GRAPH_PEERS[i]);
+                window.OY_NODE_KEEP[window.OY_GRAPH_PEERS[i]] = true;
                 oy_top_node_add(window.OY_GRAPH_PEERS[i], "peer");
-                oy_top_link_add(window.OY_MAIN['oy_self_short'], window.OY_GRAPH_PEERS[i], "link_peer");
+                oy_top_link_add(window.OY_MAIN['oy_self_short'], window.OY_GRAPH_PEERS[i], "#7a3479");
+                let oy_node_present = false;
+                for (let oy_node_short in window.OY_NODE_KEEP) {
+                    if (window.OY_NODE_KEEP[oy_node_short]!==true) {
+                        oy_node_present = true;
+                        break;
+                    }
+                }
+                console.log("ADD@"+oy_node_present);
+                console.log(Object.keys(window.OY_NODE_KEEP).length);
+                if (oy_node_present===true) oy_top_refresh();
             }
         }
 
         for (let i in window.OY_GRAPH_PEERS_PREV) {
             if (window.OY_GRAPH_PEERS_PREV[i]===false) continue;
             if (window.OY_GRAPH_PEERS.indexOf(window.OY_GRAPH_PEERS_PREV[i])===-1) {
-                console.log("REMOVE: "+window.OY_GRAPH_PEERS_PREV[i]);
+                //console.log("PEER REMOVE: "+window.OY_GRAPH_PEERS_PREV[i]);
                 oy_top_node_remove(window.OY_GRAPH_PEERS_PREV[i]);
+                let oy_node_present = false;
+                for (let oy_node_short in window.OY_NODE_KEEP) {
+                    if (window.OY_NODE_KEEP[oy_node_short]!==true) {
+                        oy_node_present = true;
+                        break;
+                    }
+                }
+                console.log("REMOVE@"+oy_node_present);
+                if (oy_node_present===true) oy_top_refresh();
             }
         }
 
@@ -860,7 +905,19 @@
         }
 
         for (let oy_node_short in window.OY_NODE_KEEP) {
-            if (window.OY_NODE_KEEP[oy_node_short]!==true&&oy_time_local-window.OY_NODE_KEEP[oy_node_short]>window.OY_NODE_KEEPTIME) oy_top_node_remove(oy_node_short);
+            if (window.OY_NODE_KEEP[oy_node_short]!==true&&oy_time_local>window.OY_NODE_KEEP[oy_node_short]) {
+                //console.log("MAINTAIN REMOVE NODE: "+oy_node_short+" WITH DIFF "+(oy_time_local-window.OY_NODE_KEEP[oy_node_short]));
+                oy_top_node_remove(oy_node_short);
+            }
+        }
+
+        for (let oy_link_key in window.OY_LINK_KEEP) {
+            if (oy_time_local>window.OY_LINK_KEEP[oy_link_key]) {
+                //console.log("MAINTAIN REMOVE LINK: "+oy_link_key+" WITH DIFF "+(oy_time_local-window.OY_LINK_KEEP[oy_link_key]));
+                delete window.OY_LINK_KEEP[oy_link_key];
+                let oy_split = oy_link_key.split("@");
+                oy_top_link_remove(oy_split[0], oy_split[1]);
+            }
         }
 
         document.getElementById("oy_self_short").innerHTML = ""+window.OY_MAIN['oy_self_short'];
@@ -898,6 +955,7 @@
         window.OY_TOP_FORCE = d3.layout.force()
             .size([window.OY_TOP_WIDTH, window.OY_TOP_HEIGHT])
             .nodes([])
+            .gravity(.20)
             .linkDistance(55)
             .charge(-75)
             .on("tick", oy_top_tick);
@@ -915,57 +973,100 @@
         window.OY_TOP_NODE = oy_svg.selectAll(".node");
         window.OY_TOP_LINK = oy_svg.selectAll(".link");
 
-        oy_top_restart("null", "null");
+        oy_top_restart("#348fab");
     }
 
     function oy_top_node_add(oy_node_short, oy_type) {
-        if (typeof(window.OY_NODE_KEEP[oy_node_short])==="undefined") {
-            console.log("ADD: "+oy_node_short);
-            if (oy_type==="peer"||oy_type==="self") {
-                window.OY_NODE_KEEP[oy_node_short] = true;
-                window.OY_TOP_NODES.push({id:oy_node_short, x: Math.random()*window.OY_TOP_WIDTH|0, y: Math.random()*window.OY_TOP_HEIGHT|0,});
-            }
-            else {
-                window.OY_NODE_KEEP[oy_node_short] = Date.now()/1000|0;
-                window.OY_TOP_NODES.push({id:oy_node_short, x: window.OY_TOP_WIDTH/2, y: window.OY_TOP_HEIGHT/2,});
-            }
-            oy_top_restart(["node", oy_type]);
+        if (typeof(window.OY_NODE_CHECK[oy_node_short])==="undefined") {
+            window.OY_NODE_CHECK[oy_node_short] = true;
+            window.OY_TOP_NODES.push({short:oy_node_short, x: Math.random()*window.OY_TOP_WIDTH|0, y: Math.random()*window.OY_TOP_HEIGHT|0,});
+            if (oy_type==="self") oy_top_restart("#ca2465");
+            else if (oy_type==="peer") oy_top_restart("#8a3789");
+            //else if (oy_type==="yellow") oy_top_restart("#bdb931");
+            else oy_top_restart("#348fab");
         }
     }
 
     function oy_top_node_remove(oy_node_short) {
         if (typeof(window.OY_NODE_KEEP[oy_node_short])!=="undefined") {
+            delete window.OY_NODE_KEEP[oy_node_short];
+            delete window.OY_NODE_CHECK[oy_node_short];
             for (let i in window.OY_TOP_NODES) {
-                if (window.OY_TOP_NODES[i].id === oy_node_short) {
-                    delete window.OY_NODE_KEEP[oy_node_short];
+                if (window.OY_TOP_NODES[i].short===oy_node_short) {
+                    //console.log("DELETE: "+oy_node_short);
+                    //console.log("["+oy_node_short+"] LINKS BEFORE: "+Object.keys(window.OY_TOP_LINKS).length);
+                    let oy_links_remove = [];
                     window.OY_TOP_LINKS = window.OY_TOP_LINKS.filter(function (l) {
-                        return l.source.id !== window.OY_TOP_NODES[i].id && l.target.id !== window.OY_TOP_NODES[i].id;
+                        let oy_condition = l.source.short !== window.OY_TOP_NODES[i].short && l.target.short !== window.OY_TOP_NODES[i].short;
+                        if (!oy_condition) oy_links_remove.push([l.source.short, l.target.short]);
+                        return oy_condition;
                     });
+                    //console.log("["+oy_node_short+"] LINKS AFTER: "+Object.keys(window.OY_TOP_LINKS).length);
+                    //console.log("["+oy_node_short+"] NODES BEFORE: "+Object.keys(window.OY_TOP_NODES).length);
                     window.OY_TOP_NODES.splice(i, 1);
-                    oy_top_restart(["node", "null"]);
-                    return true;
+                    //console.log("["+oy_node_short+"] NODES AFTER: "+Object.keys(window.OY_TOP_NODES).length);
+                    oy_top_restart("#348fab");
+                    return oy_links_remove;
                 }
             }
         }
+        return [];
     }
 
-    function oy_top_link_add(oy_node_a, oy_node_b, oy_type) {
+    function oy_top_link_add(oy_node_a, oy_node_b, oy_fill) {
         let oy_node_collect = [];
         window.OY_TOP_NODES.forEach(function(target) {
-            if (target.id===oy_node_a||target.id===oy_node_b) oy_node_collect.push(target);
+            if (target.short===oy_node_a||target.short===oy_node_b) oy_node_collect.push(target);
         });
         if (oy_node_collect.length===2) {
-            console.log("LINK PUSH: "+oy_node_collect[0].id+" <-> "+oy_node_collect[1].id);
             window.OY_TOP_LINKS.push({source: oy_node_collect[0], target: oy_node_collect[1]});
+            oy_top_restart(oy_fill);
         }
-        oy_top_restart(["self", "null", oy_type]);
     }
 
     function oy_top_link_remove(oy_node_a, oy_node_b) {
         window.OY_TOP_LINKS = window.OY_TOP_LINKS.filter(function(l) {
-            return !((l.source.id===oy_node_a&&l.target.id===oy_node_b)||
-                (l.source.id===oy_node_b&&l.target.id===oy_node_a));
+            return !((l.source.short===oy_node_a&&l.target.short===oy_node_b)||
+                (l.source.short===oy_node_b&&l.target.short===oy_node_a));
         });
+    }
+
+    function oy_top_refresh() {
+        let oy_time_local = Date.now()/1000|0;
+        console.log("----------------------------------------------------");
+        let oy_refresh_track = {};
+        for (let oy_node_short in window.OY_NODE_KEEP) {
+            if (oy_node_short===window.OY_MAIN['oy_self_short']||typeof(window.OY_NODE_CHECK[oy_node_short])==="undefined") continue;
+            let oy_local_node = window.OY_NODE_KEEP[oy_node_short];
+            let oy_local_links = oy_top_node_remove(oy_node_short);
+            window.OY_NODE_KEEP[oy_node_short] = oy_local_node;
+            oy_refresh_track[oy_node_short] = oy_local_links;
+        }
+        oy_top_restart("#348fab");
+        for (let oy_node_short in oy_refresh_track) {
+            oy_top_node_add(oy_node_short, (window.OY_NODE_KEEP[oy_node_short]===true) ? "peer" : "node");
+            if (window.OY_NODE_KEEP[oy_node_short]===true) {
+                oy_top_link_add(window.OY_MAIN['oy_self_short'], oy_node_short, "#7a3479");
+            }
+        }
+        for (let oy_link_key in window.OY_LINK_KEEP) {
+            if (window.OY_LINK_KEEP[oy_link_key]-oy_time_local>window.OY_LINK_ACTIVETIME) {
+                let oy_split = oy_link_key.split("@");
+                oy_top_link_add(oy_split[0], oy_split[1], "#314a91");
+            }
+        }
+        /*
+        console.log(oy_refresh_track);
+        for (let oy_node_short in oy_refresh_track) {
+            oy_top_node_add(oy_node_short, (window.OY_NODE_KEEP[oy_node_short]===true)?"peer":"node");
+            console.log("SHORT: "+oy_node_short+" - "+window.OY_NODE_KEEP[oy_node_short]);
+            for (let i in oy_refresh_track[oy_node_short]) {
+                oy_top_link_add(oy_refresh_track[oy_node_short][i][0], oy_refresh_track[oy_node_short][i][1], (window.OY_NODE_KEEP[oy_node_short]===true)?"#7a3479":"#314a91");
+                if (window.OY_NODE_KEEP[oy_node_short]===true) console.log("LINK: "+oy_refresh_track[oy_node_short][i][0]+" - "+oy_refresh_track[oy_node_short][i][1]);
+            }
+        }
+        */
+        oy_top_restart("#348fab");
     }
 
     function oy_top_tick() {
@@ -978,21 +1079,24 @@
             .attr("cy", function(d) { return d.y; });
     }
 
-    function oy_top_restart(oy_class) {
+    function oy_top_restart(oy_fill) {
+        //console.log(oy_fill);
         window.OY_TOP_NODE = window.OY_TOP_NODE.data(window.OY_TOP_NODES);
 
         window.OY_TOP_NODE.enter().insert("circle")
-            .attr("class", oy_class[0])
-            .attr("class", oy_class[1])
-            .attr("r", 5);
+            .attr("class", "node")
+            .attr("r", 5)
+            .style("fill", oy_fill);
 
         window.OY_TOP_NODE.exit()
             .remove();
 
         window.OY_TOP_LINK = window.OY_TOP_LINK.data(window.OY_TOP_LINKS);
 
-        window.OY_TOP_LINK.enter().insert("line", "."+oy_class[0])
-            .attr("class", oy_class[2]);
+        window.OY_TOP_LINK.enter().insert("line", ".node")
+            .attr("class", "link")
+            .style("stroke", oy_fill);
+
         window.OY_TOP_LINK.exit()
             .remove();
 
