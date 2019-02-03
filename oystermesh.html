@@ -69,15 +69,6 @@
             }
         }
 
-        @-moz-keyframes fade_in {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
-        }
-
         @keyframes fade_in {
             from {
                 opacity: 0;
@@ -114,6 +105,17 @@
             0% { opacity: 1; }
             50% { opacity: .25; }
             100% { opacity: 1; }
+        }
+
+        @-webkit-keyframes flash_green {
+            0% { background-color: rgba(36, 171, 38, 0.9); }
+            50% { background-color: rgba(36, 171, 38, 0.3); }
+            100% { background-color: rgba(36, 171, 38, 0.9); }
+        }
+        @keyframes flash_green {
+            0% { background-color: rgba(36, 171, 38, 0.9); }
+            50% { background-color: rgba(36, 171, 38, 0.3); }
+            100% { background-color: rgba(36, 171, 38, 0.9); }
         }
 
         .oy_button_execute_active {
@@ -739,7 +741,7 @@
                 <div align="center" class="oy_border oy_superhandle">
                     <div class="oy_description_handle">HANDLE</div>
                     <div class="oy_center_both" style="width:100%;">
-                        <input id="oy_pull_superhandle" type="text" class="oy_superhandle_sub" style="text-align:center;width:98%;" onclick="oy_pull_reset_handle_click()" onblur="oy_pull_reset_handle_blur()" onchange="oy_pull_reset_handle_blur()" value="" />
+                        <input id="oy_pull_superhandle" type="text" class="oy_superhandle_sub" style="text-align:center;width:98%;" onclick="oy_pull_reset_handle_click()" oninput="oy_pull_reset_handle_blur()" onchange="oy_pull_reset_handle_blur()" value="" />
                     </div>
                 </div>
                 <div id="oy_pull_stats_cont" class="oy_border oy_input_corner" style="left:5%;width:32%;">
@@ -762,9 +764,9 @@
                 <div class="oy_border oy_input_corner" style="left:40%;width:32%;">
                     <div class="oy_description">DESTINATION</div>
                     <div style="position:absolute;top:0;left:4%;height:100%;width:100%;">
-                        <div style="position:absolute;top:0;"><input id="oy_dest_recommit" type="radio" style="transform:scale(0.8);" onclick="oy_dest_radio(this.id)"> Recommit data only</div>
-                        <div style="position:absolute;top:50%;transform: translateY(-50%)"><input id="oy_dest_view" type="radio" style="transform:scale(0.8);" onclick="oy_dest_radio(this.id)"> <span id="oy_dest_view_inner">View in browser</span></div>
-                        <div style="position:absolute;bottom:0;"><input id="oy_dest_download" type="radio" style="transform:scale(0.8);" onclick="oy_dest_radio(this.id)"> Download as file</div>
+                        <div style="position:absolute;top:0;"><input id="oy_dest_recommit" type="radio" style="transform:scale(0.8);" onclick="oy_dest_radio(this.id)">&nbsp;<span id="oy_dest_recommit_inner">Recommit&nbsp;data&nbsp;only</span></div>
+                        <div style="position:absolute;top:50%;transform: translateY(-50%)"><input id="oy_dest_view" type="radio" style="transform:scale(0.8);" onclick="oy_dest_radio(this.id)">&nbsp;<span id="oy_dest_view_inner">View&nbsp;in&nbsp;browser</span></div>
+                        <div style="position:absolute;bottom:0;"><input id="oy_dest_download" type="radio" style="transform:scale(0.8);" onclick="oy_dest_radio(this.id)">&nbsp;<span id="oy_dest_download_inner">Download&nbsp;as&nbsp;file</span></div>
                         <div id="oy_dest_go" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:28%;right:15%;width:18%;height:45%;" onclick="oy_dest_go()">
                             <div style="position:relative;top:-3%;">
                                 GO
@@ -866,6 +868,7 @@
         window.OY_CONSOLE_HOVER = false;
         window.OY_PULL_AVG_HOP = [];
         window.OY_PULL_ELAPSED = null;
+        window.OY_RECOMMIT_PAUSE = null;
         window.OY_PULL_COVERAGE = [];
         window.OY_PULL_CONFLICTS = {};
         window.OY_GRAPH_PEERS = [false, false, false, false, false];
@@ -891,12 +894,10 @@
             oy_top_node_add(window.OY_MAIN['oy_self_short'], "self");
             oy_maintain();
             window.OY_MAP = function(oy_data_flag, oy_passport_passive, oy_passport_active) {
-                if (oy_data_flag==="OY_DATA_FULFILL"&&window.OY_EXECUTE_PULL===true&&oy_passport_passive.length>0&&oy_passport_active.length>0) {
-                    if (oy_passport_active[0]===window.OY_MAIN['oy_self_short']) {
-                        window.OY_PULL_AVG_HOP.push(oy_passport_passive.length);
-                        while (window.OY_PULL_AVG_HOP.length>window.OY_PULL_HOP_KEEP) window.OY_PULL_AVG_HOP.shift();
-                        document.getElementById("oy_stats_avg_hop").innerHTML = (window.OY_PULL_AVG_HOP.reduce(oy_reduce_sum)/window.OY_PULL_AVG_HOP.length).toFixed(2);
-                    }
+                if (oy_data_flag==="OY_DATA_FULFILL"&&window.OY_EXECUTE_PULL===true&&oy_passport_passive.length>0&&oy_passport_active.length>0&&oy_passport_active[0]===window.OY_MAIN['oy_self_short']) {
+                    window.OY_PULL_AVG_HOP.push(oy_passport_passive.length);
+                    while (window.OY_PULL_AVG_HOP.length>window.OY_PULL_HOP_KEEP) window.OY_PULL_AVG_HOP.shift();
+                    document.getElementById("oy_stats_avg_hop").innerHTML = (window.OY_PULL_AVG_HOP.reduce(oy_reduce_sum)/window.OY_PULL_AVG_HOP.length).toFixed(2);
                 }
                 if (Object.keys(window.OY_NODE_KEEP).length<=window.OY_NODE_MAX) {
                     let oy_time_local = Date.now()/1000|0;
@@ -1029,7 +1030,7 @@
             }
         }
 
-        if (window.OY_EXECUTE_PULL===true) {
+        if (window.OY_EXECUTE_PULL===true||window.OY_EXECUTE_RECOMMIT===true) {
             let oy_local_elapsed = ((Date.now()/1000)-window.OY_PULL_ELAPSED);
             let oy_suffix = "&nbsp;sec";
             if (oy_local_elapsed>60) {
@@ -1544,7 +1545,7 @@
 
     function oy_dest_radio(oy_radio_select) {
         if (document.getElementById(oy_radio_select).disabled===true) return false;
-        document.getElementById("oy_dest_download").checked = true;
+        document.getElementById(oy_radio_select).checked = true;
         if (oy_radio_select==="oy_dest_recommit") {
             document.getElementById("oy_dest_view").checked = false;
             document.getElementById("oy_dest_download").checked = false;
@@ -1596,10 +1597,22 @@
     }
 
     function oy_dest_radio_view_disable() {
-        oy_dest_radio("oy_dest_download");
-
         document.getElementById("oy_dest_view").disabled = "disabled";
         document.getElementById("oy_dest_view_inner").style.textDecoration = "line-through";
+        return true;
+    }
+
+    function oy_dest_radio_download_enable() {
+        document.getElementById("oy_dest_download").disabled = false;
+        document.getElementById("oy_dest_download_inner").style.textDecoration = null;
+        return true;
+    }
+
+    function oy_dest_radio_download_disable() {
+        if (window.OY_DEST_RADIO!=="oy_dest_recommit") oy_dest_radio("oy_dest_download");
+
+        document.getElementById("oy_dest_download").disabled = "disabled";
+        document.getElementById("oy_dest_download_inner").style.textDecoration = "line-through";
         return true;
     }
 
@@ -1628,7 +1641,13 @@
         document.getElementById("oy_push_execute").classList.remove("oy_button_execute_active");
         document.getElementById("oy_push_execute").classList.add("oy_button_all_dull");
 
-        window.OY_NONCE_MAX_PULL = parseInt(document.getElementById('oy_pull_superhandle').value.split("@")[0].substr(46));
+        if (document.getElementById('oy_pull_superhandle').value.indexOf("@")===-1) {
+            window.OY_NONCE_MAX_PULL = parseInt(document.getElementById('oy_pull_superhandle').value.substr(46));
+            oy_dest_radio_view_disable();
+            oy_dest_radio_download_disable();
+            if (window.OY_DEST_RADIO!=="oy_dest_recommit") oy_dest_radio("oy_dest_recommit");
+        }
+        else window.OY_NONCE_MAX_PULL = parseInt(document.getElementById('oy_pull_superhandle').value.split("@")[0].substr(46));
         if (window.OY_HANDLE_PULL===null) oy_graph_nonce_set(window.OY_NONCE_MAX_PULL);
         else if (window.OY_EXECUTE_LAST!=="OY_PULL") document.getElementById("oy_graph_nonce").innerHTML = window.OY_GRAPH_NONCE_STORE["OY_PULL"];
 
@@ -1640,6 +1659,7 @@
 
         delete window.OY_DATA_PULL[window.OY_HANDLE_PULL];
         oy_data_pull(function(oy_superhandle, oy_data_value, oy_data_crypt) {
+            oy_tab("oy_tab_download");
             oy_pull_halt(true);
             oy_graph_nonce_fill(true, oy_graph_nonce_colour(100));
             if (oy_data_value===null) window.OY_FILE_KEEP = [null, null, null, true];
@@ -1656,9 +1676,12 @@
                 document.getElementById("oy_dest_go").classList.add("oy_button_pull_go");
             }
 
-            if (!oy_file_view_check()) oy_dest_radio_view_disable();
-            if (window.OY_DEST_RADIO==="oy_dest_download"||(window.OY_DEST_RADIO==="oy_dest_view"&&!oy_file_view())) oy_file_download();
-            else if (window.OY_DEST_RADIO==="oy_dest_recommit") setTimeout("oy_recommit_execute()", 500);
+            if (!oy_file_view_check()||window.OY_FILE_KEEP[0]===null) {
+                oy_dest_radio_view_disable();
+                if (window.OY_DEST_RADIO!=="oy_dest_recommit") oy_dest_radio("oy_dest_download");
+            }
+            if (window.OY_DEST_RADIO==="oy_dest_recommit") setTimeout("oy_recommit_execute()", 500);
+            else if (window.OY_DEST_RADIO==="oy_dest_download"||(window.OY_DEST_RADIO==="oy_dest_view"&&!oy_file_view())) oy_file_download();
         }, document.getElementById('oy_pull_superhandle').value,
         function(oy_data_nonce, oy_collect_count, oy_data_count) {
             if (oy_collect_count>0&&window.OY_PULL_COVERAGE.indexOf(oy_data_nonce)===-1) {
@@ -1695,7 +1718,7 @@
         document.getElementById("oy_pull_reset").classList.remove("oy_button_all_dull");
         document.getElementById("oy_pull_reset").classList.add("oy_button_reset_active");
 
-        if (window.OY_HANDLE_PUSH!==null) {
+        if (window.OY_FILE_DATA!==null) {
             document.getElementById("oy_push_execute").classList.remove("oy_button_all_dull");
             document.getElementById("oy_push_execute").classList.add("oy_button_execute_active");
         }
@@ -1711,6 +1734,12 @@
         //if (window.OY_EXECUTE_PULL===false) return false;
         window.OY_EXECUTE_PULL = false;
 
+        document.getElementById("oy_pull_stats_beta").style.display = "block";
+        document.getElementById("oy_pull_stats_cont").style.width = "32%";
+        document.getElementById("oy_pull_stats_alpha").style.left = "3%";
+        document.getElementById("oy_mesh_glue_pull").style.display = "none";
+        document.getElementById("oy_mesh_glue_pull_sub").innerHTML = "G-/--%";
+
         document.getElementById("oy_pull_reset").classList.remove("oy_button_halt_active");
         document.getElementById("oy_pull_reset").classList.add("oy_button_all_dull");
 
@@ -1719,6 +1748,7 @@
         document.getElementById("oy_pull_superhandle").value = "";
         oy_pull_reset_handle_blur();
         oy_dest_radio_view_enable();
+        oy_dest_radio_download_enable();
 
         document.getElementById("oy_pull_execute").classList.remove("oy_button_execute_active");
         document.getElementById("oy_pull_execute").classList.add("oy_button_all_dull");
@@ -1726,8 +1756,10 @@
         document.getElementById("oy_pull_halt").classList.remove("oy_button_halt_active");
         document.getElementById("oy_pull_halt").classList.add("oy_button_all_dull");
 
-        document.getElementById("oy_push_execute").classList.remove("oy_button_all_dull");
-        document.getElementById("oy_push_execute").classList.add("oy_button_execute_active");
+        if (window.OY_EXECUTE_PUSH===false&&window.OY_FILE_DATA!==null) {
+            document.getElementById("oy_push_execute").classList.remove("oy_button_all_dull");
+            document.getElementById("oy_push_execute").classList.add("oy_button_execute_active");
+        }
 
         document.getElementById("oy_dest_go").classList.remove("oy_button_pull_go");
         document.getElementById("oy_dest_go").classList.add("oy_button_all_dull");
@@ -1737,12 +1769,17 @@
         delete window.OY_GRAPH_NONCE_STORE["OY_PULL"];
         window.OY_FILE_KEEP = null;
         window.OY_HANDLE_PULL = null;
+        oy_pull_reset_stats();
+    }
+
+    function oy_pull_reset_stats() {
         window.OY_PULL_AVG_HOP = [];
         window.OY_PULL_ELAPSED = null;
+        window.OY_RECOMMIT_PAUSE = null;
         window.OY_PULL_COVERAGE = [];
         window.OY_PULL_CONFLICTS = {};
         document.getElementById("oy_stats_avg_hop").innerHTML = "0";
-        document.getElementById("oy_stats_elapsed").innerHTML = "0 sec";
+        document.getElementById("oy_stats_elapsed").innerHTML = "0&nbsp;sec";
         document.getElementById("oy_stats_coverage").innerHTML = "0%";
         document.getElementById("oy_stats_conflicts").innerHTML = "0";
     }
@@ -1752,7 +1789,7 @@
     }
 
     function oy_pull_reset_handle_blur() {
-        if (document.getElementById("oy_pull_superhandle").value.length<80&&document.getElementById("oy_pull_superhandle").value.substr(0, 1)!=="-"&&document.getElementById("oy_pull_reset").classList.contains("oy_button_all_dull")) {
+        if (document.getElementById("oy_pull_superhandle").value.substr(0, 2)!=="OY"&&document.getElementById("oy_pull_reset").classList.contains("oy_button_all_dull")) {
             document.getElementById("oy_pull_superhandle").value = "-".repeat(82);
             document.getElementById("oy_pull_execute").classList.remove("oy_button_execute_active");
             document.getElementById("oy_pull_execute").classList.add("oy_button_all_dull");
@@ -1760,9 +1797,11 @@
             document.getElementById("oy_pull_reset").classList.remove("oy_button_reset_active");
             document.getElementById("oy_pull_reset").classList.add("oy_button_all_dull");
         }
-        else {
-            document.getElementById("oy_pull_execute").classList.remove("oy_button_all_dull");
-            document.getElementById("oy_pull_execute").classList.add("oy_button_execute_active");
+        else if (document.getElementById("oy_pull_superhandle").value.substr(0, 1)!=="-") {
+            if (window.OY_EXECUTE_PUSH===false) {
+                document.getElementById("oy_pull_execute").classList.remove("oy_button_all_dull");
+                document.getElementById("oy_pull_execute").classList.add("oy_button_execute_active");
+            }
 
             document.getElementById("oy_pull_reset").classList.remove("oy_button_all_dull");
             document.getElementById("oy_pull_reset").classList.add("oy_button_reset_active");
@@ -1785,6 +1824,11 @@
         if (window.OY_EXECUTE_PUSH===true||window.OY_EXECUTE_PULL===true||window.OY_EXECUTE_RECOMMIT===true) return false;
         window.OY_EXECUTE_RECOMMIT = true;
 
+        document.getElementById("oy_dest_recommit_inner").style.animation = "flash_green linear 1s infinite";
+
+        document.getElementById("oy_push_execute").classList.remove("oy_button_execute_active");
+        document.getElementById("oy_push_execute").classList.add("oy_button_all_dull");
+
         document.getElementById("oy_pull_reset").classList.remove("oy_button_reset_active");
         document.getElementById("oy_pull_reset").classList.add("oy_button_all_dull");
 
@@ -1801,7 +1845,11 @@
         document.getElementById("oy_pull_stats_alpha").style.left = "7.5%";
         document.getElementById("oy_mesh_glue_pull").style.display = "block";
 
-        let oy_callback_tally = function(oy_data_nonce, oy_tally_count) {
+        if (window.OY_EXECUTE_LAST!=="OY_RECOMMIT") oy_pull_reset_stats();
+        if (window.OY_RECOMMIT_PAUSE===null) window.OY_PULL_ELAPSED = Date.now()/1000;
+        else window.OY_PULL_ELAPSED += Date.now()/1000 - window.OY_RECOMMIT_PAUSE;
+
+        let oy_callback_tally = function(oy_data_nonce, oy_tally_count, oy_passport_passive_length) {
             oy_graph_nonce_fill(oy_data_nonce, oy_graph_nonce_colour(oy_tally_count));
             window.OY_MESH_GLUE[oy_data_nonce] = oy_tally_count;
             let oy_data_nonce_count = 0;
@@ -1816,6 +1864,10 @@
             if (oy_data_nonce_percent===100) oy_data_nonce_percent = 99;
             if (oy_data_nonce_percent<10) oy_data_nonce_percent = "0"+oy_data_nonce_percent;
             document.getElementById("oy_mesh_glue_pull_sub").innerHTML = "G"+oy_glue_lowest+"/"+oy_data_nonce_percent+"%";
+
+            window.OY_PULL_AVG_HOP.push(oy_passport_passive_length);
+            while (window.OY_PULL_AVG_HOP.length>window.OY_PULL_HOP_KEEP) window.OY_PULL_AVG_HOP.shift();
+            document.getElementById("oy_stats_avg_hop").innerHTML = (window.OY_PULL_AVG_HOP.reduce(oy_reduce_sum)/window.OY_PULL_AVG_HOP.length).toFixed(2);
         };
         oy_data_pull_reset(window.OY_HANDLE_PULL);
         if (window.OY_EXECUTE_LAST!=="OY_RECOMMIT") {
@@ -1838,6 +1890,15 @@
         if (window.OY_EXECUTE_RECOMMIT===false) return false;
         window.OY_EXECUTE_RECOMMIT = false;
         window.OY_DATA_PUSH[window.OY_HANDLE_PULL] = false;
+
+        window.OY_RECOMMIT_PAUSE = Date.now()/1000;
+
+        document.getElementById("oy_dest_recommit_inner").style.animation = null;
+
+        if (window.OY_FILE_DATA!==null) {
+            document.getElementById("oy_push_execute").classList.remove("oy_button_all_dull");
+            document.getElementById("oy_push_execute").classList.add("oy_button_execute_active");
+        }
 
         document.getElementById("oy_pull_reset").classList.remove("oy_button_all_dull");
         document.getElementById("oy_pull_reset").classList.add("oy_button_reset_active");

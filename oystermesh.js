@@ -17,7 +17,7 @@ window.OY_MESH_DEPOSIT_CHANCE = 0.4;//probability that self will deposit pushed 
 window.OY_MESH_FULLFILL_CHANCE = 0.2;//probability that data is stored whilst fulfilling a pull request, this makes data intelligently migrate and recommit overtime
 window.OY_MESH_SOURCE = 2;//node in route passport (from destination) that is assigned with defining the source variable
 window.OY_NODE_TOLERANCE = 3;//max amount of protocol communication violations until node is blacklisted
-window.OY_NODE_BLACKTIME = 3600;//seconds to blacklist a punished node for
+window.OY_NODE_BLACKTIME = 600;//seconds to blacklist a punished node for
 window.OY_NODE_PROPOSETIME = 12;//seconds for peer proposal session duration
 window.OY_NODE_ASSIGNTTIME = 10;//minimum interval between node_assign instances to/from central
 window.OY_NODE_DELAYTIME = 6;//minimum expected time to connect or transmit data to a node
@@ -453,7 +453,6 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
         if (oy_nonce_purge.length>0) {
             oy_data_payload[3] = oy_nonce_purge;
-
             oy_log("Pulling handle "+oy_short(oy_data_payload[2])+" forward along the mesh");
             oy_data_route("OY_LOGIC_ALL", "OY_DATA_PULL", oy_data_payload);
         }
@@ -468,7 +467,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         }
         if (oy_data_payload[1][0]===window.OY_MAIN['oy_self_short']) {
             oy_log("Data deposit sequence with handle "+oy_short(oy_data_payload[3])+" at nonce "+oy_data_payload[4]+" found self as the intended final destination");
-            oy_data_tally(oy_data_payload[2], oy_data_payload[3], oy_data_payload[4], oy_data_payload[5]);
+            oy_data_tally(oy_data_payload[2], oy_data_payload[3], oy_data_payload[4], oy_data_payload[5], oy_data_payload[0].length);
         }
         else {//carry on reversing the passport until the data reaches the intended destination
             oy_log("Continuing deposit confirmation of handle "+oy_data_payload[3]);
@@ -1051,7 +1050,7 @@ function oy_data_push_reset(oy_data_handle) {
 }
 
 //receives deposit confirmations
-function oy_data_tally(oy_data_source, oy_data_handle, oy_data_nonce, oy_data_short) {
+function oy_data_tally(oy_data_source, oy_data_handle, oy_data_nonce, oy_data_short, oy_passport_passive_length) {
     if (typeof(window.OY_PUSH_TALLY[oy_data_handle])==="undefined"||typeof(window.OY_PUSH_TALLY[oy_data_handle][oy_data_nonce])==="undefined") {
         oy_log("Received invalid deposit tally for unknown handle "+oy_short(oy_data_handle));
         return false;
@@ -1062,17 +1061,23 @@ function oy_data_tally(oy_data_source, oy_data_handle, oy_data_nonce, oy_data_sh
     }
     oy_log("Received matching deposit tally for handle "+oy_short(oy_data_handle));
     if (window.OY_PUSH_TALLY[oy_data_handle][oy_data_nonce][3].indexOf(oy_data_source)===-1) window.OY_PUSH_TALLY[oy_data_handle][oy_data_nonce][3].push(oy_data_source);
-    if (typeof(window.OY_DATA_PUSH[oy_data_handle])==="function") window.OY_DATA_PUSH[oy_data_handle](oy_data_nonce, window.OY_PUSH_TALLY[oy_data_handle][oy_data_nonce][3].length);
+    if (typeof(window.OY_DATA_PUSH[oy_data_handle])==="function") window.OY_DATA_PUSH[oy_data_handle](oy_data_nonce, window.OY_PUSH_TALLY[oy_data_handle][oy_data_nonce][3].length, oy_passport_passive_length);
     return true;
 }
 
 //pulls data from the mesh
 function oy_data_pull(oy_callback, oy_data_handle, oy_callback_collect, oy_data_nonce_max, oy_crypt_pass) {
     if (typeof(oy_data_nonce_max)==="undefined"||typeof(oy_crypt_pass)==="undefined") {
-        let oy_data_handle_split = oy_data_handle.split("@");
-        oy_data_nonce_max = parseInt(oy_data_handle_split[0].substr(46));
-        oy_crypt_pass = oy_data_handle_split[1];
-        oy_data_handle = oy_data_handle_split[0].substr(0, 46);
+        if (oy_data_handle.indexOf("@")===-1) {
+            oy_data_nonce_max = parseInt(oy_data_handle.substr(46));
+            oy_crypt_pass = null;
+        }
+        else {
+            let oy_data_handle_split = oy_data_handle.split("@");
+            oy_data_nonce_max = parseInt(oy_data_handle_split[0].substr(46));
+            oy_crypt_pass = oy_data_handle_split[1];
+        }
+        oy_data_handle = oy_data_handle.substr(0, 46);
     }
     if (typeof(oy_callback_collect)!=="function") oy_callback_collect = null;
     if (typeof(window.OY_DATA_PULL[oy_data_handle])==="undefined") window.OY_DATA_PULL[oy_data_handle] = [oy_callback, oy_callback_collect, oy_data_nonce_max, oy_crypt_pass];
