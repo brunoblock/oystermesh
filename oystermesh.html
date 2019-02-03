@@ -698,17 +698,20 @@
                 <div class="oy_border oy_input_corner" style="left:5%;width:32%;">
                     <div class="oy_description">STATISTICS</div>
                     <div class="oy_pull_stats" style="left:3%">
-                        AVG&nbsp;HOP:&nbsp;<span id="oy_stats_avg_hop" style="font-weight:bold"></span><br>
-                        TIME:&nbsp;<span id="oy_stats_elapsed" style="font-weight:bold"></span>
+                        AVG&nbsp;HOP:&nbsp;<span id="oy_stats_avg_hop" style="font-weight:bold">0</span><br>
+                        TIME:&nbsp;<span id="oy_stats_elapsed" style="font-weight:bold">0 sec</span>
                     </div>
                     <div class="oy_pull_stats" style="right:0">
-                        COVERAGE:&nbsp;<span id="oy_stats_coverage" style="font-weight:bold"></span><br>
-                        CONFLICTS:&nbsp;<span id="oy_stats_conflicts" style="font-weight:bold"></span>
+                        COVERAGE:&nbsp;<span id="oy_stats_coverage" style="font-weight:bold">0%</span><br>
+                        CONFLICTS:&nbsp;<span id="oy_stats_conflicts" style="font-weight:bold">0</span>
                     </div>
                 </div>
                 <div class="oy_border oy_input_corner" style="left:40%;width:32%;">
                     <div class="oy_description">DESTINATION</div>
-                    <div style="position:absolute;top:25%;left:20%;">
+                    <div style="position:absolute;top:0;left:4%;height:100%;width:100%;">
+                        <div style="position:absolute;top:0;"><input id="oy_dest_recommit" type="radio" style="transform:scale(0.8);"> Recommit data to mesh only</div>
+                        <div style="position:absolute;top:50%;transform: translateY(-50%)"><input id="oy_dest_view" type="radio" style="transform:scale(0.8);"> View in browser if applicable</div>
+                        <div style="position:absolute;bottom:0;"><input id="oy_dest_download" type="radio" style="transform:scale(0.8);"> Download locally as file</div>
                     </div>
                 </div>
                 <div id="oy_pull_execute" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:32%;right:5%;width:18%;height:14%;" onclick="oy_pull_execute()">
@@ -754,12 +757,12 @@
                     <span id="oy_self_short">null</span><br>
                     <span id="oy_storage_limit">0</span>&nbsp;MB<br>
                     <span id="oy_avg_latency">0</span>&nbsp;sec<br>
-                    <span id="oy_avg_peership">0</span>&nbsp;sec<br>
+                    <span id="oy_avg_peership">0</span>&nbsp;min<br>
                     <span id="oy_peer_count">0</span>&nbsp;peer(s)<br>
                     <span id="oy_blacklisted">0</span>&nbsp;node(s)<br>
                     <span id="oy_mesh_size">0</span>&nbsp;nodes<br>
-                    <span id="oy_beam_flow">0</span>&nbsp;bytes/sec<br>
-                    <span id="oy_soak_flow">0</span>&nbsp;bytes/sec<br>
+                    <span id="oy_beam_flow">0</span>&nbsp;kbps<br>
+                    <span id="oy_soak_flow">0</span>&nbsp;kbps<br>
                 </div>
             </div>
         </div>
@@ -802,6 +805,7 @@
         window.OY_PULL_AVG_HOP = [];
         window.OY_PULL_ELAPSED = null;
         window.OY_PULL_COVERAGE = [];
+        window.OY_PULL_CONFLICTS = {};
         window.OY_GRAPH_PEERS = [false, false, false, false, false];
         window.OY_GRAPH_PEERS_PREV = [false, false, false, false, false];
         window.OY_NODE_KEEP = {};
@@ -874,11 +878,28 @@
     function oy_maintain() {
         let oy_time_local = Date.now()/1000|0;
 
+        let oy_avg_latency = [];
+        let oy_avg_peership = [];
+        let oy_avg_beam = [];
+        let oy_avg_soak = [];
         let oy_peer_keep = [];
         for (let oy_peer_local in window.OY_PEERS) {
             if (oy_peer_local==="oy_aggregate_node") continue;
+            oy_data_measure(true, oy_peer_local, null);
+            oy_data_measure(false, oy_peer_local, null);
             oy_peer_keep.push([oy_short(oy_peer_local), window.OY_PEERS[oy_peer_local][3], window.OY_PEERS[oy_peer_local][5], window.OY_PEERS[oy_peer_local][7]]);
+            oy_avg_latency.push(window.OY_PEERS[oy_peer_local][3]);
+            oy_avg_peership.push(window.OY_PEERS[oy_peer_local][0]);
+            oy_avg_beam.push(window.OY_PEERS[oy_peer_local][5]);
+            oy_avg_soak.push(window.OY_PEERS[oy_peer_local][7]);
         }
+
+        if (oy_avg_latency.length>0) document.getElementById("oy_avg_latency").innerHTML = (oy_avg_latency.reduce(oy_reduce_sum)/oy_avg_latency.length).toFixed(3);
+        if (oy_avg_peership.length>0) document.getElementById("oy_avg_peership").innerHTML = ((oy_time_local - Math.round(oy_avg_peership.reduce(oy_reduce_sum)/oy_avg_peership.length))/60).toFixed(2);
+        if (oy_avg_beam.length>0) document.getElementById("oy_beam_flow").innerHTML = (oy_avg_beam.reduce(oy_reduce_sum)/1000).toFixed(2);
+        else document.getElementById("oy_beam_flow").innerHTML = "0";
+        if (oy_avg_soak.length>0) document.getElementById("oy_soak_flow").innerHTML = (oy_avg_soak.reduce(oy_reduce_sum)/1000).toFixed(2);
+        else document.getElementById("oy_soak_flow").innerHTML = "0";
 
         oy_peer_keep.sort(function(a, b) {
             return b[1] - a[1];
@@ -946,10 +967,10 @@
 
         if (window.OY_EXECUTE_PULL===true) {
             let oy_local_elapsed = ((Date.now()/1000)-window.OY_PULL_ELAPSED);
-            let oy_suffix = "&nbsp;secs";
+            let oy_suffix = "&nbsp;sec";
             if (oy_local_elapsed>60) {
                 oy_local_elapsed /= 60;
-                oy_suffix = "&nbsp;mins";
+                oy_suffix = "&nbsp;min";
             }
             if (oy_local_elapsed>60) {
                 oy_local_elapsed /= 60;
@@ -1327,6 +1348,8 @@
         document.getElementById("oy_push_reset").classList.remove("oy_button_reset_active");
         document.getElementById("oy_push_reset").classList.add("oy_button_all_dull");
 
+        document.getElementById("oy_file_upload").disabled = "disabled";
+
         oy_pull_reset_handle_partial();
 
         if (document.getElementById("oy_mesh_glue_sub").innerHTML.substr(1, 1)==="-") document.getElementById("oy_mesh_glue_sub").innerHTML = "G0/00%";
@@ -1393,6 +1416,7 @@
         document.getElementById("oy_push_reset").classList.add("oy_button_reset_active");
 
         oy_pull_reset_handle_resume();
+        document.getElementById("oy_file_upload").disabled = null;
 
         window.OY_DATA_PUSH[window.OY_HANDLE_PUSH] = false;
     }
@@ -1455,10 +1479,15 @@
             oy_graph_nonce_fill(true, oy_graph_nonce_colour(100));
             oy_file_download(oy_data_value);
         }, document.getElementById('oy_pull_superhandle').value,
-        function(oy_data_nonce, oy_collect_count) {
+        function(oy_data_nonce, oy_collect_count, oy_data_count) {
             if (oy_collect_count>0&&window.OY_PULL_COVERAGE.indexOf(oy_data_nonce)===-1) {
                 window.OY_PULL_COVERAGE.push(oy_data_nonce);
-                document.getElementById("oy_stats_coverage").innerHTML = Math.round((window.OY_PULL_COVERAGE.length/window.OY_NONCE_MAX_PULL)*100)+"%";
+                document.getElementById("oy_stats_coverage").innerHTML = Math.floor((window.OY_PULL_COVERAGE.length/window.OY_NONCE_MAX_PULL)*100)+"%";
+            }
+            if (window.OY_EXECUTE_PULL===true&&oy_data_count>0) {
+                if (oy_data_count===1) delete window.OY_PULL_CONFLICTS[oy_data_nonce];
+                else window.OY_PULL_CONFLICTS[oy_data_nonce] = true;
+                document.getElementById("oy_stats_conflicts").innerHTML = ""+Object.keys(window.OY_PULL_CONFLICTS).length;
             }
             oy_graph_nonce_fill(oy_data_nonce, oy_graph_nonce_colour(oy_collect_count));
         });
@@ -1511,6 +1540,11 @@
         window.OY_PULL_AVG_HOP = [];
         window.OY_PULL_ELAPSED = null;
         window.OY_PULL_COVERAGE = [];
+        window.OY_PULL_CONFLICTS = {};
+        document.getElementById("oy_stats_avg_hop").innerHTML = "0";
+        document.getElementById("oy_stats_elapsed").innerHTML = "0 sec";
+        document.getElementById("oy_stats_coverage").innerHTML = "0%";
+        document.getElementById("oy_stats_conflicts").innerHTML = "0";
     }
 
     function oy_pull_reset_handle_click() {
