@@ -360,6 +360,14 @@
                 font-size:1.6vh;
             }
 
+            .oy_pull_stats {
+                position:absolute;
+                top:17%;
+                width:50%;
+                height:100%;
+                font-size:1.1vh;
+            }
+
             #oy_console {
                 width:96%;
                 height:99%;
@@ -374,7 +382,7 @@
 
             .oy_tooltip .oy_tooltip_text {
                 position: absolute;
-                width: 11vh;
+                width: 12vh;
                 background-color: #555;
                 color: #fff;
                 text-align: center;
@@ -408,7 +416,7 @@
 
             .oy_tooltip_warn .oy_tooltip_text_warn {
                 position: absolute;
-                width: 12vh;
+                width: 13vh;
                 background-color: #c37b2c;
                 color: #151515;
                 text-align: center;
@@ -655,7 +663,7 @@
                 <div class="oy_border oy_input_corner">
                     <div class="oy_description">FILE&nbsp;UPLOAD</div>
                     <div style="position:absolute;top:25%;left:5%;">
-                        <input type="file" id="oy_file_upload" onmouseenter="oy_push_reset_handle_enter()" onmouseleave="oy_push_reset_handle_leave()" />
+                        <input type="file" id="oy_file_upload" onclick="oy_push_reset()" onmouseenter="oy_push_reset_handle_enter()" onmouseleave="oy_push_reset_handle_leave()" />
                     </div>
                 </div>
                 <div class="oy_border oy_mesh_glue" style="position:absolute;bottom:14%;left:59%;width:14%;height:30%;">
@@ -689,7 +697,13 @@
                 </div>
                 <div class="oy_border oy_input_corner" style="left:5%;width:32%;">
                     <div class="oy_description">STATISTICS</div>
-                    <div style="position:absolute;top:25%;left:20%;">
+                    <div class="oy_pull_stats" style="left:3%">
+                        AVG&nbsp;HOP:&nbsp;<span id="oy_stats_avg_hop" style="font-weight:bold"></span><br>
+                        TIME:&nbsp;<span id="oy_stats_elapsed" style="font-weight:bold"></span>
+                    </div>
+                    <div class="oy_pull_stats" style="right:0">
+                        COVERAGE:&nbsp;<span id="oy_stats_coverage" style="font-weight:bold"></span><br>
+                        CONFLICTS:&nbsp;<span id="oy_stats_conflicts" style="font-weight:bold"></span>
                     </div>
                 </div>
                 <div class="oy_border oy_input_corner" style="left:40%;width:32%;">
@@ -769,6 +783,7 @@
         window.OY_NODE_ACTIVETIME = 250;
         window.OY_LINK_ADDTIME = 60;
         window.OY_LINK_ACTIVETIME = 110;
+        window.OY_PULL_HOP_KEEP = 100;
 
         window.OY_FILE_DATA = null;
         window.OY_MESH_GLUE = [];
@@ -784,6 +799,9 @@
         window.OY_EXECUTE_RECEIVE = false;
         window.OY_CONSOLE_COUNTER = 0;
         window.OY_CONSOLE_HOVER = false;
+        window.OY_PULL_AVG_HOP = [];
+        window.OY_PULL_ELAPSED = null;
+        window.OY_PULL_COVERAGE = [];
         window.OY_GRAPH_PEERS = [false, false, false, false, false];
         window.OY_GRAPH_PEERS_PREV = [false, false, false, false, false];
         window.OY_NODE_KEEP = {};
@@ -804,7 +822,14 @@
             window.OY_NODE_KEEP[window.OY_MAIN['oy_self_short']] = true;
             oy_top_node_add(window.OY_MAIN['oy_self_short'], "self");
             oy_maintain();
-            window.OY_MAP = function(oy_data_flag, oy_passport_passive) {
+            window.OY_MAP = function(oy_data_flag, oy_passport_passive, oy_passport_active) {
+                if (oy_data_flag==="OY_DATA_FULFILL"&&window.OY_EXECUTE_PULL===true&&oy_passport_passive.length>0&&oy_passport_active.length>0) {
+                    if (oy_passport_active[0]===window.OY_MAIN['oy_self_short']) {
+                        window.OY_PULL_AVG_HOP.push(oy_passport_passive.length);
+                        while (window.OY_PULL_AVG_HOP.length>window.OY_PULL_HOP_KEEP) window.OY_PULL_AVG_HOP.shift();
+                        document.getElementById("oy_stats_avg_hop").innerHTML = (window.OY_PULL_AVG_HOP.reduce(oy_reduce_sum)/window.OY_PULL_AVG_HOP.length).toFixed(2);
+                    }
+                }
                 if (Object.keys(window.OY_NODE_KEEP).length<=window.OY_NODE_MAX) {
                     let oy_time_local = Date.now()/1000|0;
                     let oy_node_prev = false;
@@ -919,10 +944,24 @@
             }
         }
 
+        if (window.OY_EXECUTE_PULL===true) {
+            let oy_local_elapsed = ((Date.now()/1000)-window.OY_PULL_ELAPSED);
+            let oy_suffix = "&nbsp;secs";
+            if (oy_local_elapsed>60) {
+                oy_local_elapsed /= 60;
+                oy_suffix = "&nbsp;mins";
+            }
+            if (oy_local_elapsed>60) {
+                oy_local_elapsed /= 60;
+                oy_suffix = "&nbsp;hrs";
+            }
+            document.getElementById("oy_stats_elapsed").innerHTML = oy_local_elapsed.toFixed(2)+oy_suffix;
+        }
+
         document.getElementById("oy_self_short").innerHTML = ""+window.OY_MAIN['oy_self_short'];
         document.getElementById("oy_peer_count").innerHTML = ""+window.OY_PEER_COUNT;
         document.getElementById("oy_blacklisted").innerHTML = ""+Object.keys(window.OY_BLACKLIST).length;
-        setTimeout("oy_maintain()", 1000);
+        setTimeout("oy_maintain()", 200);
     }
 
     function oy_console_local(oy_console_msg) {
@@ -1409,12 +1448,18 @@
         window.OY_NONCE_MAX_PULL = parseInt(document.getElementById('oy_pull_superhandle').value.split("@")[0].substr(48));
         oy_graph_nonce_set(window.OY_NONCE_MAX_PULL);
 
+        window.OY_PULL_ELAPSED = Date.now()/1000;
+
         oy_data_pull(function(oy_superhandle, oy_data_value) {
             oy_pull_halt();
             oy_graph_nonce_fill(true, oy_graph_nonce_colour(100));
             oy_file_download(oy_data_value);
         }, document.getElementById('oy_pull_superhandle').value,
         function(oy_data_nonce, oy_collect_count) {
+            if (oy_collect_count>0&&window.OY_PULL_COVERAGE.indexOf(oy_data_nonce)===-1) {
+                window.OY_PULL_COVERAGE.push(oy_data_nonce);
+                document.getElementById("oy_stats_coverage").innerHTML = Math.round((window.OY_PULL_COVERAGE.length/window.OY_NONCE_MAX_PULL)*100)+"%";
+            }
             oy_graph_nonce_fill(oy_data_nonce, oy_graph_nonce_colour(oy_collect_count));
         });
     }
@@ -1463,6 +1508,9 @@
         oy_data_pull_reset(window.OY_HANDLE_PULL);
         if (window.OY_EXECUTE_PUSH===false&&window.OY_EXECUTE_RECOMMIT===false) oy_graph_nonce_set(null);
         window.OY_HANDLE_PULL = null;
+        window.OY_PULL_AVG_HOP = [];
+        window.OY_PULL_ELAPSED = null;
+        window.OY_PULL_COVERAGE = [];
     }
 
     function oy_pull_reset_handle_click() {

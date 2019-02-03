@@ -1277,7 +1277,7 @@ function oy_data_validate(oy_node_id, oy_data_raw) {
                    oy_node_punish(oy_node_id, "OY_PUNISH_PASSPORT_ALREADY");
                    return false;
                }
-               if (typeof(window.OY_MAP)==="function") window.OY_MAP(oy_data[0], oy_data[1][0]);
+               if (typeof(window.OY_MAP)==="function") window.OY_MAP(oy_data[0], oy_data[1][0], (oy_data[0]==="OY_DATA_DEPOSIT"||oy_data[0]==="OY_DATA_FULFILL")?oy_data[1][1]:null);
                if (oy_data[0]==="OY_DATA_PUSH"||oy_data[0]==="OY_DATA_PULL") {
                    if (oy_data[1][0].length>1&&!!oy_peer_find(oy_data[1][0][0])) {
                        oy_log_debug("We are peers with the origination node "+oy_data[1][0][0]+", will cease routing");
