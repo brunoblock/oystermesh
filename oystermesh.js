@@ -1113,7 +1113,7 @@ function oy_data_collect(oy_data_source, oy_data_handle, oy_data_nonce, oy_data_
         oy_log("Collect received an invalid handle: "+oy_data_handle+", will not process");
         return false;
     }
-    if (typeof(window.OY_DATA_PULL[oy_data_handle])==="undefined"||window.OY_DATA_PULL[oy_data_handle]===false) {
+    if (typeof(window.OY_DATA_PULL[oy_data_handle])==="undefined") {
         oy_log("Collect could not find a pull session for handle: "+oy_data_handle+", will not process");
         return false;
     }
@@ -1140,7 +1140,7 @@ function oy_data_collect(oy_data_source, oy_data_handle, oy_data_nonce, oy_data_
         window.OY_DATA_PULL[oy_data_handle][1](oy_data_nonce, oy_source_count_highest, Object.keys(window.OY_COLLECT[oy_data_handle][oy_data_nonce]).length);
     }
 
-    if (Object.keys(window.OY_COLLECT[oy_data_handle]).length===window.OY_DATA_PULL[oy_data_handle][2]) {
+    if (typeof(window.OY_DATA_PULL[oy_data_handle])!=="undefined"&&window.OY_DATA_PULL[oy_data_handle]!==false&&Object.keys(window.OY_COLLECT[oy_data_handle]).length===window.OY_DATA_PULL[oy_data_handle][2]) {
         if (typeof(window.OY_CONSTRUCT[oy_data_handle])==="undefined") window.OY_CONSTRUCT[oy_data_handle] = [];
         for (let oy_data_nonce in window.OY_COLLECT[oy_data_handle]) {
             if (oy_data_nonce>=window.OY_DATA_PULL[oy_data_handle][2]) continue;

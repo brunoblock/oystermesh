@@ -145,6 +145,26 @@
             cursor: pointer;
         }
 
+        .oy_button_view_close {
+            background-color: #14a2cc;
+            border:0.1vh solid #14a2cc;
+            color: #f3f3f3;
+        }
+
+        .oy_button_view_close:hover {
+            cursor: pointer;
+        }
+
+        .oy_button_view_download {
+            background-color: #24ab26;
+            border:0.1vh solid #24ab26;
+            color: #f3f3f3;
+        }
+
+        .oy_button_view_download:hover {
+            cursor: pointer;
+        }
+
         .oy_button_all_dull {
             background-color: #7A7A7A;
             border:0.1vh solid #7A7A7A;
@@ -221,7 +241,7 @@
                 top:35vh;
                 width: 110vh;
                 height: 58vh;
-                z-index: 10000;
+                z-index: 1000;
             }
 
             .oy_tab {
@@ -624,6 +644,22 @@
 <body>
 <span id="oy_github_ribbon" class="oy_fade two"><a href="https://github.com/brunoblock/oystermesh" target="_blank">GITHUB REPO</a></span>
 <div id="front" class="oy_slide" style="height:100%">
+    <div id="oy_cover" style="position:absolute;left:0;top:0;width:100%;height:100%;background-color:#0f0f0f;opacity:0.85;z-index:2000;display:none;"></div>
+    <div id="oy_file_view_cont" style="position: absolute;top:50%;left:50%;transform: translate(-50%, -60%);width:auto;height:auto;background-color:#121212;padding:1.5%;border-top-left-radius:0.5vh;border-top-right-radius:0.5vh;z-index: 3000;display: none;">
+        <div id="oy_file_view_data"></div>
+        <div style="position:absolute;left:0;bottom:0;transform:translateY(99%);border-bottom-left-radius:0.5vh;border-bottom-right-radius:0.5vh;width: 100%;min-width:23vh;height:3vh;background-color:#121212;">
+            <div id="oy_view_close" align="center" class="oy_button oy_button_view_close" style="position:absolute;bottom:18%;right:2.5vh;width:6.5vh;height:65%;" onclick="oy_file_view_close()">
+                <div style="position:relative;top:-3%;">
+                    CLOSE
+                </div>
+            </div>
+            <div id="oy_view_download" align="center" class="oy_button oy_button_view_download" style="position:absolute;bottom:18%;right:11vh;width:10vh;height:65%;" onclick="oy_file_download()">
+                <div style="position:relative;top:-3%;">
+                    DOWNLOAD
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="oy_fade one oy_shell_cont_img">
         <img alt="Oyster" class="oy_shell_img" src="oy_resources/oy_logo_shell.png"/>
         <div class="oy_shadow">
@@ -710,7 +746,7 @@
                     <div class="oy_description">DESTINATION</div>
                     <div style="position:absolute;top:0;left:4%;height:100%;width:100%;">
                         <div style="position:absolute;top:0;"><input id="oy_dest_recommit" type="radio" style="transform:scale(0.8);"> Recommit data to mesh only</div>
-                        <div style="position:absolute;top:50%;transform: translateY(-50%)"><input id="oy_dest_view" type="radio" style="transform:scale(0.8);"> View in browser if applicable</div>
+                        <div style="position:absolute;top:50%;transform: translateY(-50%)"><input id="oy_dest_view" type="radio" style="transform:scale(0.8);" checked> View in browser if applicable</div>
                         <div style="position:absolute;bottom:0;"><input id="oy_dest_download" type="radio" style="transform:scale(0.8);"> Download locally as file</div>
                     </div>
                 </div>
@@ -775,7 +811,7 @@
         </div>
     </div>
     <div class="oy_signature oy_fade two">
-        <div class="oy_center_hor" style="top:0;">Designed and developed by <a href="https://github.com/brunoblock"><img alt="Bruno Block" src="oy_resources/oy_logo_bruno.png" class="oy_signature_img"></a></div>
+        <div class="oy_center_hor" style="top:0;">Designed&nbsp;and&nbsp;developed&nbsp;by&nbsp;<a href="https://github.com/brunoblock"><img alt="Bruno Block" src="oy_resources/oy_logo_bruno.png" class="oy_signature_img" style="left:0.5%;"></a></div>
     </div>
 </div>
 <script type="text/javascript">
@@ -789,12 +825,15 @@
         window.OY_PULL_HOP_KEEP = 100;
 
         window.OY_FILE_DATA = null;
+        window.OY_FILE_KEEP = null;
         window.OY_MESH_GLUE = [];
         window.OY_HANDLE_PUSH = null;
         window.OY_HANDLE_PUSH_COPY = null;
         window.OY_NONCE_MAX_PUSH = null;
         window.OY_NONCE_MAX_PULL = null;
         window.OY_HANDLE_PULL = null;
+        window.OY_GRAPH_NONCE_STORE = {};
+        window.OY_EXECUTE_LAST = null;
         window.OY_EXECUTE_PUSH = false;
         window.OY_EXECUTE_PULL = false;
         window.OY_EXECUTE_RECOMMIT = false;
@@ -1245,7 +1284,7 @@
         else if (window.OY_GRAPH_PEERS[oy_graph_slot]!==false) {
             if (oy_peer_short===null) {
                 window.OY_GRAPH_PEERS[oy_graph_slot] = false;
-                document.getElementById("oy_graph_slot_"+oy_graph_slot+"_front").style.backgroundColor = "#8a1e26";
+                document.getElementById("oy_graph_slot_"+oy_graph_slot+"_front").style.backgroundColor = "#c37b2c";
                 setTimeout(function() {
                     oy_element_remove("oy_graph_slot_"+oy_graph_slot+"_base");
                 }, 400);
@@ -1309,15 +1348,31 @@
         });
     }
 
-    function oy_file_download(oy_file_raw) {
-        let oy_file_data = JSON.parse(oy_file_raw);
+    function oy_file_view() {
+        if (window.OY_FILE_KEEP===null) return false;
+        if (window.OY_FILE_KEEP[1]==="image/png"||window.OY_FILE_KEEP[1]==="image/jpg") {
+            document.getElementById("oy_file_view_data").innerHTML = "<img src=\"data:"+window.OY_FILE_KEEP[1]+";base64,"+window.OY_FILE_KEEP[2]+"\">";
+            document.getElementById("oy_cover").style.display = "block";
+            document.getElementById("oy_file_view_cont").style.display = "block";
+            return true;
+        }
+        return false;
+    }
 
-        var blobUrl = URL.createObjectURL(b64toBlob(window.btoa(oy_file_data[2]), oy_file_data[1]));
+    function oy_file_view_close() {
+        document.getElementById("oy_file_view_cont").style.display = "none";
+        document.getElementById("oy_cover").style.display = "none";
+        document.getElementById("oy_file_view_data").innerHTML = "";
+    }
+
+    function oy_file_download() {
+        if (window.OY_FILE_KEEP===null) return false;
+        var blobUrl = URL.createObjectURL(b64toBlob(window.OY_FILE_KEEP[2], window.OY_FILE_KEEP[1]));
         var a = document.createElement("a");
         document.body.appendChild(a);
         a.style = "display: none";
         a.href = blobUrl;
-        a.download = oy_file_data[0];
+        a.download = window.OY_FILE_KEEP[0];
         a.click();
         window.URL.revokeObjectURL(blobUrl);
     }
@@ -1342,8 +1397,10 @@
         document.getElementById("oy_push_execute").classList.remove("oy_button_execute_active");
         document.getElementById("oy_push_execute").classList.add("oy_button_all_dull");
 
-        document.getElementById("oy_push_execute").style.backgroundColor = "#cbba3c";
-        document.getElementById("oy_push_execute").style.animation = "flash linear 0.3s infinite";
+        if (window.OY_HANDLE_PUSH===null) {
+            document.getElementById("oy_push_execute").style.backgroundColor = "#cbba3c";
+            document.getElementById("oy_push_execute").style.animation = "flash linear 0.3s infinite";
+        }
 
         document.getElementById("oy_push_reset").classList.remove("oy_button_reset_active");
         document.getElementById("oy_push_reset").classList.add("oy_button_all_dull");
@@ -1392,6 +1449,7 @@
             }
         }
         else {
+            if (window.OY_EXECUTE_LAST!=="OY_PUSH") document.getElementById("oy_graph_nonce").innerHTML = window.OY_GRAPH_NONCE_STORE["OY_PUSH"];
             window.OY_DATA_PUSH[window.OY_HANDLE_PUSH] = oy_callback_tally;
             oy_data_push(null, window.OY_HANDLE_PUSH, oy_callback_tally);
         }
@@ -1400,6 +1458,7 @@
 
         document.getElementById("oy_push_execute").style.backgroundColor = null;
         document.getElementById("oy_push_execute").style.animation = null;
+        window.OY_EXECUTE_LAST = "OY_PUSH";
     }
 
     function oy_push_halt() {
@@ -1419,6 +1478,8 @@
         document.getElementById("oy_file_upload").disabled = null;
 
         window.OY_DATA_PUSH[window.OY_HANDLE_PUSH] = false;
+
+        window.OY_GRAPH_NONCE_STORE["OY_PUSH"] = document.getElementById("oy_graph_nonce").innerHTML;
     }
 
     function oy_push_reset() {
@@ -1432,6 +1493,7 @@
 
         if (window.OY_HANDLE_PUSH===null) oy_data_push_reset(window.OY_HANDLE_PUSH);
         if (window.OY_EXECUTE_PULL===false&&window.OY_EXECUTE_RECOMMIT===false) oy_graph_nonce_set(null);
+        delete window.OY_GRAPH_NONCE_STORE["OY_PUSH"];
         window.OY_HANDLE_PUSH = null;
         window.OY_HANDLE_PUSH_COPY = null;
         window.OY_NONCE_MAX_PUSH = null;
@@ -1468,16 +1530,23 @@
         document.getElementById("oy_push_execute").classList.remove("oy_button_execute_active");
         document.getElementById("oy_push_execute").classList.add("oy_button_all_dull");
 
-        window.OY_HANDLE_PULL = document.getElementById('oy_pull_superhandle').value.substr(0, 48);
         window.OY_NONCE_MAX_PULL = parseInt(document.getElementById('oy_pull_superhandle').value.split("@")[0].substr(48));
-        oy_graph_nonce_set(window.OY_NONCE_MAX_PULL);
+        if (window.OY_HANDLE_PULL===null) oy_graph_nonce_set(window.OY_NONCE_MAX_PULL);
+        else if (window.OY_EXECUTE_LAST!=="OY_PULL") document.getElementById("oy_graph_nonce").innerHTML = window.OY_GRAPH_NONCE_STORE["OY_PULL"];
+
+        window.OY_HANDLE_PULL = document.getElementById('oy_pull_superhandle').value.substr(0, 48);
 
         window.OY_PULL_ELAPSED = Date.now()/1000;
 
+        delete window.OY_DATA_PULL[window.OY_HANDLE_PULL];
         oy_data_pull(function(oy_superhandle, oy_data_value) {
             oy_pull_halt();
             oy_graph_nonce_fill(true, oy_graph_nonce_colour(100));
-            oy_file_download(oy_data_value);
+            window.OY_FILE_KEEP = JSON.parse(oy_data_value);
+            window.OY_FILE_KEEP[2] = window.btoa(window.OY_FILE_KEEP[2]);
+
+            oy_file_view();
+            //oy_file_download();
         }, document.getElementById('oy_pull_superhandle').value,
         function(oy_data_nonce, oy_collect_count, oy_data_count) {
             if (oy_collect_count>0&&window.OY_PULL_COVERAGE.indexOf(oy_data_nonce)===-1) {
@@ -1491,6 +1560,7 @@
             }
             oy_graph_nonce_fill(oy_data_nonce, oy_graph_nonce_colour(oy_collect_count));
         });
+        window.OY_EXECUTE_LAST = "OY_PULL";
     }
 
     function oy_pull_halt() {
@@ -1512,6 +1582,8 @@
         }
 
         window.OY_DATA_PULL[window.OY_HANDLE_PULL] = false;
+
+        window.OY_GRAPH_NONCE_STORE["OY_PULL"] = document.getElementById("oy_graph_nonce").innerHTML;
     }
 
     function oy_pull_reset() {
@@ -1536,6 +1608,8 @@
 
         oy_data_pull_reset(window.OY_HANDLE_PULL);
         if (window.OY_EXECUTE_PUSH===false&&window.OY_EXECUTE_RECOMMIT===false) oy_graph_nonce_set(null);
+        delete window.OY_GRAPH_NONCE_STORE["OY_PULL"];
+        window.OY_FILE_KEEP = null;
         window.OY_HANDLE_PULL = null;
         window.OY_PULL_AVG_HOP = [];
         window.OY_PULL_ELAPSED = null;
