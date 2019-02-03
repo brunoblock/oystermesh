@@ -163,8 +163,8 @@
         }
 
         .oy_button_pull_go {
-            background-color: #14a2cc;
-            border:0.1vh solid #14a2cc;
+            background-color: #24ab26;
+            border:0.1vh solid #24ab26;
             color: #f3f3f3;
         }
 
@@ -656,7 +656,7 @@
 <span id="oy_github_ribbon" class="oy_fade two"><a href="https://github.com/brunoblock/oystermesh" target="_blank">GITHUB REPO</a></span>
 <div id="front" class="oy_slide" style="height:100%">
     <div id="oy_cover" style="position:absolute;left:0;top:0;width:100%;height:100%;background-color:#0f0f0f;opacity:0.85;z-index:2000;display:none;"></div>
-    <div id="oy_file_view_cont" style="position: absolute;top:50%;left:50%;transform: translate(-50%, -60%);width:auto;height:auto;background-color:#121212;padding:1.5%;border-top-left-radius:0.5vh;border-top-right-radius:0.5vh;z-index: 3000;display: none;">
+    <div id="oy_file_view_cont" style="position: absolute;top:50%;left:50%;transform: translate(-50%, -52%);width:auto;height:auto;background-color:#121212;padding:1.5%;border-top-left-radius:0.5vh;border-top-right-radius:0.5vh;z-index: 3000;display: none;">
         <div id="oy_file_view_data"></div>
         <div style="position:absolute;left:0;bottom:0;transform:translateY(99%);border-bottom-left-radius:0.5vh;border-bottom-right-radius:0.5vh;width: 100%;min-width:23vh;height:3vh;background-color:#121212;">
             <div id="oy_view_close" align="center" class="oy_button oy_button_view_close" style="position:absolute;bottom:18%;right:2.5vh;width:6.5vh;height:65%;" onclick="oy_file_view_close()">
@@ -742,15 +742,21 @@
                         <input id="oy_pull_superhandle" type="text" class="oy_superhandle_sub" style="text-align:center;width:98%;" onclick="oy_pull_reset_handle_click()" onblur="oy_pull_reset_handle_blur()" onchange="oy_pull_reset_handle_blur()" value="" />
                     </div>
                 </div>
-                <div class="oy_border oy_input_corner" style="left:5%;width:32%;">
+                <div id="oy_pull_stats_cont" class="oy_border oy_input_corner" style="left:5%;width:32%;">
                     <div class="oy_description">STATISTICS</div>
-                    <div class="oy_pull_stats" style="left:3%">
+                    <div id="oy_pull_stats_alpha" class="oy_pull_stats" style="left:3%">
                         AVG&nbsp;HOP:&nbsp;<span id="oy_stats_avg_hop" style="font-weight:bold">0</span><br>
                         TIME:&nbsp;<span id="oy_stats_elapsed" style="font-weight:bold">0 sec</span>
                     </div>
-                    <div class="oy_pull_stats" style="right:0">
+                    <div id="oy_pull_stats_beta" class="oy_pull_stats" style="right:0">
                         COVERAGE:&nbsp;<span id="oy_stats_coverage" style="font-weight:bold">0%</span><br>
                         CONFLICTS:&nbsp;<span id="oy_stats_conflicts" style="font-weight:bold">0</span>
+                    </div>
+                </div>
+                <div id="oy_mesh_glue_pull" class="oy_border oy_mesh_glue" style="position:absolute;bottom:14%;left:23%;width:14%;height:30%;display:none;">
+                    <div class="oy_description">MESH&nbsp;GLUE</div>
+                    <div id="oy_mesh_glue_pull_sub" class="oy_mesh_glue_sub">
+                        G-/--%
                     </div>
                 </div>
                 <div class="oy_border oy_input_corner" style="left:40%;width:32%;">
@@ -1374,7 +1380,7 @@
     function oy_file_view() {
         if (window.OY_FILE_KEEP===null) return false;
         if (oy_file_view_check()) {
-            document.getElementById("oy_file_view_data").innerHTML = "<img src=\"data:"+window.OY_FILE_KEEP[1]+";base64,"+window.OY_FILE_KEEP[2]+"\">";
+            document.getElementById("oy_file_view_data").innerHTML = "<img style=\"width:auto;height:auto;max-height:85vh;max-width:85vw;\" src=\"data:"+window.OY_FILE_KEEP[1]+";base64,"+window.OY_FILE_KEEP[2]+"\">";
             document.getElementById("oy_cover").style.display = "block";
             document.getElementById("oy_file_view_cont").style.display = "block";
             return true;
@@ -1415,7 +1421,6 @@
 
     function oy_push_execute() {
         if (document.getElementById("oy_push_execute").classList.contains("oy_button_all_dull")) return false;
-        //if (window.OY_EXECUTE_PUSH===true||window.OY_EXECUTE_PULL===true||window.OY_EXECUTE_RECOMMIT===true||window.OY_FILE_DATA===null) return false;
         window.OY_EXECUTE_PUSH = true;
         document.getElementById("oy_push_execute").classList.remove("oy_button_execute_active");
         document.getElementById("oy_push_execute").classList.add("oy_button_all_dull");
@@ -1460,10 +1465,10 @@
             window.OY_FILE_DATA = "oy_null";
             document.getElementById("oy_push_superhandle").value = oy_superhandle;
             let oy_superhandle_split = oy_superhandle.split("@");
-            window.OY_HANDLE_PUSH = oy_superhandle_split[0].substr(0, 48);
+            window.OY_HANDLE_PUSH = oy_superhandle_split[0].substr(0, 46);
             window.OY_HANDLE_PUSH_COPY = false;
             document.getElementById("oy_tooltip_push").style.display = "block";
-            window.OY_NONCE_MAX_PUSH = parseInt(oy_superhandle_split[0].substr(48));
+            window.OY_NONCE_MAX_PUSH = parseInt(oy_superhandle_split[0].substr(46));
             oy_graph_nonce_set(window.OY_NONCE_MAX_PUSH);
             let oy_nonce_counter = 0;
             while (oy_nonce_counter<window.OY_NONCE_MAX_PUSH) {
@@ -1514,7 +1519,7 @@
         document.getElementById("oy_push_reset").classList.remove("oy_button_reset_active");
         document.getElementById("oy_push_reset").classList.add("oy_button_all_dull");
 
-        if (window.OY_HANDLE_PUSH===null) oy_data_push_reset(window.OY_HANDLE_PUSH);
+        if (window.OY_HANDLE_PUSH!==null) oy_data_push_reset(window.OY_HANDLE_PUSH);
         if (window.OY_EXECUTE_PULL===false&&window.OY_EXECUTE_RECOMMIT===false) oy_graph_nonce_set(null);
         delete window.OY_GRAPH_NONCE_STORE["OY_PUSH"];
         window.OY_HANDLE_PUSH = null;
@@ -1543,14 +1548,41 @@
         if (oy_radio_select==="oy_dest_recommit") {
             document.getElementById("oy_dest_view").checked = false;
             document.getElementById("oy_dest_download").checked = false;
+
+            if (window.OY_FILE_KEEP!==null&&window.OY_EXECUTE_RECOMMIT===false) {
+                document.getElementById("oy_dest_go").classList.remove("oy_button_all_dull");
+                document.getElementById("oy_dest_go").classList.add("oy_button_pull_go");
+            }
+            else {
+                document.getElementById("oy_dest_go").classList.remove("oy_button_pull_go");
+                document.getElementById("oy_dest_go").classList.add("oy_button_all_dull");
+            }
         }
         else if (oy_radio_select==="oy_dest_view") {
             document.getElementById("oy_dest_recommit").checked = false;
             document.getElementById("oy_dest_download").checked = false;
+
+            if (window.OY_FILE_KEEP!==null&&window.OY_FILE_KEEP[0]!==null) {
+                document.getElementById("oy_dest_go").classList.remove("oy_button_all_dull");
+                document.getElementById("oy_dest_go").classList.add("oy_button_pull_go");
+            }
+            else {
+                document.getElementById("oy_dest_go").classList.remove("oy_button_pull_go");
+                document.getElementById("oy_dest_go").classList.add("oy_button_all_dull");
+            }
         }
         else if (oy_radio_select==="oy_dest_download") {
             document.getElementById("oy_dest_recommit").checked = false;
             document.getElementById("oy_dest_view").checked = false;
+
+            if (window.OY_FILE_KEEP!==null&&window.OY_FILE_KEEP[0]!==null) {
+                document.getElementById("oy_dest_go").classList.remove("oy_button_all_dull");
+                document.getElementById("oy_dest_go").classList.add("oy_button_pull_go");
+            }
+            else {
+                document.getElementById("oy_dest_go").classList.remove("oy_button_pull_go");
+                document.getElementById("oy_dest_go").classList.add("oy_button_all_dull");
+            }
         }
         else return false;
         window.OY_DEST_RADIO = oy_radio_select;
@@ -1560,6 +1592,7 @@
     function oy_dest_radio_view_enable() {
         document.getElementById("oy_dest_view").disabled = false;
         document.getElementById("oy_dest_view_inner").style.textDecoration = null;
+        return true;
     }
 
     function oy_dest_radio_view_disable() {
@@ -1574,6 +1607,9 @@
         if (document.getElementById("oy_dest_go").classList.contains("oy_button_all_dull")||window.OY_EXECUTE_PULL===true||window.OY_FILE_KEEP===null) return false;
         if (window.OY_DEST_RADIO==="oy_dest_view") oy_file_view();
         else if (window.OY_DEST_RADIO==="oy_dest_download") oy_file_download();
+        else if (window.OY_DEST_RADIO==="oy_dest_recommit") oy_recommit_execute();
+        else return false;
+        return true;
     }
 
     function oy_pull_execute() {
@@ -1592,29 +1628,37 @@
         document.getElementById("oy_push_execute").classList.remove("oy_button_execute_active");
         document.getElementById("oy_push_execute").classList.add("oy_button_all_dull");
 
-        window.OY_NONCE_MAX_PULL = parseInt(document.getElementById('oy_pull_superhandle').value.split("@")[0].substr(48));
+        window.OY_NONCE_MAX_PULL = parseInt(document.getElementById('oy_pull_superhandle').value.split("@")[0].substr(46));
         if (window.OY_HANDLE_PULL===null) oy_graph_nonce_set(window.OY_NONCE_MAX_PULL);
         else if (window.OY_EXECUTE_LAST!=="OY_PULL") document.getElementById("oy_graph_nonce").innerHTML = window.OY_GRAPH_NONCE_STORE["OY_PULL"];
 
-        window.OY_HANDLE_PULL = document.getElementById('oy_pull_superhandle').value.substr(0, 48);
+        document.getElementById('oy_pull_superhandle').disabled = "disabled";
+
+        window.OY_HANDLE_PULL = document.getElementById('oy_pull_superhandle').value.substr(0, 46);
 
         window.OY_PULL_ELAPSED = Date.now()/1000;
 
         delete window.OY_DATA_PULL[window.OY_HANDLE_PULL];
-        oy_data_pull(function(oy_superhandle, oy_data_value) {
-            oy_pull_halt();
+        oy_data_pull(function(oy_superhandle, oy_data_value, oy_data_crypt) {
+            oy_pull_halt(true);
             oy_graph_nonce_fill(true, oy_graph_nonce_colour(100));
-            window.OY_FILE_KEEP = JSON.parse(oy_data_value);
-            oy_data_value = null;
-            window.OY_FILE_KEEP[2] = window.btoa(window.OY_FILE_KEEP[2]);
+            if (oy_data_value===null) window.OY_FILE_KEEP = [null, null, null, true];
+            else {
+                window.OY_FILE_KEEP = JSON.parse(oy_data_value);
+                oy_data_value = null;
+                window.OY_FILE_KEEP[2] = window.btoa(window.OY_FILE_KEEP[2]);
+            }
+            window.OY_FILE_KEEP[3] = oy_data_crypt;
+            oy_data_crypt = null;
 
-            document.getElementById("oy_dest_go").classList.remove("oy_button_all_dull");
-            document.getElementById("oy_dest_go").classList.add("oy_button_pull_go");
+            if (window.OY_DEST_RADIO!=="oy_dest_recommit") {
+                document.getElementById("oy_dest_go").classList.remove("oy_button_all_dull");
+                document.getElementById("oy_dest_go").classList.add("oy_button_pull_go");
+            }
 
             if (!oy_file_view_check()) oy_dest_radio_view_disable();
             if (window.OY_DEST_RADIO==="oy_dest_download"||(window.OY_DEST_RADIO==="oy_dest_view"&&!oy_file_view())) oy_file_download();
-
-
+            else if (window.OY_DEST_RADIO==="oy_dest_recommit") setTimeout("oy_recommit_execute()", 500);
         }, document.getElementById('oy_pull_superhandle').value,
         function(oy_data_nonce, oy_collect_count, oy_data_count) {
             if (oy_collect_count>0&&window.OY_PULL_COVERAGE.indexOf(oy_data_nonce)===-1) {
@@ -1631,12 +1675,19 @@
         window.OY_EXECUTE_LAST = "OY_PULL";
     }
 
-    function oy_pull_halt() {
+    function oy_pull_halt(oy_switch) {
         if (document.getElementById("oy_pull_halt").classList.contains("oy_button_all_dull")) return false;
+
+        if (window.OY_EXECUTE_RECOMMIT===true) {
+            oy_recommit_halt();
+            return true;
+        }
         //if (window.OY_EXECUTE_PULL===false) return false;
         window.OY_EXECUTE_PULL = false;
-        document.getElementById("oy_pull_execute").classList.remove("oy_button_all_dull");
-        document.getElementById("oy_pull_execute").classList.add("oy_button_execute_active");
+        if (typeof(oy_switch)==="undefined") {
+            document.getElementById("oy_pull_execute").classList.remove("oy_button_all_dull");
+            document.getElementById("oy_pull_execute").classList.add("oy_button_execute_active");
+        }
 
         document.getElementById("oy_pull_halt").classList.remove("oy_button_halt_active");
         document.getElementById("oy_pull_halt").classList.add("oy_button_all_dull");
@@ -1649,7 +1700,8 @@
             document.getElementById("oy_push_execute").classList.add("oy_button_execute_active");
         }
 
-        window.OY_DATA_PULL[window.OY_HANDLE_PULL] = false;
+        if (typeof(oy_switch)==="undefined") window.OY_DATA_PULL[window.OY_HANDLE_PULL] = false;
+        else delete window.OY_DATA_PULL[window.OY_HANDLE_PULL];
 
         window.OY_GRAPH_NONCE_STORE["OY_PULL"] = document.getElementById("oy_graph_nonce").innerHTML;
     }
@@ -1661,6 +1713,8 @@
 
         document.getElementById("oy_pull_reset").classList.remove("oy_button_halt_active");
         document.getElementById("oy_pull_reset").classList.add("oy_button_all_dull");
+
+        document.getElementById('oy_pull_superhandle').disabled = false;
 
         document.getElementById("oy_pull_superhandle").value = "";
         oy_pull_reset_handle_blur();
@@ -1730,45 +1784,71 @@
     function oy_recommit_execute() {
         if (window.OY_EXECUTE_PUSH===true||window.OY_EXECUTE_PULL===true||window.OY_EXECUTE_RECOMMIT===true) return false;
         window.OY_EXECUTE_RECOMMIT = true;
-        document.getElementById("oy_recommit_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_recommit_execute").classList.add("oy_button_all_dull");
 
-        document.getElementById("oy_recommit_halt").classList.remove("oy_button_all_dull");
-        document.getElementById("oy_recommit_halt").classList.add("oy_button_halt_active");
+        document.getElementById("oy_pull_reset").classList.remove("oy_button_reset_active");
+        document.getElementById("oy_pull_reset").classList.add("oy_button_all_dull");
 
-        document.getElementById("oy_push_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_push_execute").classList.add("oy_button_all_dull");
+        document.getElementById("oy_pull_halt").classList.remove("oy_button_all_dull");
+        document.getElementById("oy_pull_halt").classList.add("oy_button_halt_active");
 
-        document.getElementById("oy_pull_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_pull_execute").classList.add("oy_button_all_dull");
+        if (window.OY_DEST_RADIO==="oy_dest_recommit") {
+            document.getElementById("oy_dest_go").classList.remove("oy_button_pull_go");
+            document.getElementById("oy_dest_go").classList.add("oy_button_all_dull");
+        }
 
-        document.getElementById("oy_send_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_send_execute").classList.add("oy_button_all_dull");
+        document.getElementById("oy_pull_stats_beta").style.display = "none";
+        document.getElementById("oy_pull_stats_cont").style.width = "15%";
+        document.getElementById("oy_pull_stats_alpha").style.left = "7.5%";
+        document.getElementById("oy_mesh_glue_pull").style.display = "block";
 
-        document.getElementById("oy_receive_execute").classList.remove("oy_button_execute_active");
-        document.getElementById("oy_receive_execute").classList.add("oy_button_all_dull");
+        let oy_callback_tally = function(oy_data_nonce, oy_tally_count) {
+            oy_graph_nonce_fill(oy_data_nonce, oy_graph_nonce_colour(oy_tally_count));
+            window.OY_MESH_GLUE[oy_data_nonce] = oy_tally_count;
+            let oy_data_nonce_count = 0;
+            let oy_glue_lowest = 9;
+            for (let oy_data_nonce_sub in window.OY_MESH_GLUE) {
+                if (window.OY_MESH_GLUE[oy_data_nonce_sub]<oy_glue_lowest) oy_glue_lowest = window.OY_MESH_GLUE[oy_data_nonce_sub];
+            }
+            for (let oy_data_nonce_sub in window.OY_MESH_GLUE) {
+                if (window.OY_MESH_GLUE[oy_data_nonce_sub]===oy_glue_lowest) oy_data_nonce_count++;
+            }
+            let oy_data_nonce_percent = Math.floor(((window.OY_NONCE_MAX_PULL-oy_data_nonce_count)/window.OY_NONCE_MAX_PULL)*100);
+            if (oy_data_nonce_percent===100) oy_data_nonce_percent = 99;
+            if (oy_data_nonce_percent<10) oy_data_nonce_percent = "0"+oy_data_nonce_percent;
+            document.getElementById("oy_mesh_glue_pull_sub").innerHTML = "G"+oy_glue_lowest+"/"+oy_data_nonce_percent+"%";
+        };
+        oy_data_pull_reset(window.OY_HANDLE_PULL);
+        if (window.OY_EXECUTE_LAST!=="OY_RECOMMIT") {
+            window.OY_MESH_GLUE = [];
+            let oy_nonce_counter = 0;
+            while (oy_nonce_counter<window.OY_NONCE_MAX_PULL) {
+                window.OY_MESH_GLUE[oy_nonce_counter] = 0;
+                oy_nonce_counter++;
+            }
+            oy_graph_nonce_set(null);
+            oy_graph_nonce_set(window.OY_NONCE_MAX_PULL);
+        }
+        delete window.OY_PUSH_HOLD[window.OY_HANDLE_PULL];
+        window.OY_DATA_PUSH[window.OY_HANDLE_PULL] = oy_callback_tally;
+        oy_data_push(window.OY_FILE_KEEP[3], window.OY_HANDLE_PULL);
+        window.OY_EXECUTE_LAST = "OY_RECOMMIT";
     }
 
     function oy_recommit_halt() {
         if (window.OY_EXECUTE_RECOMMIT===false) return false;
         window.OY_EXECUTE_RECOMMIT = false;
-        document.getElementById("oy_recommit_execute").classList.remove("oy_button_all_dull");
-        document.getElementById("oy_recommit_execute").classList.add("oy_button_execute_active");
+        window.OY_DATA_PUSH[window.OY_HANDLE_PULL] = false;
 
-        document.getElementById("oy_recommit_halt").classList.remove("oy_button_halt_active");
-        document.getElementById("oy_recommit_halt").classList.add("oy_button_all_dull");
+        document.getElementById("oy_pull_reset").classList.remove("oy_button_all_dull");
+        document.getElementById("oy_pull_reset").classList.add("oy_button_reset_active");
 
-        document.getElementById("oy_push_execute").classList.remove("oy_button_all_dull");
-        document.getElementById("oy_push_execute").classList.add("oy_button_execute_active");
+        document.getElementById("oy_pull_halt").classList.remove("oy_button_halt_active");
+        document.getElementById("oy_pull_halt").classList.add("oy_button_all_dull");
 
-        document.getElementById("oy_pull_execute").classList.remove("oy_button_all_dull");
-        document.getElementById("oy_pull_execute").classList.add("oy_button_execute_active");
-
-        document.getElementById("oy_send_execute").classList.remove("oy_button_all_dull");
-        document.getElementById("oy_send_execute").classList.add("oy_button_execute_active");
-
-        document.getElementById("oy_receive_execute").classList.remove("oy_button_all_dull");
-        document.getElementById("oy_receive_execute").classList.add("oy_button_execute_active");
+        if (window.OY_DEST_RADIO==="oy_dest_recommit") {
+            document.getElementById("oy_dest_go").classList.remove("oy_button_all_dull");
+            document.getElementById("oy_dest_go").classList.add("oy_button_pull_go");
+        }
     }
 
     function oy_tab(oy_tab_id) {
@@ -1822,7 +1902,6 @@
             document.getElementById('oy_tab_download').style.color = "#232323";
 
             if (window.OY_EXECUTE_PULL===true) document.getElementById('oy_tab_download').style.backgroundColor = "#c37b2c";
-            if (window.OY_EXECUTE_RECOMMIT===true) document.getElementById('oy_tab_recommit').style.backgroundColor = "#c37b2c";
 
             document.getElementById('oy_interface_dapper').style.display = "none";
             document.getElementById('oy_interface_wallet').style.display = "none";
@@ -1841,7 +1920,6 @@
             document.getElementById('oy_tab_download').style.color = "#d7d7d7";
 
             if (window.OY_EXECUTE_PUSH===true) document.getElementById('oy_tab_upload').style.backgroundColor = "#c37b2c";
-            if (window.OY_EXECUTE_RECOMMIT===true) document.getElementById('oy_tab_recommit').style.backgroundColor = "#c37b2c";
 
             document.getElementById('oy_interface_dapper').style.display = "none";
             document.getElementById('oy_interface_wallet').style.display = "none";

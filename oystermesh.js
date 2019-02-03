@@ -1,6 +1,7 @@
 // OYSTER MESH
 // Bruno Block
 // v0.1
+// License: GNU GPLv3
 
 // GLOBAL VARS
 window.OY_MESH_DYNASTY = "BRUNO_GENESIS_V1";//mesh dynasty definition, changing this will cause a hard-fork
@@ -36,7 +37,7 @@ window.OY_LATENCY_TRACK = 200;//how many latency measurements to keep at a time 
 window.OY_LATENCY_WEAK_BUFFER = 0.5;//percentage buffer for comparing latency with peers, higher means less likely the weakest peer will be dropped and hence less peer turnover
 window.OY_DATA_MAX = 64000;//max size of data that can be sent to another node
 window.OY_DATA_CHUNK = 48000;//chunk size by which data is split up and sent per transmission
-window.OY_DATA_PUSH_INTERVAL = 200;//ms per chunk per push loop iteration
+window.OY_DATA_PUSH_INTERVAL = 190;//ms per chunk per push loop iteration
 window.OY_DATA_PUSH_NONCE_MAX = 15;//maximum amount of nonces to push per push loop iteration
 window.OY_DATA_PULL_INTERVAL = 500;//ms per pull loop iteration
 window.OY_DATA_PULL_NONCE_MAX = 5;//maximum amount of nonces to request per pull beam, if too high fulfill will overrun soak limits and cause time/resource waste
@@ -112,11 +113,11 @@ function oy_hash_gen(oy_data_value) {
 }
 
 function oy_base_encode(oy_base_raw) {
-    return window.btoa(encodeURIComponent(oy_base_raw));
+    return encodeURIComponent(oy_base_raw);
 }
 
 function oy_base_decode(oy_base_base) {
-    return decodeURIComponent(window.atob(oy_base_base));
+    return decodeURIComponent(oy_base_base);
 }
 
 function oy_buffer_encode(oy_buffer_text, oy_buffer_base64) {
@@ -257,7 +258,7 @@ function oy_reduce_sum(oy_reduce_total, oy_reduce_num) {
 }
 
 function oy_handle_check(oy_data_handle) {
-    return typeof(oy_data_handle)==="string"&&oy_data_handle.length>20;
+    return typeof(oy_data_handle)==="string"&&oy_data_handle.substr(0, 2)==="OY"&&oy_data_handle.length>20;
 }
 
 function oy_local_store(oy_local_name, oy_local_data) {
@@ -981,9 +982,9 @@ function oy_data_push(oy_data_value, oy_data_handle, oy_callback_tally) {
     let oy_data_superhandle = false;
     if (typeof(oy_data_handle)==="undefined"||oy_data_handle===null) {
         oy_data_value = oy_base_encode(oy_data_value);
-        oy_data_handle = oy_rand_gen(2)+oy_hash_gen(oy_data_value);
         let oy_key_pass = oy_rand_gen();
         oy_data_value = oy_crypt_encrypt(oy_data_value, oy_key_pass);
+        oy_data_handle = "OY"+oy_rand_gen(1)+oy_hash_gen(oy_data_value);
         oy_data_superhandle = oy_data_handle+Math.ceil(oy_data_value.length/window.OY_DATA_CHUNK)+"@"+oy_key_pass;
         oy_key_pass = null;
     }
@@ -1069,9 +1070,9 @@ function oy_data_tally(oy_data_source, oy_data_handle, oy_data_nonce, oy_data_sh
 function oy_data_pull(oy_callback, oy_data_handle, oy_callback_collect, oy_data_nonce_max, oy_crypt_pass) {
     if (typeof(oy_data_nonce_max)==="undefined"||typeof(oy_crypt_pass)==="undefined") {
         let oy_data_handle_split = oy_data_handle.split("@");
-        oy_data_nonce_max = parseInt(oy_data_handle_split[0].substr(48));
+        oy_data_nonce_max = parseInt(oy_data_handle_split[0].substr(46));
         oy_crypt_pass = oy_data_handle_split[1];
-        oy_data_handle = oy_data_handle_split[0].substr(0, 48);//32 is for encryption key, 48 is for length of salt (8) integrity SHA1 (40), 32+48 = 80
+        oy_data_handle = oy_data_handle_split[0].substr(0, 46);
     }
     if (typeof(oy_callback_collect)!=="function") oy_callback_collect = null;
     if (typeof(window.OY_DATA_PULL[oy_data_handle])==="undefined") window.OY_DATA_PULL[oy_data_handle] = [oy_callback, oy_callback_collect, oy_data_nonce_max, oy_crypt_pass];
@@ -1157,12 +1158,12 @@ function oy_data_collect(oy_data_source, oy_data_handle, oy_data_nonce, oy_data_
 
         if (Object.keys(window.OY_CONSTRUCT[oy_data_handle]).length===window.OY_DATA_PULL[oy_data_handle][2]) {
             oy_log("Construct for "+oy_data_handle+" achieved all "+window.OY_DATA_PULL[oy_data_handle][2]+" nonce(s)");
-            let oy_data_construct = oy_crypt_decrypt(window.OY_CONSTRUCT[oy_data_handle].join(""), window.OY_DATA_PULL[oy_data_handle][3]);
-            if (oy_data_handle.substr(8, 40)===oy_hash_gen(oy_data_construct)) {
-                oy_log("Construct for "+oy_data_handle+" cleared hash check");
+            let oy_data_construct = window.OY_CONSTRUCT[oy_data_handle].join("");
+            if (oy_data_handle.substr(6, 40)===oy_hash_gen(oy_data_construct)) {
                 delete window.OY_COLLECT[oy_data_handle];
                 delete window.OY_CONSTRUCT[oy_data_handle];
-                window.OY_DATA_PULL[oy_data_handle][0](window.OY_DATA_PULL[oy_data_handle][3]+oy_data_handle+window.OY_DATA_PULL[oy_data_handle][2], oy_base_decode(oy_data_construct));
+                oy_log("Construct for "+oy_data_handle+" cleared hash check");
+                window.OY_DATA_PULL[oy_data_handle][0]("OY"+oy_data_handle+window.OY_DATA_PULL[oy_data_handle][2]+((window.OY_DATA_PULL[oy_data_handle][3]===null)?"":"@"+window.OY_DATA_PULL[oy_data_handle][3]), (window.OY_DATA_PULL[oy_data_handle][3]===null)?null:oy_base_decode(oy_crypt_decrypt(oy_data_construct, window.OY_DATA_PULL[oy_data_handle][3])), oy_data_construct);
                 window.OY_DATA_PULL[oy_data_handle] = false;
                 return true;
             }
