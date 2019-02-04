@@ -355,7 +355,7 @@
                 border-radius: 0.5vh;
             }
 
-            .oy_border.oy_graph_nonce {
+            .oy_border.oy_graph {
                 border:0.2vh solid #404040;
             }
 
@@ -371,6 +371,7 @@
                 border:0.1vh dashed #727272;
                 color:#000000;
                 font-weight:bold;
+                font-size:1.2vh;
             }
 
             .oy_peer_sub {
@@ -568,7 +569,7 @@
 
             .oy_shell_cont_img {
                 position: absolute;
-                top: 12vw;
+                top: 6vh;
                 left: 50%;
                 height: 27vw;
                 transform: translateX(-50%);
@@ -589,14 +590,246 @@
                 position:absolute;
                 left:50%;
                 transform:translateX(-50%);
-                top: 41vw;
-                width: 80vw;
-                height: 60vw;
-                z-index: 10000;
+                top:35vw;
+                width: 95vw;
+                height: 80vw;
+                z-index: 1000;
+            }
+
+            .oy_tab {
+                border-radius: 0.5vw;
+                padding: 0.5vw 1vw;
+                font-size:1.7vw;
+                font-family: geo_med, Fallback, sans-serif;
+            }
+
+            .oy_tab:hover {
+                cursor: pointer;
+            }
+
+            .oy_description {
+                position:absolute;
+                top:0;
+                left:0;
+                transform: translateY(-100%);
+                font-size:1.5vw;
+            }
+
+            .oy_description_handle {
+                position:absolute;
+                top:0;
+                left:0;
+                transform: translateY(-100%);
+                font-size:1.8vw;
+            }
+
+            .oy_superhandle {
+                position:absolute;
+                top:18%;
+                left:5%;
+                width:90%;
+                height:20%;
+                border:0.1vw dashed #727272;
+            }
+
+            .oy_superhandle_sub {
+                font-size:0.95vw;
+                font-family: 'Courier New', sans-serif;
+            }
+
+            .oy_superhandle_sub:hover {
+                cursor: pointer;
+            }
+
+            .oy_box {
+                position:absolute;
+                bottom:14%;
+                left:41%;
+                width:32.5%;
+                height:30%;
+                border:0.1vw dashed #727272;
+                font-size:1vw;
+            }
+
+            .oy_mesh_glue {
+                position:absolute;
+                bottom:14%;
+                left:23.5%;
+                width:14%;
+                height:30%;
+                border:0.1vw dashed #727272;
+                font-size:1vw;
+            }
+
+            .oy_mesh_glue_sub {
+                position:absolute;
+                top:50%;
+                left:50%;
+                transform: translate(-37%, -50%);
+                width:90%;
+                font-family: "Courier New", Fallback, sans-serif;
+                font-size:1.5vw;
+            }
+
+            .oy_button {
+                border-radius: 0.5vh;
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+                font-family: geo_med, Fallback, sans-serif;
+                font-size:1.5vw;
             }
 
             .oy_border {
-                border-radius: 0.5vw;
+                border-radius: 0.5vh;
+            }
+
+            .oy_border.oy_graph {
+                border:0.2vw solid #404040;
+            }
+
+            .oy_border.oy_interface_main {
+                border:0.2vw solid #404040;
+            }
+
+            .oy_peer {
+                position:absolute;
+                left:5%;
+                width:90%;
+                height:12%;
+                border:0.1vw dashed #727272;
+                color:#000000;
+                font-weight:bold;
+                font-size:1.2vw;
+            }
+
+            .oy_peer_sub {
+                position:absolute;
+                left:0;
+                top:0;
+                width:100%;
+                height:100%;
+            }
+
+            .oy_peer_beam {
+                position:absolute;
+                left:0;
+                top:0;
+                width:100%;
+                height:100%;
+                background-color: #626262;
+            }
+
+            .oy_peer_soak {
+                position:absolute;
+                left:0;
+                top:0;
+                width:100%;
+                height:100%;
+                background-color: #7A7A7A;
+            }
+
+            .oy_stats {
+                font-size:1.6vw;
+            }
+
+            .oy_pull_stats {
+                position:absolute;
+                top:17%;
+                width:50%;
+                height:100%;
+                font-size:1.1vw;
+            }
+
+            #oy_console {
+                width:96%;
+                height:99%;
+                overflow: scroll;
+                font-family:'Courier New', sans-serif;
+                font-size: 1vw;
+            }
+
+            .oy_tooltip {
+                position: absolute;
+            }
+
+            .oy_tooltip .oy_tooltip_text {
+                position: absolute;
+                width: 12vw;
+                background-color: #555;
+                color: #fff;
+                text-align: center;
+                border-radius: 0.6vw;
+                padding: 0.6vw;
+                z-index: 1;
+                bottom: 150%;
+                left: 50%;
+                margin-left: -5.5vw;
+                opacity: 0;
+            }
+
+            .oy_tooltip .oy_tooltip_text::after {
+                content: "";
+                position: absolute;
+                top: 100%;
+                left: 50%;
+                margin-left: -0.6vw;
+                border-width: 0.6vw;
+                border-style: solid;
+                border-color: #555 transparent transparent transparent;
+            }
+
+            .oy_tooltip:hover .oy_tooltip_text {
+                opacity: 1;
+            }
+
+            .oy_tooltip_warn {
+                position: absolute;
+            }
+
+            .oy_tooltip_warn .oy_tooltip_text_warn {
+                position: absolute;
+                width: 13vw;
+                background-color: #c37b2c;
+                color: #151515;
+                text-align: center;
+                border-radius: 0.6vw;
+                padding: 0.6vw;
+                z-index: 1;
+                bottom: 150%;
+                left: 50%;
+                margin-left: -5.5vw;
+                opacity: 0;
+            }
+
+            .oy_tooltip_warn .oy_tooltip_text_warn::after {
+                content: "";
+                position: absolute;
+                top: 100%;
+                left: 50%;
+                margin-left: -0.6vw;
+                border-width: 0.6vw;
+                border-style: solid;
+                border-color: #c37b2c transparent transparent transparent;
+            }
+
+            .oy_signature {
+                position:absolute;
+                left:0;
+                bottom:0;
+                width:100%;
+                height:5%;
+                color:#000;
+                font-size: 1.2vw;
+            }
+
+            .oy_signature_img {
+                position: relative;
+                width: auto;
+                height: auto;
+                max-height: 1.6vw;
+                max-width: 1.6vw;
+                transform:translateY(25%);
             }
 
             #oy_github_ribbon a:hover {
@@ -604,7 +837,7 @@
                 color: #fff;
             }
 
-            #oy_github_ribbon a::before, #oy_github_ribbon a::after {
+            #oy_github_ribbon a::before, #github_ribbon a::after {
                 content: "";
                 width: 100%;
                 display: block;
@@ -612,7 +845,7 @@
                 top: 0.1vw;
                 left: 0;
                 height: 0.1vw;
-                background: #f7f7f7;
+                background: #0f0f0f;
             }
 
             #oy_github_ribbon a::after {
@@ -625,9 +858,9 @@
                 display: block;
                 top: 0;
                 right: 0;
-                width: 20vw;
+                width: 20vh;
                 overflow: hidden;
-                height: 20vw;
+                height: 20vh;
                 z-index: 9999;
             }
 
@@ -638,7 +871,7 @@
                 font-family: arial, sans-serif;
                 text-align: center;
                 font-weight: bold;
-                padding: 0.5vw 4vw;
+                padding: 0.5vh 4vh;
                 font-size: 1.5vw;
                 line-height: 3vw;
                 transition: 0.5s;
@@ -692,7 +925,7 @@
         </div>
     </div>
     <div class="oy_holder oy_fade two">
-        <div id="oy_graph_nonce" class="oy_center_hor oy_border oy_graph_nonce" style="top:0;width:50%;height:10%;background-color: #404040;overflow: hidden"></div>
+        <div id="oy_graph_nonce" class="oy_center_hor oy_border oy_graph" style="top:0;width:50%;height:10%;background-color: #404040;overflow: hidden"></div>
         <div id="oy_interface_main" class="oy_center_hor" style="top:18%;width:50%;height:25%;">
             <div id="oy_tab_dapper" class="oy_tab oy_left" style="position:fixed;top:-20%;left: 10%;height:20%;background-color: #7A7A7A;color:#232323;z-index:-50;" onclick="oy_tab(this.id)">DAPPER</div>
             <div id="oy_tab_wallet" class="oy_tab" style="position:fixed;top:-20%;left: 37%;height:20%;transform: translateX(-50%);background-color: #7A7A7A;color:#232323;z-index:-50;" onclick="oy_tab(this.id)">WALLET</div>
@@ -808,14 +1041,14 @@
                 </div>
             </div>
         </div>
-        <div class="oy_border oy_graph_nonce" style="position:absolute;bottom:0;left:0;width:49%;height:53%;background-color: #404040;overflow: hidden" onmouseenter="oy_console_hover_on()" onmouseleave="oy_console_hover_off()">
+        <div class="oy_border oy_graph" style="position:absolute;bottom:0;left:0;width:49%;height:53%;background-color: #404040;overflow: hidden" onmouseenter="oy_console_hover_on()" onmouseleave="oy_console_hover_off()">
             <div id="oy_console_hover_indicator" style="position:absolute;top:1%;right:1%;width:2.5%;height:4%;background-color: #c37b2c;border-radius: 50%;display: none;z-index: 200;"></div>
             <div id="oy_console" class="oy_center_both">***<br></div>
         </div>
-        <div id="oy_graph_nodes" class="oy_border oy_graph_nonce" style="position:absolute;bottom:0;right:0;width:49%;height:53%;background-color: #404040;overflow:hidden;">
+        <div id="oy_graph_nodes" class="oy_border oy_graph" style="position:absolute;bottom:0;right:0;width:49%;height:53%;background-color: #404040;overflow:hidden;">
             <div id="oy_top_inner" style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);overflow:hidden;"></div>
         </div>
-        <div id="oy_stats" class="oy_border oy_graph_nonce" style="position:absolute;top:0;left:0;width:23%;height:43%;background-color: #404040;overflow:hidden;">
+        <div id="oy_stats" class="oy_border oy_graph" style="position:absolute;top:0;left:0;width:23%;height:43%;background-color: #404040;overflow:hidden;">
             <div class="oy_center_both oy_stats" style="top:46%;height:77%;width:100%;">
                 <div align="right" style="position:absolute;left:-2.5%;top:0;width:50%;height:100%;">
                     SELF&nbsp;SHORT&nbsp;ID<br>
@@ -853,7 +1086,7 @@
                 </div>
             </div>
         </div>
-        <div id="oy_graph_peers" class="oy_border oy_graph_nonce" style="position:absolute;top:0;right:0;width:23%;height:43%;background-color: #404040;">
+        <div id="oy_graph_peers" class="oy_border oy_graph" style="position:absolute;top:0;right:0;width:23%;height:43%;background-color: #404040;">
             <div id="oy_graph_slot_4" class="oy_peer" style="top:4%;"></div>
             <div id="oy_graph_slot_3" class="oy_peer" style="top:24%;"></div>
             <div id="oy_graph_slot_2" class="oy_peer" style="top:44%;"></div>
