@@ -1389,7 +1389,7 @@
             document.getElementById("oy_peer_count_cont").style.backgroundColor = null;
         }
         document.getElementById("oy_blacklisted").innerHTML = ""+Object.keys(window.OY_BLACKLIST).length;
-        setTimeout("oy_maintain()", 200);
+        setTimeout("oy_maintain()", 250);
     }
 
     function oy_console_local(oy_console_msg) {
@@ -1614,7 +1614,7 @@
             document.getElementById("oy_graph_slot_"+oy_graph_slot+"_front").style.backgroundColor = "#348fab";
             setTimeout(function() {
                 document.getElementById("oy_graph_slot_"+oy_graph_slot+"_front").style.backgroundColor = "transparent";
-            }, 400);
+            }, 220);
         }
         else if (window.OY_GRAPH_PEERS[oy_graph_slot]!==false) {
             if (oy_peer_short===null) {
@@ -1622,7 +1622,7 @@
                 document.getElementById("oy_graph_slot_"+oy_graph_slot+"_front").style.backgroundColor = "#c37b2c";
                 setTimeout(function() {
                     oy_element_remove("oy_graph_slot_"+oy_graph_slot+"_base");
-                }, 400);
+                }, 220);
             }
             else {
                 window.OY_GRAPH_PEERS[oy_graph_slot] = oy_peer_short;
