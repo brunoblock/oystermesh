@@ -53,7 +53,7 @@ window.OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inp
 
 // INIT
 window.OY_CONN = null;//global P2P connection handle
-window.OY_FORCE_RESET = false;//forces engine to restart init
+window.OY_ENGINE_KILL = false;//forces engine to stop its loop
 window.OY_CONSOLE = null;//custom function for handling console
 window.OY_MAP = null;//custom function for tracking passive passports
 window.OY_INIT = 0;//prevents multiple instances of oy_init() from running simultaneously
@@ -786,7 +786,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
         return false;
     }
     else {
-        oy_log_debug("Node "+oy_short(oy_node_id)+" sent an incoherent message with flag "+oy_data_flag);
+        oy_log("Node "+oy_short(oy_node_id)+" sent an incoherent message with flag "+oy_data_flag);
         oy_node_punish(oy_node_id, "OY_PUNISH_DATA_INCOHERENT");
         oy_node_disconnect(oy_node_id);
         return false;
@@ -1287,7 +1287,7 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
                if (typeof(window.OY_MAP)==="function") window.OY_MAP(oy_data[0], oy_data[1][0], (oy_data[0]==="OY_DATA_DEPOSIT"||oy_data[0]==="OY_DATA_FULFILL")?oy_data[1][1]:null);
                if (oy_data[0]==="OY_DATA_PUSH"||oy_data[0]==="OY_DATA_PULL") {
                    if (oy_data[1][0].length>1&&!!oy_peer_find(oy_data[1][0][0])) {
-                       oy_log_debug("We are peers with the origination node "+oy_data[1][0][0]+", will cease routing");
+                       oy_log("We are peers with the origination node "+oy_data[1][0][0]+", will cease routing");
                        return true;
                    }
                    if (oy_data[0]==="OY_DATA_PULL") {
@@ -1343,6 +1343,10 @@ function oy_data_deposit(oy_data_handle, oy_data_nonce, oy_data_value) {
 
 //core loop that runs critical functions and checks
 function oy_engine(oy_thread_track) {
+    if (window.OY_ENGINE_KILL===true) {
+        window.OY_ENGINE_KILL = false;
+        return true;
+    }
     //reboot INIT if the connection was lost
     if (window.OY_MAIN['oy_ready']===true&&(window.OY_CONN===null||window.OY_CONN.disconnected!==false)) {
         oy_log("Engine found connection handler dead, will reboot INIT and kill engine chain");

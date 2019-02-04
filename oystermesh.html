@@ -927,6 +927,7 @@
             window.OY_NODE_KEEP[window.OY_MAIN['oy_self_short']] = true;
             oy_top_node_add(window.OY_MAIN['oy_self_short'], "self");
             if (typeof(oy_block)==="undefined") oy_maintain();
+
             window.OY_MAP = function(oy_data_flag, oy_passport_passive, oy_passport_active) {
                 let oy_time_local = Date.now()/1000|0;
                 window.OY_MESH_RANGE.push([oy_time_local, oy_passport_passive.length]);
@@ -968,6 +969,13 @@
                         oy_node_prev = oy_passport_passive[i];
                     }
                 }
+            };
+
+            if (location.hash.substr(0, 3)==="#OY"&&location.hash.length>=46) {
+                document.getElementById('oy_pull_superhandle').value = location.hash.substr(1);
+                oy_pull_reset_handle_blur();
+                oy_tab("oy_tab_download");
+                oy_pull_execute();
             }
         }, null,
         function(oy_console_msg) {
@@ -1058,10 +1066,14 @@
             }
         }
 
+        let oy_local_remove;
         for (let i in window.OY_GRAPH_PEERS_PREV) {
             if (window.OY_GRAPH_PEERS_PREV[i]===false) continue;
             if (window.OY_GRAPH_PEERS.indexOf(window.OY_GRAPH_PEERS_PREV[i])===-1) {
-                oy_top_node_remove(window.OY_GRAPH_PEERS_PREV[i]);
+                oy_local_remove = window.OY_GRAPH_PEERS_PREV[i];
+                setTimeout(function() {
+                    oy_top_node_remove(oy_local_remove);
+                }, 150);
                 let oy_node_present = false;
                 for (let oy_node_short in window.OY_NODE_KEEP) {
                     if (window.OY_NODE_KEEP[oy_node_short]!==true) {
@@ -1436,7 +1448,6 @@
     }
 
     function oy_file_view_check(oy_type) {
-        console.log(window.OY_FILE_KEEP[1]);
         if ((oy_type==="oy_image"||oy_type===true)&&(window.OY_FILE_KEEP[1]==="image/png"||window.OY_FILE_KEEP[1]==="image/jpg")) return true;
         else if ((oy_type==="oy_audio"||oy_type===true)&&(window.OY_FILE_KEEP[1]==="audio/mpeg"||window.OY_FILE_KEEP[1]==="audio/wav"||window.OY_FILE_KEEP[1]==="audio/ogg"||window.OY_FILE_KEEP[1]==="audio/x-m4a")) return true;
         else if ((oy_type==="oy_video"||oy_type===true)&&(window.OY_FILE_KEEP[1]==="video/mp4"||window.OY_FILE_KEEP[1]==="video/webm"||window.OY_FILE_KEEP[1]==="video/ogg")) return true;
@@ -1563,6 +1574,7 @@
             let oy_superhandle = oy_data_push(window.OY_FILE_DATA, null, oy_callback_tally);
             window.OY_FILE_DATA = "oy_null";
             document.getElementById("oy_push_superhandle").value = oy_superhandle;
+            location.hash = document.getElementById('oy_push_superhandle').value;
             let oy_superhandle_split = oy_superhandle.split("@");
             window.OY_HANDLE_PUSH = oy_superhandle_split[0].substr(0, 46);
             window.OY_HANDLE_PUSH_COPY = false;
@@ -1635,6 +1647,7 @@
         window.OY_MESH_GLUE = [];
         document.getElementById("oy_file_upload").value = "";
         document.getElementById("oy_push_superhandle").value = "-".repeat(82);
+        location.hash = "";
         document.getElementById("oy_push_mesh_glue_sub").innerHTML = "G-/--%";
         document.getElementById("oy_tooltip_push").style.display = "none";
         oy_push_reset_handle_leave();
@@ -1732,7 +1745,6 @@
 
     function oy_pull_execute() {
         if (document.getElementById("oy_pull_execute").classList.contains("oy_button_all_dull")) return false;
-        //if (window.OY_EXECUTE_PUSH===true||window.OY_EXECUTE_PULL===true||window.OY_EXECUTE_RECOMMIT===true) return false;
         window.OY_EXECUTE_PULL = true;
         document.getElementById("oy_pull_execute").classList.remove("oy_button_execute_active");
         document.getElementById("oy_pull_execute").classList.add("oy_button_all_dull");
@@ -1757,6 +1769,7 @@
         else if (window.OY_EXECUTE_LAST!=="OY_PULL") document.getElementById("oy_graph_nonce").innerHTML = window.OY_GRAPH_NONCE_STORE["OY_PULL"];
 
         document.getElementById('oy_pull_superhandle').disabled = "disabled";
+        location.hash = document.getElementById('oy_pull_superhandle').value;
 
         window.OY_HANDLE_PULL = document.getElementById('oy_pull_superhandle').value.substr(0, 46);
 
@@ -1806,7 +1819,6 @@
 
     function oy_pull_halt(oy_switch) {
         if (document.getElementById("oy_pull_halt").classList.contains("oy_button_all_dull")) return false;
-
         if (window.OY_EXECUTE_RECOMMIT===true) {
             oy_recommit_halt();
             return true;
@@ -1839,7 +1851,6 @@
 
     function oy_pull_reset() {
         if (document.getElementById("oy_pull_reset").classList.contains("oy_button_all_dull")) return false;
-        //if (window.OY_EXECUTE_PULL===false) return false;
         window.OY_EXECUTE_PULL = false;
 
         document.getElementById("oy_pull_stats_beta").style.display = "block";
@@ -1854,6 +1865,7 @@
         document.getElementById('oy_pull_superhandle').disabled = false;
 
         document.getElementById("oy_pull_superhandle").value = "";
+        location.hash = "";
         oy_pull_reset_handle_blur();
         oy_dest_radio_view_enable();
         oy_dest_radio_download_enable();
