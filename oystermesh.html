@@ -1393,13 +1393,14 @@
     }
 
     function oy_console_local(oy_console_msg) {
+        if (window.OY_CONSOLE_HOVER===true) return false;
         let oy_msg_build = "<span>";
         if (typeof(window.OY_MAIN['oy_self_short'])==="undefined") oy_msg_build += "null@mesh$ ";
         else oy_msg_build += window.OY_MAIN['oy_self_short']+"@mesh$ ";
         oy_element_add("oy_console", "span", "oy_console_line_"+window.OY_CONSOLE_COUNTER, oy_msg_build+oy_console_msg+"<br>");
         window.OY_CONSOLE_COUNTER++;
         if (window.OY_CONSOLE_COUNTER>=window.OY_CONSOLE_SIZE) oy_element_remove("oy_console_line_"+(window.OY_CONSOLE_COUNTER-window.OY_CONSOLE_SIZE));
-        if (window.OY_CONSOLE_HOVER===false) document.getElementById("oy_console").scrollTo(0, 9000);
+        document.getElementById("oy_console").scrollTo(0, 9000);
     }
 
     function oy_console_hover_on() {
