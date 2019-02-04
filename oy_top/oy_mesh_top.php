@@ -1,5 +1,5 @@
 <?php
-header("Access-Control-Allow-Origin: *");
+if (php_sapi_name()!=="cli") exit;
 
 function oy_flow_format($oy_bytes, $oy_precision = 2) {
     $oy_base = log($oy_bytes, 1000);
@@ -12,7 +12,12 @@ function oy_flow_format($oy_bytes, $oy_precision = 2) {
 $oy_mesh_top = [[], [], [["oy_stat_avg_latency"=>[], "oy_stat_avg_peership"=>[], "oy_stat_mesh_size"=>0, "oy_stat_mesh_flow"=>0, "oy_stat_sector_count"=>[]], []]];
 $oy_mesh_keep = [];
 $oy_mesh_file_array = glob("/dev/shm/oy_peers/*.peer");
-if (count($oy_mesh_file_array)<=2) die(json_encode($oy_mesh_top));
+if (count($oy_mesh_file_array)<=2) {
+    $fh = fopen("/var/www/html/oy_mesh_top.json", "w");
+    fwrite($fh, json_encode($oy_mesh_top));
+    fclose($fh);
+    exit;
+}
 foreach ($oy_mesh_file_array as $oy_mesh_file_unique) {
     $oy_mesh_data = json_decode(file_get_contents($oy_mesh_file_unique), true);
     //var_dump($oy_mesh_data);
@@ -56,4 +61,7 @@ $oy_punish_total = array_sum($oy_punish_track);
 foreach ($oy_punish_track as $oy_punish_type => $oy_punish_count) {
     $oy_mesh_top[2][1][] = [str_replace("OY_PUNISH_", "", $oy_punish_type), $oy_punish_count, round(($oy_punish_count/$oy_punish_total)*100, 1)];
 }
-echo json_encode($oy_mesh_top);
+
+$fh = fopen("/var/www/html/oy_mesh_top.json", "w");
+fwrite($fh, json_encode($oy_mesh_top));
+fclose($fh);

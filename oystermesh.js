@@ -19,12 +19,12 @@ window.OY_MESH_SOURCE = 2;//node in route passport (from destination) that is as
 window.OY_NODE_TOLERANCE = 3;//max amount of protocol communication violations until node is blacklisted
 window.OY_NODE_BLACKTIME = 600;//seconds to blacklist a punished node for
 window.OY_NODE_PROPOSETIME = 12;//seconds for peer proposal session duration
-window.OY_NODE_ASSIGNTTIME = 10;//minimum interval between node_assign instances to/from central
+window.OY_NODE_ASSIGNTTIME = 10;//minimum interval between node_assign instances to/from top
 window.OY_NODE_DELAYTIME = 6;//minimum expected time to connect or transmit data to a node
 window.OY_PEER_LATENCYTIME = 60;//peers are expected to establish latency timing with each other within this interval in seconds
 window.OY_PEER_KEEPTIME = 20;//peers are expected to communicate with each other within this interval in seconds
 window.OY_PEER_REFERTIME = 480;//interval in which self asks peers for peer recommendations (as needed)
-window.OY_PEER_REPORTTIME = 10;//interval to report peer list to central
+window.OY_PEER_REPORTTIME = 10;//interval to report peer list to top
 window.OY_PEER_PRETIME = 20;//seconds which a node is waiting as a 'pre-peer'
 window.OY_PEER_MAX = 5;//maximum mutual peers per zone (applicable difference is for gateway nodes)
 window.OY_ROUTE_DYNAMIC_KEEP = 100;//how many dynamic identifiers for a routed data sequence to remember and block
@@ -93,7 +93,7 @@ function oy_log_debug(oy_log_msg) {
     if (typeof(window.OY_MAIN['oy_self_id'])==="undefined") return false;
     oy_log_msg = "["+(Date.now()/1000)+"] "+oy_log_msg;
     let oy_xhttp = new XMLHttpRequest();
-    oy_xhttp.open("POST", "http://central.oyster.org/oy_log_catch.php", true);
+    oy_xhttp.open("POST", "http://top.oyster.org/oy_log_catch.php", true);
     oy_xhttp.send("oy_log_catch="+JSON.stringify([window.OY_MAIN['oy_self_short'], oy_log_msg]));
 }
 
@@ -546,20 +546,20 @@ function oy_peer_check(oy_node_id) {
     return typeof(window.OY_PEERS[oy_node_id])!=="undefined";
 }
 
-//reports peership data to central, leads to seeing mesh big picture, mesh stability development
+//reports peership data to top, leads to seeing mesh big picture, mesh stability development
 function oy_peer_report() {
     let oy_xhttp = new XMLHttpRequest();
     oy_xhttp.onreadystatechange = function() {
         if (this.readyState===4&&this.status===200) {
             if (this.responseText.substr(0, 5)==="ERROR"||this.responseText.length===0) {
-                oy_log("Received error from peer_report@central: "+this.responseText);
+                oy_log("Received error from peer_report@top: "+this.responseText);
                 return false;
             }
-            if (this.responseText==="OY_REPORT_SUCCESS") oy_log("Peer report to central succeeded");
-            else oy_log("Peer report to central failed");
+            if (this.responseText==="OY_REPORT_SUCCESS") oy_log("Peer report to top succeeded");
+            else oy_log("Peer report to top failed");
         }
     };
-    oy_xhttp.open("POST", "http://central.oyster.org/oy_peer_report.php", true);
+    oy_xhttp.open("POST", "http://top.oyster.org/oy_peer_report.php", true);
     oy_xhttp.send("oy_peer_report="+JSON.stringify([window.OY_MAIN['oy_self_id'], window.OY_PEERS, window.OY_BLACKLIST]));
 }
 
@@ -654,7 +654,7 @@ function oy_node_punish(oy_node_id, oy_punish_reason) {
     oy_node_reset(oy_node_id);
     if (typeof(oy_punish_reason)==="undefined") oy_punish_reason = null;
     if (typeof(window.OY_BLACKLIST[oy_node_id])==="undefined") {
-        //[0] is inform count, [1] is blacklist expiration time, [2] is inform boolean (if node was informed of blacklist), [3] is punish reason tracking (for diagnostics, reported to central)
+        //[0] is inform count, [1] is blacklist expiration time, [2] is inform boolean (if node was informed of blacklist), [3] is punish reason tracking (for diagnostics, reported to top)
         window.OY_BLACKLIST[oy_node_id] = [1, (Date.now()/1000)+window.OY_NODE_BLACKTIME, false, [oy_punish_reason]];//ban expiration time is defined here since we do not know if OY_NODE_TOLERANCE will change in the future
     }
     else {
@@ -702,13 +702,13 @@ function oy_node_initiate(oy_node_id, oy_list_force) {
     return true;
 }
 
-//retrieves nodes from and submit self id to central.oyster.org
+//retrieves nodes from and submit self id to top.oyster.org
 function oy_node_assign() {
     let oy_xhttp = new XMLHttpRequest();
     oy_xhttp.onreadystatechange = function() {
         if (this.readyState===4&&this.status===200) {
             if (this.responseText.substr(0, 5)==="ERROR"||this.responseText.length===0) {
-                oy_log("Received error from node_assign@central: "+this.responseText);
+                oy_log("Received error from node_assign@top: "+this.responseText);
                 return false;
             }
             let oy_node_array = JSON.parse(this.responseText);
@@ -717,7 +717,7 @@ function oy_node_assign() {
             }
         }
     };
-    oy_xhttp.open("POST", "http://central.oyster.org/oy_node_assign.php", true);
+    oy_xhttp.open("POST", "http://top.oyster.org/oy_node_assign.php", true);
     oy_xhttp.send("oy_node_id="+window.OY_MAIN['oy_self_id']);
 }
 

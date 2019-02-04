@@ -37,13 +37,13 @@
 
         #oy_stats {
             position:absolute;
-            top:2%;
-            left:2%;
-            width:100vh;
-            height:22vh;
+            top:20px;
+            left:20px;
+            width:580px;
+            height:120px;
             background-color: rgb(255, 255, 255);
-            border-radius: 0.5vh;
-            opacity: 0.6;
+            border-radius: 8px;
+            opacity: 0.75;
             z-index:900;
         }
 
@@ -65,28 +65,26 @@
 </head>
 <body>
 <div id="oy_stats" style="overflow:hidden;">
-    <img style="position:absolute;left:4%;top:4%;width: auto;height: auto;max-height: 20vh;max-width: 28vh;" src="../oy_resources/oy_logo_shadow.png" alt="Oyster"/>
-    <div id="oy_stats_alpha" style="position:absolute;top:4%;left:22%;width:35%;height:90%;">
+    <img style="position:absolute;left:4%;top:4%;width: auto;height: auto;max-height: 100px;" src="../oy_resources/oy_logo_shadow.png" alt="Oyster"/>
+    <div id="oy_stats_alpha" style="position:absolute;top:4%;left:120px;width:35%;height:90%;">
         <div class="oy_center_both oy_stats" style="height:84%;width:100%;">
-            <div align="right" style="position:absolute;left:-2.5%;top:0;width:50%;height:100%;">
+            <div align="right" style="position:absolute;left:-3%;top:0;width:50%;height:100%;">
                 AVG&nbsp;LATENCY<br>
                 AVG&nbsp;PEERSHIP<br>
                 MESH&nbsp;SIZE<br>
                 MESH&nbsp;FLOW<br>
-                SECTOR&nbsp;COUNT
             </div>
-            <div class="oy_center_hor" style="top:0;width:1%;height:100%;background-color:black;">
+            <div class="oy_center_hor" style="top:0;width:2px;height:100%;background-color:black;">
             </div>
-            <div style="position:absolute;right:-2.5%;top:0;width:50%;height:100%;">
+            <div style="position:absolute;right:-3%;top:0;width:50%;height:100%;font-weight: bold">
                 <span id="oy_stat_avg_latency">0</span>&nbsp;sec<br>
                 <span id="oy_stat_avg_peership">0</span>&nbsp;days<br>
                 <span id="oy_stat_mesh_size">0</span>&nbsp;nodes<br>
                 <span id="oy_stat_mesh_flow">0</span><br>
-                <span id="oy_stat_sector_count">0</span>&nbsp;sectors<br>
             </div>
         </div>
     </div>
-    <div id="oy_stats_beta" style="position:absolute;top:4%;right:4%;width:35%;height:90%;"></div>
+    <div id="oy_stats_beta" style="position:absolute;top:6%;right:10px;width:40%;height:80%;overflow: hidden"></div>
 </div>
 <div id="oy_top_outer" style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);width:100%;height:100%;overflow:hidden;z-index: 100;">
     <div id="oy_top_inner" style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);overflow:hidden;"></div>
@@ -200,7 +198,7 @@
                 window.OY_MESH_TOP_PREV = oy_mesh_top;
             }
         };
-        oy_xhttp.open("GET", "http://central.oyster.org/oy_mesh_top.php", true);
+        oy_xhttp.open("GET", "http://central.oyster.org/oy_mesh_top.json?"+Math.round(Math.random()*1000), true);
         oy_xhttp.send();
         setTimeout("oy_top_data()", 1000);
     }
