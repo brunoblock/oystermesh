@@ -93,7 +93,7 @@ function oy_log_debug(oy_log_msg) {
     if (typeof(window.OY_MAIN['oy_self_id'])==="undefined") return false;
     oy_log_msg = "["+(Date.now()/1000)+"] "+oy_log_msg;
     let oy_xhttp = new XMLHttpRequest();
-    oy_xhttp.open("POST", "http://top.oyster.org/oy_log_catch.php", true);
+    oy_xhttp.open("POST", "https://top.oyster.org/oy_log_catch.php", true);
     oy_xhttp.send("oy_log_catch="+JSON.stringify([window.OY_MAIN['oy_self_short'], oy_log_msg]));
 }
 
@@ -559,7 +559,7 @@ function oy_peer_report() {
             else oy_log("Peer report to top failed");
         }
     };
-    oy_xhttp.open("POST", "http://top.oyster.org/oy_peer_report.php", true);
+    oy_xhttp.open("POST", "https://top.oyster.org/oy_peer_report.php", true);
     oy_xhttp.send("oy_peer_report="+JSON.stringify([window.OY_MAIN['oy_self_id'], window.OY_PEERS, window.OY_BLACKLIST]));
 }
 
@@ -717,7 +717,7 @@ function oy_node_assign() {
             }
         }
     };
-    oy_xhttp.open("POST", "http://top.oyster.org/oy_node_assign.php", true);
+    oy_xhttp.open("POST", "https://top.oyster.org/oy_node_assign.php", true);
     oy_xhttp.send("oy_node_id="+window.OY_MAIN['oy_self_id']);
 }
 
@@ -1500,7 +1500,7 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
     oy_local_store("oy_proposed", window.OY_PROPOSED);
     oy_local_store("oy_blacklist", window.OY_BLACKLIST);
 
-    window.OY_CONN = new Peer(window.OY_MAIN['oy_self_id'], {key: 'lwjd5qra8257b9'});
+    window.OY_CONN = new Peer(window.OY_MAIN['oy_self_id'], {host: 'top.oyster.org', port: 8200, path: '/', secure:true});
     window.OY_CONN.on('open', function(oy_self_id) {
         window.OY_MAIN['oy_ready'] = true;
         oy_log("P2P connection ready with self ID "+oy_short(oy_self_id));
