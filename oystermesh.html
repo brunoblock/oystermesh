@@ -310,7 +310,6 @@
                 height:30%;
                 border:0.1vh dashed #727272;
                 font-size:1vh;
-                overflow:hidden;
             }
 
             .oy_mesh_glue {
@@ -725,7 +724,7 @@
                 </div>
                 <div class="oy_border oy_box">
                     <div class="oy_description">FILE&nbsp;UPLOAD</div>
-                    <div style="position:absolute;top:25%;left:5%;">
+                    <div style="position:absolute;top:25%;left:5%;width:94%;overflow:hidden">
                         <input type="file" id="oy_file_upload" onclick="oy_push_reset()" onmouseenter="oy_push_reset_handle_enter()" onmouseleave="oy_push_reset_handle_leave()" />
                     </div>
                 </div>
@@ -826,7 +825,7 @@
                     <span id="oy_storage_limit">0</span>&nbsp;MB<br>
                     <span id="oy_avg_latency">0</span>&nbsp;sec<br>
                     <span id="oy_avg_peership">0</span>&nbsp;min<br>
-                    <span id="oy_peer_count">0</span>&nbsp;peer(s)<br>
+                    <span id="oy_peer_count_cont"><span id="oy_peer_count">0</span>&nbsp;peer(s)</span><br>
                     <span id="oy_blacklisted">0</span>&nbsp;node(s)<br>
                     <span id="oy_mesh_size">0</span>&nbsp;nodes<br>
                     <span id="oy_beam_flow">0</span>&nbsp;kbps<br>
@@ -851,7 +850,7 @@
         window.OY_CONSOLE_SIZE = 400;
         window.OY_NODE_MAX = 30;
         window.OY_NODE_ADDTIME = 40;
-        window.OY_NODE_ACTIVETIME = 250;
+        window.OY_NODE_ACTIVETIME = 150;
         window.OY_LINK_ADDTIME = 60;
         window.OY_LINK_ACTIVETIME = 110;
         window.OY_HOP_KEEP = 100;
@@ -1072,6 +1071,18 @@
 
         document.getElementById("oy_self_short").innerHTML = ""+window.OY_MAIN['oy_self_short'];
         document.getElementById("oy_peer_count").innerHTML = ""+window.OY_PEER_COUNT;
+        if (window.OY_PEER_COUNT===0) {
+            document.getElementById("oy_peer_count_cont").style.color = "#000000";
+            document.getElementById("oy_peer_count_cont").style.backgroundColor = "#c37b2c";
+        }
+        else if (window.OY_PEER_COUNT<=2) {
+            document.getElementById("oy_peer_count_cont").style.color = "#000000";
+            document.getElementById("oy_peer_count_cont").style.backgroundColor = "#cbba3c";
+        }
+        else {
+            document.getElementById("oy_peer_count_cont").style.color = null;
+            document.getElementById("oy_peer_count_cont").style.backgroundColor = null;
+        }
         document.getElementById("oy_blacklisted").innerHTML = ""+Object.keys(window.OY_BLACKLIST).length;
         setTimeout("oy_maintain()", 200);
     }
@@ -1400,14 +1411,30 @@
         });
     }
 
-    function oy_file_view_check() {
-        return window.OY_FILE_KEEP[1]==="image/png"||window.OY_FILE_KEEP[1]==="image/jpg";
+    function oy_file_view_check(oy_type) {
+        console.log(oy_type);
+        if ((oy_type==="oy_image"||oy_type===true)&&(window.OY_FILE_KEEP[1]==="image/png"||window.OY_FILE_KEEP[1]==="image/jpg")) return true;
+        else if ((oy_type==="oy_audio"||oy_type===true)&&(window.OY_FILE_KEEP[1]==="audio/mpeg"||window.OY_FILE_KEEP[1]==="audio/wav"||window.OY_FILE_KEEP[1]==="audio/ogg"||window.OY_FILE_KEEP[1]==="audio/x-m4a")) return true;
+        else if ((oy_type==="oy_video"||oy_type===true)&&(window.OY_FILE_KEEP[1]==="video/mp4"||window.OY_FILE_KEEP[1]==="video/webm"||window.OY_FILE_KEEP[1]==="video/ogg")) return true;
+        return false;
     }
 
     function oy_file_view() {
         if (window.OY_FILE_KEEP===null) return false;
-        if (oy_file_view_check()) {
+        if (oy_file_view_check("oy_image")) {
             document.getElementById("oy_file_view_data").innerHTML = "<img style=\"width:auto;height:auto;max-height:85vh;max-width:85vw;\" src=\"data:"+window.OY_FILE_KEEP[1]+";base64,"+window.OY_FILE_KEEP[2]+"\">";
+            document.getElementById("oy_cover").style.display = "block";
+            document.getElementById("oy_file_view_cont").style.display = "block";
+            return true;
+        }
+        else if (oy_file_view_check("oy_audio")) {
+            document.getElementById("oy_file_view_data").innerHTML = "<audio controls src=\"data:"+window.OY_FILE_KEEP[1]+";base64,"+window.OY_FILE_KEEP[2]+"\">";
+            document.getElementById("oy_cover").style.display = "block";
+            document.getElementById("oy_file_view_cont").style.display = "block";
+            return true;
+        }
+        else if (oy_file_view_check("oy_video")) {
+            document.getElementById("oy_file_view_data").innerHTML = "<video controls src=\"data:"+window.OY_FILE_KEEP[1]+";base64,"+window.OY_FILE_KEEP[2]+"\">";
             document.getElementById("oy_cover").style.display = "block";
             document.getElementById("oy_file_view_cont").style.display = "block";
             return true;
@@ -1724,7 +1751,7 @@
                 document.getElementById("oy_dest_go").classList.add("oy_button_pull_go");
             }
 
-            if (!oy_file_view_check()||window.OY_FILE_KEEP[0]===null) {
+            if (!oy_file_view_check(true)||window.OY_FILE_KEEP[0]===null) {
                 oy_dest_radio_view_disable();
                 if (window.OY_DEST_RADIO!=="oy_dest_recommit") oy_dest_radio("oy_dest_download");
             }
@@ -1919,7 +1946,7 @@
             oy_graph_nonce_set(null);
             oy_graph_nonce_set(window.OY_NONCE_MAX_PULL);
         }
-        delete window.OY_PUSH_HOLD[window.OY_HANDLE_PULL];
+        if (window.OY_EXECUTE_LAST!=="OY_RECOMMIT") delete window.OY_PUSH_HOLD[window.OY_HANDLE_PULL];
         window.OY_DATA_PUSH[window.OY_HANDLE_PULL] = oy_callback_tally;
         oy_data_push(window.OY_FILE_KEEP[3], window.OY_HANDLE_PULL);
         window.OY_EXECUTE_LAST = "OY_RECOMMIT";

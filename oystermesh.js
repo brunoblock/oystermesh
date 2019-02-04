@@ -67,7 +67,7 @@ window.OY_COLLECT = {};//object for tracking pull fulfillments
 window.OY_CONSTRUCT = {};//data considered valid from OY_COLLECT is stored here, awaiting for final data reconstruction
 window.OY_DATA_PUSH = {};//object for tracking data push threads
 window.OY_DATA_PULL = {};//object for tracking data pull threads
-window.OY_PEERS = {"oy_aggregate_node":[-1, -1, -1, -1, [], 0, [], 0, []]};//optimization for quick and inexpensive checks for mutual peering
+window.OY_PEERS = {"oy_aggregate_node":[-1, -1, -1, 0, [], 0, [], 0, []]};//optimization for quick and inexpensive checks for mutual peering
 window.OY_PEERS_PRE = {};//tracks nodes that are almost peers, will become peers once PEER_AFFIRM is received from other node
 window.OY_NODES = {};//P2P connection handling for individual nodes, is not mirrored in localStorage due to DOM restrictions
 window.OY_WARM = {};//tracking connections to nodes that are warming up
@@ -271,7 +271,7 @@ function oy_local_get(oy_local_name) {
     let oy_local_raw = localStorage.getItem(oy_local_name);
     if (oy_local_raw===null||oy_local_raw.length===0) {
         if (oy_local_name==="oy_main") return {"oy_ready":false, "oy_deposit_size":0, "oy_deposit_counter":0};
-        else if (oy_local_name==="oy_peers") return {"oy_aggregate_node":[-1, -1, -1, -1, [], 0, [], 0, []]};
+        else if (oy_local_name==="oy_peers") return {"oy_aggregate_node":[-1, -1, -1, 0, [], 0, [], 0, []]};
         else if (oy_local_name==="oy_purge") return [];
         return {};
     }
@@ -308,7 +308,7 @@ function oy_peer_add(oy_peer_id) {
     }
     let oy_callback_local = function() {
         //[peership timestamp, last msg timestamp, last latency timestamp, latency avg, latency history, data beam, data beam history, data soak, data soak history]
-        window.OY_PEERS[oy_peer_id] = [Date.now()/1000|0, -1, -1, -1, [], 0, [], 0, []];
+        window.OY_PEERS[oy_peer_id] = [Date.now()/1000|0, -1, -1, 0, [], 0, [], 0, []];
         window.OY_PEER_COUNT++;
         oy_local_store("oy_peers", window.OY_PEERS);
         oy_node_reset(oy_peer_id);
@@ -1464,7 +1464,7 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
                 window.OY_MAIN['oy_self_public'] = oy_key_public;
                 window.OY_MAIN['oy_self_id'] = oy_hash_gen(oy_key_public);
                 window.OY_MAIN['oy_self_short'] = oy_short(window.OY_MAIN['oy_self_id']);
-                window.OY_PEERS = {"oy_aggregate_node":[-1, -1, -1, -1, [], 0, [], 0, []]};
+                window.OY_PEERS = {"oy_aggregate_node":[-1, -1, -1, 0, [], 0, [], 0, []]};
                 window.OY_PROPOSED = {};
                 oy_local_store("oy_main", window.OY_MAIN);
                 oy_local_store("oy_peers", window.OY_PEERS);
