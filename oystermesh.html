@@ -159,8 +159,8 @@
         }
 
         .oy_button_view_download {
-            background-color: #24ab26;
-            border:0.1vh solid #24ab26;
+            background-color: #2f2f2f;
+            border:0.1vh solid #2f2f2f;
             color: #f3f3f3;
         }
 
@@ -175,6 +175,16 @@
         }
 
         .oy_button_view_download:hover {
+            cursor: pointer;
+        }
+
+        .oy_button_all_active {
+            background-color: #696969;
+            border:0.1vh solid #696969;
+            color: #111111;
+        }
+
+        .oy_button_all_active:hover {
             cursor: pointer;
         }
 
@@ -660,13 +670,13 @@
     <div id="oy_cover" style="position:absolute;left:0;top:0;width:100%;height:100%;background-color:#0f0f0f;opacity:0.85;z-index:2000;display:none;"></div>
     <div id="oy_file_view_cont" style="position: absolute;top:50%;left:50%;transform: translate(-50%, -52%);width:auto;height:auto;background-color:#121212;padding:1.5%;border-top-left-radius:0.5vh;border-top-right-radius:0.5vh;z-index: 3000;display: none;">
         <div id="oy_file_view_data"></div>
-        <div style="position:absolute;left:0;bottom:0;transform:translateY(99%);border-bottom-left-radius:0.5vh;border-bottom-right-radius:0.5vh;width: 100%;min-width:23vh;height:3vh;background-color:#121212;">
-            <div id="oy_view_close" align="center" class="oy_button oy_button_view_close" style="position:absolute;bottom:18%;right:2.5vh;width:6.5vh;height:65%;" onclick="oy_file_view_close()">
+        <div style="position:absolute;left:0;bottom:0;transform:translateY(99%);border-bottom-left-radius:0.5vh;border-bottom-right-radius:0.5vh;width: 100%;min-width:23vh;height:4vh;background-color:#121212;">
+            <div id="oy_view_close" align="center" class="oy_button oy_button_view_close" style="position:absolute;bottom:25%;right:2.5vh;width:6.5vh;height:48%;" onclick="oy_file_view_close()">
                 <div style="position:relative;top:-3%;">
                     CLOSE
                 </div>
             </div>
-            <div id="oy_view_download" align="center" class="oy_button oy_button_view_download" style="position:absolute;bottom:18%;right:11vh;width:10vh;height:65%;" onclick="oy_file_download()">
+            <div id="oy_view_download" align="center" class="oy_button oy_button_view_download" style="position:absolute;bottom:25%;right:11vh;width:10vh;height:48%;" onclick="oy_file_download()">
                 <div style="position:relative;top:-3%;">
                     DOWNLOAD
                 </div>
@@ -753,7 +763,7 @@
                 </div>
                 <div id="oy_pull_stats_cont" class="oy_border oy_box" style="left:5%;">
                     <div class="oy_description">STATISTICS</div>
-                    <div id="oy_pull_stats_alpha" class="oy_pull_stats" style="left:3%">
+                    <div id="oy_pull_stats_alpha" class="oy_pull_stats" style="left:3.5%">
                         AVG&nbsp;HOP:&nbsp;<span id="oy_pull_stats_avg_hop" style="font-weight:bold">0</span><br>
                         TIME:&nbsp;<span id="oy_pull_stats_elapsed" style="font-weight:bold">0&nbsp;sec</span>
                     </div>
@@ -771,7 +781,7 @@
                 <div class="oy_border oy_box">
                     <div class="oy_description">DESTINATION</div>
                     <div style="position:absolute;top:0;left:4%;height:100%;width:100%;">
-                        <div style="position:absolute;top:0;"><input id="oy_dest_recommit" type="radio" style="transform:scale(0.8);" onclick="oy_dest_radio(this.id)">&nbsp;<span id="oy_dest_recommit_inner">Recommit&nbsp;data&nbsp;only</span></div>
+                        <div style="position:absolute;top:0;"><input id="oy_dest_recommit" type="radio" style="transform:scale(0.8);" onclick="oy_dest_radio(this.id)">&nbsp;<span id="oy_dest_recommit_inner">Recommit&nbsp;to&nbsp;mesh</span></div>
                         <div style="position:absolute;top:50%;transform: translateY(-50%)"><input id="oy_dest_view" type="radio" style="transform:scale(0.8);" onclick="oy_dest_radio(this.id)">&nbsp;<span id="oy_dest_view_inner">View&nbsp;in&nbsp;browser</span></div>
                         <div style="position:absolute;bottom:0;"><input id="oy_dest_download" type="radio" style="transform:scale(0.8);" onclick="oy_dest_radio(this.id)">&nbsp;<span id="oy_dest_download_inner">Download&nbsp;as&nbsp;file</span></div>
                         <div id="oy_dest_go" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:28%;right:15%;width:18%;height:45%;" onclick="oy_dest_go()">
@@ -806,7 +816,7 @@
             <div id="oy_top_inner" style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);overflow:hidden;"></div>
         </div>
         <div id="oy_stats" class="oy_border oy_graph_nonce" style="position:absolute;top:0;left:0;width:23%;height:43%;background-color: #404040;overflow:hidden;">
-            <div class="oy_center_both oy_stats" style="height:77%;width:100%;">
+            <div class="oy_center_both oy_stats" style="top:46%;height:77%;width:100%;">
                 <div align="right" style="position:absolute;left:-2.5%;top:0;width:50%;height:100%;">
                     SELF&nbsp;SHORT&nbsp;ID<br>
                     SELF CAPACITY<br>
@@ -818,7 +828,7 @@
                     BEAM&nbsp;FLOW<br>
                     SOAK&nbsp;FLOW<br>
                 </div>
-                <div class="oy_center_hor" style="top:0;width:0.7%;height:100%;background-color: #2a2a2a;">
+                <div class="oy_center_hor" style="top:0;width:0.7%;height:95%;background-color: #2a2a2a;">
                 </div>
                 <div style="position:absolute;right:-2.5%;top:0;width:50%;height:100%;font-weight:bold;">
                     <span id="oy_self_short">null</span><br>
@@ -827,9 +837,19 @@
                     <span id="oy_avg_peership">0</span>&nbsp;min<br>
                     <span id="oy_peer_count_cont"><span id="oy_peer_count">0</span>&nbsp;peer(s)</span><br>
                     <span id="oy_blacklisted">0</span>&nbsp;node(s)<br>
-                    <span id="oy_mesh_size">0</span>&nbsp;nodes<br>
+                    <span id="oy_mesh_range">0</span>&nbsp;node(s)<br>
                     <span id="oy_beam_flow">0</span>&nbsp;kbps<br>
                     <span id="oy_soak_flow">0</span>&nbsp;kbps<br>
+                </div>
+                <div id="oy_self_reset" align="center" class="oy_button oy_button_all_active" style="position:absolute;bottom:-12%;left:30%;transform:translateX(-50%);width:40%;height:10%;" onclick="oy_self_reset()">
+                    <div style="position:relative;top:-3%;">
+                        RESET&nbsp;NODE
+                    </div>
+                </div>
+                <div id="oy_obj_top" align="center" class="oy_button oy_button_all_active" style="position:absolute;bottom:-12%;left:70%;transform:translateX(-50%);width:30%;height:10%;" onclick="oy_self_reset()">
+                    <div style="position:relative;top:-3%;">
+                        OBJ&nbsp;TOP
+                    </div>
                 </div>
             </div>
         </div>
@@ -846,53 +866,56 @@
     </div>
 </div>
 <script type="text/javascript">
-    window.onload = function() {
-        window.OY_CONSOLE_SIZE = 400;
-        window.OY_NODE_MAX = 30;
-        window.OY_NODE_ADDTIME = 40;
-        window.OY_NODE_ACTIVETIME = 150;
-        window.OY_LINK_ADDTIME = 60;
-        window.OY_LINK_ACTIVETIME = 110;
-        window.OY_HOP_KEEP = 100;
-        window.OY_DEST_RADIO = "oy_dest_view";
+    let oy_local_init = function(oy_block) {
+        if (typeof(oy_block)==="undefined") {
+            window.OY_CONSOLE_SIZE = 400;
+            window.OY_NODE_MAX = 30;
+            window.OY_NODE_ADDTIME = 40;
+            window.OY_NODE_ACTIVETIME = 150;
+            window.OY_LINK_ADDTIME = 60;
+            window.OY_LINK_ACTIVETIME = 110;
+            window.OY_HOP_KEEP = 100;
+            window.OY_MESH_RANGETIME = 30;
+            window.OY_DEST_RADIO = "oy_dest_view";
 
-        window.OY_FILE_DATA = null;
-        window.OY_FILE_KEEP = null;
-        window.OY_MESH_GLUE = [];
-        window.OY_HANDLE_PUSH = null;
-        window.OY_HANDLE_PUSH_COPY = null;
-        window.OY_NONCE_MAX_PUSH = null;
-        window.OY_NONCE_MAX_PULL = null;
-        window.OY_HANDLE_PULL = null;
-        window.OY_GRAPH_NONCE_STORE = {};
-        window.OY_EXECUTE_LAST = null;
-        window.OY_EXECUTE_PUSH = false;
-        window.OY_EXECUTE_PULL = false;
-        window.OY_EXECUTE_RECOMMIT = false;
-        window.OY_EXECUTE_SEND = false;
-        window.OY_EXECUTE_RECEIVE = false;
-        window.OY_CONSOLE_COUNTER = 0;
-        window.OY_CONSOLE_HOVER = false;
-        window.OY_PUSH_ELAPSED = null;
-        window.OY_PUSH_AVG_HOP = [];
-        window.OY_PULL_AVG_HOP = [];
-        window.OY_PULL_ELAPSED = null;
-        window.OY_PULL_COVERAGE = [];
-        window.OY_PULL_CONFLICTS = {};
-        window.OY_PUSH_PAUSE = null;
-        window.OY_PULL_PAUSE = null;
-        window.OY_RECOMMIT_PAUSE = null;
-        window.OY_GRAPH_PEERS = [false, false, false, false, false];
-        window.OY_GRAPH_PEERS_PREV = [false, false, false, false, false];
-        window.OY_NODE_KEEP = {};
-        window.OY_NODE_CHECK = {};
-        window.OY_LINK_KEEP = {};
-        window.OY_TOP_REFRESH = false;
+            window.OY_FILE_DATA = null;
+            window.OY_FILE_KEEP = null;
+            window.OY_MESH_GLUE = [];
+            window.OY_MESH_RANGE = [];
+            window.OY_HANDLE_PUSH = null;
+            window.OY_HANDLE_PUSH_COPY = null;
+            window.OY_NONCE_MAX_PUSH = null;
+            window.OY_NONCE_MAX_PULL = null;
+            window.OY_HANDLE_PULL = null;
+            window.OY_GRAPH_NONCE_STORE = {};
+            window.OY_EXECUTE_LAST = null;
+            window.OY_EXECUTE_PUSH = false;
+            window.OY_EXECUTE_PULL = false;
+            window.OY_EXECUTE_RECOMMIT = false;
+            window.OY_EXECUTE_SEND = false;
+            window.OY_EXECUTE_RECEIVE = false;
+            window.OY_CONSOLE_COUNTER = 0;
+            window.OY_CONSOLE_HOVER = false;
+            window.OY_PUSH_ELAPSED = null;
+            window.OY_PUSH_AVG_HOP = [];
+            window.OY_PULL_AVG_HOP = [];
+            window.OY_PULL_ELAPSED = null;
+            window.OY_PULL_COVERAGE = [];
+            window.OY_PULL_CONFLICTS = {};
+            window.OY_PUSH_PAUSE = null;
+            window.OY_PULL_PAUSE = null;
+            window.OY_RECOMMIT_PAUSE = null;
+            window.OY_GRAPH_PEERS = [false, false, false, false, false];
+            window.OY_GRAPH_PEERS_PREV = [false, false, false, false, false];
+            window.OY_NODE_KEEP = {};
+            window.OY_NODE_CHECK = {};
+            window.OY_LINK_KEEP = {};
+
+            document.getElementById("oy_push_superhandle").value = "-".repeat(82);
+            document.getElementById("oy_pull_superhandle").value = "-".repeat(82);
+        }
 
         document.getElementById(window.OY_DEST_RADIO).checked = true;
-
-        document.getElementById("oy_push_superhandle").value = "-".repeat(82);
-        document.getElementById("oy_pull_superhandle").value = "-".repeat(82);
 
         oy_console_local("Loading console...");
 
@@ -903,15 +926,16 @@
             oy_top_init();
             window.OY_NODE_KEEP[window.OY_MAIN['oy_self_short']] = true;
             oy_top_node_add(window.OY_MAIN['oy_self_short'], "self");
-            oy_maintain();
+            if (typeof(oy_block)==="undefined") oy_maintain();
             window.OY_MAP = function(oy_data_flag, oy_passport_passive, oy_passport_active) {
+                let oy_time_local = Date.now()/1000|0;
+                window.OY_MESH_RANGE.push([oy_time_local, oy_passport_passive.length]);
                 if (oy_data_flag==="OY_DATA_FULFILL"&&window.OY_EXECUTE_PULL===true&&oy_passport_passive.length>0&&oy_passport_active.length>0&&oy_passport_active[0]===window.OY_MAIN['oy_self_short']) {
                     window.OY_PULL_AVG_HOP.push(oy_passport_passive.length);
                     while (window.OY_PULL_AVG_HOP.length>window.OY_HOP_KEEP) window.OY_PULL_AVG_HOP.shift();
                     document.getElementById("oy_pull_stats_avg_hop").innerHTML = (window.OY_PULL_AVG_HOP.reduce(oy_reduce_sum)/window.OY_PULL_AVG_HOP.length).toFixed(2);
                 }
                 if (Object.keys(window.OY_NODE_KEEP).length<=window.OY_NODE_MAX) {
-                    let oy_time_local = Date.now()/1000|0;
                     let oy_node_prev = false;
                     for (let i in oy_passport_passive) {
                         if (!oy_peer_find(oy_passport_passive[i])) {
@@ -935,7 +959,7 @@
                             let oy_link_key = oy_local_sort.join("@");
                             if (typeof(window.OY_LINK_KEEP[oy_link_key])==="undefined") window.OY_LINK_KEEP[oy_link_key] = oy_time_local+window.OY_LINK_ADDTIME;
                             else window.OY_LINK_KEEP[oy_link_key] += window.OY_LINK_ADDTIME;
-                            if (oy_link_found===false&&window.OY_TOP_REFRESH===false&&window.OY_LINK_KEEP[oy_link_key]-oy_time_local>window.OY_LINK_ACTIVETIME) {
+                            if (oy_link_found===false&&window.OY_LINK_KEEP[oy_link_key]-oy_time_local>window.OY_LINK_ACTIVETIME) {
                                 oy_top_node_add(oy_node_prev, "node");
                                 oy_top_node_add(oy_passport_passive[i], "node");
                                 oy_top_link_add(oy_node_prev, oy_passport_passive[i], "#314a91");
@@ -950,6 +974,30 @@
             oy_console_local(oy_console_msg);
         });
     };
+
+    window.onload = function() {
+        oy_local_init();
+    };
+
+    function oy_self_reset() {
+        oy_top_clear();
+
+        window.OY_MAIN = {"oy_ready":false, "oy_deposit_size":0, "oy_deposit_counter":0};
+        window.OY_PEERS = {"oy_aggregate_node":[-1, -1, -1, 0, [], 0, [], 0, []]};
+        window.OY_PEER_COUNT = 0;
+        window.OY_PROPOSED = {};
+        window.OY_BLACKLIST = {};
+        oy_local_store("oy_main", window.OY_MAIN);
+        oy_local_store("oy_peers", window.OY_PEERS);
+        oy_local_store("oy_proposed", window.OY_PROPOSED);
+        oy_local_store("oy_blacklist", window.OY_BLACKLIST);
+
+        window.OY_ENGINE_KILL = true;
+        window.OY_CONN = null;
+
+        window.OY_INIT = 0;
+        oy_local_init(true);
+    }
 
     function oy_maintain() {
         let oy_time_local = Date.now()/1000|0;
@@ -981,7 +1029,8 @@
             return b[1] - a[1];
         });
 
-        let i;
+        // noinspection JSUnusedAssignment
+        let i = -1;
         for (i in oy_peer_keep) {
             if (i>4) break;
             oy_graph_peer(i, oy_peer_keep[i][0], " - "+oy_peer_keep[i][1].toFixed(3)+"s", Math.round((oy_peer_keep[i][2]/(oy_peer_keep[i][2]+oy_peer_keep[i][3]))*100));
@@ -992,45 +1041,43 @@
             i++;
         }
 
-        if (window.OY_TOP_REFRESH===false) {
-            for (let i in window.OY_GRAPH_PEERS) {
-                if (window.OY_GRAPH_PEERS[i]===false) continue;
-                if (window.OY_GRAPH_PEERS_PREV.indexOf(window.OY_GRAPH_PEERS[i])===-1) {
-                    if (typeof(window.OY_NODE_KEEP[window.OY_GRAPH_PEERS[i]])!=="undefined") oy_top_node_remove(window.OY_GRAPH_PEERS[i]);
-                    window.OY_NODE_KEEP[window.OY_GRAPH_PEERS[i]] = true;
-                    oy_top_node_add(window.OY_GRAPH_PEERS[i], "peer");
-                    oy_top_link_add(window.OY_MAIN['oy_self_short'], window.OY_GRAPH_PEERS[i], "#314a91");
-                    let oy_node_present = false;
-                    for (let oy_node_short in window.OY_NODE_KEEP) {
-                        if (window.OY_NODE_KEEP[oy_node_short]!==true) {
-                            oy_node_present = true;
-                            break;
-                        }
+        for (let i in window.OY_GRAPH_PEERS) {
+            if (window.OY_GRAPH_PEERS[i]===false) continue;
+            if (window.OY_GRAPH_PEERS_PREV.indexOf(window.OY_GRAPH_PEERS[i])===-1) {
+                if (typeof(window.OY_NODE_KEEP[window.OY_GRAPH_PEERS[i]])!=="undefined") oy_top_node_remove(window.OY_GRAPH_PEERS[i]);
+                window.OY_NODE_KEEP[window.OY_GRAPH_PEERS[i]] = true;
+                oy_top_node_add(window.OY_GRAPH_PEERS[i], "peer");
+                oy_top_link_add(window.OY_MAIN['oy_self_short'], window.OY_GRAPH_PEERS[i], "#314a91");
+                let oy_node_present = false;
+                for (let oy_node_short in window.OY_NODE_KEEP) {
+                    if (window.OY_NODE_KEEP[oy_node_short]!==true) {
+                        oy_node_present = true;
+                        break;
                     }
                 }
             }
+        }
 
-            for (let i in window.OY_GRAPH_PEERS_PREV) {
-                if (window.OY_GRAPH_PEERS_PREV[i]===false) continue;
-                if (window.OY_GRAPH_PEERS.indexOf(window.OY_GRAPH_PEERS_PREV[i])===-1) {
-                    oy_top_node_remove(window.OY_GRAPH_PEERS_PREV[i]);
-                    let oy_node_present = false;
-                    for (let oy_node_short in window.OY_NODE_KEEP) {
-                        if (window.OY_NODE_KEEP[oy_node_short]!==true) {
-                            oy_node_present = true;
-                            break;
-                        }
+        for (let i in window.OY_GRAPH_PEERS_PREV) {
+            if (window.OY_GRAPH_PEERS_PREV[i]===false) continue;
+            if (window.OY_GRAPH_PEERS.indexOf(window.OY_GRAPH_PEERS_PREV[i])===-1) {
+                oy_top_node_remove(window.OY_GRAPH_PEERS_PREV[i]);
+                let oy_node_present = false;
+                for (let oy_node_short in window.OY_NODE_KEEP) {
+                    if (window.OY_NODE_KEEP[oy_node_short]!==true) {
+                        oy_node_present = true;
+                        break;
                     }
                 }
             }
+        }
 
-            for (let i in window.OY_GRAPH_PEERS) {
-                window.OY_GRAPH_PEERS_PREV[i] = window.OY_GRAPH_PEERS[i];
-            }
+        for (let i in window.OY_GRAPH_PEERS) {
+            window.OY_GRAPH_PEERS_PREV[i] = window.OY_GRAPH_PEERS[i];
+        }
 
-            for (let oy_node_short in window.OY_NODE_KEEP) {
-                if (window.OY_NODE_KEEP[oy_node_short]!==true&&oy_time_local>window.OY_NODE_KEEP[oy_node_short]) oy_top_node_remove(oy_node_short);
-            }
+        for (let oy_node_short in window.OY_NODE_KEEP) {
+            if (window.OY_NODE_KEEP[oy_node_short]!==true&&oy_time_local>window.OY_NODE_KEEP[oy_node_short]) oy_top_node_remove(oy_node_short);
         }
 
         for (let oy_link_key in window.OY_LINK_KEEP) {
@@ -1040,6 +1087,17 @@
                 oy_top_link_remove(oy_split[0], oy_split[1]);
             }
         }
+
+        let oy_mesh_range_new = [];
+        let oy_mesh_range_highest = 0;
+        for (let i in window.OY_MESH_RANGE) {
+            if (oy_time_local-window.OY_MESH_RANGE[i][0]<=window.OY_MESH_RANGETIME) {
+                oy_mesh_range_new.push(window.OY_MESH_RANGE[i]);
+                if (window.OY_MESH_RANGE[i][1]>oy_mesh_range_highest) oy_mesh_range_highest = window.OY_MESH_RANGE[i][1];
+            }
+        }
+        window.OY_MESH_RANGE = oy_mesh_range_new;
+        document.getElementById("oy_mesh_range").innerHTML = ""+oy_mesh_range_highest;
 
         if (window.OY_EXECUTE_PUSH===true) {
             let oy_local_elapsed = ((Date.now()/1000)-window.OY_PUSH_ELAPSED);
@@ -1184,44 +1242,9 @@
         });
     }
 
-    function oy_top_refresh(oy_refresh_track) {
-        if (typeof(oy_refresh_track)==="undefined") {
-            if (window.OY_TOP_REFRESH===true) return false;
-            window.OY_TOP_REFRESH = true;
-            if (typeof(oy_refresh_track)!=="undefined"&&window.OY_TOP_REFRESH===false) return false;
-            oy_refresh_track = {};
-            for (let oy_node_short in window.OY_NODE_KEEP) {
-                if (oy_node_short===window.OY_MAIN['oy_self_short']||typeof(window.OY_NODE_CHECK[oy_node_short])==="undefined"||window.OY_NODE_KEEP[oy_node_short]===true) continue;
-                let oy_local_node = window.OY_NODE_KEEP[oy_node_short];
-                let oy_local_links = oy_top_node_remove(oy_node_short);
-                window.OY_NODE_KEEP[oy_node_short] = oy_local_node;
-                oy_refresh_track[oy_node_short] = oy_local_links;
-            }
-            oy_top_restart("#348fab");
-            setTimeout(function() {
-                oy_top_refresh(oy_refresh_track);
-            }, 50);
-            return true;
-        }
-
-        let oy_time_local = Date.now()/1000|0;
-
-        for (let oy_node_short in oy_refresh_track) {
-            oy_top_node_add(oy_node_short, (window.OY_NODE_KEEP[oy_node_short]===true) ? "peer" : "node");
-            if (window.OY_NODE_KEEP[oy_node_short]===true) {
-                oy_top_link_add(window.OY_MAIN['oy_self_short'], oy_node_short, "#314a91");
-            }
-        }
-        for (let oy_link_key in window.OY_LINK_KEEP) {
-            if (window.OY_LINK_KEEP[oy_link_key]-oy_time_local>window.OY_LINK_ACTIVETIME) {
-                let oy_split = oy_link_key.split("@");
-                oy_top_link_add(oy_split[0], oy_split[1], "#314a91");
-            }
-        }
-        oy_top_restart("#348fab");
-        setTimeout(function() {
-            window.OY_TOP_REFRESH = false;
-        }, 10);
+    function oy_top_clear() {
+        window.OY_TOP_FORCE = null;
+        document.getElementById("oy_top_inner").innerHTML = "";
     }
 
     function oy_top_tick() {
@@ -1235,6 +1258,7 @@
     }
 
     function oy_top_restart(oy_fill) {
+        if (window.OY_TOP_FORCE===null) return false;
         window.OY_TOP_NODE = window.OY_TOP_NODE.data(window.OY_TOP_NODES);
 
         window.OY_TOP_NODE.enter().insert("circle")
@@ -1412,10 +1436,11 @@
     }
 
     function oy_file_view_check(oy_type) {
-        console.log(oy_type);
+        console.log(window.OY_FILE_KEEP[1]);
         if ((oy_type==="oy_image"||oy_type===true)&&(window.OY_FILE_KEEP[1]==="image/png"||window.OY_FILE_KEEP[1]==="image/jpg")) return true;
         else if ((oy_type==="oy_audio"||oy_type===true)&&(window.OY_FILE_KEEP[1]==="audio/mpeg"||window.OY_FILE_KEEP[1]==="audio/wav"||window.OY_FILE_KEEP[1]==="audio/ogg"||window.OY_FILE_KEEP[1]==="audio/x-m4a")) return true;
         else if ((oy_type==="oy_video"||oy_type===true)&&(window.OY_FILE_KEEP[1]==="video/mp4"||window.OY_FILE_KEEP[1]==="video/webm"||window.OY_FILE_KEEP[1]==="video/ogg")) return true;
+        else if ((oy_type==="oy_document"||oy_type===true)&&(window.OY_FILE_KEEP[1]==="application/pdf")) return true;
         return false;
     }
 
@@ -1435,6 +1460,12 @@
         }
         else if (oy_file_view_check("oy_video")) {
             document.getElementById("oy_file_view_data").innerHTML = "<video controls src=\"data:"+window.OY_FILE_KEEP[1]+";base64,"+window.OY_FILE_KEEP[2]+"\">";
+            document.getElementById("oy_cover").style.display = "block";
+            document.getElementById("oy_file_view_cont").style.display = "block";
+            return true;
+        }
+        else if (oy_file_view_check("oy_document")) {
+            document.getElementById("oy_file_view_data").innerHTML = "<embed style=\"height:85vh;width:75vw;\" src=\"data:"+window.OY_FILE_KEEP[1]+";base64,"+window.OY_FILE_KEEP[2]+"\">";
             document.getElementById("oy_cover").style.display = "block";
             document.getElementById("oy_file_view_cont").style.display = "block";
             return true;
@@ -1908,7 +1939,6 @@
 
         document.getElementById("oy_pull_stats_beta").style.display = "none";
         document.getElementById("oy_pull_stats_cont").style.width = "15%";
-        document.getElementById("oy_pull_stats_alpha").style.left = "7.5%";
         document.getElementById("oy_pull_mesh_glue").style.display = "block";
 
         if (window.OY_EXECUTE_LAST!=="OY_RECOMMIT") oy_pull_reset_stats();

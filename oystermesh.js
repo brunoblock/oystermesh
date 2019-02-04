@@ -53,6 +53,7 @@ window.OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inp
 
 // INIT
 window.OY_CONN = null;//global P2P connection handle
+window.OY_FORCE_RESET = false;//forces engine to restart init
 window.OY_CONSOLE = null;//custom function for handling console
 window.OY_MAP = null;//custom function for tracking passive passports
 window.OY_INIT = 0;//prevents multiple instances of oy_init() from running simultaneously
