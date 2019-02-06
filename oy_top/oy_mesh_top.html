@@ -198,7 +198,7 @@
                 window.OY_MESH_TOP_PREV = oy_mesh_top;
             }
         };
-        oy_xhttp.open("GET", "https://top.oyster.org/oy_mesh_top.json?"+Math.round(Math.random()*1000), true);
+        oy_xhttp.open("GET", "https://top.oyster.org/oy_mesh_top.json?"+Math.round(Math.random()*10000), true);
         oy_xhttp.send();
         setTimeout("oy_top_data()", 5000);
     }

@@ -24,6 +24,8 @@ Storage limit: <span id="oy_storage_limit"></span><br>
 <input id="oy_button_pull" type="button" value="DATA PULL" onclick="oy_button4()" />
 <input id="oy_button_pull_cancel" type="button" disabled="disabled" value="CANCEL" onclick="oy_button5()" />
 <br><br>
+<input id="oy_key_private" type="text" style="width:100px;" value="eyJhbGciOiJQUzI1NiIsImQiOiJQeFFmaF9oTWFyOF9XTDY5T1Z0Y0tiS0U0N1JCaXlPTGtzWXR3VGRUVE9vc1RuVWl5eHBoQS01dFY2UDZrZGRRMHpLS1luTVFKbS1pUWtIR3A5c0VzN1dQWjFLRXFPZWFjUENtRXBtbmhOUWQ3dl90WnBVTy1XSjBaeEZ5WjlYWGFELWlVaW1ad0tsRW5zX2dUc2pMQnFuQUNKbWc4Nk1PR3FRMXBiTUtWb0UiLCJkcCI6IkcxbU51NzBDb01CeHNYaWhHWldiNkhpdWVOUjEyT3ZrRDU2V0MtRFhGdmpEVlZjYmxhZUNVMHRQQ2s0YVAwOW80a3ZpRzAzVlkzelRqNDJ3cFBha1JRIiwiZHEiOiJVeGk4cWMwMnR3a0pONWY3TDA1Tko0UWdRNGtwVHB6YURtRDRkNnRIb29KeEVnZUgteEwtejJEcm9LbWEwNXNZc1RSNjJSTnVGR0VlMjhMSGNtVU1nUSIsImUiOiJBUUFCIiwiZXh0Ijp0cnVlLCJrZXlfb3BzIjpbInNpZ24iXSwia3R5IjoiUlNBIiwibiI6Im9qMjBRZUxIQjQ2U1N2WDFNMWNxeG5hVzVZaHNudmtVYnY3aWxPVlY4RVYwMk1RckVEdUUza3JGa3F4QmxaZVcyclJlSmo0MDFPUkFudHltTEFoRG9SRXljdjItbXdQbjN1T0JmNmNUZHF2LTJIY3g3aWdzNkNuYmhWS2JCamtFQU03NGZVTkZ4MzlCQXU3TC00Y0E4VFNpbEI0WlRUNFRINXlyYmFIbkJOTSIsInAiOiIyS0lwSVBHSUFaU0c5WDJDOGlraWlDZlJnemMzNjhISFRWN3FHOF9UTVZCMFJ0M3VzbS1DR1F6aHFxUGdmQTlhTm5xSk9kdERyU1lHOFRfT0ZTUWRVdyIsInEiOiJ2N2t5RmxtU0k5QThiT3IyZkVKNjl3SVAxMGFfSnkzRE1kdDlMaXN6RzZSYmJWRm85THZ5RWU2MGY2REprUUJhcXg4eFZ1UlozdlAySVZmTk4xVUtnUSIsInFpIjoiY3g3WUs3WXd2eUtQQllIbjVMaEpVMzh5Rkx3X3E2aXBwaGhEWXpXU25MeUE2UWtXM0syQlJqNEYtWGI1WXI5eW9CclVZZVJQNTNGMWI0V2V2a290UGcifQ==" /><br>
+<input id="oy_key_public" type="text" style="width:100px;" value="oj20QeLHB46SSvX1M1cqxnaW5YhsnvkUbv7ilOVV8EV02MQrEDuE3krFkqxBlZeW2rReJj401ORAntymLAhDoREycv2-mwPn3uOBf6cTdqv-2Hcx7igs6CnbhVKbBjkEAM74fUNFx39BAu7L-4cA8TSilB4ZTT4TH5yrbaHnBNM" /><br>
 <input type="button" value="CUSTOM1" onclick="oy_button_custom1()" />
 <input type="button" value="CUSTOM2" onclick="oy_button_custom2()" />
 <br><br>
@@ -103,15 +105,16 @@ CONSTRUCT:<br>
 
     function oy_button_custom1() {
         oy_key_gen(function(oy_private_key, oy_public_key) {
-            window.OY_PRIVATE_KEY = oy_private_key;
-            window.OY_PUBLIC_KEY = oy_public_key;
+            document.getElementById("oy_key_private").value = oy_private_key;
+            document.getElementById("oy_key_public").value = oy_public_key;
             console.log(oy_private_key);
             console.log(oy_public_key);
         });
     }
 
-    function oy_buttom_custom2() {
-        oy_channel_broadcast("CHANNEL123", "DATA123", window.OY_PRIVATE_KEY, window.OY_PUBLIC_KEY);
+    function oy_button_custom2() {
+        //console.log(oy_cut(document.getElementById("oy_key_public").value));
+        oy_channel_broadcast("936e62ced6eac3b08e236a9623929dbb9564bef0", "DATA123", document.getElementById("oy_key_private").value, document.getElementById("oy_key_public").value);
     }
 
     function b64toBlob(b64Data, contentType, sliceSize) {

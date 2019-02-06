@@ -51,6 +51,7 @@ window.OY_CHANNEL_BROADCAST_PACKET_MAX = 800;//maximum size for a packet is is r
 window.OY_ENGINE_INTERVAL = 2000;//ms interval for core mesh engine to run, the time must clear a reasonable latency round-about
 window.OY_READY_RETRY = 3000;//ms interval to retry connection if READY is still false
 window.OY_BLOCK_LOOP = 200;//a lower value means more opportunity within the 10 second window to propagate transactions
+window.OY_CUT_LENGTH = 32;//key variable for negotiating with the trilemma, higher is more secure/less scalable, lower is less secure/more scalable, changing requires a hardfork
 window.OY_SHORT_LENGTH = 6;//various data value such as nonce IDs, data handles, data values are shortened for efficiency
 window.OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inputs are expected
 
@@ -82,6 +83,7 @@ window.OY_PROPOSED = {};//nodes that have been recently proposed to for mutual p
 window.OY_BLACKLIST = {};//nodes to block for x amount of time
 window.OY_PUSH_HOLD = {};//holds data contents ready for pushing to mesh
 window.OY_PUSH_TALLY = {};//tracks data push nonces that were deposited on the mesh
+window.OY_BLOCK = [null];//block from the meshblock that keeps consensus-approved transactions
 window.OY_BLOCK_PREV = null;//the most recent block timestamp
 
 function oy_log(oy_log_msg, oy_log_flag) {
@@ -99,6 +101,10 @@ function oy_log_debug(oy_log_msg) {
     let oy_xhttp = new XMLHttpRequest();
     oy_xhttp.open("POST", "https://top.oyster.org/oy_log_catch.php", true);
     oy_xhttp.send("oy_log_catch="+JSON.stringify([window.OY_MAIN['oy_self_short'], oy_log_msg]));
+}
+
+function oy_cut(oy_key_public) {
+    return oy_key_public.substr(0, window.OY_CUT_LENGTH);
 }
 
 function oy_short(oy_message) {
@@ -1369,12 +1375,33 @@ function oy_data_deposit(oy_data_handle, oy_data_nonce, oy_data_value) {
     return true;
 }
 
+function oy_channel_verify(oy_data_payload, oy_callback) {
+    if (window.OY_BLOCK[0]===null) {
+        oy_callback(null);
+        return null;
+    }
+    else if (typeof(window.OY_BLOCK[1][2][oy_data_payload[2]])!=="undefined") {
+        let oy_key_public_cut = oy_cut(oy_data_payload[5]);
+        if (window.OY_BLOCK[1][2][oy_data_payload[2]][2].indexOf(oy_key_public_cut)!==-1||window.OY_BLOCK[1][2][oy_data_payload[2]][3].indexOf(oy_key_public_cut)!==-1) {
+            oy_key_verify(oy_data_payload[5], oy_data_payload[4], oy_data_payload[3], function(oy_key_valid) {
+                oy_callback(oy_key_valid);
+            });
+            return null;
+        }
+    }
+    oy_callback(false);
+    return null;
+}
+
 //broadcasts a signed message for a specified channel
 function oy_channel_broadcast(oy_channel_id, oy_channel_payload, oy_key_private, oy_key_public) {
     oy_key_sign(oy_key_private, oy_channel_payload, function(oy_payload_crypt) {
         //TODO check that the public key is in the channel's approval list in the current block
-
-        oy_data_route("OY_LOGIC_ALL", "OY_CHANNEL_BROADCAST", [[], oy_rand_gen(), oy_channel_id, oy_channel_payload, oy_payload_crypt, oy_key_public]);
+        let oy_data_payload = [[], oy_rand_gen(), oy_channel_id, oy_channel_payload, oy_payload_crypt, oy_key_public];
+        oy_channel_verify(oy_data_payload, function(oy_verify_pass) {
+            console.log("BOB"+oy_verify_pass);
+            if (oy_verify_pass===true) oy_data_route("OY_LOGIC_ALL", "OY_CHANNEL_BROADCAST", oy_data_payload);
+        });
     });
 }
 
@@ -1392,7 +1419,20 @@ function oy_block_loop() {
     if (oy_block_time_local!==window.OY_BLOCK_PREV) {
         window.OY_BLOCK_PREV = oy_block_time_local;
         //trigger for mesh consensus
-        console.log(oy_block_time_local);
+
+        //----------transitory centralized solution
+        let oy_xhttp = new XMLHttpRequest();
+        oy_xhttp.onreadystatechange = function() {
+            if (this.readyState===4&&this.status===200) {
+                window.OY_BLOCK[1] = JSON.parse(this.responseText);
+                window.OY_BLOCK[0] = oy_hash_gen(JSON.stringify(window.OY_BLOCK[1]));//this is what this line will look like in the decentralized version
+
+                console.log(window.OY_BLOCK);
+            }
+        };
+        oy_xhttp.open("POST", "https://top.oyster.org/oy_block_update.php", true);
+        oy_xhttp.send();
+        //----------transitory centralized solution
     }
     setTimeout("oy_block_loop()", window.OY_BLOCK_LOOP);
 }
