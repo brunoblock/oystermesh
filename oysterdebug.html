@@ -4,10 +4,7 @@
     <meta charset="UTF-8">
     <title>Oyster Mesh Debug Tool</title>
     <script src="oystermesh.js"></script>
-    <script src="oy_resources/peer.min.js"></script>
-    <script src="oy_resources/sha1.js"></script>
-    <script src="oy_resources/aes.js"></script>
-    <script src="oy_resources/pbkdf2.js"></script>
+    <script src="oysterdepend.js"></script>
 </head>
 <body>
 Oyster Mesh<br>
@@ -26,6 +23,9 @@ Storage limit: <span id="oy_storage_limit"></span><br>
 <input id="oy_handle_pull" type="text" style="width:100px;" /><br>
 <input id="oy_button_pull" type="button" value="DATA PULL" onclick="oy_button4()" />
 <input id="oy_button_pull_cancel" type="button" disabled="disabled" value="CANCEL" onclick="oy_button5()" />
+<br><br>
+<input type="button" value="CUSTOM1" onclick="oy_button_custom1()" />
+<input type="button" value="CUSTOM2" onclick="oy_button_custom2()" />
 <br><br>
 <input type="button" value="RESET" onclick="localStorage.clear()" />
 <br><br>
@@ -99,6 +99,19 @@ CONSTRUCT:<br>
         oy_data_push_reset(document.getElementById('oy_push_handle').value.substr(32, 48));
         document.getElementById("oy_push_handle").value = "";
         document.getElementById("oy_file_upload").value = "";
+    }
+
+    function oy_button_custom1() {
+        oy_key_gen(function(oy_private_key, oy_public_key) {
+            window.OY_PRIVATE_KEY = oy_private_key;
+            window.OY_PUBLIC_KEY = oy_public_key;
+            console.log(oy_private_key);
+            console.log(oy_public_key);
+        });
+    }
+
+    function oy_buttom_custom2() {
+        oy_channel_broadcast("CHANNEL123", "DATA123", window.OY_PRIVATE_KEY, window.OY_PUBLIC_KEY);
     }
 
     function b64toBlob(b64Data, contentType, sliceSize) {

@@ -41,13 +41,16 @@ window.OY_DATA_PUSH_INTERVAL = 190;//ms per chunk per push loop iteration
 window.OY_DATA_PUSH_NONCE_MAX = 15;//maximum amount of nonces to push per push loop iteration
 window.OY_DATA_PULL_INTERVAL = 500;//ms per pull loop iteration
 window.OY_DATA_PULL_NONCE_MAX = 5;//maximum amount of nonces to request per pull beam, if too high fulfill will overrun soak limits and cause time/resource waste
+window.OY_DATA_PULL_PACKET_MAX = 150;//maximum size for a packet that is routed via OY_DATA_PULL (OY_LOGIC_ALL)
 window.OY_DATA_FULFILL_INTERVAL = 4000;//ms per chunk per fulfill loop iteration
 window.OY_DATA_FULFILL_EXPIRE = 25;//seconds before self will resent a pull fulfillment to the same node for the same handle
 window.OY_DEPOSIT_CHAR = 100000;//character rate for data deposit sizing, helps establish storage limits
 window.OY_DEPOSIT_MAX_BUFFER = 0.9;//max character length capacity factor of data deposit (0.9 means 10% buffer until hard limit is reached)
 window.OY_DEPOSIT_COMMIT = 3;//commit data to disk every x nonce pushes, too high will lead to unnecessary data loss
+window.OY_CHANNEL_BROADCAST_PACKET_MAX = 800;//maximum size for a packet is is routed via OY_CHANNEL_BROADCAST (OY_LOGIC_ALL)
 window.OY_ENGINE_INTERVAL = 2000;//ms interval for core mesh engine to run, the time must clear a reasonable latency round-about
 window.OY_READY_RETRY = 3000;//ms interval to retry connection if READY is still false
+window.OY_BLOCK_LOOP = 200;//a lower value means more opportunity within the 10 second window to propagate transactions
 window.OY_SHORT_LENGTH = 6;//various data value such as nonce IDs, data handles, data values are shortened for efficiency
 window.OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inputs are expected
 
@@ -79,6 +82,7 @@ window.OY_PROPOSED = {};//nodes that have been recently proposed to for mutual p
 window.OY_BLACKLIST = {};//nodes to block for x amount of time
 window.OY_PUSH_HOLD = {};//holds data contents ready for pushing to mesh
 window.OY_PUSH_TALLY = {};//tracks data push nonces that were deposited on the mesh
+window.OY_BLOCK_PREV = null;//the most recent block timestamp
 
 function oy_log(oy_log_msg, oy_log_flag) {
     //oy_log_debug(oy_log_msg);
@@ -210,7 +214,7 @@ function oy_key_verify(oy_key_public, oy_key_signature, oy_key_data, oy_callback
 
 function oy_key_sign(oy_key_private, oy_key_data, oy_callback) {
     window.crypto.subtle.importKey(
-        "jwk", JSON.parse(oy_key_private),
+        "jwk", JSON.parse(window.atob(oy_key_private)),
         {   //these are the algorithm options
             name: "RSA-PSS",
             hash: {name: "SHA-256"}, //can be "SHA-1", "SHA-256", "SHA-384", or "SHA-512"
@@ -245,7 +249,7 @@ function oy_key_gen(oy_callback) {
         }, true, ["sign", "verify"]
     ).then(function(key) {
         window.crypto.subtle.exportKey("jwk", key.privateKey).then(function(oy_key_pass) {
-            oy_callback(JSON.stringify(oy_key_pass), oy_key_pass.n);
+            oy_callback(window.btoa(JSON.stringify(oy_key_pass)), oy_key_pass.n);
         }).catch(function(oy_error) {
             oy_log("Cryptographic error "+oy_error, 1);
         });
@@ -263,6 +267,25 @@ function oy_handle_check(oy_data_handle) {
 }
 
 function oy_local_store(oy_local_name, oy_local_data) {
+    /*
+    function oy_local_check_sub2(oy_heavy) {
+        try {
+            localStorage.setItem("oy_store_check", oy_heavy);
+            return true;
+        }
+        catch(e) {
+            return false;
+        }
+    }
+    if (oy_local_name==="oy_deposit") {
+        let oy_heavy = "";
+        while (oy_local_check_sub2(oy_heavy)) oy_heavy += "0123456789".repeat(10000);
+        localStorage.removeItem("oy_store_check");
+        console.log("SIZE LIMIT REMAINING: "+oy_heavy.length);
+        oy_heavy = "";
+    }
+    console.log("DATA: "+oy_local_name+" SIZE: "+JSON.stringify(oy_local_data).length);
+    */
     localStorage.setItem(oy_local_name, JSON.stringify(oy_local_data));
     oy_log("Updated localStorage retention of "+oy_local_name);
     return true;
@@ -820,7 +843,6 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
     oy_key_verify(window.OY_LATENCY[oy_node_id][5], oy_data_payload[0], window.OY_MESH_DYNASTY+window.OY_LATENCY[oy_node_id][0], function(oy_key_valid) {
         if (oy_key_valid===false) {
             oy_log("Node "+oy_short(oy_node_id)+" failed to sign latency sequence, will punish");
-            oy_log_debug("SIGN FAIL, NODE: "+oy_node_id+" PAYLOAD: "+JSON.stringify(oy_data_payload)+", SIGN: "+window.OY_MESH_DYNASTY+window.OY_LATENCY[oy_node_id][0]);
             oy_node_punish(oy_node_id, "OY_PUNISH_SIGN_FAIL");
             delete window.OY_LATENCY[oy_node_id];
             return false;
@@ -1249,7 +1271,7 @@ function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
     let oy_callback_local = function() {
         let oy_data_raw = JSON.stringify([oy_data_flag, oy_data_payload]);//convert data array to JSON
         oy_data_payload = null;
-        if (oy_data_raw.length>window.OY_DATA_MAX) {
+        if (oy_data_raw.length>window.OY_DATA_MAX||(oy_data_flag==="OY_DATA_PULL"&&oy_data_raw.length>window.OY_DATA_PULL_PACKET_MAX)) {
             oy_log("System is mis-configured, almost sent an excessively sized data sequence", 1);
             return false;
         }
@@ -1285,12 +1307,18 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
                    return false;
                }
                if (typeof(window.OY_MAP)==="function") window.OY_MAP(oy_data[0], oy_data[1][0], (oy_data[0]==="OY_DATA_DEPOSIT"||oy_data[0]==="OY_DATA_FULFILL")?oy_data[1][1]:null);
-               if (oy_data[0]==="OY_DATA_PUSH"||oy_data[0]==="OY_DATA_PULL") {
+               if (oy_data[0]==="OY_DATA_PUSH"||oy_data[0]==="OY_DATA_PULL"||oy_data[0]==="OY_CHANNEL_BROADCAST") {
                    if (oy_data[1][0].length>1&&!!oy_peer_find(oy_data[1][0][0])) {
                        oy_log("We are peers with the origination node "+oy_data[1][0][0]+", will cease routing");
                        return true;
                    }
-                   if (oy_data[0]==="OY_DATA_PULL") {
+                   if (oy_data[0]==="OY_DATA_PULL"||oy_data[0]==="OY_CHANNEL_BROADCAST") {
+                       if (oy_data_raw.length>window.OY_DATA_PULL_PACKET_MAX) {
+                           oy_log("Peer "+oy_short(oy_node_id)+" sent a data sequence that is too large for OY_LOGIC_ALL, will remove and punish");
+                           oy_peer_remove(oy_node_id);
+                           oy_node_punish(oy_node_id, "OY_PUNISH_LOGIC_BREACH");
+                           return false;
+                       }
                        if (window.OY_ROUTE_DYNAMIC.indexOf(oy_data[1][1])!==-1) {
                            oy_log("We already processed route dynamic "+oy_data[1][1]+", will cease routing");
                            return true;
@@ -1339,6 +1367,34 @@ function oy_data_deposit(oy_data_handle, oy_data_nonce, oy_data_value) {
     }
     else window.OY_MAIN['oy_deposit_counter']++;
     return true;
+}
+
+//broadcasts a signed message for a specified channel
+function oy_channel_broadcast(oy_channel_id, oy_channel_payload, oy_key_private, oy_key_public) {
+    oy_key_sign(oy_key_private, oy_channel_payload, function(oy_payload_crypt) {
+        //TODO check that the public key is in the channel's approval list in the current block
+
+        oy_data_route("OY_LOGIC_ALL", "OY_CHANNEL_BROADCAST", [[], oy_rand_gen(), oy_channel_id, oy_channel_payload, oy_payload_crypt, oy_key_public]);
+    });
+}
+
+//listens for signed messages on a specified channel
+function oy_channel_listen(oy_channel_id) {
+
+}
+
+function oy_block_time() {
+    return (Math.floor(Date.now()/10000))*10;
+}
+
+function oy_block_loop() {
+    let oy_block_time_local = oy_block_time();
+    if (oy_block_time_local!==window.OY_BLOCK_PREV) {
+        window.OY_BLOCK_PREV = oy_block_time_local;
+        //trigger for mesh consensus
+        console.log(oy_block_time_local);
+    }
+    setTimeout("oy_block_loop()", window.OY_BLOCK_LOOP);
 }
 
 //core loop that runs critical functions and checks
@@ -1481,6 +1537,8 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
         }
     }
 
+    //TODO most likely this system of clearing out localstorage for absolute measurement will be replaced with an incremental measurement system
+
     window.OY_DEPOSIT = oy_local_get("oy_deposit");
     window.OY_PURGE = oy_local_get("oy_purge");
     window.OY_PEERS = oy_local_get("oy_peers");
@@ -1559,6 +1617,7 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
         if (window.OY_MAIN['oy_ready']===true) {
             oy_log("Connection is now ready, sparking engine");
             setTimeout("oy_engine()", 200);
+            setTimeout("oy_block_loop()", 1);
         }
         else {
             oy_log("Connection is was not established before the ready cutoff, re-sparking INIT");

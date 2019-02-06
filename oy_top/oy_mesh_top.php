@@ -1,6 +1,35 @@
 <?php
 if (php_sapi_name()!=="cli") exit;
 
+$oy_punish_permit = array(
+    "OY_PUNISH_PUSH_INVALID",
+    "OY_PUNISH_DEPOSIT_INVALID",
+    "OY_PUNISH_FULFILL_INVALID",
+    "OY_PUNISH_BLACKLIST_RETURN",
+    "OY_PUNISH_LATENCY_DECLINE",
+    "OY_PUNISH_RECOMMEND_SELF",
+    "OY_PUNISH_CONNECT_FAIL",
+    "OY_PUNISH_BLACKLIST_RETURN",
+    "OY_PUNISH_FALSE_AFFIRM",
+    "OY_PUNISH_REJECT_RETURN",
+    "OY_PUNISH_LATENCY_DECLINE",
+    "OY_PUNISH_DATA_INCOHERENT",
+    "OY_PUNISH_LATENCY_NONE",
+    "OY_PUNISH_SIGN_NONE",
+    "OY_PUNISH_SIGN_INVALID",
+    "OY_PUNISH_SIGN_FAIL",
+    "OY_PUNISH_LATENCY_BREACH",
+    "OY_PUNISH_LATENCY_WEAK",
+    "OY_PUNISH_LATENCY_INVALID",
+    "OY_PUNISH_PASSPORT_MISMATCH",
+    "OY_PUNISH_PASSPORT_ALREADY",
+    "OY_PUNISH_LOGIC_BREACH",
+    "OY_PUNISH_LATENCY_LAG",
+    "OY_PUNISH_WARM_LAG",
+    "OY_PUNISH_DATA_BREACH",
+    "OY_PUNISH_DATA_INVALID",
+    "OY_PUNISH_MESH_FLOW");
+
 function oy_flow_format($oy_bytes, $oy_precision = 2) {
     $oy_base = log($oy_bytes, 1000);
     $oy_suffixes = array('', 'kbps', 'mbps', 'gbps', 'tbps');
@@ -9,7 +38,7 @@ function oy_flow_format($oy_bytes, $oy_precision = 2) {
 }
 
 //[0] is nodes, [1] is peer relationships [2] is stats
-$oy_mesh_top = [[], [], [["oy_stat_avg_latency"=>[], "oy_stat_avg_peership"=>[], "oy_stat_mesh_size"=>0, "oy_stat_mesh_flow"=>0, "oy_stat_sector_count"=>[]], []]];
+$oy_mesh_top = [[], [], [["oy_stat_avg_latency"=>[], "oy_stat_avg_peership"=>[], "oy_stat_mesh_size"=>0, "oy_stat_mesh_flow"=>0], []]];
 $oy_mesh_keep = [];
 $oy_mesh_file_array = glob("/dev/shm/oy_peers/*.peer");
 if (count($oy_mesh_file_array)<=2) {
@@ -47,6 +76,7 @@ foreach ($oy_mesh_keep as $oy_mesh_data) {
     }
     foreach ($oy_mesh_data[2] as $oy_mesh_blacklist) {
         foreach ($oy_mesh_blacklist[3] as $oy_punish_unique) {
+            if (!in_array($oy_punish_unique, $oy_punish_permit)) continue;
             if (!isset($oy_punish_track[$oy_punish_unique])) $oy_punish_track[$oy_punish_unique] = 1;
             else $oy_punish_track[$oy_punish_unique]++;
         }
@@ -54,7 +84,7 @@ foreach ($oy_mesh_keep as $oy_mesh_data) {
 }
 if (count($oy_mesh_top[2][0]["oy_stat_avg_latency"])===0) $oy_mesh_top[2][0]["oy_stat_avg_latency"] = 0;
 else $oy_mesh_top[2][0]["oy_stat_avg_latency"] = round(array_sum($oy_mesh_top[2][0]["oy_stat_avg_latency"])/count($oy_mesh_top[2][0]["oy_stat_avg_latency"]), 4);
-if (count($oy_mesh_top[2][0]["oy_stat_avg_peership"])) $oy_mesh_top[2][0]["oy_stat_avg_peership"] = 0;
+if (count($oy_mesh_top[2][0]["oy_stat_avg_peership"])===0) $oy_mesh_top[2][0]["oy_stat_avg_peership"] = 0;
 else $oy_mesh_top[2][0]["oy_stat_avg_peership"] = round((((array_sum($oy_mesh_top[2][0]["oy_stat_avg_peership"])/count($oy_mesh_top[2][0]["oy_stat_avg_peership"])/60)/60)/24), 2);
 $oy_mesh_top[2][0]["oy_stat_mesh_size"] = count($oy_mesh_top[0]);
 $oy_mesh_top[2][0]["oy_stat_mesh_flow"] = oy_flow_format($oy_mesh_top[2][0]["oy_stat_mesh_flow"]);
