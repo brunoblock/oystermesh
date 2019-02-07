@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <title>Oyster | Immutable, Sustainable, Unstoppable.</title>
     <meta name="description" content="The Oyster Mesh provides decentralized access to immutable data and currency.">
-    <script src="oystermesh.js"></script>
+    <script src="oystermesh.js?2"></script>
     <script src="oysterdepend.js"></script>
+    <script src="oy_resources/d3.v3.min.js"></script>
     <base target="_blank">
     <style type="text/css">
         @font-face {
@@ -892,12 +893,14 @@
             transform: translate(-50%, -50%);
         }
     </style>
-    <script src="oy_resources/d3.v3.min.js"></script>
 </head>
 <body>
 <span id="oy_github_ribbon" class="oy_fade two"><a href="https://github.com/brunoblock/oystermesh" target="_blank">GITHUB REPO</a></span>
 <div id="front" class="oy_slide" style="height:100%">
-    <div id="oy_cover" style="position:absolute;left:0;top:0;width:100%;height:100%;background-color:#0f0f0f;opacity:0.85;z-index:2000;display:none;"></div>
+    <div id="oy_cover" style="position:absolute;left:0;top:0;width:100%;height:100%;background-color:#0f0f0f;opacity:0.85;z-index:2000;display:none"></div>
+    <div id="oy_key_interface_cont" style="position:absolute;top:50%;left:50%;transform: translate(-50%, -52%);width:50%;height:40%;background-color:#121212;padding:1.5%;border-radius:1vh;z-index: 4000;display:none">
+
+    </div>
     <div id="oy_file_view_cont" style="position: absolute;top:50%;left:50%;transform: translate(-50%, -52%);width:auto;height:auto;background-color:#121212;padding:1.5%;border-top-left-radius:0.5vh;border-top-right-radius:0.5vh;z-index: 3000;display: none;">
         <div id="oy_file_view_data"></div>
         <div style="position:absolute;left:0;bottom:0;transform:translateY(99%);border-bottom-left-radius:0.5vh;border-bottom-right-radius:0.5vh;width: 100%;min-width:23vh;height:4vh;background-color:#121212;">
