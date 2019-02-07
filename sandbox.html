@@ -9,10 +9,145 @@
 <body>
 </body>
 <script type="text/javascript">
-    function bob(x) {
-        console.log(x);
+
+    function oy_key_verify(oy_key_public, oy_key_signature, oy_key_data, oy_callback) {
+        window.crypto.subtle.importKey(
+            "jwk", //can be "jwk" (public or private), "spki" (public only), or "pkcs8" (private only)
+            {
+                kty: "EC",
+                crv: "P-256",
+                x: oy_key_public.substr(0, 43),
+                y: oy_key_public.substr(43),
+                ext: true,
+            },
+            {   //these are the algorithm options
+                name: "ECDSA",
+                namedCurve: "P-256", //can be "P-256", "P-384", or "P-521"
+            },
+            false, //whether the key is extractable (i.e. can be used in exportKey)
+            ["verify"] //"verify" for public key import, "sign" for private key imports
+        ).then(function(oy_key_public) {
+            window.crypto.subtle.verify(
+                {
+                    name: "ECDSA",
+                    hash: {name: "SHA-256"}, //can be "SHA-1", "SHA-256", "SHA-384", or "SHA-512"
+                },
+                oy_key_public, //from generateKey or importKey above
+                oy_buffer_encode(oy_key_signature, true),
+                oy_buffer_encode(oy_key_data, false) //ArrayBuffer of data you want to sign
+            ).then(function(oy_key_valid) {
+                oy_callback(oy_key_valid);
+            }).catch(function(oy_error) {
+                oy_log("Cryptographic error "+oy_error, 1);
+            });
+        }).catch(function(oy_error) {
+            oy_log("Cryptographic error "+oy_error, 1);
+        });
     }
-    let oy_test = "8374874790465e999bc06441335dfbe50233c85b";
-    console.log(oy_test.length);
+
+    function oy_key_sign(oy_key_private, oy_key_data, oy_callback) {
+        oy_key_private = window.atob(oy_key_private);
+        window.crypto.subtle.importKey(
+            "jwk", //can be "jwk" (public or private), "spki" (public only), or "pkcs8" (private only)
+            {
+                kty: "EC",
+                crv: "P-256",
+                d: oy_key_private.substr(0, 43),
+                x: oy_key_private.substr(43, 43),
+                y: oy_key_private.substr(86),
+                ext: true,
+            },
+            {   //these are the algorithm options
+                name: "ECDSA",
+                namedCurve: "P-256", //can be "P-256", "P-384", or "P-521"
+            },
+            false, //whether the key is extractable (i.e. can be used in exportKey)
+            ["sign"] //"verify" for public key import, "sign" for private key imports
+        ).then(function(oy_key_private_raw) {
+            window.crypto.subtle.sign(
+                {
+                    name: "ECDSA",
+                    hash: {name: "SHA-256"}, //can be "SHA-1", "SHA-256", "SHA-384", or "SHA-512"
+                },
+                oy_key_private_raw, //from generateKey or importKey above
+                oy_buffer_encode(oy_key_data, false) //ArrayBuffer of data you want to sign
+            ).then(function(oy_key_signature_raw) {
+                oy_callback(oy_buffer_decode(oy_key_signature_raw, true));
+            }).catch(function(oy_error) {
+                oy_log("Cryptographic error "+oy_error, 1);
+            });
+        }).catch(function(oy_error) {
+            oy_log("Cryptographic error "+oy_error, 1);
+        });
+    }
+
+    function oy_key_gen(oy_callback) {
+        window.crypto.subtle.generateKey(
+            {
+                name: "ECDSA",
+                namedCurve: "P-256", //can be "P-256", "P-384", or "P-521"
+            },
+            true, //whether the key is extractable (i.e. can be used in exportKey)
+            ["sign", "verify"] //can be any combination of "sign" and "verify"
+        ).then(function(key) {
+            window.crypto.subtle.exportKey("jwk", key.privateKey).then(function(oy_key_pass) {
+                oy_callback(window.btoa(oy_key_pass.d+oy_key_pass.x+oy_key_pass.y), oy_key_pass.x+oy_key_pass.y);
+            }).catch(function(oy_error) {
+                oy_log("Cryptographic error "+oy_error, 1);
+            });
+        }).catch(function(oy_error) {
+            oy_log("Cryptographic error "+oy_error, 1);
+        });
+    }
+
+    oy_key_gen(function(oy_key_private, oy_key_public) {
+        console.log("PRIVATE: "+oy_key_private);
+        console.log("PUBLIC: "+oy_key_public);
+        let oy_data = "DATA123".repeat(1000);
+        oy_key_sign(oy_key_private, oy_data, function(oy_data_crypt) {
+            console.log("DATA: "+oy_data);
+            console.log("SIGNATURE: "+oy_data_crypt);
+            oy_key_verify(oy_key_public, oy_data_crypt, oy_data, function(oy_key_valid) {
+                console.log("VERIFY: "+oy_key_valid);
+            });
+        });
+    });
+
+    /*
+    window.crypto.subtle.generateKey(
+        {
+            name: "ECDSA",
+            namedCurve: "P-256", //can be "P-256", "P-384", or "P-521"
+        },
+        true, //whether the key is extractable (i.e. can be used in exportKey)
+        ["sign", "verify"] //can be any combination of "sign" and "verify"
+    )
+        .then(function(key){
+            //returns a keypair object
+            console.log(key);
+            console.log(key.publicKey);
+            console.log(key.privateKey);
+
+            window.crypto.subtle.exportKey(
+                "jwk", //can be "jwk" (public or private), "spki" (public only), or "pkcs8" (private only)
+                key.privateKey //can be a publicKey or privateKey, as long as extractable was true
+            )
+                .then(function(keydata){
+                    //returns the exported key data
+                    console.log("BOB");
+                    console.log(keydata);
+                    console.log(keydata.d.length);
+                    console.log(keydata.x+keydata.y);
+                    console.log(window.btoa(keydata.x+keydata.y));
+                    console.log(window.btoa(JSON.stringify(keydata)));
+                })
+                .catch(function(err){
+                    console.error(err);
+                });
+        })
+        .catch(function(err){
+            console.error(err);
+        });
+    */
 </script>
 </html>

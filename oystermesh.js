@@ -188,25 +188,25 @@ function oy_crypt_decrypt(oy_crypt_cipher, oy_crypt_pass) {
 
 function oy_key_verify(oy_key_public, oy_key_signature, oy_key_data, oy_callback) {
     window.crypto.subtle.importKey(
-        "jwk",
-        {   //this is an example jwk key, other key types are Uint8Array objects
-            kty: "RSA",
-            e: "AQAB",
-            n: oy_key_public,
-            alg: "PS256",
+        "jwk", //can be "jwk" (public or private), "spki" (public only), or "pkcs8" (private only)
+        {
+            kty: "EC",
+            crv: "P-256",
+            x: oy_key_public.substr(0, 43),
+            y: oy_key_public.substr(43),
             ext: true,
         },
         {   //these are the algorithm options
-            name: "RSA-PSS",
-            hash: {name: "SHA-256"}, //can be "SHA-1", "SHA-256", "SHA-384", or "SHA-512"
+            name: "ECDSA",
+            namedCurve: "P-256", //can be "P-256", "P-384", or "P-521"
         },
         false, //whether the key is extractable (i.e. can be used in exportKey)
         ["verify"] //"verify" for public key import, "sign" for private key imports
     ).then(function(oy_key_public) {
         window.crypto.subtle.verify(
             {
-                name: "RSA-PSS",
-                saltLength: 32, //the length of the salt
+                name: "ECDSA",
+                hash: {name: "SHA-256"}, //can be "SHA-1", "SHA-256", "SHA-384", or "SHA-512"
             },
             oy_key_public, //from generateKey or importKey above
             oy_buffer_encode(oy_key_signature, true),
@@ -222,19 +222,28 @@ function oy_key_verify(oy_key_public, oy_key_signature, oy_key_data, oy_callback
 }
 
 function oy_key_sign(oy_key_private, oy_key_data, oy_callback) {
+    oy_key_private = window.atob(oy_key_private);
     window.crypto.subtle.importKey(
-        "jwk", JSON.parse(window.atob(oy_key_private)),
-        {   //these are the algorithm options
-            name: "RSA-PSS",
-            hash: {name: "SHA-256"}, //can be "SHA-1", "SHA-256", "SHA-384", or "SHA-512"
+        "jwk", //can be "jwk" (public or private), "spki" (public only), or "pkcs8" (private only)
+        {
+            kty: "EC",
+            crv: "P-256",
+            d: oy_key_private.substr(0, 43),
+            x: oy_key_private.substr(43, 43),
+            y: oy_key_private.substr(86),
+            ext: true,
+        },
+        {
+            name: "ECDSA",
+            namedCurve: "P-256", //can be "P-256", "P-384", or "P-521"
         },
         false, //whether the key is extractable (i.e. can be used in exportKey)
         ["sign"] //"verify" for public key import, "sign" for private key imports
     ).then(function(oy_key_private_raw) {
         window.crypto.subtle.sign(
             {
-                name: "RSA-PSS",
-                saltLength: 32, //the length of the salt
+                name: "ECDSA",
+                hash: {name: "SHA-256"}, //can be "SHA-1", "SHA-256", "SHA-384", or "SHA-512"
             },
             oy_key_private_raw, //from generateKey or importKey above
             oy_buffer_encode(oy_key_data, false) //ArrayBuffer of data you want to sign
@@ -251,14 +260,14 @@ function oy_key_sign(oy_key_private, oy_key_data, oy_callback) {
 function oy_key_gen(oy_callback) {
     window.crypto.subtle.generateKey(
         {
-            name: "RSA-PSS",
-            modulusLength: 1024, //can be 1024, 2048, or 4096
-            publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
-            hash: {name: "SHA-256"}, //can be "SHA-1", "SHA-256", "SHA-384", or "SHA-512"
-        }, true, ["sign", "verify"]
+            name: "ECDSA",
+            namedCurve: "P-256", //can be "P-256", "P-384", or "P-521"
+        },
+        true,
+        ["sign", "verify"]
     ).then(function(key) {
         window.crypto.subtle.exportKey("jwk", key.privateKey).then(function(oy_key_pass) {
-            oy_callback(window.btoa(JSON.stringify(oy_key_pass)), oy_key_pass.n);
+            oy_callback(window.btoa(oy_key_pass.d+oy_key_pass.x+oy_key_pass.y), oy_key_pass.x+oy_key_pass.y);
         }).catch(function(oy_error) {
             oy_log("Cryptographic error "+oy_error, 1);
         });
