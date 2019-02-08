@@ -35,7 +35,7 @@ window.OY_LATENCY_REPEAT = 2;//how many ping round trips should be performed to 
 window.OY_LATENCY_TOLERANCE = 2;//tolerance buffer factor for receiving ping requested from a proposed-to node
 window.OY_LATENCY_MAX = 20;//max amount of seconds for latency test before peership is refused or starts breaking down
 window.OY_LATENCY_TRACK = 200;//how many latency measurements to keep at a time per peer
-window.OY_LATENCY_WEAK_BUFFER = 0.5;//percentage buffer for comparing latency with peers, higher means less likely the weakest peer will be dropped and hence less peer turnover
+window.OY_LATENCY_WEAK_BUFFER = 9.5;//percentage buffer for comparing latency with peers, higher means less likely the weakest peer will be dropped and hence less peer turnover
 window.OY_DATA_MAX = 64000;//max size of data that can be sent to another node
 window.OY_DATA_CHUNK = 48000;//chunk size by which data is split up and sent per transmission
 window.OY_DATA_PUSH_INTERVAL = 190;//ms per chunk per push loop iteration
@@ -55,6 +55,9 @@ window.OY_READY_RETRY = 3000;//ms interval to retry connection if READY is still
 window.OY_BLOCK_LOOP = 200;//a lower value means more opportunity within the 10 second window to propagate transactions
 window.OY_CUT_LENGTH = 32;//key variable for negotiating with the trilemma, higher is more secure/less scalable, lower is less secure/more scalable, changing this requires a hardfork
 window.OY_CHANNEL_VERIFY_CHANCE = 0.5;//chance a node will verify a channel broadcast, higher means more aggregate CPU usage and less bandwidth, lower means less aggregate CPU and more bandwidth
+window.OY_CHANNEL_KEEPTIME = 40;//channel bearing nodes are expected to broadcast a logic_all packet within this interval
+window.OY_CHANNEL_FORGETIME = 60;//seconds since last signed message from channel bearing node
+window.OY_CHANNEL_RECOVERTIME = 30;//second interval between channel recovery requests per node
 window.OY_SHORT_LENGTH = 6;//various data value such as nonce IDs, data handles, data values are shortened for efficiency
 window.OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inputs are expected
 
@@ -89,7 +92,9 @@ window.OY_PUSH_TALLY = {};//tracks data push nonces that were deposited on the m
 window.OY_BLOCK = [null];//block from the meshblock that keeps consensus-approved transactions
 window.OY_BLOCK_PREV = null;//the most recent block timestamp
 window.OY_CHANNEL_LISTEN = {};//track channels to listen for
+window.OY_CHANNEL_KEEP = {};//stored broadcasts that are re-shared
 window.OY_CHANNEL_ECHO = {};//track channels to listen for
+window.OY_CHANNEL_TOP = {};//track current channel topology
 
 function oy_log(oy_log_msg, oy_log_flag) {
     //oy_log_debug(oy_log_msg);
@@ -447,7 +452,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         oy_log("Tried to call peer_process on a non-existent peer", 1);
         return false;
     }
-    window.OY_PEERS[oy_peer_id][1] = Date.now()/1000;//update last msg timestamp for peer, no need to update localstorage via oy_local_store() (could be expensive)
+    let oy_local_time = Date.now()/1000;
+    window.OY_PEERS[oy_peer_id][1] = oy_local_time;//update last msg timestamp for peer, no need to update localstorage via oy_local_store() (could be expensive)
     oy_log("Mutual peer "+oy_short(oy_peer_id)+" sent data sequence with flag: "+oy_data_flag);
     if (oy_data_flag==="OY_DATA_PUSH") {//store received data and potentially forward the push request to peers
         //oy_data_payload = [oy_route_passport_passive, oy_data_handle, oy_data_nonce, oy_data_value]
@@ -555,9 +561,15 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             if (typeof(window.OY_CHANNEL_LISTEN[oy_data_payload[2]])!=="undefined") {
                 window.OY_CHANNEL_LISTEN[oy_data_payload[2]][2](oy_data_payload);
 
-                //TODO channel_link
+                if (typeof(window.OY_CHANNEL_TOP[oy_data_payload[2]])==="undefined") window.OY_CHANNEL_TOP[oy_data_payload[2]] = {};
+                window.OY_CHANNEL_TOP[oy_data_payload[2]][oy_data_payload[0][0]] = [oy_local_time, -1, oy_data_payload[0]];
 
-                oy_key_sign(window.OY_CHANNEL_LISTEN[oy_data_payload[2]][0], oy_short(oy_data_payload[4]), function(oy_echo_crypt) {
+                let oy_broadcast_hash = oy_hash_gen(oy_data_payload[4]);
+
+                if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]])==="undefined") window.OY_CHANNEL_KEEP[oy_data_payload[2]] = {};
+                if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash])==="undefined") window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash] = oy_data_payload;
+
+                oy_key_sign(window.OY_CHANNEL_LISTEN[oy_data_payload[2]][0], oy_broadcast_hash, function(oy_echo_crypt) {
                     oy_log("Beaming echo for channel "+oy_short(oy_data_payload[2]));
                     oy_data_route("OY_LOGIC_FOLLOW", "OY_CHANNEL_ECHO", [[], oy_data_payload[0], oy_data_payload[1], oy_data_payload[2], oy_echo_crypt, window.OY_CHANNEL_LISTEN[oy_data_payload[2]][1]]);
                 });
@@ -1473,7 +1485,7 @@ function oy_channel_verify(oy_data_payload, oy_callback) {
         return null;
     }
     else if (typeof(window.OY_BLOCK[1][2][oy_data_payload[2]])!=="undefined"&&oy_data_payload[6]<=oy_time_local&&oy_data_payload[6]>oy_time_local-window.OY_MESH_EDGE) {
-        //TODO the public key might need to get referenced from the pearl wallet list section of the block
+        //TODO the public key might need to get referenced from the pearl wallet list section of the block, to save block space
         if (window.OY_BLOCK[1][2][oy_data_payload[2]][2].indexOf(oy_data_payload[5])!==-1||window.OY_BLOCK[1][2][oy_data_payload[2]][3].indexOf(oy_data_payload[5])!==-1) {
             oy_key_verify(oy_data_payload[5], oy_data_payload[4], oy_data_payload[6]+oy_data_payload[3], function(oy_key_valid) {
                 oy_callback(oy_key_valid);
@@ -1492,7 +1504,7 @@ function oy_channel_broadcast(oy_channel_id, oy_channel_payload, oy_key_private,
         let oy_data_payload = [[], oy_rand_gen(), oy_channel_id, oy_channel_payload, oy_payload_crypt, oy_key_public, oy_time_local];
         oy_channel_verify(oy_data_payload, function(oy_verify_pass) {
             if (oy_verify_pass===true) {
-                if (typeof(oy_callback_echo)==="function") window.OY_CHANNEL_ECHO[oy_channel_id+oy_data_payload[1]] = [oy_time_local+window.OY_MESH_EDGE, oy_short(oy_payload_crypt), oy_callback_echo];
+                if (typeof(oy_callback_echo)==="function") window.OY_CHANNEL_ECHO[oy_channel_id+oy_data_payload[1]] = [oy_time_local+window.OY_MESH_EDGE, oy_hash_gen(oy_payload_crypt), oy_callback_echo];
                 oy_data_route("OY_LOGIC_ALL", "OY_CHANNEL_BROADCAST", oy_data_payload);
             }
         });
@@ -1605,6 +1617,7 @@ function oy_engine(oy_thread_track) {
         oy_log("Engine initiating node_assign, peer count is "+window.OY_PEER_COUNT+"/"+window.OY_PEER_MAX);
         oy_node_assign();
     }
+
     if (window.OY_PEER_COUNT>0&&(oy_time_local-oy_thread_track[1])>window.OY_PEER_REPORTTIME) {
         oy_thread_track[1] = oy_time_local;
         oy_log("Engine initiating peer_report, peer count is "+window.OY_PEER_COUNT+"/"+window.OY_PEER_MAX);
@@ -1620,6 +1633,22 @@ function oy_engine(oy_thread_track) {
             oy_node_punish(oy_node_select, "OY_PUNISH_WARM_LAG");
             delete window.OY_WARM[oy_node_select];
             oy_log("Cleaned up expired warming session for node: "+oy_short(oy_node_select));
+        }
+    }
+
+    let oy_hash_keep = [];
+    for (let oy_channel_id in window.OY_CHANNEL_KEEP) {
+        for (let oy_broadcast_hash in window.OY_CHANNEL_KEEP[oy_channel_id]) {
+            oy_hash_keep.push(oy_broadcast_hash);
+        }
+    }
+    for (let oy_channel_id in window.OY_CHANNEL_TOP) {
+        for (let oy_node_select in window.OY_CHANNEL_TOP[oy_channel_id]) {
+            if (oy_time_local-window.OY_CHANNEL_TOP[oy_channel_id][oy_node_select][0]>window.OY_CHANNEL_FORGETIME) delete window.OY_CHANNEL_TOP[oy_channel_id][oy_node_select];
+            else if (oy_time_local-window.OY_CHANNEL_TOP[oy_channel_id][oy_node_select][1]>window.OY_CHANNEL_RECOVERTIME) {
+                window.OY_CHANNEL_TOP[oy_channel_id][oy_node_select][1] = oy_time_local;
+                oy_data_route("OY_LOGIC_FOLLOW", "OY_CHANNEL_RECOVER", [[], window.OY_CHANNEL_TOP[oy_channel_id][oy_node_select][2], oy_channel_id, oy_hash_keep])
+            }
         }
     }
 
