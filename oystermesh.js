@@ -57,7 +57,8 @@ window.OY_CUT_LENGTH = 32;//key variable for negotiating with the trilemma, high
 window.OY_CHANNEL_VERIFY_CHANCE = 0.5;//chance a node will verify a channel broadcast, higher means more aggregate CPU usage and less bandwidth, lower means less aggregate CPU and more bandwidth
 window.OY_CHANNEL_KEEPTIME = 40;//channel bearing nodes are expected to broadcast a logic_all packet within this interval
 window.OY_CHANNEL_FORGETIME = 60;//seconds since last signed message from channel bearing node
-window.OY_CHANNEL_RECOVERTIME = 30;//second interval between channel recovery requests per node
+window.OY_CHANNEL_RECOVERTIME = 30;//second interval between channel recovery requests per node, should be at least MESH_EDGE*2
+window.OY_CHANNEL_RESPOND_MAX = 5;//max amount of broadcast payloads to send in response to a channel recover request
 window.OY_SHORT_LENGTH = 6;//various data value such as nonce IDs, data handles, data values are shortened for efficiency
 window.OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inputs are expected
 
@@ -523,6 +524,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_log("Continuing deposit confirmation of handle "+oy_short(oy_data_payload[3]));
             oy_data_route("OY_LOGIC_FOLLOW", "OY_DATA_DEPOSIT", oy_data_payload);
         }
+        return true;
     }
     else if (oy_data_flag==="OY_DATA_FULFILL") {
         //oy_data_payload = [oy_route_passport_passive, oy_route_passport_active, oy_data_source, oy_data_handle, oy_data_nonce, oy_data_value]
@@ -603,6 +605,70 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         else {//carry on reversing the passport until the data reaches the intended destination
             oy_log("Continuing echo of channel "+oy_short(oy_data_payload[3]));
             oy_data_route("OY_LOGIC_FOLLOW", "OY_CHANNEL_ECHO", oy_data_payload);
+        }
+    }
+    else if (oy_data_flag==="OY_CHANNEL_RECOVER") {
+        //oy_data_payload = [oy_route_passport_passive, oy_route_passport_active, oy_channel_id, oy_hash_keep]
+        if (oy_data_payload.length!==4||oy_data_payload[1].length===0||!oy_channel_check(oy_data_payload[2])) {
+            oy_log("Peer "+oy_short(oy_peer_id)+" sent invalid channel recover request, will punish");
+            oy_node_punish(oy_peer_id, "OY_PUNISH_RECOVER_INVALID");
+            return false;
+        }
+        if (oy_data_payload[1][0]===window.OY_MAIN['oy_self_short']) {
+            oy_log("Channel recover request for channel "+oy_short(oy_data_payload[2])+" found self as the intended final destination");
+            if (typeof(window.OY_CHANNEL_LISTEN[oy_data_payload[2]])==="undefined"||typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]])==="undefined") {
+                oy_log("Channel "+oy_short(oy_data_payload[2])+" is not being kept locally");
+                return false;
+            }
+            else {
+                let oy_channel_respond = [];
+                for (let oy_broadcast_hash in window.OY_CHANNEL_KEEP[oy_data_payload[2]]) {
+                    if (oy_data_payload[3].indexOf(oy_broadcast_hash)===-1) {
+                        let oy_broadcast_payload = window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash];
+                        if (typeof(oy_broadcast_payload[7])==="undefined") {
+                            oy_key_sign(window.OY_CHANNEL_LISTEN[oy_data_payload[2]][0], oy_broadcast_payload[4], function(oy_data_crypt) {
+                                oy_broadcast_payload.push([oy_data_crypt]);
+                                oy_broadcast_payload.push([window.OY_CHANNEL_LISTEN[oy_data_payload[2]][1]]);
+                                oy_channel_respond.push([oy_broadcast_hash, oy_broadcast_payload]);
+                            });
+                        }
+                    }
+                }
+                if (oy_channel_respond.length===0) {
+                    oy_log("No unknown broadcast payloads found for channel "+oy_short(oy_data_payload[2]));
+                    return false;
+                }
+                oy_channel_respond.sort(function(){return 0.5 - Math.random()});
+                while (oy_channel_respond.length>window.OY_CHANNEL_RESPOND_MAX) oy_channel_respond.pop();
+                oy_data_route("OY_LOGIC_FOLLOW", "OY_CHANNEL_RESPOND", [[], oy_data_payload[0], oy_data_payload[2], oy_channel_respond]);
+            }
+        }
+        else {//carry on reversing the passport until the data reaches the intended destination
+            oy_log("Continuing channel recover request of channel "+oy_short(oy_data_payload[2]));
+            oy_data_route("OY_LOGIC_FOLLOW", "OY_CHANNEL_RECOVER", oy_data_payload);
+        }
+        return true;
+    }
+    else if (oy_data_flag==="OY_CHANNEL_RESPOND") {
+        //oy_data_payload = [oy_route_passport_passive, oy_route_passport_active, oy_channel_id, oy_channel_respond]
+        if (oy_data_payload.length!==4||oy_data_payload[1].length===0||!oy_channel_check(oy_data_payload[2])) {
+            oy_log("Peer "+oy_short(oy_peer_id)+" sent invalid channel respond sequence, will punish");
+            oy_node_punish(oy_peer_id, "OY_PUNISH_RESPOND_INVALID");
+            return false;
+        }
+        if (oy_data_payload[1][0]===window.OY_MAIN['oy_self_short']) {
+            oy_log("Channel respond sequence for channel "+oy_short(oy_data_payload[2])+" found self as the intended final destination");
+            if (typeof(window.OY_CHANNEL_TOP[oy_data_payload[2]])!=="undefined"&&typeof(window.OY_CHANNEL_TOP[oy_data_payload[2]][oy_data_payload[0][0]])!=="undefined"&&oy_local_time-window.OY_CHANNEL_TOP[oy_data_payload[2]][oy_data_payload[0][0]][1]<window.OY_CHANNEL_RECOVERTIME) {
+                oy_log("A local session was not found for respond sequence for channel "+oy_short(oy_data_payload[2]));
+                return false;
+            }
+            else {
+
+            }
+        }
+        else {//carry on reversing the passport until the data reaches the intended destination
+            oy_log("Continuing channel respond sequence of channel "+oy_short(oy_data_payload[2]));
+            oy_data_route("OY_LOGIC_FOLLOW", "OY_CHANNEL_RESPOND", oy_data_payload);
         }
     }
     else if (oy_data_flag==="OY_PEER_LATENCY") {
@@ -1518,6 +1584,8 @@ function oy_channel_listen(oy_channel_id, oy_key_private, oy_key_public, oy_call
 
 function oy_channel_mute(oy_channel_id) {
     delete window.OY_CHANNEL_LISTEN[oy_channel_id];
+    delete window.OY_CHANNEL_KEEP[oy_channel_id];
+    delete window.OY_CHANNEL_TOP[oy_channel_id];
 }
 
 function oy_echo_process(oy_data_payload) {
@@ -1643,12 +1711,21 @@ function oy_engine(oy_thread_track) {
         }
     }
     for (let oy_channel_id in window.OY_CHANNEL_TOP) {
+        if (typeof(window.OY_CHANNEL_LISTEN[oy_channel_id])==="undefined") continue;
         for (let oy_node_select in window.OY_CHANNEL_TOP[oy_channel_id]) {
             if (oy_time_local-window.OY_CHANNEL_TOP[oy_channel_id][oy_node_select][0]>window.OY_CHANNEL_FORGETIME) delete window.OY_CHANNEL_TOP[oy_channel_id][oy_node_select];
             else if (oy_time_local-window.OY_CHANNEL_TOP[oy_channel_id][oy_node_select][1]>window.OY_CHANNEL_RECOVERTIME) {
                 window.OY_CHANNEL_TOP[oy_channel_id][oy_node_select][1] = oy_time_local;
+                //oy_key_sign();
                 oy_data_route("OY_LOGIC_FOLLOW", "OY_CHANNEL_RECOVER", [[], window.OY_CHANNEL_TOP[oy_channel_id][oy_node_select][2], oy_channel_id, oy_hash_keep])
             }
+        }
+    }
+
+    for (let oy_echo_key in window.OY_CHANNEL_ECHO) {
+        if (window.OY_CHANNEL_ECHO[oy_echo_key][0]<oy_time_local) {
+            delete window.OY_CHANNEL_ECHO[oy_echo_key];
+            oy_log("Cleaned up expired echo session with key: "+oy_short(oy_echo_key));
         }
     }
 
@@ -1677,13 +1754,6 @@ function oy_engine(oy_thread_track) {
         if (window.OY_BLACKLIST[oy_node_select]<oy_time_local) {
             delete window.OY_BLACKLIST[oy_node_select];
             oy_log("Cleaned up expired blacklist flag for node: "+oy_short(oy_node_select));
-        }
-    }
-
-    for (let oy_echo_key in window.OY_CHANNEL_ECHO) {
-        if (window.OY_CHANNEL_ECHO[oy_echo_key][0]<oy_time_local) {
-            delete window.OY_CHANNEL_ECHO[oy_echo_key];
-            oy_log("Cleaned up expired echo session with key: "+oy_short(oy_echo_key));
         }
     }
 
