@@ -28,7 +28,7 @@ window.OY_PEER_REFERTIME = 480;//interval in which self asks peers for peer reco
 window.OY_PEER_REPORTTIME = 10;//interval to report peer list to top
 window.OY_PEER_PRETIME = 20;//seconds which a node is waiting as a 'pre-peer'
 window.OY_PEER_MAX = 5;//maximum mutual peers per zone (applicable difference is for gateway nodes)
-window.OY_ROUTE_DYNAMIC_KEEP = 100;//how many dynamic identifiers for a routed data sequence to remember and block
+window.OY_ROUTE_DYNAMIC_KEEP = 1000;//how many dynamic identifiers for a routed data sequence to remember and block
 window.OY_LATENCY_SIZE = 80;//size of latency ping payload, larger is more accurate yet more taxing, vice-versa applies
 window.OY_LATENCY_LENGTH = 8;//length of rand sequence which is repeated for payload and signed for ID verification
 window.OY_LATENCY_REPEAT = 2;//how many ping round trips should be performed to conclude the latency test
@@ -96,6 +96,7 @@ window.OY_CHANNEL_LISTEN = {};//track channels to listen for
 window.OY_CHANNEL_KEEP = {};//stored broadcasts that are re-shared
 window.OY_CHANNEL_ECHO = {};//track channels to listen for
 window.OY_CHANNEL_TOP = {};//track current channel topology
+window.OY_CHANNEL_RENDER = {};//track channel broadcasts that have been rendered
 
 function oy_log(oy_log_msg, oy_log_flag) {
     //oy_log_debug(oy_log_msg);
@@ -561,15 +562,32 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_data_route("OY_LOGIC_ALL", "OY_CHANNEL_BROADCAST", oy_data_payload);
 
             if (typeof(window.OY_CHANNEL_LISTEN[oy_data_payload[2]])!=="undefined") {
+
+                if (typeof(window.OY_CHANNEL_RENDER[oy_data_payload[2]])==="undefined") window.OY_CHANNEL_RENDER[oy_data_payload[2]] = {};
+
+                let oy_broadcast_hash = oy_hash_gen(oy_data_payload[4]);
+
+                if (typeof(window.OY_CHANNEL_RENDER[oy_data_payload[2]][oy_broadcast_hash])!=="undefined") {
+                    oy_log("Already rendered broadcast hash "+oy_short(oy_broadcast_hash)+" from channel "+oy_short(oy_data_payload[2])+", will ignore");
+                    return false;
+                }
+
+                window.OY_CHANNEL_RENDER[oy_data_payload[2]][oy_broadcast_hash] = true;
                 window.OY_CHANNEL_LISTEN[oy_data_payload[2]][2](oy_data_payload);
 
                 if (typeof(window.OY_CHANNEL_TOP[oy_data_payload[2]])==="undefined") window.OY_CHANNEL_TOP[oy_data_payload[2]] = {};
                 window.OY_CHANNEL_TOP[oy_data_payload[2]][oy_data_payload[0][0]] = [oy_local_time, -1, oy_data_payload[0]];
 
-                let oy_broadcast_hash = oy_hash_gen(oy_data_payload[4]);
+                let oy_broadcast_payload = oy_data_payload;
+                oy_broadcast_payload[0] = null;
+                oy_broadcast_payload[1] = null;
+                oy_broadcast_payload[7] = [];
 
-                if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]])==="undefined") window.OY_CHANNEL_KEEP[oy_data_payload[2]] = {};
-                if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash])==="undefined") window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash] = oy_data_payload;
+                oy_key_sign(window.OY_CHANNEL_LISTEN[oy_data_payload[2]][0], oy_data_payload[4], function(oy_data_crypt) {
+                    oy_broadcast_payload[7].push([oy_data_crypt, window.OY_CHANNEL_LISTEN[oy_data_payload[2]][1]]);
+                    if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]])==="undefined") window.OY_CHANNEL_KEEP[oy_data_payload[2]] = {};
+                    if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash])==="undefined") window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash] = oy_broadcast_payload;
+                });
 
                 oy_key_sign(window.OY_CHANNEL_LISTEN[oy_data_payload[2]][0], oy_broadcast_hash, function(oy_echo_crypt) {
                     oy_log("Beaming echo for channel "+oy_short(oy_data_payload[2]));
@@ -623,16 +641,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             else {
                 let oy_channel_respond = [];
                 for (let oy_broadcast_hash in window.OY_CHANNEL_KEEP[oy_data_payload[2]]) {
-                    if (oy_data_payload[3].indexOf(oy_broadcast_hash)===-1) {
-                        let oy_broadcast_payload = window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash];
-                        if (typeof(oy_broadcast_payload[7])==="undefined") {
-                            oy_key_sign(window.OY_CHANNEL_LISTEN[oy_data_payload[2]][0], oy_broadcast_payload[4], function(oy_data_crypt) {
-                                oy_broadcast_payload.push([oy_data_crypt]);
-                                oy_broadcast_payload.push([window.OY_CHANNEL_LISTEN[oy_data_payload[2]][1]]);
-                                oy_channel_respond.push([oy_broadcast_hash, oy_broadcast_payload]);
-                            });
-                        }
-                    }
+                    if (oy_data_payload[3].indexOf(oy_broadcast_hash)===-1) oy_channel_respond.push([oy_broadcast_hash, window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash]]);
                 }
                 if (oy_channel_respond.length===0) {
                     oy_log("No unknown broadcast payloads found for channel "+oy_short(oy_data_payload[2]));
@@ -651,7 +660,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_CHANNEL_RESPOND") {
         //oy_data_payload = [oy_route_passport_passive, oy_route_passport_active, oy_channel_id, oy_channel_respond]
-        if (oy_data_payload.length!==4||oy_data_payload[1].length===0||!oy_channel_check(oy_data_payload[2])) {
+        if (oy_data_payload.length!==4||oy_data_payload[1].length===0||!oy_channel_check(oy_data_payload[2])||oy_data_payload[3].length===0) {
             oy_log("Peer "+oy_short(oy_peer_id)+" sent invalid channel respond sequence, will punish");
             oy_node_punish(oy_peer_id, "OY_PUNISH_RESPOND_INVALID");
             return false;
@@ -663,7 +672,33 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                 return false;
             }
             else {
+                oy_log("Local session found for respond sequence for channel "+oy_short(oy_data_payload[2]));
+                window.OY_CHANNEL_TOP[oy_data_payload[2]][oy_data_payload[0][0]][0] = oy_local_time;
+                window.OY_CHANNEL_TOP[oy_data_payload[2]][oy_data_payload[0][0]][2] = oy_data_payload[0];
 
+                if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]])==="undefined") window.OY_CHANNEL_KEEP[oy_data_payload[2]] = {};
+
+                for (let i in oy_data_payload[3]) {
+                    if (oy_channel_approved(oy_data_payload[2], oy_data_payload[3][i][1][8])&&oy_channel_approved(oy_data_payload[2], oy_data_payload[3][i][1][5])) {
+                        oy_key_verify(oy_data_payload[3][i][1][8], oy_data_payload[3][i][1][7], oy_data_payload[3][i][1][4], function(oy_key_valid) {
+                            if (oy_key_valid===true) {
+                                oy_log("Valid secondary signature for broadcast hash "+oy_short(oy_data_payload[3][i][0])+" from channel "+oy_short(oy_data_payload[2]));
+                                oy_key_verify(oy_data_payload[3][i][1][5], oy_data_payload[3][i][1][4], oy_data_payload[3][i][1][3], function(oy_key_valid) {
+                                    if (oy_key_valid===true) {
+                                        oy_log("Valid primary signature for broadcast hash "+oy_short(oy_data_payload[3][i][0])+" from channel "+oy_short(oy_data_payload[2]));
+                                        if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_data_payload[3][i][0]])==="undefined") window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_data_payload[3][i][0]] = [oy_data_payload[3][i][1][0], oy_data_payload[3][i][1][1], oy_data_payload[3][i][1][2], oy_data_payload[3][i][1][3], oy_data_payload[3][i][1][4], oy_data_payload[3][i][1][5], oy_data_payload[3][i][1][6], [[oy_data_payload[3][i][1][7], oy_data_payload[3][i][1][8]]]];
+                                        else if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_data_payload[3][i][0]][7])!=="undefined") window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_data_payload[3][i][0]][7].push([oy_data_payload[3][i][1][7], oy_data_payload[3][i][1][8]]);
+                                        else oy_log("Could not record channel respond sequence for broadcast hash "+oy_short(oy_data_payload[3][i][0])+" from channel "+oy_short(oy_data_payload[2])+", go tell Bruno", 1);
+                                    }
+                                    else oy_log("Invalid primary signature for broadcast hash "+oy_short(oy_data_payload[3][i][0])+" from channel "+oy_short(oy_data_payload[2]));
+                                });
+                            }
+                            else oy_log("Invalid secondary signature for broadcast hash "+oy_short(oy_data_payload[3][i][0])+" from channel "+oy_short(oy_data_payload[2]));
+                        });
+                    }
+                    else oy_log("Primary and/or secondary signatures were not found in the approval list of the current block for channel "+oy_short(oy_data_payload[2]))
+                    //oy_data_payload[3][i][1];
+                }
             }
         }
         else {//carry on reversing the passport until the data reaches the intended destination
@@ -1544,20 +1579,23 @@ function oy_channel_check(oy_channel_id) {
     return oy_channel_id.length===40;
 }
 
+//checks if the public key is on the admin or approve list in the current block
+function oy_channel_approved(oy_channel_id, oy_key_public) {
+    //TODO the public key might need to get referenced from the pearl wallet list section of the block, to save block space
+    return (typeof(window.OY_BLOCK[1][2][oy_channel_id])==="undefined"&&(window.OY_BLOCK[1][2][oy_channel_id][2].indexOf(oy_key_public)!==-1||window.OY_BLOCK[1][2][oy_channel_id][3].indexOf(oy_key_public)!==-1));
+}
+
 function oy_channel_verify(oy_data_payload, oy_callback) {
     let oy_time_local = Date.now()/1000;
     if (window.OY_BLOCK[0]===null) {
         oy_callback(null);
         return null;
     }
-    else if (typeof(window.OY_BLOCK[1][2][oy_data_payload[2]])!=="undefined"&&oy_data_payload[6]<=oy_time_local&&oy_data_payload[6]>oy_time_local-window.OY_MESH_EDGE) {
-        //TODO the public key might need to get referenced from the pearl wallet list section of the block, to save block space
-        if (window.OY_BLOCK[1][2][oy_data_payload[2]][2].indexOf(oy_data_payload[5])!==-1||window.OY_BLOCK[1][2][oy_data_payload[2]][3].indexOf(oy_data_payload[5])!==-1) {
-            oy_key_verify(oy_data_payload[5], oy_data_payload[4], oy_data_payload[6]+oy_data_payload[3], function(oy_key_valid) {
-                oy_callback(oy_key_valid);
-            });
-            return null;
-        }
+    else if (oy_channel_approved(oy_data_payload[2], oy_data_payload[5])&&oy_data_payload[6]<=oy_time_local&&oy_data_payload[6]>oy_time_local-window.OY_MESH_EDGE) {
+        oy_key_verify(oy_data_payload[5], oy_data_payload[4], oy_data_payload[6]+oy_data_payload[3], function(oy_key_valid) {
+            oy_callback(oy_key_valid);
+        });
+        return null;
     }
     oy_callback(false);
     return null;
@@ -1586,6 +1624,7 @@ function oy_channel_mute(oy_channel_id) {
     delete window.OY_CHANNEL_LISTEN[oy_channel_id];
     delete window.OY_CHANNEL_KEEP[oy_channel_id];
     delete window.OY_CHANNEL_TOP[oy_channel_id];
+    delete window.OY_CHANNEL_RENDER[oy_channel_id];
 }
 
 function oy_echo_process(oy_data_payload) {
@@ -1706,8 +1745,16 @@ function oy_engine(oy_thread_track) {
 
     let oy_hash_keep = [];
     for (let oy_channel_id in window.OY_CHANNEL_KEEP) {
+        let oy_top_count = Object.keys(window.OY_CHANNEL_KEEP[oy_channel_id]).length;
         for (let oy_broadcast_hash in window.OY_CHANNEL_KEEP[oy_channel_id]) {
-            oy_hash_keep.push(oy_broadcast_hash);
+            if (typeof(window.OY_CHANNEL_LISTEN[oy_channel_id])!=="undefined"&&window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash][7].length>Math.round(oy_top_count*0.5)) {
+                oy_hash_keep.push(oy_broadcast_hash);
+                if (typeof(window.OY_CHANNEL_RENDER[oy_channel_id])==="undefined") window.OY_CHANNEL_RENDER[oy_channel_id] = {};
+                if (typeof(window.OY_CHANNEL_RENDER[oy_channel_id][oy_broadcast_hash])==="undefined") {
+                    window.OY_CHANNEL_RENDER[oy_channel_id][oy_broadcast_hash] = true;
+                    window.OY_CHANNEL_LISTEN[oy_channel_id][2](window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash]);
+                }
+            }
         }
     }
     for (let oy_channel_id in window.OY_CHANNEL_TOP) {
@@ -1716,7 +1763,6 @@ function oy_engine(oy_thread_track) {
             if (oy_time_local-window.OY_CHANNEL_TOP[oy_channel_id][oy_node_select][0]>window.OY_CHANNEL_FORGETIME) delete window.OY_CHANNEL_TOP[oy_channel_id][oy_node_select];
             else if (oy_time_local-window.OY_CHANNEL_TOP[oy_channel_id][oy_node_select][1]>window.OY_CHANNEL_RECOVERTIME) {
                 window.OY_CHANNEL_TOP[oy_channel_id][oy_node_select][1] = oy_time_local;
-                //oy_key_sign();
                 oy_data_route("OY_LOGIC_FOLLOW", "OY_CHANNEL_RECOVER", [[], window.OY_CHANNEL_TOP[oy_channel_id][oy_node_select][2], oy_channel_id, oy_hash_keep])
             }
         }
