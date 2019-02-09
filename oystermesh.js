@@ -1747,7 +1747,7 @@ function oy_engine(oy_thread_track) {
     for (let oy_channel_id in window.OY_CHANNEL_KEEP) {
         let oy_top_count = Object.keys(window.OY_CHANNEL_KEEP[oy_channel_id]).length;
         for (let oy_broadcast_hash in window.OY_CHANNEL_KEEP[oy_channel_id]) {
-            if (typeof(window.OY_CHANNEL_LISTEN[oy_channel_id])!=="undefined"&&window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash][7].length>Math.round(oy_top_count*0.5)) {
+            if (typeof(window.OY_CHANNEL_LISTEN[oy_channel_id])!=="undefined"&&window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash][7].length>Math.floor(oy_top_count*0.5)) {
                 oy_hash_keep.push(oy_broadcast_hash);
                 if (typeof(window.OY_CHANNEL_RENDER[oy_channel_id])==="undefined") window.OY_CHANNEL_RENDER[oy_channel_id] = {};
                 if (typeof(window.OY_CHANNEL_RENDER[oy_channel_id][oy_broadcast_hash])==="undefined") {
@@ -1810,7 +1810,6 @@ function oy_engine(oy_thread_track) {
 
 //initialize oyster mesh boot up sequence
 function oy_init(oy_callback, oy_passthru, oy_console) {
-    localStorage.clear();
     if (typeof(oy_console)==="function") {
         console.log("Console redirected to custom function");
         window.OY_CONSOLE = oy_console;

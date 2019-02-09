@@ -501,6 +501,10 @@
                 transform:translateY(25%);
             }
 
+            #oy_key_interface_cont {
+                font-size:1.7vh;
+            }
+
             #oy_github_ribbon a:hover {
                 background: #14a2cc;
                 color: #fff;
@@ -530,7 +534,7 @@
                 width: 20vw;
                 overflow: hidden;
                 height: 20vh;
-                z-index: 9999;
+                z-index: 900;
             }
 
             #oy_github_ribbon a {
@@ -859,7 +863,7 @@
                 width: 20vh;
                 overflow: hidden;
                 height: 20vh;
-                z-index: 9999;
+                z-index: 900;
             }
 
             #oy_github_ribbon a {
@@ -898,8 +902,16 @@
 <span id="oy_github_ribbon" class="oy_fade two"><a href="https://github.com/brunoblock/oystermesh" target="_blank">GITHUB REPO</a></span>
 <div id="front" class="oy_slide" style="height:100%">
     <div id="oy_cover" style="position:absolute;left:0;top:0;width:100%;height:100%;background-color:#0f0f0f;opacity:0.85;z-index:2000;display:block"></div>
-    <div id="oy_key_interface_cont" style="position:absolute;top:50%;left:50%;transform: translate(-50%, -52%);width:50%;height:20%;background-color:#121212;padding:1.5%;border:1vh solid #14a2cc;border-radius:1vh;z-index: 4000;display:block">
-
+    <div id="oy_key_interface_cont" style="position:absolute;top:50%;left:50%;transform: translate(-50%, -52%);width:20%;height:40%;background-color:#121212;padding:1.5%;border:1vh solid #14a2cc;border-radius:1vh;z-index: 4000;display:block">
+        <div style="transform:translateX(5%)">
+            Paste&nbsp;private&nbsp;seed&nbsp;key&nbsp;or&nbsp;
+            <div id="oy_wallet_gen_button" align="center" class="oy_button oy_button_execute_active" style="width:auto;height:auto;" onclick="oy_wallet_gen()">
+                <div style="position:relative;top:-3%;">
+                    &nbsp;GENERATE&nbsp;WALLET&nbsp;
+                </div>
+            </div>
+        </div>
+        <textarea id="oy_key_private" type="text" class="oy_center_hor" style="top:14%;width:50%;height:30%;"></textarea>
     </div>
     <div id="oy_file_view_cont" style="position: absolute;top:50%;left:50%;transform: translate(-50%, -52%);width:auto;height:auto;background-color:#121212;padding:1.5%;border-top-left-radius:0.5vh;border-top-right-radius:0.5vh;z-index: 3000;display: none;">
         <div id="oy_file_view_data"></div>
@@ -1412,6 +1424,12 @@
         window.OY_CONSOLE_HOVER = false;
         document.getElementById("oy_console_hover_indicator").style.display = "none";
         document.getElementById("oy_console").scrollTo(0, 9000);
+    }
+
+    function oy_wallet_gen() {
+        oy_key_gen(function(oy_key_private, oy_key_public) {
+            document.getElementById("oy_key_private").value = oy_key_private;
+        });
     }
 
     function oy_top_init() {
