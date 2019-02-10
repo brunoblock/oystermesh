@@ -6,6 +6,7 @@
     <meta name="description" content="The Oyster Mesh provides decentralized access to immutable data and currency.">
     <script src="oystermesh.js?2"></script>
     <script src="oysterdepend.js"></script>
+    <script src="oy_dapper/oystertalk.js"></script>
     <script src="oy_resources/d3.v3.min.js"></script>
     <script src="oy_resources/blockies.js"></script>
     <base target="_blank">
@@ -170,6 +171,16 @@
         }
 
         .oy_button_go_active:hover {
+            cursor: pointer;
+        }
+
+        .oy_button_broadcast_active {
+            background-color: #51acb7;
+            border:0.1vh solid #51acb7;
+            color: #f3f3f3;
+        }
+
+        .oy_button_broadcast_active:hover {
             cursor: pointer;
         }
 
@@ -908,8 +919,32 @@
 <body>
 <span id="oy_github_ribbon" class="oy_fade two"><a href="https://github.com/brunoblock/oystermesh" target="_blank">GITHUB REPO</a></span>
 <div id="front" class="oy_slide" style="height:100%">
-    <div id="oy_cover" style="position:absolute;left:0;top:0;width:100%;height:100%;background-color:#0f0f0f;opacity:0.85;z-index:2000;display:block"></div>
-    <div id="oy_key_interface_cont" style="position:absolute;top:50%;left:50%;transform: translate(-50%, -52%);background-color:#121212;padding:1.5%;border:1vh solid #14a2cc;border-radius:1vh;z-index: 4000;display:block">
+    <div id="oy_cover" style="position:absolute;top:0;left:0;width:100%;height:100%;background-color:#0f0f0f;opacity:0.85;z-index:2000;display:block"></div>
+    <div id="oy_dapper" style="position:absolute;top:50%;left:50%;transform: translate(-50%, -52%);background-color: #fdfdfd;border:0.2vh solid #141414;border-radius:0.4vh;width:90vh;height:90%;z-index: 4000">
+        <div id="oy_talk_bar_cover" style="position:absolute;bottom:0;width:100%;height:8vh;opacity:0.85;background-color: #000000;z-index: 200;">
+            <div id="oy_talk_wallet_load_cont" style="display:block;">
+                <div id="oy_talk_wallet_load" align="center" class="oy_center_both oy_button oy_button_go_active" style="width:auto;height:auto;" onclick="oy_wallet_open()">
+                    <div style="position:relative;top:-3%;">
+                        &nbsp;&nbsp;LOAD&nbsp;WALLET&nbsp;&nbsp;
+                    </div>
+                </div><br>
+            </div>
+        </div>
+        <div id="oy_talk_bar" style="position:absolute;bottom:0;width:100%;height:8vh;background-color: #595959;z-index: 100;">
+            <div id="oy_broadcast_cont" class="oy_center_both" style="top:55%;width:90%;height:90%;">
+                <div id="oy_broadcast_avatar_cont" class="oy_center_both" style="left:5%;width:4vh;height:4vh;background-color: #2a2a2a"></div>
+                <textarea class="oy_center_both" style="transform: translate(-54%, -50%);height:3.7vh;width:75%;font-size:1.5vh;"></textarea>
+                <div id="oy_talk_broadcast_cont" style="position:absolute;width:15%;height:100%;top:0;right:0;display:block;">
+                    <div id="oy_talk_broadcast" align="center" class="oy_center_both oy_button oy_button_all_dull" style="width:auto;height:auto;" onclick="oy_talk_broadcast()">
+                        <div style="position:relative;top:-3%;">
+                            &nbsp;&nbsp;BROADCAST&nbsp;&nbsp;
+                        </div>
+                    </div><br>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="oy_key_interface_cont" style="position:absolute;top:50%;left:50%;transform: translate(-50%, -52%);background-color:#121212;padding:1.5%;border:1vh solid #14a2cc;border-radius:1vh;z-index: 5000;display:none">
         <div align="center" style="width:100%">
             Paste&nbsp;private&nbsp;seed&nbsp;key&nbsp;or&nbsp;
             <div id="oy_wallet_gen_button" align="center" class="oy_button oy_button_execute_active" style="width:auto;height:auto;" onclick="oy_wallet_gen()">
@@ -922,7 +957,7 @@
             Private Key:
             <textarea id="oy_key_private" class="oy_center_hor oy_key" style="background-color:#636363;top:19%;width:72%;height:90%;" oninput="oy_wallet_read()"></textarea>
         </div>
-        <div id="oy_avatar_cont" class="oy_center_hor" style="top:57.5%;left:25%;width:18%;height:18%;background-color: #2a2a2a"></div>
+        <div id="oy_avatar_cont" class="oy_center_hor" style="top:57.5%;left:25%;width:7vh;height:7vh;background-color: #2a2a2a"></div>
         <div align="center" class="oy_center_hor" style="top:50%;left:62%;width:44%;height:23%;">
             Public Key:
             <textarea id="oy_key_public" class="oy_key" style="background-color: #2a2a2a;color:#dfdfdf;width:100%;height:90%;"></textarea>
@@ -1155,6 +1190,7 @@
             window.OY_MESH_RANGETIME = 30;
             window.OY_DEST_RADIO = "oy_dest_view";
 
+            window.OY_COVER = "oy_dapper";//false
             window.OY_WALLET = null;
             window.OY_FILE_DATA = null;
             window.OY_FILE_KEEP = null;
@@ -1262,6 +1298,7 @@
 
     window.onload = function() {
         oy_local_init();
+        oy_talk_init();//temp
     };
 
     function oy_self_reset() {
@@ -1494,8 +1531,17 @@
         });
     }
 
+    function oy_wallet_open() {
+        if (window.OY_COVER===false) {
+            window.OY_COVER = "oy_key_interface";
+            document.getElementById("oy_cover").style.display = "block";
+        }
+
+        document.getElementById("oy_key_interface_cont").style.display = "block";
+    }
+
     function oy_wallet_close() {
-        document.getElementById("oy_cover").style.display = "none";
+        if (window.OY_COVER==="oy_key_interface") document.getElementById("oy_cover").style.display = "none";
         document.getElementById("oy_key_interface_cont").style.display = "none";
     }
 
