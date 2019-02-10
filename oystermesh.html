@@ -957,8 +957,8 @@
             Private Key:
             <textarea id="oy_key_private" class="oy_center_hor oy_key" style="background-color:#636363;top:19%;width:72%;height:90%;" oninput="oy_wallet_read()"></textarea>
         </div>
-        <div id="oy_avatar_cont" class="oy_center_hor" style="top:57.5%;left:25%;width:7vh;height:7vh;background-color: #2a2a2a"></div>
-        <div align="center" class="oy_center_hor" style="top:50%;left:62%;width:44%;height:23%;">
+        <div id="oy_avatar_cont" class="oy_center_hor" style="top:60%;left:21%;width:5.5vh;height:5.5vh;background-color: #2a2a2a"></div>
+        <div align="center" class="oy_center_hor" style="top:50%;left:58%;width:55%;height:24%;">
             Public Key:
             <textarea id="oy_key_public" class="oy_key" style="background-color: #2a2a2a;color:#dfdfdf;width:100%;height:90%;"></textarea>
         </div>
@@ -1517,7 +1517,7 @@
         if (document.getElementById("oy_wallet_load").classList.contains("oy_button_all_dull")) return false;
 
         let oy_key_private = document.getElementById("oy_key_private").value;
-        let oy_key_public = document.getElementById("oy_key_public").value.replace(/&#8209;/g, "-");
+        let oy_key_public = document.getElementById("oy_key_public").value;
 
         let oy_data = oy_rand_gen();
         oy_key_sign(oy_key_private, oy_data, function(oy_data_crypt) {
@@ -1537,6 +1537,8 @@
             document.getElementById("oy_cover").style.display = "block";
         }
 
+        if (window.OY_WALLET!==null) oy_wallet_activate(window.OY_WALLET[0], window.OY_WALLET[1]);
+
         document.getElementById("oy_key_interface_cont").style.display = "block";
     }
 
@@ -1551,7 +1553,7 @@
             oy_wallet_reset(true);
             return false;
         }
-        let oy_key_public = window.atob(oy_key_private).substr(43);
+        let oy_key_public = window.btoa(window.atob(oy_key_private).substr(43)).substr(0, 115);
         let oy_data = oy_rand_gen();
         oy_key_sign(oy_key_private, oy_data, function(oy_data_crypt) {
             oy_key_verify(oy_key_public, oy_data_crypt, oy_data, function(oy_key_valid) {
@@ -1563,6 +1565,8 @@
 
     function oy_wallet_reset(oy_force) {
         if (typeof(oy_force)==="undefined"&&document.getElementById("oy_wallet_reset").classList.contains("oy_button_all_dull")) return false;
+
+        window.OY_WALLET = null;
 
         document.getElementById("oy_wallet_load").classList.remove("oy_button_go_active");
         document.getElementById("oy_wallet_load").classList.add("oy_button_all_dull");

@@ -196,6 +196,7 @@ function oy_crypt_decrypt(oy_crypt_cipher, oy_crypt_pass) {
 }
 
 function oy_key_verify(oy_key_public, oy_key_signature, oy_key_data, oy_callback) {
+    oy_key_public = window.atob(oy_key_public+"=");
     window.crypto.subtle.importKey(
         "jwk", //can be "jwk" (public or private), "spki" (public only), or "pkcs8" (private only)
         {
@@ -276,7 +277,7 @@ function oy_key_gen(oy_callback) {
         ["sign", "verify"]
     ).then(function(key) {
         window.crypto.subtle.exportKey("jwk", key.privateKey).then(function(oy_key_pass) {
-            oy_callback(window.btoa(oy_key_pass.d+oy_key_pass.x+oy_key_pass.y), oy_key_pass.x+oy_key_pass.y);
+            oy_callback(window.btoa(oy_key_pass.d+oy_key_pass.x+oy_key_pass.y), window.btoa(oy_key_pass.x+oy_key_pass.y).substr(0, 115));
         }).catch(function(oy_error) {
             oy_log("Cryptographic error "+oy_error, 1);
         });
@@ -1810,6 +1811,7 @@ function oy_engine(oy_thread_track) {
 
 //initialize oyster mesh boot up sequence
 function oy_init(oy_callback, oy_passthru, oy_console) {
+    localStorage.clear();
     if (typeof(oy_console)==="function") {
         console.log("Console redirected to custom function");
         window.OY_CONSOLE = oy_console;
