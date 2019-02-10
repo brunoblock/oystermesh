@@ -13,7 +13,6 @@ if (!is_dir("/dev/shm/oy_nodes")) mkdir("/dev/shm/oy_nodes");
 if (is_file("/dev/shm/oy_nodes/".$_SERVER['REMOTE_ADDR'].".node")&&(time()-filemtime("/dev/shm/oy_nodes/".$_SERVER['REMOTE_ADDR'].".node")) < 10) die("ERROR: Asked too early");
 
 //chance of DB failing > chance of filesystem failing, data persistence is not needed here anyways
-//if central gets more complex might switch to a DB down the road
 $fh = fopen("/dev/shm/oy_nodes/".$_SERVER['REMOTE_ADDR'].".node", "w");
 fwrite($fh, $oy_node_id);
 fclose($fh);

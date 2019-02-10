@@ -196,7 +196,7 @@ function oy_crypt_decrypt(oy_crypt_cipher, oy_crypt_pass) {
 }
 
 function oy_key_verify(oy_key_public, oy_key_signature, oy_key_data, oy_callback) {
-    oy_key_public = window.atob(oy_key_public+"=");
+    oy_key_public = oy_key_public.replace(/!/g, "-");
     window.crypto.subtle.importKey(
         "jwk", //can be "jwk" (public or private), "spki" (public only), or "pkcs8" (private only)
         {
@@ -232,7 +232,7 @@ function oy_key_verify(oy_key_public, oy_key_signature, oy_key_data, oy_callback
 }
 
 function oy_key_sign(oy_key_private, oy_key_data, oy_callback) {
-    oy_key_private = window.atob(oy_key_private);
+    oy_key_private = window.atob(oy_key_private).replace(/!/g, "-");
     window.crypto.subtle.importKey(
         "jwk", //can be "jwk" (public or private), "spki" (public only), or "pkcs8" (private only)
         {
@@ -277,7 +277,7 @@ function oy_key_gen(oy_callback) {
         ["sign", "verify"]
     ).then(function(key) {
         window.crypto.subtle.exportKey("jwk", key.privateKey).then(function(oy_key_pass) {
-            oy_callback(window.btoa(oy_key_pass.d+oy_key_pass.x+oy_key_pass.y), window.btoa(oy_key_pass.x+oy_key_pass.y).substr(0, 115));
+            oy_callback(window.btoa((oy_key_pass.d+oy_key_pass.x+oy_key_pass.y).replace(/-/g, "!")), (oy_key_pass.x+oy_key_pass.y).replace(/-/g, "!"));
         }).catch(function(oy_error) {
             oy_log("Cryptographic error "+oy_error, 1);
         });
