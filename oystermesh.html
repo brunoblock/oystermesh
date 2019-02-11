@@ -513,8 +513,8 @@
             }
 
             #oy_key_interface_cont {
-                width:33vh;
-                height:35vh;
+                width:35vh;
+                height:23vh;
                 font-size:1.7vh;
             }
 
@@ -925,12 +925,13 @@
                 </div><br>
             </div>
             <div id="oy_talk_approval_cont" style="display:none;">
-                <div id="oy_talk_approval" align="center" class="oy_center_both oy_button oy_button_alt_active" style="width:auto;height:auto;" onclick="oy_wallet_open(function(){ot_join()})">
+                <div id="oy_talk_approval" align="center" class="oy_center_both oy_button oy_button_alt_active" style="width:auto;height:auto;" onclick="ot_join()">
                     <div style="position:relative;top:-3%;">
                         &nbsp;&nbsp;JOIN&nbsp;GROUP&nbsp;&nbsp;
                     </div>
                 </div><br>
             </div>
+            <div id="oy_talk_message" align="center" class="oy_center_both" style="width: 90%;"></div>
         </div>
         <div id="oy_talk_bar" style="position:absolute;bottom:0;width:100%;height:8vh;background-color: #595959;z-index: 100;">
             <div id="oy_broadcast_cont" class="oy_center_both" style="top:55%;width:90%;height:90%;">
@@ -946,23 +947,29 @@
             </div>
         </div>
     </div>
-    <div id="oy_key_interface_cont" style="position:absolute;top:50%;left:50%;transform: translate(-50%, -52%);background-color:#121212;padding:1.5%;border:1vh solid #14a2cc;border-radius:1vh;z-index: 5000;display:none">
+    <div id="oy_key_interface_cont" style="position:absolute;top:50%;left:50%;transform: translate(-50%, -52%);background-color:#121212;padding:1.5%;border:1vh solid #14a2cc;border-radius:1vh;z-index: 5000;display:block">
         <div align="center" style="width:100%">
-            Paste&nbsp;private&nbsp;seed&nbsp;key&nbsp;or&nbsp;
-            <div id="oy_wallet_gen_button" align="center" class="oy_button oy_button_execute_active" style="width:auto;height:auto;" onclick="oy_wallet_gen()">
+            <div id="oy_wallet_gen_button" align="center" class="oy_button oy_button_alt_active" style="width:auto;height:auto;" onclick="oy_wallet_gen()">
                 <div style="position:relative;top:-3%;">
-                    &nbsp;GENERATE&nbsp;WALLET&nbsp;
+                    &nbsp;GENERATE&nbsp;
                 </div>
             </div>
+            &nbsp;or&nbsp;
+            <div id="oy_wallet_upload_button" align="center" class="oy_button oy_button_execute_active" style="width:auto;height:auto;" onclick="oy_wallet_gen()">
+                <div style="position:relative;top:-3%;">
+                    &nbsp;UPLOAD&nbsp;
+                </div>
+            </div>
+            &nbsp;.pearl&nbsp;file&nbsp;<input id="oy_pearl_file" type="file" hidden/>
         </div>
-        <div align="center" class="oy_center_hor" style="top:15%;width:100%;height:29%;">
-            Private Key:
-            <textarea id="oy_key_private" class="oy_center_hor oy_key" style="background-color:#636363;top:19%;width:72%;height:90%;" oninput="oy_wallet_read()"></textarea>
+        <div align="left" style="position:absolute;top:19%;left:5%;width:70%;height:29%;">
+            Passphrase:&nbsp;<input type="text" style="width:9vh;border:0.2vh solid #8a3789;" /><br>
+            Type&nbsp;again:&nbsp;<input type="text" style="width:9vh;" />
         </div>
-        <div id="oy_avatar_cont" class="oy_center_hor" style="top:60%;left:21%;width:5.5vh;height:5.5vh;background-color: #2a2a2a"></div>
-        <div align="center" class="oy_center_hor" style="top:50%;left:58%;width:55%;height:24%;">
+        <div id="oy_avatar_cont" class="oy_center_hor" style="top:47%;left:21.5%;width:6vh;height:6vh;background-color:#2a2a2a"></div>
+        <div align="center" class="oy_center_hor" style="top:38%;left:59%;width:52%;height:22.5%;">
             Public Key:
-            <textarea id="oy_key_public" class="oy_key" style="background-color: #2a2a2a;color:#dfdfdf;width:100%;height:90%;"></textarea>
+            <textarea id="oy_key_public" class="oy_key" style="background-color: #2a2a2a;color:#dfdfdf;width:100%;height:100%;"></textarea>
         </div>
         <div align="center" class="oy_center_hor" style="bottom:4%;">
             <div id="oy_wallet_load" align="center" class="oy_center_hor oy_button oy_button_all_dull" style="top:-10%;width:auto;height:auto;" onclick="oy_wallet_load()">
@@ -1497,6 +1504,10 @@
     }
 
     function oy_wallet_gen() {
+
+    }
+
+    function oy_wallet_gen_calc() {
         oy_key_gen(function(oy_key_private, oy_key_public) {
             oy_wallet_activate(oy_key_private, oy_key_public);
         });

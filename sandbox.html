@@ -99,6 +99,21 @@
         });
     }
 
+    window.OY_BLOCK_TRIGGER = new Event('oy_block_trigger');
+
+    // Listen for the event.
+    document.addEventListener('oy_block_trigger', function (e) {
+        console.log("BOB");
+    }, false);
+
+    // Dispatch the event.
+    document.dispatchEvent(window.OY_BLOCK_TRIGGER);
+
+    setTimeout(function() {
+        document.dispatchEvent(window.OY_BLOCK_TRIGGER);
+    }, 2000);
+
+    /*
     oy_key_gen(function(oy_key_private, oy_key_public) {
         console.log("PRIVATE: "+oy_key_private);
         console.log("PUBLIC: "+oy_key_public);
@@ -111,42 +126,6 @@
             });
         });
     });
-
-    /*
-    window.crypto.subtle.generateKey(
-        {
-            name: "ECDSA",
-            namedCurve: "P-256", //can be "P-256", "P-384", or "P-521"
-        },
-        true, //whether the key is extractable (i.e. can be used in exportKey)
-        ["sign", "verify"] //can be any combination of "sign" and "verify"
-    )
-        .then(function(key){
-            //returns a keypair object
-            console.log(key);
-            console.log(key.publicKey);
-            console.log(key.privateKey);
-
-            window.crypto.subtle.exportKey(
-                "jwk", //can be "jwk" (public or private), "spki" (public only), or "pkcs8" (private only)
-                key.privateKey //can be a publicKey or privateKey, as long as extractable was true
-            )
-                .then(function(keydata){
-                    //returns the exported key data
-                    console.log("BOB");
-                    console.log(keydata);
-                    console.log(keydata.d.length);
-                    console.log(keydata.x+keydata.y);
-                    console.log(window.btoa(keydata.x+keydata.y));
-                    console.log(window.btoa(JSON.stringify(keydata)));
-                })
-                .catch(function(err){
-                    console.error(err);
-                });
-        })
-        .catch(function(err){
-            console.error(err);
-        });
     */
 </script>
 </html>

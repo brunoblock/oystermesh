@@ -90,8 +90,10 @@ window.OY_PROPOSED = {};//nodes that have been recently proposed to for mutual p
 window.OY_BLACKLIST = {};//nodes to block for x amount of time
 window.OY_PUSH_HOLD = {};//holds data contents ready for pushing to mesh
 window.OY_PUSH_TALLY = {};//tracks data push nonces that were deposited on the mesh
-window.OY_BLOCK = [null];//block from the meshblock that keeps consensus-approved transactions
+window.OY_BLOCK = [null];//block from the block that keeps consensus-approved transactions
+window.OY_BLOCK_HASH = null;//hash of the most current block
 window.OY_BLOCK_PREV = null;//the most recent block timestamp
+window.OY_BLOCK_TRIGGER = new Event('oy_block_trigger');//trigger-able event for when a new block is issued
 window.OY_CHANNEL_LISTEN = {};//track channels to listen for
 window.OY_CHANNEL_KEEP = {};//stored broadcasts that are re-shared
 window.OY_CHANNEL_ECHO = {};//track channels to listen for
@@ -1583,12 +1585,12 @@ function oy_channel_check(oy_channel_id) {
 //checks if the public key is on the admin or approve list in the current block
 function oy_channel_approved(oy_channel_id, oy_key_public) {
     //TODO the public key might need to get referenced from the pearl wallet list section of the block, to save block space
-    return (typeof(window.OY_BLOCK[1][2][oy_channel_id])==="undefined"&&(window.OY_BLOCK[1][2][oy_channel_id][2].indexOf(oy_key_public)!==-1||window.OY_BLOCK[1][2][oy_channel_id][3].indexOf(oy_key_public)!==-1));
+    return (typeof(window.OY_BLOCK[2][oy_channel_id])==="undefined"&&(window.OY_BLOCK[2][oy_channel_id][2].indexOf(oy_key_public)!==-1||window.OY_BLOCK[2][oy_channel_id][3].indexOf(oy_key_public)!==-1));
 }
 
 function oy_channel_verify(oy_data_payload, oy_callback) {
     let oy_time_local = Date.now()/1000;
-    if (window.OY_BLOCK[0]===null) {
+    if (window.OY_BLOCK_HASH===null) {
         oy_callback(null);
         return null;
     }
@@ -1662,10 +1664,9 @@ function oy_block_loop() {
         let oy_xhttp = new XMLHttpRequest();
         oy_xhttp.onreadystatechange = function() {
             if (this.readyState===4&&this.status===200) {
-                window.OY_BLOCK[1] = JSON.parse(this.responseText);
-                window.OY_BLOCK[0] = oy_hash_gen(JSON.stringify(window.OY_BLOCK[1]));//this is what this line will look like in the decentralized version
-
-                //console.log(window.OY_BLOCK);
+                window.OY_BLOCK = JSON.parse(this.responseText);
+                window.OY_BLOCK_HASH = oy_hash_gen(JSON.stringify(window.OY_BLOCK));//this is what this line will look like in the decentralized version
+                document.dispatchEvent(window.OY_BLOCK_TRIGGER);
             }
         };
         oy_xhttp.open("POST", "https://top.oyster.org/oy_block_update.php", true);
