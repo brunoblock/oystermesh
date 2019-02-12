@@ -586,16 +586,18 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                 oy_broadcast_payload[1] = null;
                 oy_broadcast_payload[7] = [];
 
-                oy_key_sign(window.OY_CHANNEL_LISTEN[oy_data_payload[2]][0], oy_data_payload[4], function(oy_data_crypt) {
-                    oy_broadcast_payload[7].push([oy_data_crypt, window.OY_CHANNEL_LISTEN[oy_data_payload[2]][1]]);
-                    if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]])==="undefined") window.OY_CHANNEL_KEEP[oy_data_payload[2]] = {};
-                    if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash])==="undefined") window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash] = oy_broadcast_payload;
-                });
+                if (window.OY_CHANNEL_LISTEN[oy_data_payload[2]][0]!==null) {
+                    oy_key_sign(window.OY_CHANNEL_LISTEN[oy_data_payload[2]][0], oy_data_payload[4], function(oy_data_crypt) {
+                        oy_broadcast_payload[7].push([oy_data_crypt, window.OY_CHANNEL_LISTEN[oy_data_payload[2]][1]]);
+                        if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]])==="undefined") window.OY_CHANNEL_KEEP[oy_data_payload[2]] = {};
+                        if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash])==="undefined") window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash] = oy_broadcast_payload;
+                    });
 
-                oy_key_sign(window.OY_CHANNEL_LISTEN[oy_data_payload[2]][0], oy_broadcast_hash, function(oy_echo_crypt) {
-                    oy_log("Beaming echo for channel "+oy_short(oy_data_payload[2]));
-                    oy_data_route("OY_LOGIC_FOLLOW", "OY_CHANNEL_ECHO", [[], oy_data_payload[0], oy_data_payload[1], oy_data_payload[2], oy_echo_crypt, window.OY_CHANNEL_LISTEN[oy_data_payload[2]][1]]);
-                });
+                    oy_key_sign(window.OY_CHANNEL_LISTEN[oy_data_payload[2]][0], oy_broadcast_hash, function(oy_echo_crypt) {
+                        oy_log("Beaming echo for channel "+oy_short(oy_data_payload[2]));
+                        oy_data_route("OY_LOGIC_FOLLOW", "OY_CHANNEL_ECHO", [[], oy_data_payload[0], oy_data_payload[1], oy_data_payload[2], oy_echo_crypt, window.OY_CHANNEL_LISTEN[oy_data_payload[2]][1]]);
+                    });
+                }
             }
         };
 
@@ -1619,7 +1621,9 @@ function oy_channel_broadcast(oy_channel_id, oy_channel_payload, oy_key_private,
 }
 
 //listens for signed messages on a specified channel
-function oy_channel_listen(oy_channel_id, oy_key_private, oy_key_public, oy_callback) {
+function oy_channel_listen(oy_channel_id, oy_callback, oy_key_private, oy_key_public) {
+    if (typeof(oy_key_private)==="undefined") oy_key_private = null;
+    if (typeof(oy_key_public)==="undefined") oy_key_public = null;
     window.OY_CHANNEL_LISTEN[oy_channel_id] = [oy_key_private, oy_key_public, oy_callback];
 }
 
