@@ -198,7 +198,6 @@ function oy_crypt_decrypt(oy_crypt_cipher, oy_crypt_pass) {
 }
 
 function oy_key_verify(oy_key_public, oy_key_signature, oy_key_data, oy_callback) {
-    oy_key_public = oy_key_public.replace(/!/g, "-");
     window.crypto.subtle.importKey(
         "jwk", //can be "jwk" (public or private), "spki" (public only), or "pkcs8" (private only)
         {
@@ -214,27 +213,27 @@ function oy_key_verify(oy_key_public, oy_key_signature, oy_key_data, oy_callback
         },
         false, //whether the key is extractable (i.e. can be used in exportKey)
         ["verify"] //"verify" for public key import, "sign" for private key imports
-    ).then(function(oy_key_public) {
+    ).then(function(oy_key_public_raw) {
         window.crypto.subtle.verify(
             {
                 name: "ECDSA",
                 hash: {name: "SHA-256"}, //can be "SHA-1", "SHA-256", "SHA-384", or "SHA-512"
             },
-            oy_key_public, //from generateKey or importKey above
+            oy_key_public_raw, //from generateKey or importKey above
             oy_buffer_encode(oy_key_signature, true),
             oy_buffer_encode(oy_key_data, false) //ArrayBuffer of data you want to sign
         ).then(function(oy_key_valid) {
             oy_callback(oy_key_valid);
         }).catch(function(oy_error) {
-            oy_log("Cryptographic error "+oy_error, 1);
+            oy_log("Cryptographic error [VERIFY_B] "+oy_error, 1);
         });
     }).catch(function(oy_error) {
-        oy_log("Cryptographic error "+oy_error, 1);
+        oy_log("Cryptographic error [VERIFY_A]: "+oy_error, 1);
     });
 }
 
 function oy_key_sign(oy_key_private, oy_key_data, oy_callback) {
-    oy_key_private = window.atob(oy_key_private).replace(/!/g, "-");
+    oy_key_private = window.atob(oy_key_private);
     window.crypto.subtle.importKey(
         "jwk", //can be "jwk" (public or private), "spki" (public only), or "pkcs8" (private only)
         {
@@ -262,10 +261,10 @@ function oy_key_sign(oy_key_private, oy_key_data, oy_callback) {
         ).then(function(oy_key_signature_raw) {
             oy_callback(oy_buffer_decode(oy_key_signature_raw, true));
         }).catch(function(oy_error) {
-            oy_log("Cryptographic error "+oy_error, 1);
+            oy_log("Cryptographic error [SIGN_B]: "+oy_error, 1);
         });
     }).catch(function(oy_error) {
-        oy_log("Cryptographic error "+oy_error, 1);
+        oy_log("Cryptographic error [SIGN_A]: "+oy_error, 1);
     });
 }
 
@@ -279,12 +278,12 @@ function oy_key_gen(oy_callback) {
         ["sign", "verify"]
     ).then(function(key) {
         window.crypto.subtle.exportKey("jwk", key.privateKey).then(function(oy_key_pass) {
-            oy_callback(window.btoa((oy_key_pass.d+oy_key_pass.x+oy_key_pass.y).replace(/-/g, "!")), (oy_key_pass.x+oy_key_pass.y).replace(/-/g, "!"));
+            oy_callback(window.btoa((oy_key_pass.d+oy_key_pass.x+oy_key_pass.y)), (oy_key_pass.x+oy_key_pass.y));
         }).catch(function(oy_error) {
-            oy_log("Cryptographic error "+oy_error, 1);
+            oy_log("Cryptographic error [GEN_B]: "+oy_error, 1);
         });
     }).catch(function(oy_error) {
-        oy_log("Cryptographic error "+oy_error, 1);
+        oy_log("Cryptographic error [GEN_A]: "+oy_error, 1);
     });
 }
 
@@ -556,7 +555,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_CHANNEL_BROADCAST") {
         //oy_data_payload = [oy_route_passport_passive, oy_route_dynamic, oy_channel_id, oy_channel_payload, oy_payload_crypt, oy_key_public, oy_broadcast_time]
-        if (oy_data_payload.length!==6||oy_data_payload[1].length===0||!oy_channel_check(oy_data_payload[2])) {
+        if (oy_data_payload.length!==7||oy_data_payload[1].length===0||!oy_channel_check(oy_data_payload[2])) {
             oy_log("Peer "+oy_short(oy_peer_id)+" sent invalid fulfill data sequence, will punish");
             oy_node_punish(oy_peer_id, "OY_PUNISH_CHANNEL_INVALID");
             return false;
@@ -583,7 +582,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                 if (typeof(window.OY_CHANNEL_TOP[oy_data_payload[2]])==="undefined") window.OY_CHANNEL_TOP[oy_data_payload[2]] = {};
                 window.OY_CHANNEL_TOP[oy_data_payload[2]][oy_data_payload[0][0]] = [oy_local_time, -1, oy_data_payload[0]];
 
-                let oy_broadcast_payload = oy_data_payload;
+                let oy_broadcast_payload = oy_data_payload.slice();
                 oy_broadcast_payload[0] = null;
                 oy_broadcast_payload[1] = null;
                 oy_broadcast_payload[7] = [];
@@ -724,7 +723,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_PEER_TERMINATE") {
         oy_peer_remove(oy_peer_id, "OY_PUNISH_TERMINATE_RETURN");//return the favour
-        oy_log("Removed peer "+oy_short(oy_peer_id)+" who terminated peership first with reason: "+oy_data_payload);
+        oy_log("Removed peer "+oy_short(oy_peer_id)+" who terminated with reason: "+oy_data_payload);
         return true;
     }
     else if (oy_data_flag==="OY_BLACKLIST") {
