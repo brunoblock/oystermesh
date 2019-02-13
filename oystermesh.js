@@ -137,14 +137,6 @@ function oy_hash_gen(oy_data_value) {
     return CryptoJS.SHA1(oy_data_value).toString()
 }
 
-function oy_base_encode(oy_base_raw) {
-    return encodeURIComponent(oy_base_raw);
-}
-
-function oy_base_decode(oy_base_base) {
-    return decodeURIComponent(oy_base_base);
-}
-
 function oy_buffer_encode(oy_buffer_text, oy_buffer_base64) {
     let binary_string;
     if (oy_buffer_base64===true) binary_string =  window.atob(oy_buffer_text);
@@ -1194,7 +1186,6 @@ function oy_data_measure(oy_data_beam, oy_node_id, oy_data_length) {
 function oy_data_push(oy_data_value, oy_data_handle, oy_callback_tally) {
     let oy_data_superhandle = false;
     if (typeof(oy_data_handle)==="undefined"||oy_data_handle===null) {
-        oy_data_value = oy_base_encode(oy_data_value);
         let oy_key_pass = oy_rand_gen();
         oy_data_value = oy_crypt_encrypt(oy_data_value, oy_key_pass);
         oy_data_handle = "OY"+oy_rand_gen(1)+oy_hash_gen(oy_data_value);
@@ -1376,13 +1367,13 @@ function oy_data_collect(oy_data_source, oy_data_handle, oy_data_nonce, oy_data_
         }
 
         if (Object.keys(window.OY_CONSTRUCT[oy_data_handle]).length===window.OY_DATA_PULL[oy_data_handle][2]) {
-            oy_log("Construct for "+oy_data_handle+" achieved all "+window.OY_DATA_PULL[oy_data_handle][2]+" nonce(s)");
+            oy_log("Construct for "+oy_short(oy_data_handle)+" achieved all "+window.OY_DATA_PULL[oy_data_handle][2]+" nonce(s)");
             let oy_data_construct = window.OY_CONSTRUCT[oy_data_handle].join("");
             if (oy_data_handle.substr(6, 40)===oy_hash_gen(oy_data_construct)) {
                 delete window.OY_COLLECT[oy_data_handle];
                 delete window.OY_CONSTRUCT[oy_data_handle];
-                oy_log("Construct for "+oy_data_handle+" cleared hash check");
-                window.OY_DATA_PULL[oy_data_handle][0]("OY"+oy_data_handle+window.OY_DATA_PULL[oy_data_handle][2]+((window.OY_DATA_PULL[oy_data_handle][3]===null)?"":"@"+window.OY_DATA_PULL[oy_data_handle][3]), (window.OY_DATA_PULL[oy_data_handle][3]===null)?null:oy_base_decode(oy_crypt_decrypt(oy_data_construct, window.OY_DATA_PULL[oy_data_handle][3])), oy_data_construct);
+                oy_log("Construct for "+oy_short(oy_data_handle)+" cleared hash check");
+                window.OY_DATA_PULL[oy_data_handle][0]("OY"+oy_data_handle+window.OY_DATA_PULL[oy_data_handle][2]+((window.OY_DATA_PULL[oy_data_handle][3]===null)?"":"@"+window.OY_DATA_PULL[oy_data_handle][3]), (window.OY_DATA_PULL[oy_data_handle][3]===null)?null:oy_crypt_decrypt(oy_data_construct, window.OY_DATA_PULL[oy_data_handle][3]), oy_data_construct);
                 window.OY_DATA_PULL[oy_data_handle] = false;
                 return true;
             }
@@ -1830,6 +1821,8 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
         window.OY_INIT = 1;
         oy_log("Oyster Mesh initializing...");
 
+        //if (window.crypto&&!window.crypto.subtle&&window.crypto.webkitSubtle) window.crypto.subtle = window.crypto.webkitSubtle;
+
         //recover session variables from localstorage
         window.OY_MAIN = oy_local_get("oy_main");
         if (window.OY_MAIN['oy_ready']===true) {
@@ -1933,7 +1926,7 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
             setTimeout("oy_block_loop()", 1);
         }
         else {
-            oy_log("Connection is was not established before the ready cutoff, re-sparking INIT");
+            oy_log("Connection was not established before cutoff, re-sparking INIT");
             window.OY_INIT = 0;
             oy_init(oy_callback);
         }
