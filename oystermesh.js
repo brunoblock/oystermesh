@@ -1620,7 +1620,7 @@ function oy_channel_broadcast(oy_channel_id, oy_channel_payload, oy_key_private,
         oy_channel_verify(oy_data_payload, function(oy_verify_pass) {
             if (oy_verify_pass===true) {
                 let oy_broadcast_hash = oy_hash_gen(oy_payload_crypt);
-                if (typeof(oy_callback_echo)==="function") window.OY_CHANNEL_ECHO[oy_channel_id+oy_data_payload[1]] = [oy_time_local+window.OY_MESH_EDGE, oy_broadcast_hash, oy_callback_echo];
+                if (typeof(oy_callback_echo)==="function") window.OY_CHANNEL_ECHO[oy_channel_id+oy_data_payload[1]] = [oy_time_local+window.OY_MESH_EDGE, oy_broadcast_hash, oy_callback_echo, []];
                 oy_data_route("OY_LOGIC_ALL", "OY_CHANNEL_BROADCAST", oy_data_payload);
                 let oy_render_payload = oy_data_payload.slice();
                 oy_render_payload[3] = oy_channel_payload;
@@ -1656,10 +1656,15 @@ function oy_echo_process(oy_data_payload) {
         delete window.OY_CHANNEL_ECHO[oy_echo_key];
         return false;
     }
+    if (window.OY_CHANNEL_ECHO[oy_echo_key][3].indexOf(oy_data_payload[5])!==-1) {
+        oy_log("Received duplicate echo for channel "+oy_short(oy_data_payload[3]));
+        return false;
+    }
+    window.OY_CHANNEL_ECHO[oy_echo_key][3].push(oy_data_payload[5]);
     oy_key_verify(oy_data_payload[5], oy_data_payload[4], window.OY_CHANNEL_ECHO[oy_echo_key][1], function(oy_key_valid) {
         if (oy_key_valid===true) {
             oy_log("Valid echo received for channel "+oy_short(oy_data_payload[3]));
-            window.OY_CHANNEL_ECHO[oy_echo_key][2](oy_data_payload[3]);
+            window.OY_CHANNEL_ECHO[oy_echo_key][2](window.OY_CHANNEL_ECHO[oy_echo_key][1]);
         }
         else oy_log("Invalid echo received for channel "+oy_short(oy_data_payload[3]));
     });
