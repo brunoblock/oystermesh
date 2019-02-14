@@ -1607,15 +1607,19 @@ function oy_channel_verify(oy_data_payload, oy_callback) {
 }
 
 //broadcasts a signed message for a specified channel
-function oy_channel_broadcast(oy_channel_id, oy_channel_payload, oy_key_private, oy_key_public, oy_callback_echo) {
+function oy_channel_broadcast(oy_channel_id, oy_channel_payload, oy_key_private, oy_key_public, oy_callback_complete, oy_callback_echo) {
     let oy_time_local = Date.now()/1000;
-    oy_channel_payload = oy_base_encode(oy_channel_payload);
-    oy_key_sign(oy_key_private, oy_time_local+oy_channel_payload, function(oy_payload_crypt) {
-        let oy_data_payload = [[], oy_rand_gen(), oy_channel_id, oy_channel_payload, oy_payload_crypt, oy_key_public, oy_time_local];
+    let oy_channel_base = oy_base_encode(oy_channel_payload);
+    oy_key_sign(oy_key_private, oy_time_local+oy_channel_base, function(oy_payload_crypt) {
+        let oy_data_payload = [[], oy_rand_gen(), oy_channel_id, oy_channel_base, oy_payload_crypt, oy_key_public, oy_time_local];
         oy_channel_verify(oy_data_payload, function(oy_verify_pass) {
             if (oy_verify_pass===true) {
-                if (typeof(oy_callback_echo)==="function") window.OY_CHANNEL_ECHO[oy_channel_id+oy_data_payload[1]] = [oy_time_local+window.OY_MESH_EDGE, oy_hash_gen(oy_payload_crypt), oy_callback_echo];
+                let oy_broadcast_hash = oy_hash_gen(oy_payload_crypt);
+                if (typeof(oy_callback_echo)==="function") window.OY_CHANNEL_ECHO[oy_channel_id+oy_data_payload[1]] = [oy_time_local+window.OY_MESH_EDGE, oy_broadcast_hash, oy_callback_echo];
                 oy_data_route("OY_LOGIC_ALL", "OY_CHANNEL_BROADCAST", oy_data_payload);
+                let oy_render_payload = oy_data_payload.slice();
+                oy_render_payload[3] = oy_channel_payload;
+                if (typeof(oy_callback_complete)==="function") oy_callback_complete(oy_broadcast_hash, oy_render_payload);
             }
         });
     });
