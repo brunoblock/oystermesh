@@ -16,7 +16,8 @@ window.OY_MESH_PUSH_CHANCE = 0.85;//probability that self will forward a data_pu
 window.OY_MESH_PUSH_CHANCE_STORED = 0.95;//probability that self will forward a data_push when the nonce was previously stored on self
 window.OY_MESH_DEPOSIT_CHANCE = 0.4;//probability that self will deposit pushed data
 window.OY_MESH_FULLFILL_CHANCE = 0.2;//probability that data is stored whilst fulfilling a pull request, this makes data intelligently migrate and recommit overtime
-window.OY_MESH_SOURCE = 2;//node in route passport (from destination) that is assigned with defining the source variable
+window.OY_MESH_SOURCE = 3;//node in route passport (from destination) that is assigned with defining the source variable
+window.OY_MESH_SYNC_BUFFER = 1;//buffer for time sync tolerance across nodes in seconds
 window.OY_NODE_TOLERANCE = 3;//max amount of protocol communication violations until node is blacklisted
 window.OY_NODE_BLACKTIME = 600;//seconds to blacklist a punished node for
 window.OY_NODE_PROPOSETIME = 12;//seconds for peer proposal session duration
@@ -574,8 +575,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
                 window.OY_CHANNEL_RENDER[oy_data_payload[2]][oy_broadcast_hash] = true;
                 let oy_render_payload = oy_data_payload.slice();
-                oy_render_payload[3] = oy_base_decode(oy_broadcast_hash, oy_render_payload[3]);
-                window.OY_CHANNEL_LISTEN[oy_data_payload[2]][2](oy_render_payload);
+                oy_render_payload[3] = oy_base_decode(oy_render_payload[3]);
+                window.OY_CHANNEL_LISTEN[oy_data_payload[2]][2](oy_broadcast_hash, oy_render_payload);
                 oy_render_payload = null;
 
                 if (typeof(window.OY_CHANNEL_TOP[oy_data_payload[2]])==="undefined") window.OY_CHANNEL_TOP[oy_data_payload[2]] = {};
@@ -1595,7 +1596,7 @@ function oy_channel_verify(oy_data_payload, oy_callback) {
         oy_callback(null);
         return null;
     }
-    else if (oy_channel_approved(oy_data_payload[2], oy_data_payload[5])&&oy_data_payload[6]<=oy_time_local&&oy_data_payload[6]>oy_time_local-window.OY_MESH_EDGE) {
+    else if (oy_channel_approved(oy_data_payload[2], oy_data_payload[5])&&oy_data_payload[6]<=oy_time_local+window.OY_MESH_SYNC_BUFFER&&oy_data_payload[6]>oy_time_local-window.OY_MESH_EDGE) {
         oy_key_verify(oy_data_payload[5], oy_data_payload[4], oy_data_payload[6]+oy_data_payload[3], function(oy_key_valid) {
             oy_callback(oy_key_valid);
         });
@@ -1607,7 +1608,7 @@ function oy_channel_verify(oy_data_payload, oy_callback) {
 
 //broadcasts a signed message for a specified channel
 function oy_channel_broadcast(oy_channel_id, oy_channel_payload, oy_key_private, oy_key_public, oy_callback_echo) {
-    let oy_time_local = Math.floor(Date.now()/1000);
+    let oy_time_local = Date.now()/1000;
     oy_channel_payload = oy_base_encode(oy_channel_payload);
     oy_key_sign(oy_key_private, oy_time_local+oy_channel_payload, function(oy_payload_crypt) {
         let oy_data_payload = [[], oy_rand_gen(), oy_channel_id, oy_channel_payload, oy_payload_crypt, oy_key_public, oy_time_local];
