@@ -53,7 +53,6 @@ window.OY_LOGIC_ALL_LIMIT = 100;//ms interval allowed for an OY_LOGIC_ALL packet
 window.OY_ENGINE_INTERVAL = 2000;//ms interval for core mesh engine to run, the time must clear a reasonable latency round-about
 window.OY_READY_RETRY = 3000;//ms interval to retry connection if READY is still false
 window.OY_BLOCK_LOOP = 200;//a lower value means more opportunity within the 10 second window to propagate transactions
-window.OY_CUT_LENGTH = 32;//key variable for negotiating with the trilemma, higher is more secure/less scalable, lower is less secure/more scalable, changing this requires a hardfork
 window.OY_CHANNEL_VERIFY_CHANCE = 0.5;//chance a node will verify a channel broadcast, higher means more aggregate CPU usage and less bandwidth, lower means less aggregate CPU and more bandwidth
 window.OY_CHANNEL_KEEPTIME = 40;//channel bearing nodes are expected to broadcast a logic_all packet within this interval
 window.OY_CHANNEL_FORGETIME = 60;//seconds since last signed message from channel bearing node
@@ -109,16 +108,13 @@ function oy_log(oy_log_msg, oy_log_flag) {
     else window.OY_CONSOLE(oy_log_msg);
 }
 
+// noinspection JSUnusedGlobalSymbols
 function oy_log_debug(oy_log_msg) {
     if (typeof(window.OY_MAIN['oy_self_id'])==="undefined") return false;
     oy_log_msg = "["+(Date.now()/1000)+"] "+oy_log_msg;
     let oy_xhttp = new XMLHttpRequest();
     oy_xhttp.open("POST", "https://top.oyster.org/oy_log_catch.php", true);
     oy_xhttp.send("oy_log_catch="+JSON.stringify([window.OY_MAIN['oy_self_short'], oy_log_msg]));
-}
-
-function oy_cut(oy_key_public) {
-    return oy_key_public.substr(0, window.OY_CUT_LENGTH);
 }
 
 function oy_short(oy_message) {
@@ -160,6 +156,14 @@ function oy_buffer_decode(oy_buffer_buffer, oy_buffer_base64) {
     return binary;
 }
 
+function oy_base_encode(oy_base_raw) {
+    return window.btoa(oy_base_raw);
+}
+
+function oy_base_decode(oy_base_encoded) {
+    return window.atob(oy_base_encoded);
+}
+
 function oy_crypt_encrypt(oy_crypt_data, oy_crypt_pass) {
     let oy_crypt_salt = CryptoJS.lib.WordArray.random(128/8);
     let oy_crypt_key = CryptoJS.PBKDF2(oy_crypt_pass, oy_crypt_salt, {
@@ -191,7 +195,7 @@ function oy_crypt_decrypt(oy_crypt_cipher, oy_crypt_pass) {
 
 function oy_key_verify(oy_key_public, oy_key_signature, oy_key_data, oy_callback) {
     window.crypto.subtle.importKey(
-        "jwk", //can be "jwk" (public or private), "spki" (public only), or "pkcs8" (private only)
+        "jwk",
         {
             kty: "EC",
             crv: "P-256",
@@ -227,7 +231,7 @@ function oy_key_verify(oy_key_public, oy_key_signature, oy_key_data, oy_callback
 function oy_key_sign(oy_key_private, oy_key_data, oy_callback) {
     oy_key_private = window.atob(oy_key_private);
     window.crypto.subtle.importKey(
-        "jwk", //can be "jwk" (public or private), "spki" (public only), or "pkcs8" (private only)
+        "jwk",
         {
             kty: "EC",
             crv: "P-256",
@@ -569,7 +573,10 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                 }
 
                 window.OY_CHANNEL_RENDER[oy_data_payload[2]][oy_broadcast_hash] = true;
+                let oy_render_payload = oy_data_payload.slice();
+                oy_render_payload[3] = oy_base_decode(oy_render_payload[3]);
                 window.OY_CHANNEL_LISTEN[oy_data_payload[2]][2](oy_data_payload);
+                oy_render_payload = null;
 
                 if (typeof(window.OY_CHANNEL_TOP[oy_data_payload[2]])==="undefined") window.OY_CHANNEL_TOP[oy_data_payload[2]] = {};
                 window.OY_CHANNEL_TOP[oy_data_payload[2]][oy_data_payload[0][0]] = [oy_local_time, -1, oy_data_payload[0]];
@@ -1601,6 +1608,7 @@ function oy_channel_verify(oy_data_payload, oy_callback) {
 //broadcasts a signed message for a specified channel
 function oy_channel_broadcast(oy_channel_id, oy_channel_payload, oy_key_private, oy_key_public, oy_callback_echo) {
     let oy_time_local = Math.floor(Date.now()/1000);
+    oy_channel_payload = oy_base_encode(oy_channel_payload);
     oy_key_sign(oy_key_private, oy_time_local+oy_channel_payload, function(oy_payload_crypt) {
         let oy_data_payload = [[], oy_rand_gen(), oy_channel_id, oy_channel_payload, oy_payload_crypt, oy_key_public, oy_time_local];
         oy_channel_verify(oy_data_payload, function(oy_verify_pass) {
@@ -1619,6 +1627,7 @@ function oy_channel_listen(oy_channel_id, oy_callback, oy_key_private, oy_key_pu
     window.OY_CHANNEL_LISTEN[oy_channel_id] = [oy_key_private, oy_key_public, oy_callback];
 }
 
+// noinspection JSUnusedGlobalSymbols
 function oy_channel_mute(oy_channel_id) {
     delete window.OY_CHANNEL_LISTEN[oy_channel_id];
     delete window.OY_CHANNEL_KEEP[oy_channel_id];
@@ -1750,7 +1759,9 @@ function oy_engine(oy_thread_track) {
                 if (typeof(window.OY_CHANNEL_RENDER[oy_channel_id])==="undefined") window.OY_CHANNEL_RENDER[oy_channel_id] = {};
                 if (typeof(window.OY_CHANNEL_RENDER[oy_channel_id][oy_broadcast_hash])==="undefined") {
                     window.OY_CHANNEL_RENDER[oy_channel_id][oy_broadcast_hash] = true;
-                    window.OY_CHANNEL_LISTEN[oy_channel_id][2](window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash]);
+                    let oy_render_payload = window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash].slice();
+                    oy_render_payload[3] = oy_base_decode(oy_render_payload[3]);
+                    window.OY_CHANNEL_LISTEN[oy_channel_id][2](oy_render_payload);
                 }
             }
         }
