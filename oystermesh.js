@@ -427,6 +427,7 @@ function oy_peer_latency(oy_peer_id, oy_latency_new) {
 
 //checks if short id of node correlates with a mutual peer
 function oy_peer_find(oy_peer_short) {
+    if (oy_peer_short===window.OY_MAIN['oy_self_short']) return false;
     for (let oy_peer_local in window.OY_PEERS) {
         if (oy_peer_local==="oy_aggregate_node") continue;
         if (oy_peer_short===oy_short(oy_peer_local)) return oy_peer_local;
@@ -1433,17 +1434,21 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_push_def
             oy_log("Active passport ran empty on reversal with flag "+oy_data_flag+", will cancel routing");
             return false;
         }
-        let oy_peer_final = oy_peer_find(oy_data_payload[1][0]);
-        if (oy_peer_final!==false) oy_peer_select = oy_peer_final;
-        else oy_peer_select = oy_peer_find(oy_data_payload[1].pop());//select the next peer on the active passport
-        if (oy_peer_select===false||!oy_peer_check(oy_peer_select)) {
+        let oy_peer_final;
+        let oy_active_build = [];
+        for (let i in oy_data_payload[1]) {
+            oy_active_build.push(oy_data_payload[1][i]);
+            oy_peer_final = oy_peer_find(oy_data_payload[1][i]);
+            if (!!oy_peer_final) break;
+        }
+        if (oy_peer_final===false||!oy_peer_check(oy_peer_final)) {
             oy_log("Data route couldn't find reversal peer to send to for flag "+oy_data_flag);
             return false;
         }
-        //if (oy_data_payload[1].length===0) oy_data_payload[1].push(oy_peer_select);
+        oy_data_payload[1] = oy_active_build.slice();
         oy_data_payload[0].push(window.OY_MAIN['oy_self_short']);
-        oy_log("Routing data via peer "+oy_short(oy_peer_select)+" with flag "+oy_data_flag);
-        oy_data_beam(oy_peer_select, oy_data_flag, oy_data_payload);
+        oy_log("Routing data via peer "+oy_short(oy_peer_final)+" with flag "+oy_data_flag);
+        oy_data_beam(oy_peer_final, oy_data_flag, oy_data_payload);
     }
     else {
         oy_log("Invalid data_logic provided: "+oy_data_logic+", will cancel");
