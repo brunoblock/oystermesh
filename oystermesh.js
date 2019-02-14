@@ -574,8 +574,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
                 window.OY_CHANNEL_RENDER[oy_data_payload[2]][oy_broadcast_hash] = true;
                 let oy_render_payload = oy_data_payload.slice();
-                oy_render_payload[3] = oy_base_decode(oy_render_payload[3]);
-                window.OY_CHANNEL_LISTEN[oy_data_payload[2]][2](oy_data_payload);
+                oy_render_payload[3] = oy_base_decode(oy_broadcast_hash, oy_render_payload[3]);
+                window.OY_CHANNEL_LISTEN[oy_data_payload[2]][2](oy_render_payload);
                 oy_render_payload = null;
 
                 if (typeof(window.OY_CHANNEL_TOP[oy_data_payload[2]])==="undefined") window.OY_CHANNEL_TOP[oy_data_payload[2]] = {};
@@ -1761,7 +1761,7 @@ function oy_engine(oy_thread_track) {
                     window.OY_CHANNEL_RENDER[oy_channel_id][oy_broadcast_hash] = true;
                     let oy_render_payload = window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash].slice();
                     oy_render_payload[3] = oy_base_decode(oy_render_payload[3]);
-                    window.OY_CHANNEL_LISTEN[oy_channel_id][2](oy_render_payload);
+                    window.OY_CHANNEL_LISTEN[oy_channel_id][2](oy_broadcast_hash, oy_render_payload);
                 }
             }
         }
