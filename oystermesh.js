@@ -53,12 +53,12 @@ window.OY_LOGIC_ALL_LIMIT = 100;//ms interval allowed for an OY_LOGIC_ALL packet
 window.OY_ENGINE_INTERVAL = 2000;//ms interval for core mesh engine to run, the time must clear a reasonable latency round-about
 window.OY_READY_RETRY = 3000;//ms interval to retry connection if READY is still false
 window.OY_BLOCK_LOOP = 200;//a lower value means more opportunity within the 10 second window to propagate transactions
-window.OY_CHANNEL_VERIFY_CHANCE = 0.5;//chance a node will verify a channel broadcast, higher means more aggregate CPU usage and less bandwidth, lower means less aggregate CPU and more bandwidth
 window.OY_CHANNEL_KEEPTIME = 15;//channel bearing nodes are expected to broadcast a logic_all packet within this interval
 window.OY_CHANNEL_FORGETIME = 60;//seconds since last signed message from channel bearing node
 window.OY_CHANNEL_RECOVERTIME = 30;//second interval between channel recovery requests per node, should be at least MESH_EDGE*2
 window.OY_CHANNEL_RESPOND_MAX = 5;//max amount of broadcast payloads to send in response to a channel recover request
-window.OY_CHANNEL_BROADCAST_PACKET_MAX = 800;//maximum size for a packet is is routed via OY_CHANNEL_BROADCAST (OY_LOGIC_ALL)
+window.OY_CHANNEL_BROADCAST_PACKET_MAX = 5000;//maximum size for a packet that is routed via OY_CHANNEL_BROADCAST (OY_LOGIC_ALL)
+window.OY_KEY_BRUNO = "XLp6_wVPBF3Zg-QNRkEj6U8bOYEZddQITs1n2pyeRqwOG5k9w_1A-RMIESIrVv_5HbvzoLhq-xPLE7z2na0C6M";//prevent impersonation
 window.OY_SHORT_LENGTH = 6;//various data value such as nonce IDs, data handles, data values are shortened for efficiency
 window.OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inputs are expected
 
@@ -81,8 +81,8 @@ window.OY_DATA_PUSH = {};//object for tracking data push threads
 window.OY_DATA_PULL = {};//object for tracking data pull threads
 window.OY_PEERS = {"oy_aggregate_node":[-1, -1, -1, 0, [], 0, [], 0, [], -1, -1]};//optimization for quick and inexpensive checks for mutual peering
 window.OY_PEERS_PRE = {};//tracks nodes that are almost peers, will become peers once PEER_AFFIRM is received from other node
-window.OY_PEERS_NULL = new Event('oy_peers_null');//trigger-able event for when peer_count == 0
-window.OY_PEERS_RECOVER = new Event('oy_peers_recover');//trigger-able event for when peer_count > 0
+window.OY_PEERS_NULL = new Event('oy_peers_null');//trigger-able event for when a new block is issued
+window.OY_PEERS_RECOVER = new Event('oy_peers_recover');//trigger-able event for when a new block is issued
 window.OY_NODES = {};//P2P connection handling for individual nodes, is not mirrored in localStorage due to DOM restrictions
 window.OY_WARM = {};//tracking connections to nodes that are warming up
 window.OY_COLD = {};//tracking connection shutdowns to specific nodes
@@ -563,72 +563,66 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             return false;
         }
 
-        let oy_local_beam = function() {
-            oy_log("Beaming channel "+oy_short(oy_data_payload[2])+" forward along the mesh");
-            oy_data_route("OY_LOGIC_ALL", "OY_CHANNEL_BROADCAST", oy_data_payload);
+        oy_channel_verify(oy_data_payload, function(oy_verify_pass) {
+            if (oy_verify_pass===null) oy_log("Was unable to verify broadcast from channel "+oy_short(oy_data_payload[2])+" at no fault of the sending peer");
+            else if (oy_verify_pass===true) {
+                oy_log("Beaming channel "+oy_short(oy_data_payload[2])+" forward along the mesh");
+                oy_data_route("OY_LOGIC_ALL", "OY_CHANNEL_BROADCAST", oy_data_payload);
 
-            if (typeof(window.OY_CHANNEL_LISTEN[oy_data_payload[2]])!=="undefined") {
+                if (typeof(window.OY_CHANNEL_LISTEN[oy_data_payload[2]])!=="undefined") {
 
-                if (typeof(window.OY_CHANNEL_TOP[oy_data_payload[2]])==="undefined") window.OY_CHANNEL_TOP[oy_data_payload[2]] = {};
-                window.OY_CHANNEL_TOP[oy_data_payload[2]][oy_data_payload[0][0]] = [oy_local_time, -1, oy_data_payload[0]];
+                    if (typeof(window.OY_CHANNEL_TOP[oy_data_payload[2]])==="undefined") window.OY_CHANNEL_TOP[oy_data_payload[2]] = {};
+                    window.OY_CHANNEL_TOP[oy_data_payload[2]][oy_data_payload[0][0]] = [oy_local_time, -1, oy_data_payload[0]];
 
-                let oy_broadcast_hash = oy_hash_gen(oy_data_payload[4]);
+                    let oy_broadcast_hash = oy_hash_gen(oy_data_payload[4]);
 
-                let oy_echo_beam = function() {
-                    oy_key_sign(window.OY_CHANNEL_LISTEN[oy_data_payload[2]][0], oy_broadcast_hash, function(oy_echo_crypt) {
-                        oy_log("Beaming echo for channel "+oy_short(oy_data_payload[2]));
-                        oy_data_route("OY_LOGIC_FOLLOW", "OY_CHANNEL_ECHO", [[], oy_data_payload[0], oy_data_payload[1], oy_data_payload[2], oy_echo_crypt, window.OY_CHANNEL_LISTEN[oy_data_payload[2]][1]]);
-                    });
-                };
+                    let oy_echo_beam = function() {
+                        oy_key_sign(window.OY_CHANNEL_LISTEN[oy_data_payload[2]][0], oy_broadcast_hash, function(oy_echo_crypt) {
+                            oy_log("Beaming echo for channel "+oy_short(oy_data_payload[2]));
+                            oy_data_route("OY_LOGIC_FOLLOW", "OY_CHANNEL_ECHO", [[], oy_data_payload[0], window.OY_CHANNEL_LISTEN[oy_data_payload[2]][1], oy_data_payload[2], oy_echo_crypt, oy_broadcast_hash]);
+                        });
+                    };
 
-                if (oy_data_payload[3]==="OY_CHANNEL_PING") {
-                    oy_log("Received ping broadcast for channel "+oy_short(oy_data_payload[2]));
-                    oy_echo_beam();
-                    return true;
-                }
+                    if (oy_data_payload[3]==="OY_CHANNEL_PING") {
+                        oy_log("Received ping broadcast for channel "+oy_short(oy_data_payload[2]));
+                        oy_echo_beam();
+                        return true;
+                    }
 
-                if (typeof(window.OY_CHANNEL_RENDER[oy_data_payload[2]])==="undefined") window.OY_CHANNEL_RENDER[oy_data_payload[2]] = {};
+                    if (typeof(window.OY_CHANNEL_RENDER[oy_data_payload[2]])==="undefined") window.OY_CHANNEL_RENDER[oy_data_payload[2]] = {};
 
-                if (typeof(window.OY_CHANNEL_RENDER[oy_data_payload[2]][oy_broadcast_hash])!=="undefined") {
-                    oy_log("Already rendered broadcast hash "+oy_short(oy_broadcast_hash)+" from channel "+oy_short(oy_data_payload[2])+", will ignore");
-                    return false;
-                }
+                    if (typeof(window.OY_CHANNEL_RENDER[oy_data_payload[2]][oy_broadcast_hash])!=="undefined") {
+                        oy_log("Already rendered broadcast hash "+oy_short(oy_broadcast_hash)+" from channel "+oy_short(oy_data_payload[2])+", will ignore");
+                        return false;
+                    }
 
-                window.OY_CHANNEL_RENDER[oy_data_payload[2]][oy_broadcast_hash] = true;
-                let oy_render_payload = oy_data_payload.slice();
-                oy_render_payload[3] = oy_base_decode(oy_render_payload[3]);
-                window.OY_CHANNEL_LISTEN[oy_data_payload[2]][2](oy_broadcast_hash, oy_render_payload);
-                oy_render_payload = null;
+                    window.OY_CHANNEL_RENDER[oy_data_payload[2]][oy_broadcast_hash] = true;
+                    let oy_render_payload = oy_data_payload.slice();
+                    oy_render_payload[3] = oy_base_decode(oy_render_payload[3]);
+                    window.OY_CHANNEL_LISTEN[oy_data_payload[2]][2](oy_broadcast_hash, oy_render_payload);
+                    oy_render_payload = null;
 
-                let oy_broadcast_payload = oy_data_payload.slice();
-                oy_broadcast_payload[0] = null;
-                oy_broadcast_payload[1] = null;
-                oy_broadcast_payload[7] = [];
+                    let oy_broadcast_payload = oy_data_payload.slice();
+                    oy_broadcast_payload[0] = null;
+                    oy_broadcast_payload[6] = [];
 
-                if (window.OY_CHANNEL_LISTEN[oy_data_payload[2]][0]!==null) {
-                    oy_key_sign(window.OY_CHANNEL_LISTEN[oy_data_payload[2]][0], oy_data_payload[4], function(oy_data_crypt) {
-                        oy_broadcast_payload[7].push([oy_data_crypt, window.OY_CHANNEL_LISTEN[oy_data_payload[2]][1]]);
-                        if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]])==="undefined") window.OY_CHANNEL_KEEP[oy_data_payload[2]] = {};
-                        if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash])==="undefined") window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash] = oy_broadcast_payload;
-                    });
+                    if (window.OY_CHANNEL_LISTEN[oy_data_payload[2]][0]!==null) {
+                        oy_key_sign(window.OY_CHANNEL_LISTEN[oy_data_payload[2]][0], oy_data_payload[4], function(oy_data_crypt) {
+                            oy_broadcast_payload[6].push([oy_data_crypt, window.OY_CHANNEL_LISTEN[oy_data_payload[2]][1]]);
+                            if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]])==="undefined") window.OY_CHANNEL_KEEP[oy_data_payload[2]] = {};
+                            if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash])==="undefined") window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash] = oy_broadcast_payload;
+                        });
 
-                    oy_echo_beam();
+                        oy_echo_beam();
+                    }
                 }
             }
-        };
-
-        if (Math.random()<=window.OY_CHANNEL_VERIFY_CHANCE||typeof(window.OY_CHANNEL_LISTEN[oy_data_payload[2]])!=="undefined") {
-            oy_channel_verify(oy_data_payload, function(oy_verify_pass) {
-                if (oy_verify_pass===null) oy_log("Was unable to verify broadcast from channel "+oy_short(oy_data_payload[2])+" at no fault of the sending peer");
-                else if (oy_verify_pass===true) oy_local_beam();
-                else {
-                    oy_log("Peer "+oy_short(oy_peer_id)+" sent an unverifiable channel broadcast, will punish");
-                    oy_node_punish(oy_peer_id, "OY_PUNISH_CHANNEL_VERIFY");
-                    return false;
-                }
-            });
-        }
-        else oy_local_beam();
+            else {
+                oy_log("Peer "+oy_short(oy_peer_id)+" sent an unverifiable channel broadcast, will punish");
+                oy_node_punish(oy_peer_id, "OY_PUNISH_CHANNEL_VERIFY");
+                return false;
+            }
+        });
     }
     else if (oy_data_flag==="OY_CHANNEL_ECHO") {
         //oy_data_payload = [oy_route_passport_passive, oy_route_passport_active, oy_route_dynamic_prev, oy_channel_id, oy_echo_crypt, oy_key_public]

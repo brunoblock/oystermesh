@@ -85,7 +85,7 @@ function ot_broadcast() {
     document.getElementById("ot_broadcast_button").classList.remove("oy_button_broadcast_active");
     document.getElementById("ot_broadcast_button").classList.add("oy_button_all_dull");
 
-    if (window.OY_BLOCK[2][window.OT_CHANNEL_ID][2].indexOf(window.OY_WALLET_PUBLIC)===-1) ot_broadcast_freeze();//TODO use main protocol function which uses space optimization//&&window.OY_WALLET_PUBLIC!==window.OY_KEY_BRUNO
+    if (window.OY_WALLET_PUBLIC!==window.OY_KEY_BRUNO) ot_broadcast_freeze();//TODO use main protocol function which uses space optimization
 
     oy_channel_broadcast(window.OT_CHANNEL_ID, oy_broadcast_msg, window.OY_WALLET_PRIVATE, window.OY_WALLET_PUBLIC, function(oy_broadcast_hash, oy_render_payload) {
         ot_render(oy_broadcast_hash, oy_render_payload);
@@ -101,7 +101,7 @@ function ot_broadcast() {
 function ot_broadcast_freeze(ot_count) {
     if (typeof(ot_count)==="undefined") {
         window.OT_BROADCAST_FREEZE = true;
-        ot_count = 10;
+        ot_count = 9;
     }
     else if (ot_count===0) {
         window.OT_BROADCAST_FREEZE = false;
