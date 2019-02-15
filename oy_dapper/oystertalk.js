@@ -6,12 +6,16 @@ function ot_render(oy_broadcast_hash, oy_render_payload) {
 
     let oy_render_stats;
     if (oy_render_payload[5]===window.OY_WALLET_PUBLIC) oy_render_stats = "<span id='ot_render_stats_echo_"+oy_broadcast_hash+"' style='color:indianred'>E0</span>";
-    else if (oy_render_payload[0]===null) oy_render_stats = "S4";
+    else if (oy_render_payload[0]===null) oy_render_stats = "S"+oy_render_payload[7].length;
     else oy_render_stats = "H"+oy_render_payload[0].length;
 
     oy_render_stats += "&nbsp;/&nbsp;"+ot_time_print(oy_render_payload[6]);
 
-    let oy_element_html = "<div style='position:relative;'><div id='ot_render_avatar_"+oy_broadcast_hash+"' style='position:absolute;left:0;top:0;width:4vh;height:4vh;background-color: #2a2a2a'></div><div style='position:relative;top:0;left:calc(4vh + 1.5%);padding:0.5vh 1vh;border-radius:0.15vh;background-color: "+((oy_render_payload[5]===window.OY_WALLET_PUBLIC)?"#c2c2c2":"#d6d6d6")+";color:#000000;min-height:3vh;display: inline-flex;align-items: center;'><div>"+oy_render_payload[3]+"</div><div style='position:absolute;right:0;top:50%;transform: translate(calc(100% + 0.8vh), -50%);font-size:0.9vh;color: #dbdbdb'>[<span id='ot_render_stats_"+oy_broadcast_hash+"'>"+oy_render_stats+"</span>]</div></div></div><br>";
+    let oy_panel_color;
+    if (oy_render_payload[5]===window.OY_KEY_BRUNO) oy_panel_color = "#7bb3ee";
+    else if (oy_render_payload[5]===window.OY_WALLET_PUBLIC) oy_panel_color = "#c2c2c2";
+    else oy_panel_color = "#d6d6d6";
+    let oy_element_html = "<div style='position:relative;'><div id='ot_render_avatar_"+oy_broadcast_hash+"' style='position:absolute;left:0;top:0;width:4vh;height:4vh;background-color: #2a2a2a'></div><div style='position:relative;top:0;left:calc(4vh + 1.5%);padding:0.5vh 1vh;border-radius:0.15vh;background-color: "+oy_panel_color+";color:#000000;min-height:3vh;display: inline-flex;align-items: center;'><div>"+oy_render_payload[3]+"</div><div style='position:absolute;right:0;top:50%;transform: translate(calc(100% + 0.8vh), -50%);font-size:0.9vh;color: #dbdbdb'>[<span id='ot_render_stats_"+oy_broadcast_hash+"'>"+oy_render_stats+"</span>]</div></div></div><br>";
 
     let oy_element = document.createElement("div");
     oy_element.setAttribute('id', "ot_render_"+oy_broadcast_hash);
@@ -157,7 +161,7 @@ function ot_init() {
     }, 600);
 
     setTimeout(function() {
-        ot_render("x08e485fc2b625244e8bebc9a78ac9a4d5fdf94a", JSON.parse("[[\"666b50\",\"03f424\",\"8c46cf\",\"3a0bf1\",\"6a68cc\",\"c87c88\"],\"05e97ed9fc216060756f92104beb8744\",\"936e62ced6eac3b08e236a9623929dbb9564bef0\",\"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse aliquam massa rhoncus, commodo turpis et, pellentesque purus. Mauris sed maximus magna, et condimentum augue. In hac habitasse platea dictumst. Quisque sit amet erat sed ex faucibus placerat. Mauris a justo facilisis dui ullamcorper tincidunt vitae in dolor. Sed posuere accumsan metus, id euismod metus lobortis eu. Vivamus porta ipsum vel justo cursus luctus. Vivamus vestibulum iaculis ligula nec facilisis. Integer accumsan urna ut faucibus elementum. Vestibulum gravida, massa non molestie iaculis, massa libero dictum orci, quis ullamcorper turpis magna in odio. Aliquam aliquet metus sit amet metus tincidunt scelerisque. Nunc vel risus varius orci sagittis dignissim. Aenean quis massa sit amet lorem tristique tristique. Quisque aliquet sollicitudin nulla id ornare.\",\"h6xKNOYZ1sAt8txz6G5iC0vzop+SkZ1IHU6G/q2Tcf5ex77dc9mACKSPoZXG0deypcisVECr4/usNtUn4ObaSQ==\",\"mkAWmMa-J3yVV3fwi-w5KoXlvRq_XBp4phkMuz734SQ1nNAvtP3vPzDlr0Qj3tbKSbWdK4WtcC1RS-nS8stg5o\",1550111843]"))
+        ot_render("x08e485fc2b625244e8bebc9a78ac9a4d5fdf94a", JSON.parse("[[\"666b50\",\"03f424\",\"8c46cf\",\"3a0bf1\",\"6a68cc\",\"c87c88\"],\"05e97ed9fc216060756f92104beb8744\",\"936e62ced6eac3b08e236a9623929dbb9564bef0\",\"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse aliquam massa rhoncus, commodo turpis et, pellentesque purus. Mauris sed maximus magna, et condimentum augue. In hac habitasse platea dictumst. Quisque sit amet erat sed ex faucibus placerat. Mauris a justo facilisis dui ullamcorper tincidunt vitae in dolor. Sed posuere accumsan metus, id euismod metus lobortis eu. Vivamus porta ipsum vel justo cursus luctus. Vivamus vestibulum iaculis ligula nec facilisis. Integer accumsan urna ut faucibus elementum. Vestibulum gravida, massa non molestie iaculis, massa libero dictum orci, quis ullamcorper turpis magna in odio. Aliquam aliquet metus sit amet metus tincidunt scelerisque. Nunc vel risus varius orci sagittis dignissim. Aenean quis massa sit amet lorem tristique tristique. Quisque aliquet sollicitudin nulla id ornare.\",\"h6xKNOYZ1sAt8txz6G5iC0vzop+SkZ1IHU6G/q2Tcf5ex77dc9mACKSPoZXG0deypcisVECr4/usNtUn4ObaSQ==\",\"mkAWmMa-J3yVV3fwi-w5KoXlvRq_XBp4phkMuz734SQ1nNAvtP3vPzDlr0Qj3tbKSbWdK4WtcC1RS-nS8stg5o\",1580111843]"))
     }, 900);
 
 

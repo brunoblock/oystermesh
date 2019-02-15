@@ -1240,6 +1240,7 @@
             window.OY_HOP_KEEP = 100;
             window.OY_MESH_RANGETIME = 30;
             window.OY_DEST_RADIO = "oy_dest_view";
+            window.OY_KEY_BRUNO = "XLp6_wVPBF3Zg-QNRkEj6U8bOYEZddQITs1n2pyeRqwOG5k9w_1A-RMIESIrVv_5HbvzoLhq-xPLE7z2na0C6M";//prevent impersonation
 
             window.OY_COVER = "oy_dapper";//false
             window.OY_WALLET_PRIVATE = null;
@@ -1774,16 +1775,27 @@
         document.getElementById("oy_file_pearl").value = null;
 
         document.getElementById("oy_key_public").value = "";
+        document.getElementById("oy_avatar_cont").style.backgroundColor = "#2a2a2a";
         document.getElementById("oy_avatar_cont").innerHTML = "";
     }
 
     function oy_avatar_gen(oy_key_public, oy_object) {
-        const canvas = createIcon({
-            seed:oy_key_public,
-            size: 10,
-            scale: 8
-        });
-        oy_object.appendChild(canvas);
+        if (oy_key_public===window.OY_KEY_BRUNO) {
+            let oy_element = document.createElement("img");
+            oy_element.src = "https://oyster.org/oy_resources/oy_logo_bruno.png?2";
+            oy_element.style.width = "100%";
+            oy_element.style.height = "100%";
+            oy_object.appendChild(oy_element);
+        }
+        else {
+            const canvas = createIcon({
+                seed:oy_key_public,
+                size: 10,
+                scale: 8
+            });
+            oy_object.appendChild(canvas);
+        }
+        oy_object.style.backgroundColor = "transparent";
     }
 
     function oy_top_init() {
