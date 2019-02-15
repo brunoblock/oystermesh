@@ -54,7 +54,7 @@ window.OY_ENGINE_INTERVAL = 2000;//ms interval for core mesh engine to run, the 
 window.OY_READY_RETRY = 3000;//ms interval to retry connection if READY is still false
 window.OY_BLOCK_LOOP = 200;//a lower value means more opportunity within the 10 second window to propagate transactions
 window.OY_CHANNEL_VERIFY_CHANCE = 0.5;//chance a node will verify a channel broadcast, higher means more aggregate CPU usage and less bandwidth, lower means less aggregate CPU and more bandwidth
-window.OY_CHANNEL_KEEPTIME = 20;//channel bearing nodes are expected to broadcast a logic_all packet within this interval
+window.OY_CHANNEL_KEEPTIME = 15;//channel bearing nodes are expected to broadcast a logic_all packet within this interval
 window.OY_CHANNEL_FORGETIME = 60;//seconds since last signed message from channel bearing node
 window.OY_CHANNEL_RECOVERTIME = 30;//second interval between channel recovery requests per node, should be at least MESH_EDGE*2
 window.OY_CHANNEL_RESPOND_MAX = 5;//max amount of broadcast payloads to send in response to a channel recover request
@@ -81,6 +81,8 @@ window.OY_DATA_PUSH = {};//object for tracking data push threads
 window.OY_DATA_PULL = {};//object for tracking data pull threads
 window.OY_PEERS = {"oy_aggregate_node":[-1, -1, -1, 0, [], 0, [], 0, [], -1, -1]};//optimization for quick and inexpensive checks for mutual peering
 window.OY_PEERS_PRE = {};//tracks nodes that are almost peers, will become peers once PEER_AFFIRM is received from other node
+window.OY_PEERS_NULL = new Event('oy_peers_null');//trigger-able event for when a new block is issued
+window.OY_PEERS_RECOVER = new Event('oy_peers_recover');//trigger-able event for when a new block is issued
 window.OY_NODES = {};//P2P connection handling for individual nodes, is not mirrored in localStorage due to DOM restrictions
 window.OY_WARM = {};//tracking connections to nodes that are warming up
 window.OY_COLD = {};//tracking connection shutdowns to specific nodes
@@ -360,6 +362,7 @@ function oy_peer_add(oy_peer_id) {
     let oy_callback_local = function() {
         //[peership timestamp, last msg timestamp, last latency timestamp, latency avg, latency history, data beam, data beam history, data soak, data soak history, logic_all last beamed, logic_all last soaked]
         window.OY_PEERS[oy_peer_id] = [Date.now()/1000|0, -1, -1, 0, [], 0, [], 0, [], -1, -1];
+        if (window.OY_PEER_COUNT===0) document.dispatchEvent(window.OY_PEERS_RECOVER);
         window.OY_PEER_COUNT++;
         oy_local_store("oy_peers", window.OY_PEERS);
         oy_node_reset(oy_peer_id);
@@ -376,6 +379,7 @@ function oy_peer_remove(oy_peer_id, oy_punish_reason) {
     oy_data_beam(oy_peer_id, "OY_PEER_TERMINATE", (typeof(oy_punish_reason)==="undefined")?"OY_REASON_PEER_REMOVE":oy_punish_reason);
     window.OY_PEER_COUNT--;
     delete window.OY_PEERS[oy_peer_id];
+    if (window.OY_PEER_COUNT===0) document.dispatchEvent(window.OY_PEERS_NULL);
     oy_local_store("oy_peers", window.OY_PEERS);
     oy_node_reset(oy_peer_id);
     if (window.OY_PEER_COUNT<0) {
