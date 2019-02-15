@@ -986,7 +986,7 @@
                 <textarea id="ot_broadcast_input" class="oy_center_both" style="transform: translate(-54%, -50%);height:3.7vh;width:75%;font-size:1.5vh;" oninput="ot_input()"></textarea>
                 <div id="ot_broadcast_button_cont" style="position:absolute;width:15%;height:100%;top:0;right:0;display:block;">
                     <div id="ot_broadcast_button" align="center" class="oy_center_both oy_button oy_button_all_dull" style="width:auto;height:auto;" onclick="ot_broadcast()">
-                        <div style="position:relative;top:-3%;">
+                        <div id="ot_broadcast_button_inner" style="position:relative;top:-3%;">
                             &nbsp;&nbsp;BROADCAST&nbsp;&nbsp;
                         </div>
                     </div><br>
@@ -1298,12 +1298,26 @@
             window.OY_NODE_KEEP = {};
             window.OY_NODE_CHECK = {};
             window.OY_LINK_KEEP = {};
+            window.OY_KEY_ENTER = new Event('oy_key_enter');//trigger-able event for when the enter key is pressed
+            window.OY_KEY_SHIFT = false;
 
             document.getElementById("oy_push_superhandle").value = "-".repeat(82);
             document.getElementById("oy_pull_superhandle").value = "-".repeat(82);
 
             document.getElementById("oy_file_upload").addEventListener('change', oy_file_change, false);
             document.getElementById("oy_file_pearl").addEventListener('change', oy_wallet_read, false);
+
+            document.addEventListener("keydown", function(oy_event) {
+                if (window.OY_KEY_SHIFT===false&&oy_event.key==="Enter") {
+                    oy_event.preventDefault();
+                    document.dispatchEvent(window.OY_KEY_ENTER);
+                }
+                else if (oy_event.key==="Shift") window.OY_KEY_SHIFT = true;
+            });
+
+            document.addEventListener("keyup", function(oy_event) {
+                if (oy_event.key==="Shift") window.OY_KEY_SHIFT = false;
+            });
         }
 
         document.getElementById(window.OY_DEST_RADIO).checked = true;
@@ -1665,6 +1679,7 @@
         if (window.OY_WALLET_PUBLIC!==null) oy_wallet_activate(window.OY_WALLET_PUBLIC);
 
         document.getElementById("oy_key_interface_cont").style.display = "block";
+        document.addEventListener('oy_key_enter', oy_wallet_load, false);
     }
 
     function oy_wallet_close() {
@@ -1673,6 +1688,7 @@
 
         if (window.OY_WALLET_CALLBACK!==null) window.OY_WALLET_CALLBACK();
         window.OY_WALLET_CALLBACK = null;
+        document.removeEventListener('oy_key_enter', oy_wallet_load, false);
     }
 
     function oy_wallet_unlock(oy_pass) {

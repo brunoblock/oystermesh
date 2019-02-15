@@ -64,7 +64,7 @@ function ot_time_print(ot_time) {
 }
 
 function ot_input() {
-    if (document.getElementById("ot_broadcast_input").value.length===0) {
+    if (document.getElementById("ot_broadcast_input").value.length===0||window.OT_BROADCAST_FREEZE===true) {
         document.getElementById("ot_broadcast_button").classList.remove("oy_button_broadcast_active");
         document.getElementById("ot_broadcast_button").classList.add("oy_button_all_dull");
     }
@@ -77,9 +77,16 @@ function ot_input() {
 function ot_broadcast() {
     if (document.getElementById("ot_broadcast_button").classList.contains("oy_button_all_dull")) return false;
 
-    let oy_broadcast_msg = document.getElementById("ot_broadcast_input").value.replace(/(?:\r\n|\r|\n)/g, '<br>');
+    let oy_broadcast_msg = document.getElementById("ot_broadcast_input").value;
     if (oy_broadcast_msg.length===0) return false;
+    oy_broadcast_msg = oy_broadcast_msg.replace(/(?:\r\n|\r|\n)/g, "<br>");
+
     document.getElementById("ot_broadcast_input").value = "";
+    document.getElementById("ot_broadcast_button").classList.remove("oy_button_broadcast_active");
+    document.getElementById("ot_broadcast_button").classList.add("oy_button_all_dull");
+
+    if (window.OY_BLOCK[2][window.OT_CHANNEL_ID][2].indexOf(window.OY_WALLET_PUBLIC)===-1) ot_broadcast_freeze();//TODO use main protocol function which uses space optimization//&&window.OY_WALLET_PUBLIC!==window.OY_KEY_BRUNO
+
     oy_channel_broadcast(window.OT_CHANNEL_ID, oy_broadcast_msg, window.OY_WALLET_PRIVATE, window.OY_WALLET_PUBLIC, function(oy_broadcast_hash, oy_render_payload) {
         ot_render(oy_broadcast_hash, oy_render_payload);
     }, function(oy_broadcast_hash) {
@@ -89,6 +96,23 @@ function ot_broadcast() {
             ot_render_stats_object.style.color = null;
         }
     });
+}
+
+function ot_broadcast_freeze(ot_count) {
+    if (typeof(ot_count)==="undefined") {
+        window.OT_BROADCAST_FREEZE = true;
+        ot_count = 10;
+    }
+    else if (ot_count===0) {
+        window.OT_BROADCAST_FREEZE = false;
+        document.getElementById("ot_broadcast_button_inner").innerHTML = "&nbsp;&nbsp;BROADCAST&nbsp;&nbsp;";
+        ot_input();
+        return true;
+    }
+    document.getElementById("ot_broadcast_button_inner").innerHTML = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;["+ot_count+"s]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
+    setTimeout(function() {
+        ot_broadcast_freeze(ot_count-1);
+    }, 1000);
 }
 
 function ot_join() {
@@ -116,7 +140,8 @@ function ot_join() {
 }
 
 function ot_approve() {
-    if (window.OY_WALLET_PUBLIC!==null&&(window.OY_BLOCK[2][window.OT_CHANNEL_ID][2].indexOf(window.OY_WALLET_PUBLIC)!==-1||window.OY_BLOCK[2][window.OT_CHANNEL_ID][3].indexOf(window.OY_WALLET_PUBLIC)!==-1)) {
+    if (typeof(window.OY_BLOCK[2][window.OT_CHANNEL_ID])==="undefined") return false;
+    if (window.OY_WALLET_PUBLIC!==null&&(window.OY_BLOCK[2][window.OT_CHANNEL_ID][2].indexOf(window.OY_WALLET_PUBLIC)!==-1||window.OY_BLOCK[2][window.OT_CHANNEL_ID][3].indexOf(window.OY_WALLET_PUBLIC)!==-1)) {//TODO use main protocol function which uses space optimization
         oy_channel_listen(window.OT_CHANNEL_ID,function(oy_broadcast_hash, oy_render_payload) {
             ot_render(oy_broadcast_hash, oy_render_payload);
         }, window.OY_WALLET_PRIVATE, window.OY_WALLET_PUBLIC);
@@ -165,6 +190,10 @@ function ot_peers_halt() {
 }
 
 function ot_close() {
+    document.removeEventListener("oy_block_trigger", ot_approve, false);
+    document.removeEventListener("oy_peers_null", ot_peers_halt, false);
+    document.removeEventListener("oy_peers_recover", ot_peers_resume, false);
+    document.removeEventListener("oy_key_enter", ot_broadcast, false);
     oy_channel_mute(window.OT_CHANNEL_ID);
 }
 
@@ -173,6 +202,7 @@ function ot_init() {
 
     window.OT_RENDER_KEEP = [];
     window.OT_PEERS_NULL = null;
+    window.OT_BROADCAST_FREEZE = false;
 
     oy_channel_listen(window.OT_CHANNEL_ID, function(oy_broadcast_hash, oy_render_payload) {
         ot_render(oy_broadcast_hash, oy_render_payload);
@@ -183,15 +213,8 @@ function ot_init() {
     if (window.OY_PEER_COUNT===0) ot_peers_halt();
     else ot_peers_resume();
 
-    document.addEventListener('oy_block_trigger', function () {
-        if (typeof(window.OY_BLOCK[2][window.OT_CHANNEL_ID])!=="undefined") ot_approve();
-    }, false);
-
-    document.addEventListener('oy_peers_null', function () {
-        ot_peers_halt();
-    }, false);
-
-    document.addEventListener('oy_peers_recover', function () {
-        ot_peers_resume();
-    }, false);
+    document.addEventListener("oy_block_trigger", ot_approve, false);
+    document.addEventListener("oy_peers_null", ot_peers_halt, false);
+    document.addEventListener("oy_peers_recover", ot_peers_resume, false);
+    document.addEventListener("oy_key_enter", ot_broadcast, false);
 }

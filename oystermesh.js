@@ -81,8 +81,8 @@ window.OY_DATA_PUSH = {};//object for tracking data push threads
 window.OY_DATA_PULL = {};//object for tracking data pull threads
 window.OY_PEERS = {"oy_aggregate_node":[-1, -1, -1, 0, [], 0, [], 0, [], -1, -1]};//optimization for quick and inexpensive checks for mutual peering
 window.OY_PEERS_PRE = {};//tracks nodes that are almost peers, will become peers once PEER_AFFIRM is received from other node
-window.OY_PEERS_NULL = new Event('oy_peers_null');//trigger-able event for when a new block is issued
-window.OY_PEERS_RECOVER = new Event('oy_peers_recover');//trigger-able event for when a new block is issued
+window.OY_PEERS_NULL = new Event('oy_peers_null');//trigger-able event for when peer_count == 0
+window.OY_PEERS_RECOVER = new Event('oy_peers_recover');//trigger-able event for when peer_count > 0
 window.OY_NODES = {};//P2P connection handling for individual nodes, is not mirrored in localStorage due to DOM restrictions
 window.OY_WARM = {};//tracking connections to nodes that are warming up
 window.OY_COLD = {};//tracking connection shutdowns to specific nodes
