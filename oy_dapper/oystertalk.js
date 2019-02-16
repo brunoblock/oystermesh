@@ -4,23 +4,46 @@ function ot_render(oy_broadcast_hash, oy_render_payload) {
         return false;
     }
 
-    let oy_render_stats;
-    if (oy_render_payload[0]===null) oy_render_stats = "S"+oy_render_payload[7].length;
-    else if (oy_render_payload[5]===window.OY_WALLET_PUBLIC) oy_render_stats = "<span id='ot_render_stats_echo_"+oy_broadcast_hash+"' style='color:indianred'>E0</span>";
-    else oy_render_stats = "H"+oy_render_payload[0].length;
+    let ot_render_opacity = "";
+    let ot_render_stats;
+    if (oy_render_payload[0]===null) ot_render_stats = "S"+oy_render_payload[7].length;
+    else if (oy_render_payload[5]===window.OY_WALLET_PUBLIC) {
+        ot_render_stats = "<span id='ot_render_stats_echo_"+oy_broadcast_hash+"' style='color:indianred'>E0</span>";
+        ot_render_opacity = "opacity:0.5;";
+    }
+    else ot_render_stats = "H"+oy_render_payload[0].length;
 
-    oy_render_stats += "&nbsp;/&nbsp;"+ot_time_print(oy_render_payload[6]);
+    ot_render_stats += "&nbsp;/&nbsp;"+ot_time_print(oy_render_payload[6]);
 
-    let oy_panel_color;
-    if (oy_render_payload[5]===window.OY_KEY_BRUNO) oy_panel_color = "#7bb3ee";
-    else if (oy_render_payload[5]===window.OY_WALLET_PUBLIC) oy_panel_color = "#c2c2c2";
-    else oy_panel_color = "#d6d6d6";
+    let ot_panel_color;
+    if (oy_render_payload[5]===window.OY_KEY_BRUNO) ot_panel_color = window.OT_MSG_COLOR_BRUNO;
+    else if (oy_render_payload[5]===window.OY_WALLET_PUBLIC) ot_panel_color = window.OT_MSG_COLOR_SELF;
+    else ot_panel_color = window.OT_MSG_COLOR_MAIN;
 
-    let oy_badge = "";
-    if (oy_render_payload[5]===window.OY_KEY_BRUNO) oy_badge = "<div style='position:absolute;top:1.1vh;left:-3.1vh;border-radius:0.2vh;font-size:1vh;padding:0.12vh;transform:translate(-50%, -50%);background-color: #2f7dab;color:#dadada'>&nbsp;FOUNDER&nbsp;</div><div style='position:absolute;top:2.9vh;left:-3.1vh;border-radius:0.2vh;font-size:1vh;padding:0.12vh;transform:translate(-50%, -50%);background-color: #8b59ab;color:#dadada'>&nbsp;LEAD&nbsp;DEV&nbsp;</div>";
-    else if (window.OY_BLOCK[2][window.OT_CHANNEL_ID][2].indexOf(oy_render_payload[5])!==-1) oy_badge = "<div style='position:absolute;top:2vh;left:-2.3vh;border-radius:0.2vh;font-size:1.1vh;padding:0.12vh;transform:translate(-50%, -50%);background-color: #aba920;color:#dadada'>&nbsp;MOD&nbsp;</div>";
+    let ot_badge = "";
+    if (oy_render_payload[5]===window.OY_KEY_BRUNO) ot_badge = "<div style='position:absolute;top:1.1vh;left:-3.1vh;opacity:0.8;border-radius:0.2vh;font-size:1vh;padding:0.12vh;transform:translate(-50%, -50%);background-color: #2f7dab;color:#dadada'>&nbsp;FOUNDER&nbsp;</div><div style='position:absolute;top:2.9vh;left:-3.1vh;opacity:0.8;border-radius:0.2vh;font-size:1vh;padding:0.12vh;transform:translate(-50%, -50%);background-color: #8b59ab;color:#dadada'>&nbsp;LEAD&nbsp;DEV&nbsp;</div>";
+    else if (window.OY_BLOCK[2][window.OT_CHANNEL_ID][2].indexOf(oy_render_payload[5])!==-1) ot_badge = "<div style='position:absolute;top:2vh;left:-2.3vh;opacity:0.8;border-radius:0.2vh;font-size:1.1vh;padding:0.12vh;transform:translate(-50%, -50%);background-color: #aba920;color:#dadada'>&nbsp;MOD&nbsp;</div>";
 
-    let oy_element_html = "<div style='position:relative;'>"+oy_badge+"<div id='ot_render_avatar_"+oy_broadcast_hash+"' style='position:absolute;left:0;top:0;width:4vh;height:4vh;background-color: #2a2a2a'></div><div style='position:relative;top:0;left:calc(4vh + 1.5%);padding:0.5vh 1vh;border-radius:0.15vh;background-color: "+oy_panel_color+";color:#000000;min-height:3vh;display: inline-flex;align-items: center;' onmouseover='this.style.cursor = \"pointer\"' onclick='ot_reply(\""+oy_broadcast_hash+"\")'><div id='ot_render_content_"+oy_broadcast_hash+"'>"+oy_render_payload[3]+"</div><div style='position:absolute;right:0;top:50%;transform: translate(calc(100% + 0.8vh), -50%);font-size:0.9vh;color: #dbdbdb'>[<span id='ot_render_stats_"+oy_broadcast_hash+"'>"+oy_render_stats+"</span>]</div></div></div><br>";
+    let ot_append = "";
+    let ot_reply = "";
+    let ot_reply_hash;
+    let ot_reply_public_key;
+    if (oy_render_payload[3].substr(0, 9)==="OT_REPLY_") {
+        ot_reply_hash = oy_render_payload[3].substr(9, 40);
+        oy_render_payload[3] = oy_render_payload[3].substr(49);
+        let ot_render_content_object = document.getElementById("ot_render_content_"+ot_reply_hash);
+        if (ot_render_content_object) {
+            ot_reply_public_key = document.getElementById("ot_render_public_key_"+ot_reply_hash).innerHTML;
+            let ot_reply_color;
+            if (ot_reply_public_key===window.OY_KEY_BRUNO) ot_reply_color = window.OT_MSG_COLOR_BRUNO;
+            else if (ot_reply_public_key===window.OY_WALLET_PUBLIC) ot_reply_color = window.OT_MSG_COLOR_SELF;
+            else ot_reply_color = window.OT_MSG_COLOR_MAIN;
+            ot_append = "<br>";
+            ot_reply = "<div style='position:absolute;top:0;left:7vh;transform: translateY(-100%);height:2.1vh;font-size:1.3vh;opacity:0.6;'><div id='ot_reply_avatar_"+oy_broadcast_hash+"' style='position:absolute;top:0;left:0;width:2.1vh;height:2.1vh;transform:translateX(-99%)'></div><div style='background-color:"+ot_reply_color+";color:#000000;white-space: nowrap;overflow:hidden;padding:0.25vh 0.75vh;height:calc(100% - 0.5vh);display: inline-flex;align-items: center;max-width:55vh;' onmouseover='this.style.cursor = \"pointer\"' onclick='ot_reply(\""+ot_reply_hash+"\")'>"+ot_render_content_object.innerHTML+"</div></div>";
+        }
+    }
+
+    let oy_element_html = ot_append+"<div id='ot_render_cont_"+oy_broadcast_hash+"' style='position:relative;"+ot_render_opacity+"'>"+ot_badge+ot_reply+"<div id='ot_render_avatar_"+oy_broadcast_hash+"' style='position:absolute;left:0;top:0;width:4vh;height:4vh;background-color: #2a2a2a'></div><div id='ot_render_public_key_"+oy_broadcast_hash+"' style='display:none;'>"+oy_render_payload[5]+"</div><div style='position:relative;top:0;left:calc(4vh + 1.5%);padding:0.5vh 1vh;border-radius:0.15vh;background-color: "+ot_panel_color+";color:#000000;min-height:3vh;display: inline-flex;align-items: center;' onmouseover='this.style.cursor = \"pointer\"' onclick='ot_reply(\""+oy_broadcast_hash+"\")'><div id='ot_render_content_"+oy_broadcast_hash+"' style='display:block;max-width:65vh;word-wrap: break-word;'>"+oy_render_payload[3]+"</div><div style='position:absolute;right:0;top:50%;transform: translate(calc(100% + 0.8vh), -50%);font-size:0.9vh;color: #dbdbdb'>[<span id='ot_render_stats_"+oy_broadcast_hash+"'>"+ot_render_stats+"</span>]</div></div></div><br>";
 
     let oy_element = document.createElement("div");
     oy_element.setAttribute('id', "ot_render_"+oy_broadcast_hash);
@@ -36,6 +59,7 @@ function ot_render(oy_broadcast_hash, oy_render_payload) {
         document.getElementById("ot_render").insertBefore(oy_element, document.getElementById("ot_render_"+oy_hash_last));
     }
     oy_avatar_gen(oy_render_payload[5], document.getElementById("ot_render_avatar_"+oy_broadcast_hash));
+    if (ot_reply.length>0) oy_avatar_gen(ot_reply_public_key, document.getElementById("ot_reply_avatar_"+oy_broadcast_hash));
 
     window.OT_RENDER_KEEP.push([oy_broadcast_hash, oy_render_payload[6]]);
     window.OT_RENDER_KEEP.sort(function(a, b) {
@@ -79,13 +103,23 @@ function ot_input() {
 }
 
 function ot_reply(oy_broadcast_hash) {
-    console.log(oy_broadcast_hash);
+    let ot_render_content_object = document.getElementById("ot_render_content_"+oy_broadcast_hash);
+    if (!ot_render_content_object) return false;
     window.OT_REPLY = "OT_REPLY_"+oy_broadcast_hash;
-    document.getElementById("ot_broadcast_reply").innerHTML = document.getElementById("ot_render_content_"+oy_broadcast_hash).innerHTML;
+    let ot_reply_public_key = document.getElementById("ot_render_public_key_"+oy_broadcast_hash).innerHTML;
+    let ot_reply_color;
+    if (ot_reply_public_key===window.OY_KEY_BRUNO) ot_reply_color = window.OT_MSG_COLOR_BRUNO;
+    else if (ot_reply_public_key===window.OY_WALLET_PUBLIC) ot_reply_color = window.OT_MSG_COLOR_SELF;
+    else ot_reply_color = window.OT_MSG_COLOR_MAIN;
+    document.getElementById("ot_broadcast_reply").innerHTML = "<div id='ot_broadcast_reply_avatar_"+oy_broadcast_hash+"' style='position:absolute;top:0;left:0;width:1.9vh;height:1.9vh;transform:translateX(-100%)'></div><div style='background-color:"+ot_reply_color+";white-space: nowrap;overflow:hidden;padding:0.25vh 0.75vh;height:calc(100% - 0.5vh);display: inline-flex;align-items: center;max-width:100%;' onmouseover='this.style.cursor = \"pointer\"' onclick='ot_reply_reset()'>"+ot_render_content_object.innerHTML+"</div>";
+    document.getElementById("ot_broadcast_reply").style.display = "block";
+    oy_avatar_gen(ot_reply_public_key, document.getElementById("ot_broadcast_reply_avatar_"+oy_broadcast_hash));
 }
 
 function ot_reply_reset() {
     window.OT_REPLY = "";
+    document.getElementById("ot_broadcast_reply").innerHTML = "";
+    document.getElementById("ot_broadcast_reply").style.display = "none";
 }
 
 function ot_broadcast() {
@@ -109,6 +143,7 @@ function ot_broadcast() {
         if (ot_render_stats_object) {
             ot_render_stats_object.innerHTML = "E"+(parseInt(ot_render_stats_object.innerHTML.substr(1))+1);
             ot_render_stats_object.style.color = null;
+            document.getElementById("ot_render_cont_"+oy_broadcast_hash).style.opacity = 1;
         }
     });
 }
@@ -217,22 +252,21 @@ function ot_close() {
 
 function ot_maintain() {
     if (window.OY_BLOCK_HASH!==null&&typeof(window.OY_BLOCK[2][window.OT_CHANNEL_ID])!=="undefined") {
-        let ot_online = 0;
-        let ot_watching = 0;
-        for (let oy_node_short in window.OY_CHANNEL_TOP[window.OT_CHANNEL_ID]) {
-            if (window.OY_CHANNEL_TOP[window.OT_CHANNEL_ID][oy_node_short][3]===true) ot_online++;
-            else ot_watching++;
-        }
 
-        if (window.OY_WALLET_PUBLIC!==null&&(window.OY_BLOCK[2][window.OT_CHANNEL_ID][2].indexOf(window.OY_WALLET_PUBLIC)!==-1||window.OY_BLOCK[2][window.OT_CHANNEL_ID][3].indexOf(window.OY_WALLET_PUBLIC)!==-1)) ot_online++;//TODO use main protocol function which uses space optimization
-        else ot_watching++;
+        let ot_top_count = oy_channel_top_count(window.OT_CHANNEL_ID);
 
-        document.getElementById("ot_channel_stats").innerHTML = "["+(window.OY_BLOCK[2][window.OT_CHANNEL_ID][2].length+window.OY_BLOCK[2][window.OT_CHANNEL_ID][3].length)+"&nbsp;members&nbsp;/&nbsp;"+ot_online+"&nbsp;online&nbsp;/&nbsp;"+ot_watching+"&nbsp;watching]";
+        if (window.OY_WALLET_PUBLIC!==null&&(window.OY_BLOCK[2][window.OT_CHANNEL_ID][2].indexOf(window.OY_WALLET_PUBLIC)!==-1||window.OY_BLOCK[2][window.OT_CHANNEL_ID][3].indexOf(window.OY_WALLET_PUBLIC)!==-1)) ot_top_count[0]++;//TODO use main protocol function which uses space optimization
+        else ot_top_count[1]++;
+
+        document.getElementById("ot_channel_stats").innerHTML = "["+(window.OY_BLOCK[2][window.OT_CHANNEL_ID][2].length+window.OY_BLOCK[2][window.OT_CHANNEL_ID][3].length)+"&nbsp;members&nbsp;/&nbsp;"+ot_top_count[0]+"&nbsp;online&nbsp;/&nbsp;"+ot_top_count[1]+"&nbsp;watching]";
     }
 }
 
 function ot_init() {
     window.OT_CHANNEL_ID = "936e62ced6eac3b08e236a9623929dbb9564bef0";
+    window.OT_MSG_COLOR_MAIN = "#d6d6d6";
+    window.OT_MSG_COLOR_SELF = "#bbbbbb";
+    window.OT_MSG_COLOR_BRUNO = "#7bb3ee";
 
     window.OT_RENDER_KEEP = [];
     window.OT_PEERS_NULL = null;

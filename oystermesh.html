@@ -959,7 +959,7 @@
             </div>
         </div>
         <div id="ot_render_cont" style="position:absolute;top:3vh;left:0;width:100%;height:calc(100% - 11vh);background-color: #fdfdfd;overflow:scroll">
-            <div id="ot_render" style="position:absolute;top:0;left:calc(9.5% - 2vh);width:70%;height:100%;">
+            <div id="ot_render" style="position:absolute;top:0;left:calc(9.5% - 2vh);width:70%;height:100%;font-size:1.7vh;">
                 <br>
                 <div style='position:relative;'><div style='position:absolute;left:0;top:0;width:4vh;height:4vh;background-color: #414141'></div><div style='position:relative;top:0;left:calc(4vh + 1.5%);padding:0.5vh 1vh;border-radius:0.15vh;background-color: #414141;color:#9b9b9b;min-height:3vh;display: inline-flex;align-items: center;'><div>Discussion Top</div><div style='position:absolute;right:0;top:50%;transform: translate(calc(100% + 0.8vh), -50%);font-size:0.9vh;color: #dbdbdb'>[null]</div></div></div><br>
             </div>
@@ -984,10 +984,8 @@
         <div id="ot_bar" style="position:absolute;bottom:0;width:100%;height:8vh;background-color: #606060;border-bottom-left-radius: 0.5vh;border-bottom-right-radius: 0.5vh;z-index: 100;">
             <div id="ot_broadcast_cont" class="oy_center_both" style="top:55%;width:90%;height:90%;">
                 <div id="ot_broadcast_avatar_cont" class="oy_center_both" style="left:5%;width:4vh;height:4vh;background-color: #2a2a2a"></div>
-                <div id="ot_broadcast_reply" style="position:absolute;left:50%;bottom:calc(50% + 1.1vh);transform: translate(-54%, -50%);width:75%;height:1.7vh;font-size:0.9vh;background-color:#d6d6d6;color:#000000">
-                    BOB
-                </div>
-                <textarea id="ot_broadcast_input" class="oy_center_both" style="transform: translate(-54%, -50%);width:75%;height:3.7vh;font-size:1.5vh;" oninput="ot_input()"></textarea>
+                <div id="ot_broadcast_reply" style="position:absolute;left:50%;bottom:calc(50% + 1.2vh);transform: translate(-54%, -50%);width:calc(75% - 4vh);height:1.9vh;font-size:1.2vh;color:#000000;display:none;"></div>
+                <textarea id="ot_broadcast_input" class="oy_center_both" style="transform: translate(-54%, -50%);width:75%;height:3.7vh;font-size:1.6vh;" oninput="ot_input()"></textarea>
                 <div id="ot_broadcast_button_cont" style="position:absolute;width:15%;height:100%;top:0;right:0;display:block;">
                     <div id="ot_broadcast_button" align="center" class="oy_center_both oy_button oy_button_all_dull" style="width:auto;height:auto;" onclick="ot_broadcast()">
                         <div id="ot_broadcast_button_inner" style="position:relative;top:-3%;">

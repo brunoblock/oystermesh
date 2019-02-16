@@ -56,7 +56,7 @@ window.OY_BLOCK_LOOP = 200;//a lower value means more opportunity within the 10 
 window.OY_CHANNEL_KEEPTIME = 15;//channel bearing nodes are expected to broadcast a logic_all packet within this interval
 window.OY_CHANNEL_FORGETIME = 60;//seconds since last signed message from channel bearing node
 window.OY_CHANNEL_RECOVERTIME = 30;//second interval between channel recovery requests per node, should be at least MESH_EDGE*2
-window.OY_CHANNEL_RESPOND_MAX = 5;//max amount of broadcast payloads to send in response to a channel recover request
+window.OY_CHANNEL_RESPOND_MAX = 100;//max amount of broadcast payloads to send in response to a channel recover request, divided by online count
 window.OY_CHANNEL_BROADCAST_PACKET_MAX = 5000;//maximum size for a packet that is routed via OY_CHANNEL_BROADCAST (OY_LOGIC_ALL)
 window.OY_CHANNEL_ALLOWANCE = 8;//broadcast allowance in seconds per public key, an anti-spam mechanism to prevent abuse of OY_LOGIC_ALL
 window.OY_KEY_BRUNO = "XLp6_wVPBF3Zg-QNRkEj6U8bOYEZddQITs1n2pyeRqwOG5k9w_1A-RMIESIrVv_5HbvzoLhq-xPLE7z2na0C6M";//prevent impersonation
@@ -701,7 +701,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                     return false;
                 }
                 oy_channel_respond.sort(function(){return 0.5 - Math.random()});
-                while (oy_channel_respond.length>window.OY_CHANNEL_RESPOND_MAX) oy_channel_respond.pop();
+                let oy_respond_max = Math.ceil(window.OY_CHANNEL_RESPOND_MAX/Math.max(oy_channel_top_count(oy_data_payload[2])[0], 1));
+                while (oy_channel_respond.length>oy_respond_max) oy_channel_respond.pop();
                 oy_data_route("OY_LOGIC_FOLLOW", "OY_CHANNEL_RESPOND", [[], oy_data_payload[0], oy_data_payload[2], oy_channel_respond]);
             }
         }
@@ -1658,6 +1659,16 @@ function oy_channel_top(oy_channel_id, oy_passport_passive, oy_channel_approved)
     }
 }
 
+function oy_channel_top_count(oy_channel_id) {
+    let oy_online = 0;
+    let oy_watching = 0;
+    for (let oy_node_short in window.OY_CHANNEL_TOP[oy_channel_id]) {
+        if (window.OY_CHANNEL_TOP[oy_channel_id][oy_node_short][3]===true) oy_online++;
+        else oy_watching++;
+    }
+    return [oy_online, oy_watching];
+}
+
 //checks if the public key is on the admin or approve list in the current block
 function oy_channel_approved(oy_channel_id, oy_key_public) {
     //TODO the public key might need to get referenced from the pearl wallet list section of the block, to save block space
@@ -1817,12 +1828,9 @@ function oy_engine(oy_thread_track) {
     let oy_hash_keep = [];
     for (let oy_channel_id in window.OY_CHANNEL_KEEP) {
         if (typeof(window.OY_CHANNEL_TOP[oy_channel_id])==="undefined") continue;
-        let oy_top_count = 0;
-        for (let oy_node_short in window.OY_CHANNEL_TOP[oy_channel_id]) {
-            if (window.OY_CHANNEL_TOP[oy_channel_id][oy_node_short][3]===true) oy_top_count++;
-        }
+        let oy_top_count = oy_channel_top_count(oy_channel_id);
         for (let oy_broadcast_hash in window.OY_CHANNEL_KEEP[oy_channel_id]) {
-            if (typeof(window.OY_CHANNEL_LISTEN[oy_channel_id])!=="undefined"&&window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash][7].length>=Math.floor(oy_top_count*0.5)) {
+            if (typeof(window.OY_CHANNEL_LISTEN[oy_channel_id])!=="undefined"&&window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash][7].length>=Math.floor(oy_top_count[0]*0.5)) {
                 oy_hash_keep.push(oy_broadcast_hash);
                 if (typeof(window.OY_CHANNEL_RENDER[oy_channel_id])==="undefined") window.OY_CHANNEL_RENDER[oy_channel_id] = {};
                 if (typeof(window.OY_CHANNEL_RENDER[oy_channel_id][oy_broadcast_hash])==="undefined") {
