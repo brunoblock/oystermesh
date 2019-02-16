@@ -942,7 +942,8 @@
     <div id="oy_cover" style="position:absolute;top:0;left:0;width:100%;height:100%;background-color:#0f0f0f;opacity:0.85;z-index:2000;display:block"></div>
     <div id="oy_dapper" style="position:absolute;top:50%;left:50%;transform: translate(-50%, -50%);background-color: #000000;border:0.2vh solid #141414;border-radius:0.4vh;width:90vh;height:96%;opacity:1;z-index: 4000;display: block">
         <div id="ot_top" style="position:absolute;top:0;left:0;width:100%;height:3vh;background-color: #606060;border-top-left-radius: 0.5vh;border-top-right-radius: 0.5vh;">
-            <div id="ot_peers_null" align="center" class="oy_center_both" style="width:12vh;height:80%;background-color: #c37b2c;color:#606060;border-radius:0.15vh;font-size:2vh;font-family: geo_med, sans-serif;display:none;">
+            <div id="ot_channel_stats" align="center" class="oy_center_both" style="width:50%;font-size:1.5vh;color:#dadada;display:none;"></div>
+            <div id="ot_peers_null" align="center" class="oy_center_both" style="width:12vh;height:80%;background-color: #c37b2c;color:#dadada;border-radius:0.15vh;font-size:2vh;font-family: geo_med, sans-serif;display:none;">
                 <div class="oy_center_both">NO&nbsp;PEERS</div>
             </div>
             <div id="ot_rebuild_progress" align="center" class="oy_center_both" style="width:12vh;height:80%;background-color: #3094f4;border-radius:0.15vh;font-size:1.7vh;font-family: geo_med, sans-serif;display:none;">
@@ -983,7 +984,10 @@
         <div id="ot_bar" style="position:absolute;bottom:0;width:100%;height:8vh;background-color: #606060;border-bottom-left-radius: 0.5vh;border-bottom-right-radius: 0.5vh;z-index: 100;">
             <div id="ot_broadcast_cont" class="oy_center_both" style="top:55%;width:90%;height:90%;">
                 <div id="ot_broadcast_avatar_cont" class="oy_center_both" style="left:5%;width:4vh;height:4vh;background-color: #2a2a2a"></div>
-                <textarea id="ot_broadcast_input" class="oy_center_both" style="transform: translate(-54%, -50%);height:3.7vh;width:75%;font-size:1.5vh;" oninput="ot_input()"></textarea>
+                <div id="ot_broadcast_reply" style="position:absolute;left:50%;bottom:calc(50% + 1.1vh);transform: translate(-54%, -50%);width:75%;height:1.7vh;font-size:0.9vh;background-color:#d6d6d6;color:#000000">
+                    BOB
+                </div>
+                <textarea id="ot_broadcast_input" class="oy_center_both" style="transform: translate(-54%, -50%);width:75%;height:3.7vh;font-size:1.5vh;" oninput="ot_input()"></textarea>
                 <div id="ot_broadcast_button_cont" style="position:absolute;width:15%;height:100%;top:0;right:0;display:block;">
                     <div id="ot_broadcast_button" align="center" class="oy_center_both oy_button oy_button_all_dull" style="width:auto;height:auto;" onclick="ot_broadcast()">
                         <div id="ot_broadcast_button_inner" style="position:relative;top:-3%;">
@@ -1260,6 +1264,7 @@
             window.OY_MESH_RANGETIME = 30;
             window.OY_DEST_RADIO = "oy_dest_view";
 
+            window.OY_MAINTAIN_TRIGGER = new Event('oy_maintain_trigger');//trigger-able event for maintain cadence
             window.OY_COVER = "oy_dapper";//false
             window.OY_WALLET_PRIVATE = null;
             window.OY_WALLET_PUBLIC = null;
@@ -1411,6 +1416,8 @@
     }
 
     function oy_maintain() {
+        document.dispatchEvent(window.OY_MAINTAIN_TRIGGER);
+
         let oy_time_local = Date.now()/1000|0;
 
         let oy_avg_latency = [];
@@ -1557,7 +1564,7 @@
             document.getElementById("oy_peer_count_cont").style.backgroundColor = null;
         }
         document.getElementById("oy_blacklisted").innerHTML = ""+Object.keys(window.OY_BLACKLIST).length;
-        setTimeout("oy_maintain()", 250);
+        setTimeout("oy_maintain()", 500);
     }
 
     function oy_console_local(oy_console_msg) {

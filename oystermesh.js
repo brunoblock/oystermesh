@@ -4,7 +4,7 @@
 // License: GNU GPLv3
 
 // GLOBAL VARS
-window.OY_MESH_DYNASTY = "BRUNO_GENESIS_V1_TEST";//mesh dynasty definition, changing this will cause a hard-fork
+window.OY_MESH_DYNASTY = "BRUNO_GENESIS_V1";//mesh dynasty definition, changing this will cause a hard-fork
 window.OY_MESH_EDGE = 10;//maximum seconds that it should take for a transaction to reach the furthest edge-to-edge distance of the mesh, this variable should stay at 10
 window.OY_MESH_FLOW = 128000;//characters per second allowed per peer, and for all aggregate non-peer nodes
 window.OY_MESH_MEASURE = 10;//seconds by which to measure mesh flow, larger means more tracking of nearby node and peer activity
