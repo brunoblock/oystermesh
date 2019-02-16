@@ -9,6 +9,8 @@
     <script src="oy_dapper/oystertalk.js"></script>
     <script src="oy_resources/d3.v3.min.js"></script>
     <script src="oy_resources/blockies.js"></script>
+    <script src="oy_resources/linkify.min.js"></script>
+    <script src="oy_resources/linkify-string.min.js"></script>
     <base target="_blank">
     <style type="text/css">
         @font-face {
@@ -245,7 +247,7 @@
 
             .oy_shell_cont_img {
                 position: absolute;
-                top: 6vh;
+                top: 2.4vh;
                 left: 50%;
                 height: 27vh;
                 transform: translateX(-50%);
@@ -266,9 +268,9 @@
                 position:absolute;
                 left:50%;
                 transform:translateX(-50%);
-                top:35vh;
-                width: 110vh;
-                height: 58vh;
+                top:30.5vh;
+                width: 123vh;
+                height: 65vh;
                 z-index: 1000;
             }
 
@@ -319,7 +321,7 @@
 
             .oy_box {
                 position:absolute;
-                bottom:14%;
+                bottom:11%;
                 left:41%;
                 width:32.5%;
                 height:30%;
@@ -329,7 +331,7 @@
 
             .oy_mesh_glue {
                 position:absolute;
-                bottom:14%;
+                bottom:11%;
                 left:23.5%;
                 width:14%;
                 height:30%;
@@ -409,12 +411,12 @@
                 font-size:1.6vh;
             }
 
-            .oy_pull_stats {
+            .oy_data_stats {
                 position:absolute;
                 top:17%;
                 width:50%;
                 height:100%;
-                font-size:1.1vh;
+                font-size:1.3vh;
             }
 
             .oy_wallet_gen_pass_before {
@@ -519,7 +521,7 @@
                 left:0;
                 bottom:0;
                 width:100%;
-                height:5%;
+                height:3%;
                 color:#000;
                 font-size: 1.2vh;
             }
@@ -773,12 +775,12 @@
                 font-size:1.6vw;
             }
 
-            .oy_pull_stats {
+            .oy_data_stats {
                 position:absolute;
                 top:17%;
                 width:50%;
                 height:100%;
-                font-size:1.1vw;
+                font-size:1.3vw;
             }
 
             #oy_console {
@@ -941,7 +943,7 @@
 <div id="front" class="oy_slide" style="height:100%">
     <div id="oy_cover" style="position:absolute;top:0;left:0;width:100%;height:100%;background-color:#0f0f0f;opacity:0.85;z-index:2000;display:block"></div>
     <div id="oy_dapper" style="position:absolute;top:50%;left:50%;transform: translate(-50%, -50%);background-color: #000000;border:0.2vh solid #141414;border-radius:0.4vh;width:90vh;height:96%;opacity:1;z-index: 4000;display: block">
-        <div id="ot_top" style="position:absolute;top:0;left:0;width:100%;height:3vh;background-color: #606060;border-top-left-radius: 0.5vh;border-top-right-radius: 0.5vh;">
+        <div id="oy_dapper_control" style="position:absolute;top:0;left:0;width:100%;height:3vh;background-color: #606060;border-top-left-radius: 0.5vh;border-top-right-radius: 0.5vh;">
             <div id="ot_channel_stats" align="center" class="oy_center_both" style="width:50%;font-size:1.5vh;color:#dadada;display:none;"></div>
             <div id="ot_peers_null" align="center" class="oy_center_both" style="width:12vh;height:80%;background-color: #c37b2c;color:#dadada;border-radius:0.15vh;font-size:2vh;font-family: geo_med, sans-serif;display:none;">
                 <div class="oy_center_both">NO&nbsp;PEERS</div>
@@ -949,6 +951,13 @@
             <div id="ot_rebuild_progress" align="center" class="oy_center_both" style="width:12vh;height:80%;background-color: #3094f4;border-radius:0.15vh;font-size:1.7vh;font-family: geo_med, sans-serif;display:none;">
                 <div id="ot_rebuild_progress_inner" style="position:absolute;top:50%;transform:translateY(-50%);right:5%;width:90%;height:70%;background-color:#606060;display: block"></div>
                 <div class="oy_center_both" style="width:90%;height:70%;color:#3094f4;font-size:1.3vh;">REBUILDING</div>
+            </div>
+            <div id="ot_toggle_cont" style="position:absolute;width:12%;height:100%;top:0;right:9%;">
+                <div id="ot_toggle" align="center" class="oy_center_both oy_button oy_button_reset_active" style="width:auto;height:auto;" onclick="oy_dapper_toggle()">
+                    <div id="ot_toggle_inner" style="position:relative;top:-3%;">
+                        &nbsp;&nbsp;MINIMIZE&nbsp;&nbsp;
+                    </div>
+                </div><br>
             </div>
             <div id="ot_close_cont" style="position:absolute;width:12%;height:100%;top:0;right:0;">
                 <div id="ot_close" align="center" class="oy_center_both oy_button oy_button_alt_active" style="width:auto;height:auto;" onclick="ot_close();oy_dapper_close()">
@@ -958,50 +967,43 @@
                 </div><br>
             </div>
         </div>
-        <div id="ot_render_cont" style="position:absolute;top:3vh;left:0;width:100%;height:calc(100% - 11vh);background-color: #fdfdfd;overflow:scroll">
-            <div id="ot_render" style="position:absolute;top:0;left:calc(9.5% - 2vh);width:70%;height:100%;font-size:1.7vh;">
-                <br>
-                <div style='position:relative;'><div style='position:absolute;left:0;top:0;width:4vh;height:4vh;background-color: #414141'></div><div style='position:relative;top:0;left:calc(4vh + 1.5%);padding:0.5vh 1vh;border-radius:0.15vh;background-color: #414141;color:#9b9b9b;min-height:3vh;display: inline-flex;align-items: center;'><div>Discussion Top</div><div style='position:absolute;right:0;top:50%;transform: translate(calc(100% + 0.8vh), -50%);font-size:0.9vh;color: #dbdbdb'>[null]</div></div></div><br>
+        <div id="oy_dapper_content">
+            <div id="ot_render_cont" style="position:absolute;top:3vh;left:0;width:100%;height:calc(100% - 11vh);background-color: #fdfdfd;overflow:scroll">
+                <div id="ot_render" style="position:absolute;top:0;left:calc(9.5% - 2vh);width:70%;height:100%;font-size:1.7vh;">
+                    <br>
+                    <div style='position:relative;'><div style='position:absolute;left:0;top:0;width:4vh;height:4vh;background-color: #414141'></div><div style='position:relative;top:0;left:calc(4vh + 1.5%);padding:0.5vh 1vh;border-radius:0.15vh;background-color: #414141;color:#9b9b9b;min-height:3vh;display: inline-flex;align-items: center;'><div>Discussion Top</div><div style='position:absolute;right:0;top:50%;transform: translate(calc(100% + 0.8vh), -50%);font-size:0.9vh;color: #dbdbdb'>[null]</div></div></div><br>
+                </div>
             </div>
-        </div>
-        <div id="ot_bar_cover" style="position:absolute;bottom:0;width:100%;height:8vh;opacity:0.85;background-color:#000000;border-bottom-left-radius: 0.5vh;border-bottom-right-radius: 0.5vh;z-index: 200;">
-            <div id="ot_wallet_load_cont" style="display:block;">
-                <div id="ot_wallet_load" align="center" class="oy_center_both oy_button oy_button_go_active" style="width:auto;height:auto;" onclick="oy_wallet_open(function(){ot_load()})">
-                    <div style="position:relative;top:-3%;">
-                        &nbsp;&nbsp;LOAD&nbsp;WALLET&nbsp;&nbsp;
-                    </div>
-                </div><br>
-            </div>
-            <div id="ot_approval_cont" style="display:none;">
-                <div id="ot_approval" align="center" class="oy_center_both oy_button oy_button_alt_active" style="width:auto;height:auto;" onclick="ot_join()">
-                    <div style="position:relative;top:-3%;">
-                        &nbsp;&nbsp;JOIN&nbsp;GROUP&nbsp;&nbsp;
-                    </div>
-                </div><br>
-            </div>
-            <div id="ot_message" align="center" class="oy_center_both" style="width: 90%;"></div>
-        </div>
-        <div id="ot_bar" style="position:absolute;bottom:0;width:100%;height:8vh;background-color: #606060;border-bottom-left-radius: 0.5vh;border-bottom-right-radius: 0.5vh;z-index: 100;">
-            <div id="ot_broadcast_cont" class="oy_center_both" style="top:55%;width:90%;height:90%;">
-                <div id="ot_broadcast_avatar_cont" class="oy_center_both" style="left:5%;width:4vh;height:4vh;background-color: #2a2a2a"></div>
-                <div id="ot_broadcast_reply" style="position:absolute;left:50%;bottom:calc(50% + 1.2vh);transform: translate(-54%, -50%);width:calc(75% - 4vh);height:1.9vh;font-size:1.2vh;color:#000000;display:none;"></div>
-                <textarea id="ot_broadcast_input" class="oy_center_both" style="transform: translate(-54%, -50%);width:75%;height:3.7vh;font-size:1.6vh;" oninput="ot_input()"></textarea>
-                <div id="ot_broadcast_button_cont" style="position:absolute;width:15%;height:75%;top:0;right:0;display:block;">
-                    <div id="ot_broadcast_button" align="center" class="oy_center_both oy_button oy_button_all_dull" style="width:auto;height:auto;" onclick="ot_broadcast()">
-                        <div id="ot_broadcast_button_inner" style="position:relative;top:-3%;">
-                            &nbsp;&nbsp;BROADCAST&nbsp;&nbsp;
+            <div id="ot_bar_cover" style="position:absolute;bottom:0;width:100%;height:8vh;opacity:0.85;background-color:#000000;border-bottom-left-radius: 0.5vh;border-bottom-right-radius: 0.5vh;z-index: 200;">
+                <div id="ot_wallet_load_cont" style="display:block;">
+                    <div id="ot_wallet_load" align="center" class="oy_center_both oy_button oy_button_go_active" style="width:auto;height:auto;" onclick="oy_wallet_open(function(){ot_load()})">
+                        <div style="position:relative;top:-3%;">
+                            &nbsp;&nbsp;LOAD&nbsp;WALLET&nbsp;&nbsp;
                         </div>
                     </div><br>
                 </div>
-                <div id="ot_broadcast_limit" style="position:absolute;width:12%;bottom:21%;right:0;font-size:1.2vh;display:block;">
-                    [0]
-                </div>
-                <div id="ot_broadcast_data_button_cont" style="position:absolute;width:11%;height:60%;bottom:0;right:0;transform:scale(0.8);display:block;">
-                    <div id="ot_broadcast_data_button" align="center" class="oy_center_both oy_button oy_button_all_dull" style="width:auto;height:auto;" onclick="ot_broadcast()">
-                        <div id="ot_broadcast_data_button_inner" style="position:relative;top:-3%;">
-                            &nbsp;&nbsp;DATA&nbsp;&nbsp;
+                <div id="ot_approval_cont" style="display:none;">
+                    <div id="ot_approval" align="center" class="oy_center_both oy_button oy_button_alt_active" style="width:auto;height:auto;" onclick="ot_join()">
+                        <div style="position:relative;top:-3%;">
+                            &nbsp;&nbsp;JOIN&nbsp;GROUP&nbsp;&nbsp;
                         </div>
                     </div><br>
+                </div>
+                <div id="ot_message" align="center" class="oy_center_both" style="width: 90%;"></div>
+            </div>
+            <div id="ot_bar" style="position:absolute;bottom:0;width:100%;height:8vh;background-color: #606060;border-bottom-left-radius: 0.5vh;border-bottom-right-radius: 0.5vh;z-index: 100;">
+                <div id="ot_broadcast_cont" class="oy_center_both" style="top:55%;width:90%;height:90%;">
+                    <div id="ot_broadcast_avatar_cont" class="oy_center_both" style="left:5%;width:4vh;height:4vh;background-color: #2a2a2a"></div>
+                    <div id="ot_broadcast_reply" style="position:absolute;left:50%;bottom:calc(50% + 1.2vh);transform: translate(-54%, -50%);width:calc(75% - 4vh);height:1.9vh;font-size:1.2vh;color:#000000;display:none;"></div>
+                    <textarea id="ot_broadcast_input" class="oy_center_both" style="transform: translate(-54%, -50%);width:75%;height:3.7vh;font-size:1.6vh;" oninput="ot_input()"></textarea>
+                    <div id="ot_broadcast_button_cont" style="position:absolute;width:15%;height:100%;top:0;right:0;display:block;">
+                        <div id="ot_broadcast_button" align="center" class="oy_center_both oy_button oy_button_all_dull" style="width:auto;height:auto;" onclick="ot_broadcast()">
+                            <div id="ot_broadcast_button_inner" style="position:relative;top:-3%;">
+                                &nbsp;&nbsp;BROADCAST&nbsp;&nbsp;
+                            </div>
+                        </div><br>
+                    </div>
+                    <div id="ot_broadcast_limit" style="position:absolute;width:12.5%;top:6%;right:0;font-size:1.2vh;display:block;"></div>
                 </div>
             </div>
         </div>
@@ -1110,12 +1112,12 @@
                     <div class="oy_center_both" style="width:100%;">
                         <div id="oy_tooltip_push" class="oy_tooltip_text" style="display:none;">Copy to clipboard</div>
                         <div id="oy_tooltip_push_warn" class="oy_tooltip_text_warn">Handle not copied!</div>
-                        <input id="oy_push_superhandle" type="text" class="oy_superhandle_sub" style="text-align:center;width:98%;" onclick="oy_push_superhandle_copy()" onmouseout="oy_push_superhandle_reset()" readonly="readonly" value="" />
+                        <input id="oy_push_superhandle" type="text" class="oy_superhandle_sub" style="text-align:center;width:90%;" onclick="oy_push_superhandle_copy()" onmouseout="oy_push_superhandle_reset()" readonly="readonly" value="" />
                     </div>
                 </div>
                 <div id="oy_push_stats_cont" class="oy_border oy_box" style="left:5%;width:15%;">
                     <div class="oy_description">STATISTICS</div>
-                    <div id="oy_push_stats_alpha" class="oy_pull_stats" style="left:7.5%">
+                    <div id="oy_push_stats_alpha" class="oy_data_stats" style="left:7.5%">
                         AVG&nbsp;HOP:&nbsp;<span id="oy_push_stats_avg_hop" style="font-weight:bold">0</span><br>
                         TIME:&nbsp;<span id="oy_push_stats_elapsed" style="font-weight:bold">0&nbsp;sec</span>
                     </div>
@@ -1128,22 +1130,22 @@
                 </div>
                 <div class="oy_border oy_box">
                     <div class="oy_description">FILE&nbsp;UPLOAD</div>
-                    <div style="position:absolute;top:25%;left:5%;width:94%;overflow:hidden">
+                    <div style="position:absolute;top:32%;left:5%;width:94%;overflow:hidden">
                         <input type="file" id="oy_file_upload" onclick="oy_push_reset()" onmouseenter="oy_push_reset_handle_enter()" onmouseleave="oy_push_reset_handle_leave()" />
                     </div>
                 </div>
-                <div id="oy_push_execute" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:32%;right:5%;width:18%;height:14%;" onclick="oy_push_execute()">
-                    <div style="position:relative;top:-3%;">
+                <div id="oy_push_execute" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:29%;right:5%;width:18%;height:12%;" onclick="oy_push_execute()">
+                    <div style="position:relative;">
                         MESH&nbsp;PUSH
                     </div>
                 </div>
-                <div id="oy_push_halt" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:14%;right:15.5%;width:7.5%;height:14%;" onclick="oy_push_halt()">
-                    <div style="position:relative;top:-3%;">
+                <div id="oy_push_halt" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:11%;right:15.5%;width:7.5%;height:12%;" onclick="oy_push_halt()">
+                    <div style="position:relative;">
                         HALT
                     </div>
                 </div>
-                <div id="oy_push_reset" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:14%;right:5%;width:9.5%;height:14%;" onclick="oy_push_reset()" onmouseenter="oy_push_reset_handle_enter()" onmouseleave="oy_push_reset_handle_leave()">
-                    <div style="position:relative;top:-3%;">
+                <div id="oy_push_reset" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:11%;right:5%;width:9.5%;height:12%;" onclick="oy_push_reset()" onmouseenter="oy_push_reset_handle_enter()" onmouseleave="oy_push_reset_handle_leave()">
+                    <div style="position:relative;">
                         RESET
                     </div>
                 </div>
@@ -1152,16 +1154,16 @@
                 <div align="center" class="oy_border oy_superhandle">
                     <div class="oy_description_handle">HANDLE</div>
                     <div class="oy_center_both" style="width:100%;">
-                        <input id="oy_pull_superhandle" type="text" class="oy_superhandle_sub" style="text-align:center;width:98%;" onclick="oy_pull_reset_handle_click()" oninput="oy_pull_reset_handle_blur()" onchange="oy_pull_reset_handle_blur()" value="" />
+                        <input id="oy_pull_superhandle" type="text" class="oy_superhandle_sub" style="text-align:center;width:90%;" onclick="oy_pull_reset_handle_click()" oninput="oy_pull_reset_handle_blur()" onchange="oy_pull_reset_handle_blur()" value="" />
                     </div>
                 </div>
                 <div id="oy_pull_stats_cont" class="oy_border oy_box" style="left:5%;">
                     <div class="oy_description">STATISTICS</div>
-                    <div id="oy_pull_stats_alpha" class="oy_pull_stats" style="left:3.5%">
+                    <div id="oy_pull_stats_alpha" class="oy_data_stats" style="left:3.5%">
                         AVG&nbsp;HOP:&nbsp;<span id="oy_pull_stats_avg_hop" style="font-weight:bold">0</span><br>
                         TIME:&nbsp;<span id="oy_pull_stats_elapsed" style="font-weight:bold">0&nbsp;sec</span>
                     </div>
-                    <div id="oy_pull_stats_beta" class="oy_pull_stats" style="right:0">
+                    <div id="oy_pull_stats_beta" class="oy_data_stats" style="right:0">
                         COVERAGE:&nbsp;<span id="oy_pull_stats_coverage" style="font-weight:bold">0%</span><br>
                         CONFLICTS:&nbsp;<span id="oy_pull_stats_conflicts" style="font-weight:bold">0</span>
                     </div>
@@ -1179,24 +1181,24 @@
                         <div style="position:absolute;top:50%;transform: translateY(-50%)"><input id="oy_dest_view" type="radio" style="transform:scale(0.8);" onclick="oy_dest_radio(this.id)">&nbsp;<span id="oy_dest_view_inner">View&nbsp;in&nbsp;browser</span></div>
                         <div style="position:absolute;bottom:0;"><input id="oy_dest_download" type="radio" style="transform:scale(0.8);" onclick="oy_dest_radio(this.id)">&nbsp;<span id="oy_dest_download_inner">Download&nbsp;as&nbsp;file</span></div>
                         <div id="oy_dest_go" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:28%;right:15%;width:18%;height:45%;" onclick="oy_dest_go()">
-                            <div style="position:relative;top:-3%;">
+                            <div style="position:relative;">
                                 GO
                             </div>
                         </div>
                     </div>
                 </div>
-                <div id="oy_pull_execute" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:32%;right:5%;width:18%;height:14%;" onclick="oy_pull_execute()">
-                    <div style="position:relative;top:-3%;">
+                <div id="oy_pull_execute" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:29%;right:5%;width:18%;height:12%;" onclick="oy_pull_execute()">
+                    <div style="position:relative;">
                         MESH&nbsp;PULL
                     </div>
                 </div>
-                <div id="oy_pull_halt" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:14%;right:15.5%;width:7.5%;height:14%;" onclick="oy_pull_halt()">
-                    <div style="position:relative;top:-3%;">
+                <div id="oy_pull_halt" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:11%;right:15.5%;width:7.5%;height:12%;" onclick="oy_pull_halt()">
+                    <div style="position:relative;">
                         HALT
                     </div>
                 </div>
-                <div id="oy_pull_reset" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:14%;right:5%;width:9.5%;height:14%;" onclick="oy_pull_reset()">
-                    <div style="position:relative;top:-3%;">
+                <div id="oy_pull_reset" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:11%;right:5%;width:9.5%;height:12%;" onclick="oy_pull_reset()">
+                    <div style="position:relative;">
                         RESET
                     </div>
                 </div>
@@ -1221,7 +1223,7 @@
                     BEAM&nbsp;FLOW<br>
                     SOAK&nbsp;FLOW<br>
                 </div>
-                <div class="oy_center_hor" style="top:0;width:0.7%;height:95%;background-color: #2a2a2a;">
+                <div class="oy_center_hor" style="top:0;width:0.7%;height:85%;background-color: #2a2a2a;">
                 </div>
                 <div style="position:absolute;right:-2.5%;top:0;width:50%;height:100%;font-weight:bold;">
                     <span id="oy_self_short">null</span><br>
@@ -1272,6 +1274,7 @@
             window.OY_MESH_RANGETIME = 30;
             window.OY_DEST_RADIO = "oy_dest_view";
 
+            window.OY_DAPPER_MINIMIZED = false;
             window.OY_MAINTAIN_TRIGGER = new Event('oy_maintain_trigger');//trigger-able event for maintain cadence
             window.OY_COVER = "oy_dapper";//false
             window.OY_WALLET_PRIVATE = null;
@@ -1852,9 +1855,40 @@
         oy_object.style.backgroundColor = "transparent";
     }
 
+    function oy_dapper_toggle(oy_force_reset) {
+        if (window.OY_DAPPER_MINIMIZED===true||typeof(oy_force_reset)!=="undefined") {
+            window.OY_DAPPER_MINIMIZED = false;
+            document.getElementById("oy_dapper_content").style.display = "block";
+            document.getElementById("oy_dapper").style.height = "90vh";
+            document.getElementById("oy_dapper").style.top = "50%";
+            document.getElementById("oy_dapper").style.backgroundColor = "#000000";
+            document.getElementById("oy_dapper").style.border = "0.2vh solid #141414";
+            document.getElementById("oy_dapper_control").style.backgroundColor = "#606060";
+            document.getElementById("oy_cover").style.display = "block";
+            document.getElementById("ot_toggle_inner").innerHTML = "&nbsp;&nbsp;MINIMIZE&nbsp;&nbsp;";
+        }
+        else {
+            window.OY_DAPPER_MINIMIZED = true;
+            document.getElementById("oy_dapper_content").style.display = "none";
+            document.getElementById("oy_dapper").style.height = "0";
+            document.getElementById("oy_dapper").style.top = "calc(100% - 3vh)";
+            document.getElementById("oy_dapper").style.backgroundColor = null;
+            document.getElementById("oy_dapper").style.border = null;
+            document.getElementById("oy_dapper_control").style.backgroundColor = "#3b3b3b";
+            document.getElementById("oy_cover").style.display = "none";
+            document.getElementById("ot_toggle_inner").innerHTML = "&nbsp;&nbsp;RESTORE&nbsp;&nbsp;";
+        }
+    }
+
     function oy_dapper_close() {
         document.getElementById("oy_cover").style.display = "none";
         document.getElementById("oy_dapper").style.display = "none";
+        oy_dapper_toggle(true);
+    }
+
+    function oy_dapper_summon() {
+        document.getElementById("oy_dapper").style.opacity = "0.2";
+        document.getElementById("oy_interface_upload").style.zIndex = "4100";
     }
 
     function oy_top_init() {

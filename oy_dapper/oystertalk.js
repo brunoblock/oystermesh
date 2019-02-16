@@ -43,7 +43,7 @@ function ot_render(oy_broadcast_hash, oy_render_payload) {
         }
     }
 
-    let oy_element_html = ot_append+"<div id='ot_render_cont_"+oy_broadcast_hash+"' style='position:relative;"+ot_render_opacity+"'>"+ot_badge+ot_reply+"<div id='ot_render_avatar_"+oy_broadcast_hash+"' style='position:absolute;left:0;top:0;width:4vh;height:4vh;background-color: #2a2a2a'></div><div id='ot_render_public_key_"+oy_broadcast_hash+"' style='display:none;'>"+oy_render_payload[5]+"</div><div style='position:relative;top:0;left:calc(4vh + 1.5%);padding:0.5vh 1vh;border-radius:0.15vh;background-color: "+ot_panel_color+";color:#000000;min-height:3vh;display: inline-flex;align-items: center;' onmouseover='this.style.cursor = \"pointer\"' onclick='ot_reply(\""+oy_broadcast_hash+"\")'><div id='ot_render_content_"+oy_broadcast_hash+"' style='display:block;max-width:65vh;word-wrap: break-word;'>"+oy_render_payload[3]+"</div><div style='position:absolute;right:0;top:50%;transform: translate(calc(100% + 0.8vh), -50%);font-size:0.9vh;color: #dbdbdb'>[<span id='ot_render_stats_"+oy_broadcast_hash+"'>"+ot_render_stats+"</span>]</div></div></div><br>";
+    let oy_element_html = ot_append+"<div id='ot_render_cont_"+oy_broadcast_hash+"' style='position:relative;"+ot_render_opacity+"'>"+ot_badge+ot_reply+"<div id='ot_render_avatar_"+oy_broadcast_hash+"' style='position:absolute;left:0;top:0;width:4vh;height:4vh;background-color: #2a2a2a'></div><div id='ot_render_public_key_"+oy_broadcast_hash+"' style='display:none;'>"+oy_render_payload[5]+"</div><div style='position:relative;top:0;left:calc(4vh + 1.5%);padding:0.5vh 1vh;border-radius:0.15vh;background-color: "+ot_panel_color+";color:#000000;min-height:3vh;display: inline-flex;align-items: center;' onmouseover='this.style.cursor = \"pointer\"' onclick='ot_reply(\""+oy_broadcast_hash+"\")'><div id='ot_render_content_"+oy_broadcast_hash+"' style='display:block;max-width:65vh;word-wrap: break-word;'>"+linkifyStr(oy_render_payload[3], {attributes:{onclick:"ot_reply_reset(true)"}})+"</div><div style='position:absolute;right:0;top:50%;transform: translate(calc(100% + 0.8vh), -50%);font-size:0.9vh;color: #dbdbdb'>[<span id='ot_render_stats_"+oy_broadcast_hash+"'>"+ot_render_stats+"</span>]</div></div></div><br>";
 
     let oy_element = document.createElement("div");
     oy_element.setAttribute('id', "ot_render_"+oy_broadcast_hash);
@@ -107,7 +107,8 @@ function ot_input() {
         return true;
     }
     window.OT_INPUT_SNAPSHOT = document.getElementById("ot_broadcast_input").value;
-    document.getElementById("ot_broadcast_limit").innerHTML = "["+ot_broadcast_limit+"%]";
+    if (ot_broadcast_limit>=50) document.getElementById("ot_broadcast_limit").innerHTML = "["+ot_broadcast_limit+"%&nbsp;remaining]";
+    else document.getElementById("ot_broadcast_limit").innerHTML = "";
     return true;
 }
 
@@ -123,12 +124,17 @@ function ot_reply(oy_broadcast_hash) {
     document.getElementById("ot_broadcast_reply").innerHTML = "<div id='ot_broadcast_reply_avatar_"+oy_broadcast_hash+"' style='position:absolute;top:0;left:0;width:1.9vh;height:1.9vh;transform:translateX(-100%)'></div><div style='background-color:"+ot_reply_color+";white-space: nowrap;overflow:hidden;padding:0.25vh 0.75vh;height:calc(100% - 0.5vh);display: inline-flex;align-items: center;max-width:100%;' onmouseover='this.style.cursor = \"pointer\"' onclick='ot_reply_reset()'>"+ot_render_content_object.innerHTML.replace(/<br>/g, "")+"</div>";
     document.getElementById("ot_broadcast_reply").style.display = "block";
     oy_avatar_gen(ot_reply_public_key, document.getElementById("ot_broadcast_reply_avatar_"+oy_broadcast_hash));
+
+    document.getElementById("ot_broadcast_input").focus();
 }
 
-function ot_reply_reset() {
-    window.OT_REPLY = "";
-    document.getElementById("ot_broadcast_reply").innerHTML = "";
-    document.getElementById("ot_broadcast_reply").style.display = "none";
+function ot_reply_reset(ot_reply_delay) {
+    if (typeof(ot_reply_delay)!=="undefined") setTimeout("ot_reply_reset()", 100);
+    else {
+        window.OT_REPLY = "";
+        document.getElementById("ot_broadcast_reply").innerHTML = "";
+        document.getElementById("ot_broadcast_reply").style.display = "none";
+    }
 }
 
 function ot_broadcast() {
@@ -155,6 +161,8 @@ function ot_broadcast() {
             document.getElementById("ot_render_cont_"+oy_broadcast_hash).style.opacity = 1;
         }
     });
+
+    document.getElementById("ot_broadcast_input").focus();
 }
 
 function ot_broadcast_freeze(ot_count) {
