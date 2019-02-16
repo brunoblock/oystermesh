@@ -39,7 +39,7 @@ function ot_render(oy_broadcast_hash, oy_render_payload) {
             else if (ot_reply_public_key===window.OY_WALLET_PUBLIC) ot_reply_color = window.OT_MSG_COLOR_SELF;
             else ot_reply_color = window.OT_MSG_COLOR_MAIN;
             ot_append = "<br>";
-            ot_reply = "<div style='position:absolute;top:0;left:7vh;transform: translateY(-100%);height:2.1vh;font-size:1.3vh;opacity:0.6;'><div id='ot_reply_avatar_"+oy_broadcast_hash+"' style='position:absolute;top:0;left:0;width:2.1vh;height:2.1vh;transform:translateX(-99%)'></div><div style='background-color:"+ot_reply_color+";color:#000000;white-space: nowrap;overflow:hidden;padding:0.25vh 0.75vh;height:calc(100% - 0.5vh);display: inline-flex;align-items: center;max-width:55vh;' onmouseover='this.style.cursor = \"pointer\"' onclick='ot_reply(\""+ot_reply_hash+"\")'>"+ot_render_content_object.innerHTML+"</div></div>";
+            ot_reply = "<div style='position:absolute;top:0;left:7vh;transform: translateY(-100%);height:2.1vh;font-size:1.3vh;opacity:0.8;'><div id='ot_reply_avatar_"+oy_broadcast_hash+"' style='position:absolute;top:0;left:0;width:2.1vh;height:2.1vh;transform:translateX(-99%)'></div><div style='background-color:"+ot_reply_color+";color:#000000;white-space: nowrap;overflow:hidden;padding:0.25vh 0.75vh;height:calc(100% - 0.5vh);display: inline-flex;align-items: center;max-width:55vh;' onmouseover='this.style.cursor = \"pointer\"' onclick='ot_reply(\""+ot_reply_hash+"\")'>"+ot_render_content_object.innerHTML.replace(/<br>/g, "")+"</div></div>";
         }
     }
 
@@ -100,6 +100,15 @@ function ot_input() {
         document.getElementById("ot_broadcast_button").classList.remove("oy_button_all_dull");
         document.getElementById("ot_broadcast_button").classList.add("oy_button_broadcast_active");
     }
+    let ot_broadcast_limit = Math.floor(((oy_base_encode(document.getElementById("ot_broadcast_input").value).length/window.OY_CHANNEL_BROADCAST_PACKET_MAX)*100)/0.7);
+    if (ot_broadcast_limit>=100) {
+        document.getElementById("ot_broadcast_input").value = window.OT_INPUT_SNAPSHOT;
+        ot_input();
+        return true;
+    }
+    window.OT_INPUT_SNAPSHOT = document.getElementById("ot_broadcast_input").value;
+    document.getElementById("ot_broadcast_limit").innerHTML = "["+ot_broadcast_limit+"%]";
+    return true;
 }
 
 function ot_reply(oy_broadcast_hash) {
@@ -111,7 +120,7 @@ function ot_reply(oy_broadcast_hash) {
     if (ot_reply_public_key===window.OY_KEY_BRUNO) ot_reply_color = window.OT_MSG_COLOR_BRUNO;
     else if (ot_reply_public_key===window.OY_WALLET_PUBLIC) ot_reply_color = window.OT_MSG_COLOR_SELF;
     else ot_reply_color = window.OT_MSG_COLOR_MAIN;
-    document.getElementById("ot_broadcast_reply").innerHTML = "<div id='ot_broadcast_reply_avatar_"+oy_broadcast_hash+"' style='position:absolute;top:0;left:0;width:1.9vh;height:1.9vh;transform:translateX(-100%)'></div><div style='background-color:"+ot_reply_color+";white-space: nowrap;overflow:hidden;padding:0.25vh 0.75vh;height:calc(100% - 0.5vh);display: inline-flex;align-items: center;max-width:100%;' onmouseover='this.style.cursor = \"pointer\"' onclick='ot_reply_reset()'>"+ot_render_content_object.innerHTML+"</div>";
+    document.getElementById("ot_broadcast_reply").innerHTML = "<div id='ot_broadcast_reply_avatar_"+oy_broadcast_hash+"' style='position:absolute;top:0;left:0;width:1.9vh;height:1.9vh;transform:translateX(-100%)'></div><div style='background-color:"+ot_reply_color+";white-space: nowrap;overflow:hidden;padding:0.25vh 0.75vh;height:calc(100% - 0.5vh);display: inline-flex;align-items: center;max-width:100%;' onmouseover='this.style.cursor = \"pointer\"' onclick='ot_reply_reset()'>"+ot_render_content_object.innerHTML.replace(/<br>/g, "")+"</div>";
     document.getElementById("ot_broadcast_reply").style.display = "block";
     oy_avatar_gen(ot_reply_public_key, document.getElementById("ot_broadcast_reply_avatar_"+oy_broadcast_hash));
 }
@@ -269,6 +278,7 @@ function ot_init() {
     window.OT_MSG_COLOR_BRUNO = "#7bb3ee";
 
     window.OT_RENDER_KEEP = [];
+    window.OT_INPUT_SNAPSHOT = "";
     window.OT_PEERS_NULL = null;
     window.OT_BROADCAST_FREEZE = false;
     window.OT_REPLY = "";
