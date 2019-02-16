@@ -777,7 +777,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         oy_log("Removed peer "+oy_short(oy_peer_id)+" who terminated with reason: "+oy_data_payload);
         return true;
     }
-    else if (oy_data_flag==="OY_BLACKLIST") {
+    else if (oy_data_flag==="OY_PEER_BLACKLIST") {
         oy_peer_remove(oy_peer_id, "OY_PUNISH_BLACKLIST_RETURN");//return the favour
         oy_log("Punished peer "+oy_short(oy_peer_id)+" who blacklisted self");
         return true;
@@ -988,15 +988,15 @@ function oy_node_assign() {
 
 //respond to a node that is not mutually peered with self
 function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
-    if (oy_data_flag==="OY_BLACKLIST") {
-        oy_log("Node "+oy_short(oy_node_id)+" blacklisted us, will return the favour");
-        oy_node_punish(oy_node_id, "OY_PUNISH_BLACKLIST_RETURN");
+    if (oy_data_flag==="OY_PEER_TERMINATE") {
+        oy_log("Received termination notice with reason: "+oy_data_payload+" from non-peer, most likely we terminated him first");
+        oy_node_reset(oy_node_id);
         oy_node_disconnect(oy_node_id);
         return false;
     }
-    else if (oy_data_flag==="OY_PEER_TERMINATE") {
-        oy_log("Received termination notice with reason: "+oy_data_payload+" from non-peer, most likely we terminated him first");
-        oy_node_reset(oy_node_id);
+    else if (oy_data_flag==="OY_PEER_BLACKLIST") {
+        oy_log("Node "+oy_short(oy_node_id)+" blacklisted us, will return the favour");
+        oy_node_punish(oy_node_id, "OY_PUNISH_BLACKLIST_RETURN");
         oy_node_disconnect(oy_node_id);
         return false;
     }
@@ -1551,8 +1551,6 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
        let oy_data = JSON.parse(oy_data_raw);
        if (oy_data&&typeof(oy_data)==="object") {
            if (oy_data[0].indexOf("OY_PEER")===-1&&oy_data[0].indexOf("OY_LATENCY")===-1) {
-               console.log(oy_data[0]);
-               console.log(oy_data);
                let oy_peer_last = oy_data[1][0][oy_data[1][0].length-1];
                if (oy_peer_last!==oy_short(oy_node_id)) {
                    oy_log("Peer "+oy_short(oy_node_id)+" lied on the passport, will remove and punish");
@@ -1986,7 +1984,7 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
                 oy_log("Node "+oy_short(oy_conn.peer)+" is on blacklist, informed: "+window.OY_BLACKLIST[oy_conn.peer][2]);
                 if (window.OY_BLACKLIST[oy_conn.peer][2]===false) {
                     window.OY_BLACKLIST[oy_conn.peer][2] = true;
-                    oy_data_beam(oy_conn.peer, "OY_BLACKLIST", null);
+                    oy_data_beam(oy_conn.peer, "OY_PEER_BLACKLIST", null);
                 }
             }
             else {

@@ -209,7 +209,6 @@ function ot_init() {
     });
     document.getElementById("ot_bar_cover").style.display = "block";
 
-    console.log(window.OY_PEER_COUNT);
     if (window.OY_PEER_COUNT===0) ot_peers_halt();
     else ot_peers_resume();
 
