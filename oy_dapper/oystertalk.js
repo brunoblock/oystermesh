@@ -187,7 +187,7 @@ function ot_peers_resume() {
     document.getElementById("ot_rebuild_progress").style.display = "block";
     document.getElementById("ot_rebuild_progress_inner").style.transition = null;
     document.getElementById("ot_rebuild_progress_inner").style.width = "90%";
-    document.getElementById("ot_rebuild_progress_inner").style.transition = "width "+(window.OY_CHANNEL_KEEPTIME*1.4)+"s linear";
+    document.getElementById("ot_rebuild_progress_inner").style.transition = "width "+(window.OY_CHANNEL_RECOVERTIME)+"s linear";
     setTimeout(function() {
         document.getElementById("ot_rebuild_progress_inner").style.width = "0";
     }, 100);
@@ -195,7 +195,7 @@ function ot_peers_resume() {
         if (window.OT_PEERS_NULL===true) return false;
         document.getElementById("ot_rebuild_progress").style.display = "none";
         document.getElementById("ot_channel_stats").style.display = "block";
-    }, (window.OY_CHANNEL_KEEPTIME*1.4*1000)+100);
+    }, (window.OY_CHANNEL_RECOVERTIME*1000)+100);
 }
 
 function ot_peers_halt() {
@@ -218,11 +218,16 @@ function ot_close() {
 function ot_maintain() {
     if (window.OY_BLOCK_HASH!==null&&typeof(window.OY_BLOCK[2][window.OT_CHANNEL_ID])!=="undefined") {
         let ot_online = 0;
-        if (typeof(window.OY_CHANNEL_TOP[window.OT_CHANNEL_ID])!=="undefined") {
-            ot_online = Object.keys(window.OY_CHANNEL_TOP[window.OT_CHANNEL_ID]).length;
-            if (window.OY_WALLET_PUBLIC!==null&&(window.OY_BLOCK[2][window.OT_CHANNEL_ID][2].indexOf(window.OY_WALLET_PUBLIC)!==-1||window.OY_BLOCK[2][window.OT_CHANNEL_ID][3].indexOf(window.OY_WALLET_PUBLIC)!==-1)) ot_online++;//TODO use main protocol function which uses space optimization
+        let ot_watching = 0;
+        for (let oy_node_short in window.OY_CHANNEL_TOP[window.OT_CHANNEL_ID]) {
+            if (window.OY_CHANNEL_TOP[window.OT_CHANNEL_ID][oy_node_short][3]===true) ot_online++;
+            else ot_watching++;
         }
-        document.getElementById("ot_channel_stats").innerHTML = "["+(window.OY_BLOCK[2][window.OT_CHANNEL_ID][2].length+window.OY_BLOCK[2][window.OT_CHANNEL_ID][3].length)+"&nbsp;members&nbsp;/&nbsp;"+ot_online+"&nbsp;online]";
+
+        if (window.OY_WALLET_PUBLIC!==null&&(window.OY_BLOCK[2][window.OT_CHANNEL_ID][2].indexOf(window.OY_WALLET_PUBLIC)!==-1||window.OY_BLOCK[2][window.OT_CHANNEL_ID][3].indexOf(window.OY_WALLET_PUBLIC)!==-1)) ot_online++;//TODO use main protocol function which uses space optimization
+        else ot_watching++;
+
+        document.getElementById("ot_channel_stats").innerHTML = "["+(window.OY_BLOCK[2][window.OT_CHANNEL_ID][2].length+window.OY_BLOCK[2][window.OT_CHANNEL_ID][3].length)+"&nbsp;members&nbsp;/&nbsp;"+ot_online+"&nbsp;online&nbsp;/&nbsp;"+ot_watching+"&nbsp;watching]";
     }
 }
 
