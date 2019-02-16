@@ -58,6 +58,7 @@ window.OY_CHANNEL_FORGETIME = 60;//seconds since last signed message from channe
 window.OY_CHANNEL_RECOVERTIME = 30;//second interval between channel recovery requests per node, should be at least MESH_EDGE*2
 window.OY_CHANNEL_RESPOND_MAX = 5;//max amount of broadcast payloads to send in response to a channel recover request
 window.OY_CHANNEL_BROADCAST_PACKET_MAX = 5000;//maximum size for a packet that is routed via OY_CHANNEL_BROADCAST (OY_LOGIC_ALL)
+window.OY_CHANNEL_ALLOWANCE = 8;//broadcast allowance in seconds per public key, an anti-spam mechanism to prevent abuse of OY_LOGIC_ALL
 window.OY_KEY_BRUNO = "XLp6_wVPBF3Zg-QNRkEj6U8bOYEZddQITs1n2pyeRqwOG5k9w_1A-RMIESIrVv_5HbvzoLhq-xPLE7z2na0C6M";//prevent impersonation
 window.OY_SHORT_LENGTH = 6;//various data value such as nonce IDs, data handles, data values are shortened for efficiency
 window.OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inputs are expected
@@ -81,8 +82,8 @@ window.OY_DATA_PUSH = {};//object for tracking data push threads
 window.OY_DATA_PULL = {};//object for tracking data pull threads
 window.OY_PEERS = {"oy_aggregate_node":[-1, -1, -1, 0, [], 0, [], 0, [], -1, -1]};//optimization for quick and inexpensive checks for mutual peering
 window.OY_PEERS_PRE = {};//tracks nodes that are almost peers, will become peers once PEER_AFFIRM is received from other node
-window.OY_PEERS_NULL = new Event('oy_peers_null');//trigger-able event for when a new block is issued
-window.OY_PEERS_RECOVER = new Event('oy_peers_recover');//trigger-able event for when a new block is issued
+window.OY_PEERS_NULL = new Event('oy_peers_null');//trigger-able event for when peer_count == 0
+window.OY_PEERS_RECOVER = new Event('oy_peers_recover');//trigger-able event for when peer_count > 0
 window.OY_NODES = {};//P2P connection handling for individual nodes, is not mirrored in localStorage due to DOM restrictions
 window.OY_WARM = {};//tracking connections to nodes that are warming up
 window.OY_COLD = {};//tracking connection shutdowns to specific nodes
@@ -96,6 +97,7 @@ window.OY_BLOCK = [null];//block from the block that keeps consensus-approved tr
 window.OY_BLOCK_HASH = null;//hash of the most current block
 window.OY_BLOCK_PREV = null;//the most recent block timestamp
 window.OY_BLOCK_TRIGGER = new Event('oy_block_trigger');//trigger-able event for when a new block is issued
+window.OY_CHANNEL_DYNAMIC = {};//track channel broadcasts to ensure allowance compliance
 window.OY_CHANNEL_LISTEN = {};//track channels to listen for
 window.OY_CHANNEL_KEEP = {};//stored broadcasts that are re-shared
 window.OY_CHANNEL_ECHO = {};//track channels to listen for
@@ -466,7 +468,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     if (oy_data_flag==="OY_DATA_PUSH") {//store received data and potentially forward the push request to peers
         //oy_data_payload = [oy_route_passport_passive, oy_data_handle, oy_data_nonce, oy_data_value]
         //data received here will be committed to data_deposit with only randomness restrictions, mesh flow restrictions from oy_init() are sufficient
-        if (oy_data_payload.length!==4||!oy_handle_check(oy_data_payload[1])||oy_data_payload[3].length>window.OY_DATA_CHUNK) {
+        if (oy_data_payload.length!==4||typeof(oy_data_payload[0])!=="object"||!oy_handle_check(oy_data_payload[1])||oy_data_payload[3].length>window.OY_DATA_CHUNK) {
             oy_log("Peer "+oy_short(oy_peer_id)+" sent invalid push data sequence, will punish");
             oy_node_punish(oy_peer_id, "OY_PUNISH_PUSH_INVALID");
             return false;
@@ -486,7 +488,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_DATA_PULL") {
         //oy_data_payload = [oy_route_passport_passive, oy_route_dynamic, oy_data_handle, oy_data_nonce_set]
-        if (oy_data_payload.length!==4||!oy_handle_check(oy_data_payload[2])||oy_data_payload[3].length>window.OY_DATA_PULL_NONCE_MAX) {
+        if (oy_data_payload.length!==4||typeof(oy_data_payload[0])!=="object"||!oy_handle_check(oy_data_payload[2])||oy_data_payload[3].length>window.OY_DATA_PULL_NONCE_MAX) {
             oy_log("Peer "+oy_short(oy_peer_id)+" sent invalid pull data sequence, will punish");
             oy_node_punish(oy_peer_id, "OY_PUNISH_PULL_INVALID");
             return false;
@@ -518,7 +520,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_DATA_DEPOSIT") {
         //oy_data_payload = [oy_route_passport_passive, oy_route_passport_active, oy_data_source, oy_data_handle, oy_data_nonce, oy_data_short]
-        if (oy_data_payload.length!==6||oy_data_payload[1].length===0||!oy_handle_check(oy_data_payload[3])) {
+        if (oy_data_payload.length!==6||typeof(oy_data_payload[0])!=="object"||typeof(oy_data_payload[1])!=="object"||oy_data_payload[1].length===0||!oy_handle_check(oy_data_payload[3])) {
             oy_log("Peer "+oy_short(oy_peer_id)+" sent invalid deposit data sequence, will punish");
             oy_node_punish(oy_peer_id, "OY_PUNISH_DEPOSIT_INVALID");
             return false;
@@ -535,7 +537,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_DATA_FULFILL") {
         //oy_data_payload = [oy_route_passport_passive, oy_route_passport_active, oy_data_source, oy_data_handle, oy_data_nonce, oy_data_value]
-        if (oy_data_payload.length!==6||oy_data_payload[1].length===0||!oy_handle_check(oy_data_payload[3])) {
+        if (oy_data_payload.length!==6||typeof(oy_data_payload[0])!=="object"||typeof(oy_data_payload[1])!=="object"||oy_data_payload[1].length===0||!oy_handle_check(oy_data_payload[3])) {
             oy_log("Peer "+oy_short(oy_peer_id)+" sent invalid fulfill data sequence, will punish");
             oy_node_punish(oy_peer_id, "OY_PUNISH_FULFILL_INVALID");
             return false;
@@ -557,7 +559,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_CHANNEL_BROADCAST") {
         //oy_data_payload = [oy_route_passport_passive, oy_route_dynamic, oy_channel_id, oy_channel_payload, oy_payload_crypt, oy_key_public, oy_broadcast_time]
-        if (oy_data_payload.length!==7||oy_data_payload[1].length===0||!oy_channel_check(oy_data_payload[2])) {
+        if (oy_data_payload.length!==7||typeof(oy_data_payload[0])!=="object"||oy_data_payload[1].length===0||!oy_channel_check(oy_data_payload[2])) {
             oy_log("Peer "+oy_short(oy_peer_id)+" sent invalid fulfill data sequence, will punish");
             oy_node_punish(oy_peer_id, "OY_PUNISH_CHANNEL_INVALID");
             return false;
@@ -626,7 +628,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_CHANNEL_ECHO") {
         //oy_data_payload = [oy_route_passport_passive, oy_route_passport_active, oy_route_dynamic_prev, oy_channel_id, oy_echo_crypt, oy_key_public]
-        if (oy_data_payload.length!==6||oy_data_payload[1].length===0||!oy_channel_check(oy_data_payload[3])) {
+        if (oy_data_payload.length!==6||typeof(oy_data_payload[0])!=="object"||typeof(oy_data_payload[1])!=="object"||oy_data_payload[1].length===0||!oy_channel_check(oy_data_payload[3])) {
             oy_log("Peer "+oy_short(oy_peer_id)+" sent invalid channel echo, will punish");
             oy_node_punish(oy_peer_id, "OY_PUNISH_ECHO_INVALID");
             return false;
@@ -677,7 +679,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_CHANNEL_RECOVER") {
         //oy_data_payload = [oy_route_passport_passive, oy_route_passport_active, oy_channel_id, oy_hash_keep]
-        if (oy_data_payload.length!==4||oy_data_payload[1].length===0||!oy_channel_check(oy_data_payload[2])) {
+        if (oy_data_payload.length!==4||typeof(oy_data_payload[0])!=="object"||typeof(oy_data_payload[1])!=="object"||oy_data_payload[1].length===0||!oy_channel_check(oy_data_payload[2])) {
             oy_log("Peer "+oy_short(oy_peer_id)+" sent invalid channel recover request, will punish");
             oy_node_punish(oy_peer_id, "OY_PUNISH_RECOVER_INVALID");
             return false;
@@ -710,7 +712,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_CHANNEL_RESPOND") {
         //oy_data_payload = [oy_route_passport_passive, oy_route_passport_active, oy_channel_id, oy_channel_respond]
-        if (oy_data_payload.length!==4||oy_data_payload[1].length===0||!oy_channel_check(oy_data_payload[2])||oy_data_payload[3].length===0) {
+        if (oy_data_payload.length!==4||typeof(oy_data_payload[0])!=="object"||typeof(oy_data_payload[1])!=="object"||oy_data_payload[1].length===0||!oy_channel_check(oy_data_payload[2])||oy_data_payload[3].length===0) {
             oy_log("Peer "+oy_short(oy_peer_id)+" sent invalid channel respond sequence, will punish");
             oy_node_punish(oy_peer_id, "OY_PUNISH_RESPOND_INVALID");
             return false;
@@ -1547,7 +1549,9 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
        }
        let oy_data = JSON.parse(oy_data_raw);
        if (oy_data&&typeof(oy_data)==="object") {
-           if (oy_data[0]==="OY_DATA_PUSH"||oy_data[0]==="OY_DATA_PULL"||oy_data[0]==="OY_DATA_DEPOSIT"||oy_data[0]==="OY_DATA_FULFILL") {
+           console.log("BEFORE: "+oy_data[0]);
+           if (oy_data[0].indexOf("OY_PEER")===-1&&oy_data[0].indexOf("OY_LATENCY")===-1) {
+               console.log("AFTER: "+oy_data[0]);
                let oy_peer_last = oy_data[1][0][oy_data[1][0].length-1];
                if (oy_peer_last!==oy_short(oy_node_id)) {
                    oy_log("Peer "+oy_short(oy_node_id)+" lied on the passport, will remove and punish");
@@ -1560,35 +1564,42 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
                    return false;
                }
                if (typeof(window.OY_MAP)==="function") window.OY_MAP(oy_data[0], oy_data[1][0], (oy_data[0]==="OY_DATA_DEPOSIT"||oy_data[0]==="OY_DATA_FULFILL")?oy_data[1][1]:null);
-               if (oy_data[0]==="OY_DATA_PUSH"||oy_data[0]==="OY_DATA_PULL"||oy_data[0]==="OY_CHANNEL_BROADCAST") {
-                   if (oy_data[1][0].length>1&&!!oy_peer_find(oy_data[1][0][0])) {
-                       oy_log("We are peers with the origination node "+oy_data[1][0][0]+", will cease routing");
+               if (typeof(oy_data[1][0])==="object"&&oy_data[1][0].length>1&&!!oy_peer_find(oy_data[1][0][0])) {
+                   oy_log("We are peers with the origination node "+oy_data[1][0][0]+", will cease routing");
+                   return true;
+               }
+               if (oy_data[0]==="OY_DATA_PULL"||oy_data[0]==="OY_CHANNEL_BROADCAST") {//OY_LOGIC_ALL definitions
+                   let oy_microtime_local = Date.now();
+                   let oy_time_local = oy_microtime_local/1000;
+                   if (!oy_peer_check(oy_node_id)) {
+                       oy_log("Soaked OY_LOGIC_ALL from a non-peer "+oy_short(oy_node_id)+", will cease");
+                       return false;
+                   }
+                   else if (oy_microtime_local-window.OY_PEERS[oy_node_id][10]<window.OY_LOGIC_ALL_LIMIT) {
+                       oy_log("Peer "+oy_short(oy_node_id)+" breached logic_all limit, will remove and punish");
+                       oy_peer_remove(oy_node_id, "OY_PUNISH_LOGIC_BREACH");
+                       return false;
+                   }
+                   window.OY_PEERS[oy_node_id][10] = oy_microtime_local;
+                   if ((oy_data[0]==="OY_DATA_PULL"&&oy_data_raw.length>window.OY_DATA_PULL_PACKET_MAX)||(oy_data[0]==="OY_CHANNEL_BROADCAST"&&oy_data_raw.length>window.OY_CHANNEL_BROADCAST_PACKET_MAX)) {
+                       oy_log("Peer "+oy_short(oy_node_id)+" sent a data sequence that is too large for "+oy_data[0]+", will remove and punish");
+                       oy_peer_remove(oy_node_id, "OY_PUNISH_LOGIC_LARGE");
+                       return false;
+                   }
+                   if (oy_data[0]==="OY_CHANNEL_BROADCAST"&&oy_data[1][3]!=="OY_CHANNEL_PING"&&oy_data[1][5]!==window.OY_KEY_BRUNO) {
+                       if (typeof(window.OY_CHANNEL_DYNAMIC[oy_data[1][5]])!=="undefined"&&oy_time_local-window.OY_CHANNEL_DYNAMIC[oy_data[1][5]]<window.OY_CHANNEL_ALLOWANCE) {
+                           oy_log("Peer "+oy_short(oy_node_id)+" sent a channel broadcast from an abusive key, will remove and punish");
+                           oy_peer_remove(oy_node_id, "OY_PUNISH_BROADCAST_ABUSE");
+                           return false;
+                       }
+                       window.OY_CHANNEL_DYNAMIC[oy_data[1][5]] = oy_time_local;
+                   }
+                   if (window.OY_ROUTE_DYNAMIC.indexOf(oy_data[1][1])!==-1) {
+                       oy_log("We already processed route dynamic "+oy_short(oy_data[1][1])+", will cease routing");
                        return true;
                    }
-                   if (oy_data[0]==="OY_DATA_PULL"||oy_data[0]==="OY_CHANNEL_BROADCAST") {
-                       let oy_microtime_local = Date.now();
-                       if (!oy_peer_check(oy_node_id)) {
-                           oy_log("Soaked OY_LOGIC_ALL from a non-peer "+oy_short(oy_node_id)+", will cease");
-                           return false;
-                       }
-                       else if (oy_microtime_local-window.OY_PEERS[oy_node_id][10]<window.OY_LOGIC_ALL_LIMIT) {
-                           oy_log("Peer "+oy_short(oy_node_id)+" breached logic_all limit, will remove and punish");
-                           oy_peer_remove(oy_node_id, "OY_PUNISH_LOGIC_BREACH");
-                           return false;
-                       }
-                       window.OY_PEERS[oy_node_id][10] = oy_microtime_local;
-                       if ((oy_data[0]==="OY_DATA_PULL"&&oy_data_raw.length>window.OY_DATA_PULL_PACKET_MAX)||(oy_data[0]==="OY_CHANNEL_BROADCAST"&&oy_data_raw.length>window.OY_CHANNEL_BROADCAST_PACKET_MAX)) {
-                           oy_log("Peer "+oy_short(oy_node_id)+" sent a data sequence that is too large for "+oy_data[0]+", will remove and punish");
-                           oy_peer_remove(oy_node_id, "OY_PUNISH_LOGIC_LARGE");
-                           return false;
-                       }
-                       if (window.OY_ROUTE_DYNAMIC.indexOf(oy_data[1][1])!==-1) {
-                           oy_log("We already processed route dynamic "+oy_short(oy_data[1][1])+", will cease routing");
-                           return true;
-                       }
-                       window.OY_ROUTE_DYNAMIC.push(oy_data[1][1]);
-                       while (window.OY_ROUTE_DYNAMIC.length>window.OY_ROUTE_DYNAMIC_KEEP) window.OY_ROUTE_DYNAMIC.shift();
-                   }
+                   window.OY_ROUTE_DYNAMIC.push(oy_data[1][1]);
+                   while (window.OY_ROUTE_DYNAMIC.length>window.OY_ROUTE_DYNAMIC_KEEP) window.OY_ROUTE_DYNAMIC.shift();
                }
            }
            return oy_data;
@@ -1828,6 +1839,13 @@ function oy_engine(oy_thread_track) {
         if (window.OY_CHANNEL_ECHO[oy_echo_key][0]<oy_time_local) {
             delete window.OY_CHANNEL_ECHO[oy_echo_key];
             oy_log("Cleaned up expired echo session with key: "+oy_short(oy_echo_key));
+        }
+    }
+
+    for (let oy_key_public in window.OY_CHANNEL_DYNAMIC) {
+        if (oy_time_local-window.OY_CHANNEL_DYNAMIC[oy_key_public]>window.OY_CHANNEL_ALLOWANCE) {
+            delete window.OY_CHANNEL_ALLOWANCE[oy_key_public];
+            oy_log("Cleaned up expired channel allowance for public key: "+oy_short(oy_key_public));
         }
     }
 
