@@ -4,7 +4,7 @@
 // License: GNU GPLv3
 
 // GLOBAL VARS
-window.OY_MESH_DYNASTY = "BRUNO_GENESIS_V1";//mesh dynasty definition, changing this will cause a hard-fork
+window.OY_MESH_DYNASTY = "BRUNO_GENESIS_V1_TEST";//mesh dynasty definition, changing this will cause a hard-fork
 window.OY_MESH_EDGE = 10;//maximum seconds that it should take for a transaction to reach the furthest edge-to-edge distance of the mesh, this variable should stay at 10
 window.OY_MESH_FLOW = 128000;//characters per second allowed per peer, and for all aggregate non-peer nodes
 window.OY_MESH_MEASURE = 10;//seconds by which to measure mesh flow, larger means more tracking of nearby node and peer activity
@@ -581,7 +581,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                     let oy_echo_beam = function() {
                         oy_key_sign(window.OY_CHANNEL_LISTEN[oy_data_payload[2]][0], oy_broadcast_hash, function(oy_echo_crypt) {
                             oy_log("Beaming echo for channel "+oy_short(oy_data_payload[2]));
-                            oy_data_route("OY_LOGIC_FOLLOW", "OY_CHANNEL_ECHO", [[], oy_data_payload[0], window.OY_CHANNEL_LISTEN[oy_data_payload[2]][1], oy_data_payload[2], oy_echo_crypt, oy_broadcast_hash]);
+                            oy_data_route("OY_LOGIC_FOLLOW", "OY_CHANNEL_ECHO", [[], oy_data_payload[0], oy_data_payload[1], oy_data_payload[2], oy_echo_crypt, window.OY_CHANNEL_LISTEN[oy_data_payload[2]][1]]);
                         });
                     };
 
@@ -606,11 +606,12 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
                     let oy_broadcast_payload = oy_data_payload.slice();
                     oy_broadcast_payload[0] = null;
-                    oy_broadcast_payload[6] = [];
+                    oy_broadcast_payload[1] = null;
+                    oy_broadcast_payload[7] = [];
 
                     if (window.OY_CHANNEL_LISTEN[oy_data_payload[2]][0]!==null) {
                         oy_key_sign(window.OY_CHANNEL_LISTEN[oy_data_payload[2]][0], oy_data_payload[4], function(oy_data_crypt) {
-                            oy_broadcast_payload[6].push([oy_data_crypt, window.OY_CHANNEL_LISTEN[oy_data_payload[2]][1]]);
+                            oy_broadcast_payload[7].push([oy_data_crypt, window.OY_CHANNEL_LISTEN[oy_data_payload[2]][1]]);
                             if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]])==="undefined") window.OY_CHANNEL_KEEP[oy_data_payload[2]] = {};
                             if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash])==="undefined") window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash] = oy_broadcast_payload;
                         });
@@ -1549,9 +1550,9 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
        }
        let oy_data = JSON.parse(oy_data_raw);
        if (oy_data&&typeof(oy_data)==="object") {
-           console.log("BEFORE: "+oy_data[0]);
            if (oy_data[0].indexOf("OY_PEER")===-1&&oy_data[0].indexOf("OY_LATENCY")===-1) {
-               console.log("AFTER: "+oy_data[0]);
+               console.log(oy_data[0]);
+               console.log(oy_data);
                let oy_peer_last = oy_data[1][0][oy_data[1][0].length-1];
                if (oy_peer_last!==oy_short(oy_node_id)) {
                    oy_log("Peer "+oy_short(oy_node_id)+" lied on the passport, will remove and punish");
