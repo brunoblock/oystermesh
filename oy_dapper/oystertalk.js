@@ -48,7 +48,7 @@ function ot_render(oy_broadcast_hash, oy_render_payload) {
         }
     }
 
-    let oy_element_html = ot_append+"<div id='ot_render_cont_"+oy_broadcast_hash+"' style='position:relative;"+ot_render_opacity+"'>"+ot_badge+ot_reply+"<div id='ot_render_avatar_"+oy_broadcast_hash+"' style='position:absolute;left:0;top:0;width:4vh;height:4vh;background-color: #2a2a2a' onmouseover='this.style.cursor = \"pointer\"' onclick='ot_copy_key(this.id)'></div><div id='ot_render_public_key_"+oy_broadcast_hash+"' style='display:none;'>"+oy_render_payload[5]+"</div><div style='position:relative;top:0;left:calc(4vh + 1.5%);padding:0.5vh 1vh;border-radius:0.15vh;background-color: "+ot_panel_color+";color:#000000;min-height:3vh;display: inline-flex;align-items: center;' onmouseover='this.style.cursor = \"pointer\"' onclick='ot_reply(\""+oy_broadcast_hash+"\")'><div id='ot_render_content_"+oy_broadcast_hash+"' style='display:block;max-width:65vh;word-wrap: break-word;'>"+ot_superhandle_convert(linkifyStr(oy_render_payload[3], {attributes:{onclick:"ot_reply_reset(true)"}}))+"</div><div style='position:absolute;right:0;top:50%;transform: translate(calc(100% + 0.8vh), -50%);font-size:0.9vh;color: #dbdbdb'>[<span id='ot_render_stats_"+oy_broadcast_hash+"'>"+ot_render_stats+"</span>]</div></div></div><br>";
+    let oy_element_html = ot_append+"<div id='ot_render_cont_"+oy_broadcast_hash+"' style='position:relative;"+ot_render_opacity+"'>"+ot_badge+ot_reply+"<div id='ot_render_avatar_"+oy_broadcast_hash+"' style='position:absolute;left:0;top:0;width:4vh;height:4vh;background-color: #2a2a2a' onmouseover='this.style.cursor = \"pointer\"' onclick='ot_copy_key(this.id)'></div><div id='ot_render_public_key_"+oy_broadcast_hash+"' style='display:none;'>"+oy_render_payload[5]+"</div><div style='position:relative;top:0;left:calc(4vh + 1.5%);padding:0.5vh 1vh;border-radius:0.15vh;background-color: "+ot_panel_color+";color:#000000;min-height:3vh;display: inline-flex;align-items: center;' onmouseover='this.style.cursor = \"pointer\"' onclick='ot_reply(\""+oy_broadcast_hash+"\")'><div id='ot_render_content_"+oy_broadcast_hash+"' style='display:block;max-width:65vh;word-wrap: break-word;'>"+ot_superhandle_convert(oy_render_payload[3])+"</div><div style='position:absolute;right:0;top:50%;transform: translate(calc(100% + 0.8vh), -50%);font-size:0.9vh;color: #dbdbdb'>[<span id='ot_render_stats_"+oy_broadcast_hash+"'>"+ot_render_stats+"</span>]</div></div></div><br>";
 
     let oy_element = document.createElement("div");
     oy_element.setAttribute('id', "ot_render_"+oy_broadcast_hash);
@@ -172,7 +172,7 @@ function ot_broadcast() {
 
     let oy_broadcast_msg = document.getElementById("ot_broadcast_input").value;
     if (oy_broadcast_msg.length===0) return false;
-    oy_broadcast_msg = window.OT_REPLY+oy_broadcast_msg.replace(/(?:\r\n|\r|\n)/g, "<br>");
+    oy_broadcast_msg = window.OT_REPLY+linkifyStr(oy_broadcast_msg, {attributes:{onclick:"ot_reply_reset(true)"}}).replace(/(?:\r\n|\r|\n)/g, "<br>");
 
     ot_reply_reset();
     document.getElementById("ot_broadcast_input").value = "";

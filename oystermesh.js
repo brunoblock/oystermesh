@@ -19,7 +19,7 @@ window.OY_MESH_FULLFILL_CHANCE = 0.2;//probability that data is stored whilst fu
 window.OY_MESH_SOURCE = 3;//node in route passport (from destination) that is assigned with defining the source variable
 window.OY_MESH_SYNC_BUFFER = 1;//buffer for time sync tolerance across nodes in seconds
 window.OY_NODE_TOLERANCE = 3;//max amount of protocol communication violations until node is blacklisted
-window.OY_NODE_BLACKTIME = 600;//seconds to blacklist a punished node for
+window.OY_NODE_BLACKTIME = 60;//seconds to blacklist a punished node for
 window.OY_NODE_PROPOSETIME = 12;//seconds for peer proposal session duration
 window.OY_NODE_ASSIGNTTIME = 10;//minimum interval between node_assign instances to/from top
 window.OY_NODE_DELAYTIME = 6;//minimum expected time to connect or transmit data to a node
@@ -55,9 +55,9 @@ window.OY_READY_RETRY = 3000;//ms interval to retry connection if READY is still
 window.OY_BLOCK_LOOP = 200;//a lower value means more opportunity within the 10 second window to propagate transactions
 window.OY_CHANNEL_KEEPTIME = 15;//channel bearing nodes are expected to broadcast a logic_all packet within this interval
 window.OY_CHANNEL_FORGETIME = 60;//seconds since last signed message from channel bearing node
-window.OY_CHANNEL_RECOVERTIME = 30;//second interval between channel recovery requests per node, should be at least MESH_EDGE*2
+window.OY_CHANNEL_RECOVERTIME = 10;//second interval between channel recovery requests per node, should be at least MESH_EDGE*2
 window.OY_CHANNEL_EXPIRETIME = 259200;//seconds until a broadcast expires and is dropped from nodes listening on the channel
-window.OY_CHANNEL_RESPOND_MAX = 100;//max amount of broadcast payloads to send in response to a channel recover request, divided by online count
+window.OY_CHANNEL_RESPOND_MAX = 30;//max amount of broadcast payloads to send in response to a channel recover request, divided by online count
 window.OY_CHANNEL_BROADCAST_PACKET_MAX = 5000;//maximum size for a packet that is routed via OY_CHANNEL_BROADCAST (OY_LOGIC_ALL)
 window.OY_CHANNEL_ALLOWANCE = 8;//broadcast allowance in seconds per public key, an anti-spam mechanism to prevent abuse of OY_LOGIC_ALL
 window.OY_KEY_BRUNO = "XLp6_wVPBF3Zg-QNRkEj6U8bOYEZddQITs1n2pyeRqwOG5k9w_1A-RMIESIrVv_5HbvzoLhq-xPLE7z2na0C6M";//prevent impersonation
@@ -1789,7 +1789,7 @@ function oy_engine(oy_thread_track) {
                 if (typeof(window.OY_CHANNEL_LISTEN[oy_channel_id])!=="undefined") window.OY_CHANNEL_LISTEN[oy_channel_id][2](oy_broadcast_hash, null);
                 continue;
             }
-            if (typeof(window.OY_CHANNEL_LISTEN[oy_channel_id])!=="undefined"&&window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash][7].length>=Math.floor(oy_top_count[0]*0.5)) {
+            if (typeof(window.OY_CHANNEL_LISTEN[oy_channel_id])!=="undefined"&&window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash][7].length>=Math.floor(oy_top_count[0]*0.05)) {
                 oy_hash_keep.push(oy_broadcast_hash);
                 if (typeof(window.OY_CHANNEL_RENDER[oy_channel_id])==="undefined") window.OY_CHANNEL_RENDER[oy_channel_id] = {};
                 if (typeof(window.OY_CHANNEL_RENDER[oy_channel_id][oy_broadcast_hash])==="undefined") {
