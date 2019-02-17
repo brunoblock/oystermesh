@@ -1,4 +1,9 @@
 function ot_render(oy_broadcast_hash, oy_render_payload) {
+    if (oy_render_payload===null) {
+        if (document.getElementById("ot_render_"+oy_broadcast_hash)) document.getElementById("ot_render").removeChild(document.getElementById("ot_render_"+oy_broadcast_hash));
+        return true;
+    }
+
     if (document.getElementById("ot_render_"+oy_broadcast_hash)) {
         console.log(oy_broadcast_hash+" was already rendered");
         return false;
@@ -65,9 +70,6 @@ function ot_render(oy_broadcast_hash, oy_render_payload) {
     window.OT_RENDER_KEEP.sort(function(a, b) {
         return b[1] - a[1];
     });
-
-    if (typeof(window.OT_APPROVED_KEEP[oy_render_payload[5]])==="undefined") window.OT_APPROVED_KEEP[oy_render_payload[5]] = [];
-    else window.OT_APPROVED_KEEP[oy_render_payload[5]].push(oy_broadcast_hash);
 
     document.getElementById("ot_render_cont").scrollTo(0, document.getElementById("ot_render_cont").scrollHeight);
 }
@@ -308,14 +310,6 @@ function ot_maintain() {
         else ot_top_count[1]++;
 
         document.getElementById("ot_channel_stats").innerHTML = "["+(window.OY_BLOCK[2][window.OT_CHANNEL_ID][2].length+window.OY_BLOCK[2][window.OT_CHANNEL_ID][3].length)+"&nbsp;members&nbsp;/&nbsp;"+ot_top_count[0]+"&nbsp;online&nbsp;/&nbsp;"+ot_top_count[1]+"&nbsp;watching]";
-
-        for (let oy_key_public in window.OT_APPROVED_KEEP) {
-            if (!oy_channel_approved(window.OT_CHANNEL_ID, oy_key_public)) {
-                //for (let i in window.OT_APPROVED_KEEP[oy_key_public]) {
-
-                //}
-            }
-        }
     }
 }
 

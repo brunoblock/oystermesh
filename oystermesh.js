@@ -39,7 +39,7 @@ window.OY_LATENCY_TRACK = 200;//how many latency measurements to keep at a time 
 window.OY_LATENCY_WEAK_BUFFER = 9.5;//percentage buffer for comparing latency with peers, higher means less likely the weakest peer will be dropped and hence less peer turnover
 window.OY_DATA_MAX = 64000;//max size of data that can be sent to another node
 window.OY_DATA_CHUNK = 48000;//chunk size by which data is split up and sent per transmission
-window.OY_DATA_PURGE = 10;//how much handles to delete if localstorage limit is reached
+window.OY_DATA_PURGE = 4;//how many handles to delete if localstorage limit is reached
 window.OY_DATA_PUSH_INTERVAL = 190;//ms per chunk per push loop iteration
 window.OY_DATA_PUSH_NONCE_MAX = 15;//maximum amount of nonces to push per push loop iteration
 window.OY_DATA_PULL_INTERVAL = 500;//ms per pull loop iteration
@@ -56,6 +56,7 @@ window.OY_BLOCK_LOOP = 200;//a lower value means more opportunity within the 10 
 window.OY_CHANNEL_KEEPTIME = 15;//channel bearing nodes are expected to broadcast a logic_all packet within this interval
 window.OY_CHANNEL_FORGETIME = 60;//seconds since last signed message from channel bearing node
 window.OY_CHANNEL_RECOVERTIME = 30;//second interval between channel recovery requests per node, should be at least MESH_EDGE*2
+window.OY_CHANNEL_EXPIRETIME = 259200;//seconds until a broadcast expires and is dropped from nodes listening on the channel
 window.OY_CHANNEL_RESPOND_MAX = 100;//max amount of broadcast payloads to send in response to a channel recover request, divided by online count
 window.OY_CHANNEL_BROADCAST_PACKET_MAX = 5000;//maximum size for a packet that is routed via OY_CHANNEL_BROADCAST (OY_LOGIC_ALL)
 window.OY_CHANNEL_ALLOWANCE = 8;//broadcast allowance in seconds per public key, an anti-spam mechanism to prevent abuse of OY_LOGIC_ALL
@@ -295,7 +296,12 @@ function oy_handle_check(oy_data_handle) {
 }
 
 function oy_local_store(oy_local_name, oy_local_data) {
-    localStorage.setItem(oy_local_name, JSON.stringify(oy_local_data));
+    try {
+        localStorage.setItem(oy_local_name, JSON.stringify(oy_local_data));
+    }
+    catch(e) {
+        oy_data_deposit_purge();
+    }
     oy_log("Updated localStorage retention of "+oy_local_name);
     return true;
 }
@@ -1551,43 +1557,42 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
    return false
 }
 
-function oy_data_deposit_get(oy_data_handle, oy_data_nonce) {
-    if (window.OY_PURGE.indexOf(oy_data_handle)===-1) return false;
-    let oy_deposit_object = JSON.parse(localStorage.getItem("oy_deposit_"+oy_data_handle));
-    if (typeof(oy_deposit_object[oy_data_nonce])==="undefined") return false;
-    return oy_deposit_object[oy_data_nonce];
-}
-
 //deposits data for local retention
 function oy_data_deposit(oy_data_handle, oy_data_nonce, oy_data_value) {
     if (Math.random()>window.OY_MESH_DEPOSIT_CHANCE) return false;
 
-    console.log(oy_data_handle+" <-> "+oy_data_nonce);
-
     let oy_deposit_object = {};
     if (window.OY_PURGE.indexOf(oy_data_handle)!==-1) oy_deposit_object = JSON.parse(localStorage.getItem("oy_deposit_"+oy_data_handle));
-    console.log(1);
     if (typeof(oy_deposit_object[oy_data_nonce])!=="undefined") return false;
     oy_deposit_object[oy_data_nonce] = oy_data_value;
+    let oy_deposit_full = false;
     try {
-        console.log(2);
         localStorage.setItem("oy_deposit_"+oy_data_handle, JSON.stringify(oy_deposit_object));
     }
     catch(e) {
-        console.log(3);
-        for (let i = 0; i<window.OY_DATA_PURGE;i++) localStorage.removeItem("oy_deposit_"+window.OY_PURGE.shift());
-        localStorage.setItem("oy_deposit_"+oy_data_handle, JSON.stringify(oy_deposit_object));
-        console.log(4);
+        oy_deposit_full = true;
+        oy_data_deposit_purge();
     }
+    if (oy_deposit_full===true) return false;
     oy_deposit_object = null;
     window.OY_PURGE = window.OY_PURGE.filter(oy_handle => oy_handle!==oy_data_handle);
     window.OY_PURGE.push(oy_data_handle);
     oy_local_store("oy_purge", window.OY_PURGE);
 
-    console.log(5);
-
     oy_log("Stored handle "+oy_data_handle+" at nonce "+oy_data_nonce);
     return true;
+}
+
+function oy_data_deposit_purge() {
+    for (let i = 0; i<window.OY_DATA_PURGE;i++) localStorage.removeItem("oy_deposit_"+window.OY_PURGE.shift());
+    oy_log("Purged "+window.OY_DATA_PURGE+" handles from deposit");
+}
+
+function oy_data_deposit_get(oy_data_handle, oy_data_nonce) {
+    if (window.OY_PURGE.indexOf(oy_data_handle)===-1) return false;
+    let oy_deposit_object = JSON.parse(localStorage.getItem("oy_deposit_"+oy_data_handle));
+    if (typeof(oy_deposit_object[oy_data_nonce])==="undefined") return false;
+    return oy_deposit_object[oy_data_nonce];
 }
 
 function oy_channel_check(oy_channel_id) {
@@ -1778,10 +1783,10 @@ function oy_engine(oy_thread_track) {
         if (typeof(window.OY_CHANNEL_TOP[oy_channel_id])==="undefined") continue;
         let oy_top_count = oy_channel_top_count(oy_channel_id);
         for (let oy_broadcast_hash in window.OY_CHANNEL_KEEP[oy_channel_id]) {
-            if (!oy_channel_approved(oy_channel_id, window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash][5])) {
+            if (!oy_channel_approved(oy_channel_id, window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash][5])||oy_time_local-window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash][6]>window.OY_CHANNEL_EXPIRETIME) {
                 delete window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash];
                 delete window.OY_CHANNEL_RENDER[oy_channel_id][oy_broadcast_hash];
-                console.log(oy_broadcast_hash+" <-> "+window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash]);
+                if (typeof(window.OY_CHANNEL_LISTEN[oy_channel_id])!=="undefined") window.OY_CHANNEL_LISTEN[oy_channel_id][2](oy_broadcast_hash, null);
                 continue;
             }
             if (typeof(window.OY_CHANNEL_LISTEN[oy_channel_id])!=="undefined"&&window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash][7].length>=Math.floor(oy_top_count[0]*0.5)) {
