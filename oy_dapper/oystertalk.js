@@ -65,6 +65,10 @@ function ot_render(oy_broadcast_hash, oy_render_payload) {
     window.OT_RENDER_KEEP.sort(function(a, b) {
         return b[1] - a[1];
     });
+
+    if (typeof(window.OT_APPROVED_KEEP[oy_render_payload[5]])==="undefined") window.OT_APPROVED_KEEP[oy_render_payload[5]] = [];
+    else window.OT_APPROVED_KEEP[oy_render_payload[5]].push(oy_broadcast_hash);
+
     document.getElementById("ot_render_cont").scrollTo(0, document.getElementById("ot_render_cont").scrollHeight);
 }
 
@@ -173,7 +177,7 @@ function ot_broadcast() {
     document.getElementById("ot_broadcast_button").classList.remove("oy_button_broadcast_active");
     document.getElementById("ot_broadcast_button").classList.add("oy_button_all_dull");
 
-    if (window.OY_WALLET_PUBLIC!==window.OY_KEY_BRUNO) ot_broadcast_freeze();//TODO use main protocol function which uses space optimization
+    if (window.OY_WALLET_PUBLIC!==window.OY_KEY_BRUNO) ot_broadcast_freeze();
 
     oy_channel_broadcast(window.OT_CHANNEL_ID, oy_broadcast_msg, window.OY_WALLET_PRIVATE, window.OY_WALLET_PUBLIC, function(oy_broadcast_hash, oy_render_payload) {
         ot_render(oy_broadcast_hash, oy_render_payload);
@@ -232,7 +236,7 @@ function ot_join() {
 
 function ot_approve() {
     if (typeof(window.OY_BLOCK[2][window.OT_CHANNEL_ID])==="undefined") return false;
-    if (window.OY_WALLET_PUBLIC!==null&&(window.OY_BLOCK[2][window.OT_CHANNEL_ID][2].indexOf(window.OY_WALLET_PUBLIC)!==-1||window.OY_BLOCK[2][window.OT_CHANNEL_ID][3].indexOf(window.OY_WALLET_PUBLIC)!==-1)) {//TODO use main protocol function which uses space optimization
+    if (window.OY_WALLET_PUBLIC!==null&&oy_channel_approved(window.OT_CHANNEL_ID, window.OY_WALLET_PUBLIC)) {
         oy_channel_listen(window.OT_CHANNEL_ID,function(oy_broadcast_hash, oy_render_payload) {
             ot_render(oy_broadcast_hash, oy_render_payload);
         }, window.OY_WALLET_PRIVATE, window.OY_WALLET_PUBLIC);
@@ -300,10 +304,18 @@ function ot_maintain() {
 
         let ot_top_count = oy_channel_top_count(window.OT_CHANNEL_ID);
 
-        if (window.OY_WALLET_PUBLIC!==null&&(window.OY_BLOCK[2][window.OT_CHANNEL_ID][2].indexOf(window.OY_WALLET_PUBLIC)!==-1||window.OY_BLOCK[2][window.OT_CHANNEL_ID][3].indexOf(window.OY_WALLET_PUBLIC)!==-1)) ot_top_count[0]++;//TODO use main protocol function which uses space optimization
+        if (window.OY_WALLET_PUBLIC!==null&&oy_channel_approved(window.OT_CHANNEL_ID, window.OY_WALLET_PUBLIC)) ot_top_count[0]++;
         else ot_top_count[1]++;
 
         document.getElementById("ot_channel_stats").innerHTML = "["+(window.OY_BLOCK[2][window.OT_CHANNEL_ID][2].length+window.OY_BLOCK[2][window.OT_CHANNEL_ID][3].length)+"&nbsp;members&nbsp;/&nbsp;"+ot_top_count[0]+"&nbsp;online&nbsp;/&nbsp;"+ot_top_count[1]+"&nbsp;watching]";
+
+        for (let oy_key_public in window.OT_APPROVED_KEEP) {
+            if (!oy_channel_approved(window.OT_CHANNEL_ID, oy_key_public)) {
+                //for (let i in window.OT_APPROVED_KEEP[oy_key_public]) {
+
+                //}
+            }
+        }
     }
 }
 
@@ -314,6 +326,7 @@ function ot_init() {
     window.OT_MSG_COLOR_BRUNO = "#7bb3ee";
 
     window.OT_RENDER_KEEP = [];
+    window.OT_APPROVED_KEEP = {};
     window.OT_INPUT_SNAPSHOT = "";
     window.OT_PEERS_NULL = null;
     window.OT_BROADCAST_FREEZE = false;
