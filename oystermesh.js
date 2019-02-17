@@ -71,7 +71,7 @@ window.OY_MAP = null;//custom function for tracking passive passports
 window.OY_INIT = 0;//prevents multiple instances of oy_init() from running simultaneously
 window.OY_PEER_COUNT = 0;//how many active connections with mutual peers
 window.OY_REFER_LAST = 0;//last time self asked a peer for a peer recommendation
-window.OY_MAIN = {"oy_ready":false, "oy_deposit_size":0, "oy_deposit_counter":0};//tracks important information that is worth persisting between sessions such as self ID
+window.OY_MAIN = {"oy_ready":false};//tracks important information that is worth persisting between sessions such as self ID
 window.OY_ENGINE = [{}, {}];//tracking object for core engine variables, [0] is latency tracking
 window.OY_PURGE = [];//track order of DEPOSIT to determine what data gets deleted ('purged') first
 window.OY_COLLECT = {};//object for tracking pull fulfillments
@@ -303,7 +303,7 @@ function oy_local_store(oy_local_name, oy_local_data) {
 function oy_local_get(oy_local_name) {
     let oy_local_raw = localStorage.getItem(oy_local_name);
     if (oy_local_raw===null||oy_local_raw.length===0) {
-        if (oy_local_name==="oy_main") return {"oy_ready":false, "oy_deposit_size":0, "oy_deposit_counter":0};
+        if (oy_local_name==="oy_main") return {"oy_ready":false};
         else if (oy_local_name==="oy_peers") return {"oy_aggregate_node":[-1, -1, -1, 0, [], 0, [], 0, [], -1, -1]};
         else if (oy_local_name==="oy_purge") return [];
         return {};
@@ -1867,7 +1867,7 @@ function oy_engine(oy_thread_track) {
 
 //initialize oyster mesh boot up sequence
 function oy_init(oy_callback, oy_passthru, oy_console) {
-    localStorage.clear();
+    //localStorage.clear();
     if (typeof(oy_console)==="function") {
         console.log("Console redirected to custom function");
         window.OY_CONSOLE = oy_console;
@@ -1907,7 +1907,6 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
 
     window.OY_PURGE = oy_local_get("oy_purge");
     window.OY_PEERS = oy_local_get("oy_peers");
-    //window.OY_LATENCY = oy_local_get("oy_latency");
     window.OY_PROPOSED = oy_local_get("oy_proposed");
     window.OY_BLACKLIST = oy_local_get("oy_blacklist");
 
