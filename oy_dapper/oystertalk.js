@@ -188,7 +188,7 @@ function ot_broadcast() {
         if (ot_render_stats_object) {
             ot_render_stats_object.innerHTML = "E"+(parseInt(ot_render_stats_object.innerHTML.substr(1))+1);
             ot_render_stats_object.style.color = null;
-            document.getElementById("ot_render_cont_"+oy_broadcast_hash).style.opacity = 1;
+            document.getElementById("ot_render_cont_"+oy_broadcast_hash).style.opacity = "1";
         }
     });
 
@@ -269,7 +269,7 @@ function ot_peers_resume() {
     document.getElementById("ot_rebuild_progress").style.display = "block";
     document.getElementById("ot_rebuild_progress_inner").style.transition = null;
     document.getElementById("ot_rebuild_progress_inner").style.width = "90%";
-    document.getElementById("ot_rebuild_progress_inner").style.transition = "width "+(window.OY_CHANNEL_RECOVERTIME)+"s linear";
+    document.getElementById("ot_rebuild_progress_inner").style.transition = "width "+(window.OY_CHANNEL_RECOVERTIME*6)+"s linear";
     setTimeout(function() {
         document.getElementById("ot_rebuild_progress_inner").style.width = "0";
     }, 100);
