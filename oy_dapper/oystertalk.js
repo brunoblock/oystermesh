@@ -239,7 +239,7 @@ function ot_join() {
 function ot_approve() {
     if (typeof(window.OY_BLOCK[2][window.OT_CHANNEL_ID])==="undefined") return false;
     if (window.OY_WALLET_PUBLIC!==null&&oy_channel_approved(window.OT_CHANNEL_ID, window.OY_WALLET_PUBLIC)) {
-        oy_channel_listen(window.OT_CHANNEL_ID,function(oy_broadcast_hash, oy_render_payload) {
+        oy_channel_listen(window.OT_CHANNEL_ID, function(oy_broadcast_hash, oy_render_payload) {
             ot_render(oy_broadcast_hash, oy_render_payload);
         }, window.OY_WALLET_PRIVATE, window.OY_WALLET_PUBLIC);
         document.getElementById("ot_bar_cover").style.display = "none";
@@ -277,7 +277,7 @@ function ot_peers_resume() {
         if (window.OT_PEERS_NULL===true) return false;
         document.getElementById("ot_rebuild_progress").style.display = "none";
         document.getElementById("ot_channel_stats").style.display = "block";
-    }, (window.OY_CHANNEL_RECOVERTIME*1000)+100);
+    }, (window.OY_CHANNEL_RECOVERTIME*6*1000)+100);
 }
 
 function ot_peers_halt() {

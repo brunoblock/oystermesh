@@ -4,16 +4,30 @@
     <meta charset="UTF-8">
     <title>Oyster Mesh Passive</title>
     <script src="oystermesh.js"></script>
-    <script src="oy_resources/peer.min.js"></script>
-    <script src="oy_resources/sha1.js"></script>
-    <script src="oy_resources/aes.js"></script>
-    <script src="oy_resources/pbkdf2.js"></script>
+    <script src="oysterdepend.js"></script>
 </head>
 <body>
 OYSTER MESH PASSIVE
 <script type="text/javascript">
+    //localStorage.clear();
+
+    window.OY_MAIN = {"oy_ready":false};
+    window.OY_PEERS = {"oy_aggregate_node":[-1, -1, -1, 0, [], 0, [], 0, [], -1, -1]};
+    window.OY_PROPOSED = {};
+    window.OY_BLACKLIST = {};
+    oy_local_store("oy_main", window.OY_MAIN);
+    oy_local_store("oy_peers", window.OY_PEERS);
+    oy_local_store("oy_proposed", window.OY_PROPOSED);
+    oy_local_store("oy_blacklist", window.OY_BLACKLIST);
+
     window.OY_PASSIVE_MODE = true;
     oy_init();
+
+    window.OY_CHANNEL_ID = null;
+    window.OY_WALLET_PRIVATE = null;
+    window.OY_WALLET_PUBLIC = null;
+
+    if (window.OT_CHANNEL_ID!==null) oy_channel_listen(window.OY_CHANNEL_ID, function(oy_broadcast_hash, oy_render_payload) {}, window.OY_WALLET_PRIVATE, window.OY_WALLET_PUBLIC);
 </script>
 </body>
 </html>
