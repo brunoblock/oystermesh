@@ -36,7 +36,7 @@ window.OY_LATENCY_REPEAT = 2;//how many ping round trips should be performed to 
 window.OY_LATENCY_TOLERANCE = 2;//tolerance buffer factor for receiving ping requested from a proposed-to node
 window.OY_LATENCY_MAX = 20;//max amount of seconds for latency test before peership is refused or starts breaking down
 window.OY_LATENCY_TRACK = 200;//how many latency measurements to keep at a time per peer
-window.OY_LATENCY_WEAK_BUFFER = 9.5;//percentage buffer for comparing latency with peers, higher means less likely the weakest peer will be dropped and hence less peer turnover
+window.OY_LATENCY_WEAK_BUFFER = 15;//percentage buffer for comparing latency with peers, higher means less likely the weakest peer will be dropped and hence less peer turnover
 window.OY_DATA_MAX = 64000;//max size of data that can be sent to another node
 window.OY_DATA_CHUNK = 48000;//chunk size by which data is split up and sent per transmission
 window.OY_DATA_PURGE = 4;//how many handles to delete if localstorage limit is reached
@@ -1976,6 +1976,9 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
                 else oy_node_negotiate(oy_conn.peer, oy_data[0], oy_data[1]);
             }
         });
+    }, null);
+    window.OY_CONN.on('error', function(oy_error) {
+        oy_log("PeerJS Error: "+oy_error.type);
     }, null);
     setTimeout(function() {
         if (window.OY_MAIN['oy_ready']===true) {
