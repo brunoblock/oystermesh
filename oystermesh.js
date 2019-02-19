@@ -1,10 +1,10 @@
 // OYSTER MESH
 // Bruno Block
-// v0.1
+// v0.2
 // License: GNU GPLv3
 
 // GLOBAL VARS
-window.OY_MESH_DYNASTY = "BRUNO_GENESIS_V1";//mesh dynasty definition, changing this will cause a hard-fork
+window.OY_MESH_DYNASTY = "BRUNO_GENESIS_V2";//mesh dynasty definition, changing this will cause a hard-fork
 window.OY_MESH_EDGE = 10;//maximum seconds that it should take for a transaction to reach the furthest edge-to-edge distance of the mesh, this variable should stay at 10
 window.OY_MESH_FLOW = 128000;//characters per second allowed per peer, and for all aggregate non-peer nodes
 window.OY_MESH_MEASURE = 10;//seconds by which to measure mesh flow, larger means more tracking of nearby node and peer activity
@@ -26,7 +26,7 @@ window.OY_NODE_DELAYTIME = 6;//minimum expected time to connect or transmit data
 window.OY_NODE_EXPIRETIME = 7200;//seconds of non-interaction until a node's connection session is deleted
 window.OY_PEER_LATENCYTIME = 60;//peers are expected to establish latency timing with each other within this interval in seconds
 window.OY_PEER_KEEPTIME = 20;//peers are expected to communicate with each other within this interval in seconds
-window.OY_PEER_REFERTIME = 5;//interval in which self asks peers for peer recommendations (as needed)
+window.OY_PEER_REFERTIME = 15;//interval in which self asks peers for peer recommendations (as needed)
 window.OY_PEER_REPORTTIME = 10;//interval to report peer list to top
 window.OY_PEER_PRETIME = 20;//seconds which a node is waiting as a 'pre-peer'
 window.OY_PEER_MAX = 5;//maximum mutual peers per zone (applicable difference is for gateway nodes)
@@ -37,7 +37,7 @@ window.OY_LATENCY_REPEAT = 2;//how many ping round trips should be performed to 
 window.OY_LATENCY_TOLERANCE = 2;//tolerance buffer factor for receiving ping requested from a proposed-to node
 window.OY_LATENCY_MAX = 20;//max amount of seconds for latency test before peership is refused or starts breaking down
 window.OY_LATENCY_TRACK = 200;//how many latency measurements to keep at a time per peer
-window.OY_LATENCY_WEAK_BUFFER = 15;//percentage buffer for comparing latency with peers, higher means less likely the weakest peer will be dropped and hence less peer turnover
+window.OY_LATENCY_GEO_SENS = 50;//percentage buffer for comparing latency with peers, higher means less likely weakest peer will be dropped and mesh is less geo-sensitive
 window.OY_DATA_MAX = 64000;//max size of data that can be sent to another node
 window.OY_DATA_CHUNK = 48000;//chunk size by which data is split up and sent per transmission
 window.OY_DATA_PURGE = 4;//how many handles to delete if localstorage limit is reached
@@ -334,7 +334,7 @@ function oy_peer_add(oy_peer_id) {
         oy_local_store("oy_peers", window.OY_PEERS);
         oy_node_reset(oy_peer_id);
     };
-    if (oy_node_connect(oy_peer_id, oy_callback_local)===true) oy_callback_local();
+    oy_node_connect(oy_peer_id, oy_callback_local);
     return true;
 }
 
@@ -805,7 +805,7 @@ function oy_node_connect(oy_node_id, oy_callback) {
         oy_log("Connection with node "+oy_short(oy_node_id)+" is cold");
         return false;
     }
-    else if (typeof(window.OY_NODES[oy_node_id])==="undefined"||window.OY_NODES[oy_node_id][0].open===false) {
+    else if (typeof(window.OY_NODES[oy_node_id])==="undefined") {
         window.OY_WARM[oy_node_id] = oy_time_local;
         oy_log("Connection warming up with node "+oy_short(oy_node_id));
         let oy_local_conn = window.OY_CONN.connect(oy_node_id);
@@ -817,19 +817,28 @@ function oy_node_connect(oy_node_id, oy_callback) {
         });
         oy_local_conn.on('error', function() {
             delete window.OY_WARM[oy_node_id];
-            delete window.OY_NODES[oy_node_id];
             oy_log("Connection to node "+oy_short(oy_node_id)+" failed, will punish");
             oy_node_punish(oy_node_id, "OY_PUNISH_CONNECT_FAIL");
         });
         return false;
     }
-    window.OY_NODES[oy_node_id][1] = oy_time_local;
-    return window.OY_NODES[oy_node_id][0].open;
+    else if (window.OY_NODES[oy_node_id][0]===null||window.OY_NODES[oy_node_id][0].open===false) {
+        console.log(Object.keys(window.OY_NODES).length);
+        window.OY_NODES[oy_node_id][0].close();
+        window.OY_NODES[oy_node_id][0] = null;
+        return false;
+    }
+    else if (window.OY_NODES[oy_node_id][0].open===true) {
+        window.OY_NODES[oy_node_id][1] = oy_time_local;
+        if (typeof(oy_callback)==="function") oy_callback();
+        return true;
+    }
+    return false;
 }
 
 function oy_node_disconnect(oy_node_id) {
     if (typeof(window.OY_COLD[oy_node_id])==="undefined"&&typeof(window.OY_NODES[oy_node_id])!=="undefined") {
-        if (window.OY_NODES[oy_node_id][0].open===true) {
+        if (window.OY_NODES[oy_node_id][0]!==null&&window.OY_NODES[oy_node_id][0].open===true) {
             window.OY_COLD[oy_node_id] = true;
             setTimeout(function() {
                 window.OY_NODES[oy_node_id][0].close();
@@ -921,7 +930,7 @@ function oy_node_initiate(oy_node_id, oy_list_force) {
         window.OY_PROPOSED[oy_node_id] = (Date.now()/1000)+window.OY_NODE_PROPOSETIME;//set proposal session with expiration timestamp
         oy_local_store("oy_proposed", window.OY_PROPOSED);
     };
-    if (oy_node_connect(oy_node_id, oy_callback_local)===true) oy_callback_local();
+    oy_node_connect(oy_node_id, oy_callback_local);
     return true;
 }
 
@@ -990,7 +999,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
         let oy_callback_local = function() {
             oy_latency_test(oy_node_id, "OY_PEER_REQUEST", true);
         };
-        if (oy_node_connect(oy_node_id, oy_callback_local)===true) oy_callback_local();
+        oy_node_connect(oy_node_id, oy_callback_local);
         return true;
     }
     else if (oy_data_flag==="OY_PEER_LATENCY") {
@@ -1086,7 +1095,7 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
                             }
                         }
                         oy_log("Current weakest peer is "+oy_short(oy_peer_weak[0])+" with latency of "+oy_peer_weak[1]);
-                        if ((oy_latency_result*(1+window.OY_LATENCY_WEAK_BUFFER))<oy_peer_weak[1]) {
+                        if ((oy_latency_result*(1+window.OY_LATENCY_GEO_SENS))<oy_peer_weak[1]) {
                             oy_log("New peer request has better latency than current weakest peer");
                             oy_peer_remove(oy_peer_weak[0], "OY_PUNISH_LATENCY_DROP");
                             if (window.OY_LATENCY[oy_node_id][6]==="OY_PEER_ACCEPT") {
@@ -1488,7 +1497,7 @@ function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
         window.OY_NODES[oy_node_id][0].send(oy_data_raw);//send the JSON-converted data array to the destination node
         oy_log("Beamed data to node "+oy_short(oy_node_id)+" with size: "+oy_data_raw.length);
     };
-    if (oy_node_connect(oy_node_id, oy_callback_local)===true) oy_callback_local();
+    oy_node_connect(oy_node_id, oy_callback_local);
     return true;
 }
 
