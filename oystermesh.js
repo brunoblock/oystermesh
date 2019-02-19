@@ -23,7 +23,7 @@ window.OY_NODE_BLACKTIME = 240;//seconds to blacklist a punished node for
 window.OY_NODE_PROPOSETIME = 12;//seconds for peer proposal session duration
 window.OY_NODE_ASSIGNTTIME = 10;//minimum interval between node_assign instances to/from top
 window.OY_NODE_DELAYTIME = 6;//minimum expected time to connect or transmit data to a node
-window.OY_NODE_EXPIRETIME = 7200;//seconds of non-interaction until a node's connection session is deleted
+window.OY_NODE_EXPIRETIME = 600;//seconds of non-interaction until a node's connection session is deleted
 window.OY_PEER_LATENCYTIME = 60;//peers are expected to establish latency timing with each other within this interval in seconds
 window.OY_PEER_KEEPTIME = 20;//peers are expected to communicate with each other within this interval in seconds
 window.OY_PEER_REFERTIME = 15;//interval in which self asks peers for peer recommendations (as needed)
@@ -57,7 +57,7 @@ window.OY_BLOCK_LOOP = 200;//a lower value means more opportunity within the 10 
 window.OY_CHANNEL_KEEPTIME = 15;//channel bearing nodes are expected to broadcast a logic_all packet within this interval
 window.OY_CHANNEL_FORGETIME = 60;//seconds since last signed message from channel bearing node
 window.OY_CHANNEL_RECOVERTIME = 10;//second interval between channel recovery requests per node, should be at least MESH_EDGE*2
-window.OY_CHANNEL_EXPIRETIME = 259200;//seconds until a broadcast expires and is dropped from nodes listening on the channel
+window.OY_CHANNEL_EXPIRETIME = 1209600;//seconds until a broadcast expires and is dropped from nodes listening on the channel
 window.OY_CHANNEL_RESPOND_MAX = 30;//max amount of broadcast payloads to send in response to a channel recover request, divided by online count
 window.OY_CHANNEL_BROADCAST_PACKET_MAX = 5000;//maximum size for a packet that is routed via OY_CHANNEL_BROADCAST (OY_LOGIC_ALL)
 window.OY_CHANNEL_ALLOWANCE = 8;//broadcast allowance in seconds per public key, an anti-spam mechanism to prevent abuse of OY_LOGIC_ALL
@@ -649,7 +649,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                     return false;
                 }
                 oy_channel_respond.sort(function(a, b) {
-                    return a[1][6] - b[1][6];
+                    return b[1][6] - a[1][6];
                 });
                 let oy_respond_max = Math.ceil(window.OY_CHANNEL_RESPOND_MAX/Math.max(oy_channel_top_count(oy_data_payload[2])[0], 1));
                 while (oy_channel_respond.length>oy_respond_max) oy_channel_respond.pop();
@@ -682,7 +682,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                 if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]])==="undefined") window.OY_CHANNEL_KEEP[oy_data_payload[2]] = {};
 
                 for (let i in oy_data_payload[3]) {
-                    if (oy_channel_approved(oy_data_payload[2], oy_data_payload[3][i][1][5])) {
+                    if (oy_channel_approved(oy_data_payload[2], oy_data_payload[3][i][1][5])&&oy_time_local-oy_data_payload[3][i][1][6]<=window.OY_CHANNEL_EXPIRETIME) {
                         oy_key_verify(oy_data_payload[3][i][1][5], oy_data_payload[3][i][1][4], oy_data_payload[3][i][1][6]+oy_data_payload[3][i][1][3], function(oy_key_valid) {
                             if (oy_key_valid===true) {
                                 oy_log("Valid primary signature for broadcast hash "+oy_short(oy_data_payload[3][i][0])+" from channel "+oy_short(oy_data_payload[2]));
@@ -805,42 +805,38 @@ function oy_node_connect(oy_node_id, oy_callback) {
         oy_log("Connection with node "+oy_short(oy_node_id)+" is cold");
         return false;
     }
-    else if (typeof(window.OY_NODES[oy_node_id])==="undefined") {
+    else if (typeof(window.OY_NODES[oy_node_id])==="undefined"||window.OY_NODES[oy_node_id][0].open===false) {
+        if (typeof(window.OY_NODES[oy_node_id])!=="undefined") window.OY_NODES[oy_node_id][0].close();
         window.OY_WARM[oy_node_id] = oy_time_local;
         oy_log("Connection warming up with node "+oy_short(oy_node_id));
         let oy_local_conn = window.OY_CONN.connect(oy_node_id);
+
         oy_local_conn.on('open', function() {
             delete window.OY_WARM[oy_node_id];
             window.OY_NODES[oy_node_id] = [oy_local_conn, oy_time_local];
             oy_log("Connection status: "+window.OY_NODES[oy_node_id][0].open+" with node "+oy_short(oy_node_id));
             if (typeof(oy_callback)==="function") oy_callback();
         });
+
         oy_local_conn.on('error', function() {
             delete window.OY_WARM[oy_node_id];
+            delete window.OY_NODES[oy_node_id];
             oy_log("Connection to node "+oy_short(oy_node_id)+" failed, will punish");
             oy_node_punish(oy_node_id, "OY_PUNISH_CONNECT_FAIL");
         });
         return false;
     }
-    else if (window.OY_NODES[oy_node_id][0]!==null) {
-        console.log(Object.keys(window.OY_NODES).length);
-        if (window.OY_NODES[oy_node_id][0].open===true) {
-            window.OY_NODES[oy_node_id][1] = oy_time_local;
-            if (typeof(oy_callback)==="function") oy_callback();
-            return true;
-        }
-        else {
-            window.OY_NODES[oy_node_id][0].close();
-            window.OY_NODES[oy_node_id][0] = null;
-        }
-        return false;
+    else if (window.OY_NODES[oy_node_id][0].open===true) {
+        window.OY_NODES[oy_node_id][1] = oy_time_local;
+        if (typeof(oy_callback)==="function") oy_callback();
+        return true;
     }
     return false;
 }
 
 function oy_node_disconnect(oy_node_id) {
     if (typeof(window.OY_COLD[oy_node_id])==="undefined"&&typeof(window.OY_NODES[oy_node_id])!=="undefined") {
-        if (window.OY_NODES[oy_node_id][0]!==null&&window.OY_NODES[oy_node_id][0].open===true) {
+        if (window.OY_NODES[oy_node_id][0].open===true) {
             window.OY_COLD[oy_node_id] = true;
             setTimeout(function() {
                 window.OY_NODES[oy_node_id][0].close();
@@ -849,7 +845,10 @@ function oy_node_disconnect(oy_node_id) {
                 oy_log("Disconnected from node "+oy_short(oy_node_id));
             }, window.OY_NODE_DELAYTIME*1000);
         }
-        else delete window.OY_NODES[oy_node_id];
+        else {
+            window.OY_NODES[oy_node_id][0].close();
+            delete window.OY_NODES[oy_node_id];
+        }
         return true;
     }
     return false;
@@ -1631,9 +1630,11 @@ function oy_channel_top(oy_channel_id, oy_passport_passive, oy_channel_approved)
 function oy_channel_top_count(oy_channel_id) {
     let oy_online = 0;
     let oy_watching = 0;
-    for (let oy_node_short in window.OY_CHANNEL_TOP[oy_channel_id]) {
-        if (window.OY_CHANNEL_TOP[oy_channel_id][oy_node_short][3]===true) oy_online++;
-        else oy_watching++;
+    if (typeof(window.OY_CHANNEL_TOP[oy_channel_id])!=="undefined") {
+        for (let oy_node_short in window.OY_CHANNEL_TOP[oy_channel_id]) {
+            if (window.OY_CHANNEL_TOP[oy_channel_id][oy_node_short][3]===true) oy_online++;
+            else oy_watching++;
+        }
     }
     return [oy_online, oy_watching];
 }
@@ -1804,7 +1805,6 @@ function oy_engine(oy_thread_track) {
 
     let oy_hash_keep = [];
     for (let oy_channel_id in window.OY_CHANNEL_KEEP) {
-        if (typeof(window.OY_CHANNEL_TOP[oy_channel_id])==="undefined") continue;
         let oy_top_count = oy_channel_top_count(oy_channel_id);
         for (let oy_broadcast_hash in window.OY_CHANNEL_KEEP[oy_channel_id]) {
             if (!oy_channel_approved(oy_channel_id, window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash][5])||oy_time_local-window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash][6]>window.OY_CHANNEL_EXPIRETIME) {
@@ -1814,7 +1814,7 @@ function oy_engine(oy_thread_track) {
                 oy_local_store("oy_channel_keep", window.OY_CHANNEL_KEEP);
                 continue;
             }
-            if (typeof(window.OY_CHANNEL_LISTEN[oy_channel_id])!=="undefined"&&window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash][7].length>=Math.floor(oy_top_count[0]*0.05)) {
+            if (typeof(window.OY_CHANNEL_LISTEN[oy_channel_id])!=="undefined"&&window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash][7].length>=Math.floor(oy_top_count[0]*0.1)) {
                 oy_hash_keep.push(oy_broadcast_hash);
                 if (typeof(window.OY_CHANNEL_RENDER[oy_channel_id])==="undefined") window.OY_CHANNEL_RENDER[oy_channel_id] = {};
                 if (typeof(window.OY_CHANNEL_RENDER[oy_channel_id][oy_broadcast_hash])==="undefined") {
@@ -1942,19 +1942,28 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
     window.OY_CHANNEL_KEEP = oy_local_get("oy_channel_keep");
 
     window.OY_CONN = new Peer(window.OY_MAIN['oy_self_id'], {host: 'top.oyster.org', port: 8200, path: '/', secure:true});
+
     window.OY_CONN.on('open', function(oy_self_id) {
         window.OY_MAIN['oy_ready'] = true;
         oy_log("P2P connection ready with self ID "+oy_short(oy_self_id));
-        let oy_peer_local;
-        for (oy_peer_local in window.OY_PEERS) {
-            if (oy_peer_local==="oy_aggregate_node") continue;
-            oy_log("Recovering peer "+oy_short(oy_peer_local));
-            window.OY_PEER_COUNT++;
-            oy_node_connect(oy_peer_local);
-        }
-        oy_local_store("oy_main", window.OY_MAIN);
-        if (typeof(oy_callback)==="function") oy_callback();
+        setTimeout(function() {
+            let oy_time_local = Date.now()/1000;
+            let oy_peer_local;
+            for (oy_peer_local in window.OY_PEERS) {
+                if (oy_peer_local==="oy_aggregate_node") continue;
+                if (oy_time_local-window.OY_PEERS[oy_peer_local][1]>=window.OY_PEER_KEEPTIME) {
+                    delete window.OY_PEERS[oy_peer_local];
+                    continue;
+                }
+                oy_log("Recovering peer "+oy_short(oy_peer_local));
+                window.OY_PEER_COUNT++;
+                oy_node_connect(oy_peer_local);
+            }
+            oy_local_store("oy_main", window.OY_MAIN);
+            if (typeof(oy_callback)==="function") oy_callback();
+        }, 200);
     }, null);
+
     window.OY_CONN.on('connection', function(oy_conn) {
         // Receive messages
         oy_conn.on('data', function (oy_data_raw) {
@@ -1991,9 +2000,11 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
             }
         });
     }, null);
+
     window.OY_CONN.on('error', function(oy_error) {
         oy_log("PeerJS Error: "+oy_error.type);
     }, null);
+
     setTimeout(function() {
         if (window.OY_MAIN['oy_ready']===true) {
             oy_log("Connection is now ready, sparking engine");
