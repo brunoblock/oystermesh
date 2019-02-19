@@ -19,7 +19,7 @@ window.OY_MESH_FULLFILL_CHANCE = 0.2;//probability that data is stored whilst fu
 window.OY_MESH_SOURCE = 3;//node in route passport (from destination) that is assigned with defining the source variable
 window.OY_MESH_SYNC_BUFFER = 1;//buffer for time sync tolerance across nodes in seconds
 window.OY_NODE_TOLERANCE = 3;//max amount of protocol communication violations until node is blacklisted
-window.OY_NODE_BLACKTIME = 60;//seconds to blacklist a punished node for
+window.OY_NODE_BLACKTIME = 240;//seconds to blacklist a punished node for
 window.OY_NODE_PROPOSETIME = 12;//seconds for peer proposal session duration
 window.OY_NODE_ASSIGNTTIME = 10;//minimum interval between node_assign instances to/from top
 window.OY_NODE_DELAYTIME = 6;//minimum expected time to connect or transmit data to a node
@@ -796,6 +796,7 @@ function oy_node_connect(oy_node_id, oy_callback) {
         oy_log("Tried to connect to invalid node ID: "+oy_node_id, 1);//functions need to validate node_id before forwarding here
         return false;
     }
+    let oy_time_local = Date.now()/1000;
     if (typeof(window.OY_WARM[oy_node_id])!=="undefined") {
         oy_log("Connection with node "+oy_short(oy_node_id)+" is already warming up");
         return false;
@@ -804,14 +805,14 @@ function oy_node_connect(oy_node_id, oy_callback) {
         oy_log("Connection with node "+oy_short(oy_node_id)+" is cold");
         return false;
     }
-    else if (typeof(window.OY_NODES[oy_node_id])==="undefined"||window.OY_NODES[oy_node_id].open===false) {
-        window.OY_WARM[oy_node_id] = Date.now()/1000;
+    else if (typeof(window.OY_NODES[oy_node_id])==="undefined"||window.OY_NODES[oy_node_id][0].open===false) {
+        window.OY_WARM[oy_node_id] = oy_time_local;
         oy_log("Connection warming up with node "+oy_short(oy_node_id));
         let oy_local_conn = window.OY_CONN.connect(oy_node_id);
         oy_local_conn.on('open', function() {
             delete window.OY_WARM[oy_node_id];
-            window.OY_NODES[oy_node_id] = oy_local_conn;
-            oy_log("Connection status: "+window.OY_NODES[oy_node_id].open+" with node "+oy_short(oy_node_id));
+            window.OY_NODES[oy_node_id] = [oy_local_conn, oy_time_local];
+            oy_log("Connection status: "+window.OY_NODES[oy_node_id][0].open+" with node "+oy_short(oy_node_id));
             if (typeof(oy_callback)==="function") oy_callback();
         });
         oy_local_conn.on('error', function() {
@@ -822,15 +823,16 @@ function oy_node_connect(oy_node_id, oy_callback) {
         });
         return false;
     }
-    return window.OY_NODES[oy_node_id].open;
+    window.OY_NODES[oy_node_id][1] = oy_time_local;
+    return window.OY_NODES[oy_node_id][0].open;
 }
 
 function oy_node_disconnect(oy_node_id) {
     if (typeof(window.OY_COLD[oy_node_id])==="undefined"&&typeof(window.OY_NODES[oy_node_id])!=="undefined") {
-        if (window.OY_NODES[oy_node_id].open===true) {
+        if (window.OY_NODES[oy_node_id][0].open===true) {
             window.OY_COLD[oy_node_id] = true;
             setTimeout(function() {
-                window.OY_NODES[oy_node_id].close();
+                window.OY_NODES[oy_node_id][0].close();
                 delete window.OY_COLD[oy_node_id];
                 delete window.OY_NODES[oy_node_id];
                 oy_log("Disconnected from node "+oy_short(oy_node_id));
@@ -1489,7 +1491,7 @@ function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
             window.OY_PEERS[oy_node_id][9] = oy_microtime_local;
         }
         if (oy_peer_check(oy_node_id)) oy_data_measure(true, oy_node_id, oy_data_raw.length);
-        window.OY_NODES[oy_node_id].send(oy_data_raw);//send the JSON-converted data array to the destination node
+        window.OY_NODES[oy_node_id][0].send(oy_data_raw);//send the JSON-converted data array to the destination node
         oy_log("Beamed data to node "+oy_short(oy_node_id)+" with size: "+oy_data_raw.length);
     };
     if (oy_node_connect(oy_node_id, oy_callback_local)===true) oy_callback_local();
@@ -1743,7 +1745,7 @@ function oy_engine(oy_thread_track) {
         if (oy_peer_local==="oy_aggregate_node") continue;
         oy_time_diff_last = oy_time_local-window.OY_PEERS[oy_peer_local][1];
         oy_time_diff_latency = oy_time_local-window.OY_PEERS[oy_peer_local][2];
-        if (oy_time_diff_last>window.OY_PEER_KEEPTIME||oy_time_diff_latency>window.OY_PEER_LATENCYTIME) {
+        if (oy_time_diff_last>=window.OY_PEER_KEEPTIME||oy_time_diff_latency>=window.OY_PEER_LATENCYTIME) {
             if (typeof(window.OY_ENGINE[0][oy_peer_local])==="undefined") {
                 oy_log("Engine initiating latency test with peer "+oy_short(oy_peer_local)+", time_diff_last: "+oy_time_diff_last+"/"+window.OY_PEER_KEEPTIME+", time_diff_latency: "+oy_time_diff_latency+"/"+window.OY_PEER_LATENCYTIME);
                 if (oy_latency_test(oy_peer_local, "OY_PEER_ROUTINE", true)) window.OY_ENGINE[0][oy_peer_local] = oy_time_local;
@@ -1774,6 +1776,13 @@ function oy_engine(oy_thread_track) {
         oy_thread_track[1] = oy_time_local;
         oy_log("Engine initiating peer_report, peer count is "+window.OY_PEER_COUNT+"/"+window.OY_PEER_MAX);
         oy_peer_report();
+    }
+
+    for (let oy_node_select in window.OY_NODES) {
+        if (oy_time_local-window.OY_NODES[oy_node_select][1]>window.OY_PEER_KEEPTIME) {
+            oy_node_disconnect(oy_node_select);
+            oy_log("Cleaned up expired connection object for node: "+oy_short(oy_node_select));
+        }
     }
 
     for (let oy_node_select in window.OY_WARM) {
@@ -1870,7 +1879,7 @@ function oy_engine(oy_thread_track) {
     }
 
     for (let oy_node_select in window.OY_BLACKLIST) {
-        if (window.OY_BLACKLIST[oy_node_select]<oy_time_local) {
+        if (window.OY_BLACKLIST[oy_node_select][1]<oy_time_local) {
             delete window.OY_BLACKLIST[oy_node_select];
             oy_log("Cleaned up expired blacklist flag for node: "+oy_short(oy_node_select));
         }
