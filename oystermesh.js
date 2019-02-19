@@ -23,9 +23,10 @@ window.OY_NODE_BLACKTIME = 240;//seconds to blacklist a punished node for
 window.OY_NODE_PROPOSETIME = 12;//seconds for peer proposal session duration
 window.OY_NODE_ASSIGNTTIME = 10;//minimum interval between node_assign instances to/from top
 window.OY_NODE_DELAYTIME = 6;//minimum expected time to connect or transmit data to a node
+window.OY_NODE_EXPIRETIME = 7200;//seconds of non-interaction until a node's connection session is deleted
 window.OY_PEER_LATENCYTIME = 60;//peers are expected to establish latency timing with each other within this interval in seconds
 window.OY_PEER_KEEPTIME = 20;//peers are expected to communicate with each other within this interval in seconds
-window.OY_PEER_REFERTIME = 480;//interval in which self asks peers for peer recommendations (as needed)
+window.OY_PEER_REFERTIME = 5;//interval in which self asks peers for peer recommendations (as needed)
 window.OY_PEER_REPORTTIME = 10;//interval to report peer list to top
 window.OY_PEER_PRETIME = 20;//seconds which a node is waiting as a 'pre-peer'
 window.OY_PEER_MAX = 5;//maximum mutual peers per zone (applicable difference is for gateway nodes)
@@ -352,7 +353,6 @@ function oy_peer_remove(oy_peer_id, oy_punish_reason) {
         oy_log("Peer management system failed", 1);
         return false;
     }
-    oy_node_disconnect(oy_peer_id);
     if (typeof(oy_punish_reason)!=="undefined") oy_node_punish(oy_peer_id, oy_punish_reason);
 }
 
@@ -949,13 +949,11 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
     if (oy_data_flag==="OY_PEER_TERMINATE") {
         oy_log("Received termination notice with reason: "+oy_data_payload+" from non-peer, most likely we terminated him first");
         oy_node_reset(oy_node_id);
-        oy_node_disconnect(oy_node_id);
         return false;
     }
     else if (oy_data_flag==="OY_PEER_BLACKLIST") {
         oy_log("Node "+oy_short(oy_node_id)+" blacklisted us, will return the favour");
         oy_node_punish(oy_node_id, "OY_PUNISH_BLACKLIST_RETURN");
-        oy_node_disconnect(oy_node_id);
         return false;
     }
     else if (oy_data_flag==="OY_PEER_AFFIRM") {
@@ -985,7 +983,6 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
         else if (oy_data_flag==="OY_PEER_REJECT") {//node has rejected self's peer request
             oy_log("Node "+oy_short(oy_node_id)+" rejected peer request with reason: "+oy_data_payload);
             oy_node_punish(oy_node_id, "OY_PUNISH_REJECT_RETURN");//we need to prevent nodes with far distances/long latencies from repeatedly communicating
-            oy_node_disconnect(oy_node_id);
             return true;
         }
     }
@@ -999,19 +996,16 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
     else if (oy_data_flag==="OY_PEER_LATENCY") {
         oy_log("Node "+oy_short(oy_node_id)+" sent a latency spark request whilst not a peer, will ignore");
         oy_data_beam(oy_node_id, "OY_LATENCY_DECLINE", null);
-        oy_node_disconnect(oy_node_id);
         return false;
     }
     else if (oy_data_flag==="OY_LATENCY_DECLINE") {
         oy_log("Node "+oy_short(oy_node_id)+" declined our latency request, will cease and punish");
         oy_node_punish(oy_node_id, "OY_PUNISH_LATENCY_DECLINE");
-        oy_node_disconnect(oy_node_id);
         return false;
     }
     else {
         oy_log("Node "+oy_short(oy_node_id)+" sent an incoherent message with flag "+oy_data_flag);
         oy_node_punish(oy_node_id, "OY_PUNISH_DATA_INCOHERENT");
-        oy_node_disconnect(oy_node_id);
         return false;
     }
 }
@@ -1766,7 +1760,7 @@ function oy_engine(oy_thread_track) {
         oy_log("Asked peer "+oy_short(oy_peer_local)+" for peer recommendation");
     }
 
-    if (window.OY_PEER_COUNT<window.OY_PEER_MAX&&(oy_time_local-oy_thread_track[0])>window.OY_NODE_ASSIGNTTIME) {
+    if (window.OY_PEER_COUNT<(window.OY_PEER_MAX-1)&&(oy_time_local-oy_thread_track[0])>window.OY_NODE_ASSIGNTTIME) {
         oy_thread_track[0] = oy_time_local;
         oy_log("Engine initiating node_assign, peer count is "+window.OY_PEER_COUNT+"/"+window.OY_PEER_MAX);
         oy_node_assign();
@@ -1779,7 +1773,7 @@ function oy_engine(oy_thread_track) {
     }
 
     for (let oy_node_select in window.OY_NODES) {
-        if (oy_time_local-window.OY_NODES[oy_node_select][1]>window.OY_PEER_KEEPTIME) {
+        if (oy_time_local-window.OY_NODES[oy_node_select][1]>window.OY_NODE_EXPIRETIME) {
             oy_node_disconnect(oy_node_select);
             oy_log("Cleaned up expired connection object for node: "+oy_short(oy_node_select));
         }
