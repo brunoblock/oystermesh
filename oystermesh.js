@@ -822,16 +822,18 @@ function oy_node_connect(oy_node_id, oy_callback) {
         });
         return false;
     }
-    else if (window.OY_NODES[oy_node_id][0]===null||window.OY_NODES[oy_node_id][0].open===false) {
+    else if (window.OY_NODES[oy_node_id][0]!==null) {
         console.log(Object.keys(window.OY_NODES).length);
-        window.OY_NODES[oy_node_id][0].close();
-        window.OY_NODES[oy_node_id][0] = null;
+        if (window.OY_NODES[oy_node_id][0].open===true) {
+            window.OY_NODES[oy_node_id][1] = oy_time_local;
+            if (typeof(oy_callback)==="function") oy_callback();
+            return true;
+        }
+        else {
+            window.OY_NODES[oy_node_id][0].close();
+            window.OY_NODES[oy_node_id][0] = null;
+        }
         return false;
-    }
-    else if (window.OY_NODES[oy_node_id][0].open===true) {
-        window.OY_NODES[oy_node_id][1] = oy_time_local;
-        if (typeof(oy_callback)==="function") oy_callback();
-        return true;
     }
     return false;
 }
