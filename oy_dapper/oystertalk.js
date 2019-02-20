@@ -45,6 +45,7 @@ function ot_render(oy_broadcast_hash, oy_render_payload) {
         else {
             ot_reply_key_public = ot_reply_array[0];
             ot_reply = ot_reply_array[1];
+            ot_append = "<br>";
         }
     }
 

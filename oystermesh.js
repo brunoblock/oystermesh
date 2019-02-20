@@ -510,13 +510,11 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_node_punish(oy_peer_id, "OY_PUNISH_CHANNEL_INVALID");
             return false;
         }
-
         oy_channel_verify(oy_data_payload, function(oy_verify_pass) {
             if (oy_verify_pass===null) oy_log("Was unable to verify broadcast from channel "+oy_short(oy_data_payload[2])+" at no fault of the sending peer");
             else if (oy_verify_pass===true) {
                 oy_log("Beaming channel "+oy_short(oy_data_payload[2])+" forward along the mesh");
                 oy_data_route("OY_LOGIC_ALL", "OY_CHANNEL_BROADCAST", oy_data_payload);
-
                 if (typeof(window.OY_CHANNEL_LISTEN[oy_data_payload[2]])!=="undefined") {
                     oy_channel_top(oy_data_payload[2], oy_data_payload[0], true);
 
