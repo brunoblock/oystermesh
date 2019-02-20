@@ -45,12 +45,12 @@ window.OY_DATA_PUSH_INTERVAL = 190;//ms per chunk per push loop iteration
 window.OY_DATA_PUSH_NONCE_MAX = 15;//maximum amount of nonces to push per push loop iteration
 window.OY_DATA_PULL_INTERVAL = 500;//ms per pull loop iteration
 window.OY_DATA_PULL_NONCE_MAX = 5;//maximum amount of nonces to request per pull beam, if too high fulfill will overrun soak limits and cause time/resource waste
-window.OY_DATA_PULL_PACKET_MAX = 150;//maximum size for a packet that is routed via OY_DATA_PULL (OY_LOGIC_ALL)
+window.OY_DATA_PULL_PACKET_MAX = 600;//maximum size for a packet that is routed via OY_DATA_PULL (OY_LOGIC_ALL)
 window.OY_DATA_FULFILL_INTERVAL = 4000;//ms per chunk per fulfill loop iteration
 window.OY_DATA_FULFILL_EXPIRE = 25;//seconds before self will resent a pull fulfillment to the same node for the same handle
 window.OY_DEPOSIT_CHAR = 100000;//character rate for data deposit sizing, helps establish storage limits
 window.OY_DEPOSIT_MAX_BUFFER = 0.9;//max character length capacity factor of data deposit (0.9 means 10% buffer until hard limit is reached)
-window.OY_LOGIC_ALL_LIMIT = 2;//ms interval allowed for an OY_LOGIC_ALL packet beam/soak, the smaller this number the easier it is for a service denial attack
+window.OY_LOGIC_ALL_LIMIT = 50;//ms interval allowed for an OY_LOGIC_ALL packet beam/soak, the smaller this number the easier it is for a service denial attack
 window.OY_ENGINE_INTERVAL = 2000;//ms interval for core mesh engine to run, the time must clear a reasonable latency round-about
 window.OY_READY_RETRY = 3000;//ms interval to retry connection if READY is still false
 window.OY_BLOCK_LOOP = 200;//a lower value means more opportunity within the 10 second window to propagate transactions
@@ -1488,7 +1488,7 @@ function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
         }
         if (oy_data_flag==="OY_DATA_PULL"||oy_data_flag==="OY_CHANNEL_BROADCAST") {
             let oy_microtime_local = Date.now();
-            if (oy_microtime_local-window.OY_PEERS[oy_node_id][9]<=window.OY_LOGIC_ALL_LIMIT) {
+            if (oy_microtime_local-window.OY_PEERS[oy_node_id][9]<=window.OY_LOGIC_ALL_LIMIT*1.1) {
                 oy_log("Pending beam breached logic_all limit for flag "+oy_data_flag+" to "+oy_short(oy_node_id));
                 return true;
             }
@@ -1536,7 +1536,7 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
                        oy_log("Soaked OY_LOGIC_ALL from a non-peer "+oy_short(oy_node_id)+", will cease");
                        return false;
                    }
-                   else if (oy_microtime_local-window.OY_PEERS[oy_node_id][10]<window.OY_LOGIC_ALL_LIMIT) {
+                   else if (oy_microtime_local-window.OY_PEERS[oy_node_id][10]<window.OY_LOGIC_ALL_LIMIT*0.9) {
                        oy_log("Peer "+oy_short(oy_node_id)+" breached logic_all limit, will remove and punish");
                        oy_peer_remove(oy_node_id, "OY_PUNISH_LOGIC_BREACH");
                        return false;
@@ -1569,7 +1569,7 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
        oy_log("Data validation exception occurred: "+oy_error);
    }
    oy_log("Node "+oy_short(oy_node_id)+" failed validation");
-   return false
+   return false;
 }
 
 //deposits data for local retention
