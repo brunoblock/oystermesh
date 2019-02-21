@@ -1484,6 +1484,7 @@ function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
             oy_log("Cooling off, skipping "+oy_data_flag+" to "+oy_short(oy_node_id));
             return true;
         }
+        /*
         if (oy_data_flag==="OY_DATA_PULL"||oy_data_flag==="OY_CHANNEL_BROADCAST") {
             let oy_microtime_local = Date.now();
             if (oy_microtime_local-window.OY_PEERS[oy_node_id][9]<=window.OY_LOGIC_ALL_LIMIT*1.1) {
@@ -1492,6 +1493,7 @@ function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
             }
             window.OY_PEERS[oy_node_id][9] = oy_microtime_local;
         }
+        */
         if (oy_peer_check(oy_node_id)) oy_data_measure(true, oy_node_id, oy_data_raw.length);
         window.OY_NODES[oy_node_id][0].send(oy_data_raw);//send the JSON-converted data array to the destination node
         oy_log("Beamed data to node "+oy_short(oy_node_id)+" with size: "+oy_data_raw.length);
@@ -1534,12 +1536,14 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
                        oy_log("Soaked OY_LOGIC_ALL from a non-peer "+oy_short(oy_node_id)+", will cease");
                        return false;
                    }
+                   /*
                    else if (oy_microtime_local-window.OY_PEERS[oy_node_id][10]<window.OY_LOGIC_ALL_LIMIT*0.9) {
                        oy_log("Peer "+oy_short(oy_node_id)+" breached logic_all limit, will remove and punish");
                        oy_peer_remove(oy_node_id, "OY_PUNISH_LOGIC_BREACH");
                        return false;
                    }
                    window.OY_PEERS[oy_node_id][10] = oy_microtime_local;
+                   */
                    if ((oy_data[0]==="OY_DATA_PULL"&&oy_data_raw.length>window.OY_DATA_PULL_PACKET_MAX)||(oy_data[0]==="OY_CHANNEL_BROADCAST"&&oy_data_raw.length>window.OY_CHANNEL_BROADCAST_PACKET_MAX)) {
                        oy_log("Peer "+oy_short(oy_node_id)+" sent a data sequence that is too large for "+oy_data[0]+", will remove and punish");
                        oy_peer_remove(oy_node_id, "OY_PUNISH_LOGIC_LARGE");
@@ -1770,7 +1774,7 @@ function oy_engine(oy_thread_track) {
         oy_log("Asked peer "+oy_short(oy_peer_local)+" for peer recommendation");
     }
 
-    if (window.OY_PEER_COUNT<(window.OY_PEER_MAX-1)&&(oy_time_local-oy_thread_track[0])>window.OY_NODE_ASSIGNTTIME) {
+    if (window.OY_PEER_COUNT<window.OY_PEER_MAX&&(oy_time_local-oy_thread_track[0])>window.OY_NODE_ASSIGNTTIME) {
         oy_thread_track[0] = oy_time_local;
         oy_log("Engine initiating node_assign, peer count is "+window.OY_PEER_COUNT+"/"+window.OY_PEER_MAX);
         oy_node_assign();
