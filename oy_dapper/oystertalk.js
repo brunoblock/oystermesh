@@ -27,7 +27,7 @@ function ot_render(oy_broadcast_hash, oy_render_payload) {
 
     let ot_badge = "";
     if (oy_render_payload[5]===window.OY_KEY_BRUNO) ot_badge = "<div style='position:absolute;top:1.1vh;left:-3.1vh;opacity:0.8;border-radius:0.2vh;font-size:1vh;padding:0.12vh;transform:translate(-50%, -50%);background-color: #2f7dab;color:#dadada'>&nbsp;FOUNDER&nbsp;</div><div style='position:absolute;top:2.9vh;left:-3.1vh;opacity:0.8;border-radius:0.2vh;font-size:1vh;padding:0.12vh;transform:translate(-50%, -50%);background-color: #8b59ab;color:#dadada'>&nbsp;LEAD&nbsp;DEV&nbsp;</div>";
-    else if (window.OY_BLOCK[2][window.OT_CHANNEL_ID][2].indexOf(oy_render_payload[5])!==-1) ot_badge = "<div style='position:absolute;top:2vh;left:-2.3vh;opacity:0.8;border-radius:0.2vh;font-size:1.1vh;padding:0.12vh;transform:translate(-50%, -50%);background-color: #aba920;color:#dadada'>&nbsp;MOD&nbsp;</div>";
+    else if (window.OY_BLOCK_TEMP[2][window.OT_CHANNEL_ID][2].indexOf(oy_render_payload[5])!==-1) ot_badge = "<div style='position:absolute;top:2vh;left:-2.3vh;opacity:0.8;border-radius:0.2vh;font-size:1.1vh;padding:0.12vh;transform:translate(-50%, -50%);background-color: #aba920;color:#dadada'>&nbsp;MOD&nbsp;</div>";
 
     let ot_append = "";
     let ot_reply = "";
@@ -249,7 +249,7 @@ function ot_join() {
 }
 
 function ot_approve() {
-    if (typeof(window.OY_BLOCK[2][window.OT_CHANNEL_ID])==="undefined") return false;
+    if (typeof(window.OY_BLOCK_TEMP[2][window.OT_CHANNEL_ID])==="undefined") return false;
     if (window.OY_WALLET_PUBLIC!==null&&oy_channel_approved(window.OT_CHANNEL_ID, window.OY_WALLET_PUBLIC)) {
         oy_channel_listen(window.OT_CHANNEL_ID, function(oy_broadcast_hash, oy_render_payload) {
             ot_render(oy_broadcast_hash, oy_render_payload);
@@ -270,7 +270,7 @@ function ot_load() {
         document.getElementById("ot_wallet_load_cont").style.display = "none";
         document.getElementById("ot_approval_cont").style.display = "block";
 
-        if (typeof(window.OY_BLOCK[2][window.OT_CHANNEL_ID])!=="undefined") ot_approve();
+        if (typeof(window.OY_BLOCK_TEMP[2][window.OT_CHANNEL_ID])!=="undefined") ot_approve();
     }
 }
 
@@ -314,14 +314,14 @@ function ot_close() {
 }
 
 function ot_maintain() {
-    if (window.OY_BLOCK_HASH!==null&&typeof(window.OY_BLOCK[2][window.OT_CHANNEL_ID])!=="undefined") {
+    if (window.OY_BLOCK_HASH!==null&&typeof(window.OY_BLOCK_TEMP[2][window.OT_CHANNEL_ID])!=="undefined") {
 
         let ot_top_count = oy_channel_top_count(window.OT_CHANNEL_ID);
 
         if (window.OY_WALLET_PUBLIC!==null&&oy_channel_approved(window.OT_CHANNEL_ID, window.OY_WALLET_PUBLIC)) ot_top_count[0]++;
         else ot_top_count[1]++;
 
-        document.getElementById("ot_channel_stats").innerHTML = "["+(window.OY_BLOCK[2][window.OT_CHANNEL_ID][2].length+window.OY_BLOCK[2][window.OT_CHANNEL_ID][3].length)+"&nbsp;members&nbsp;/&nbsp;"+ot_top_count[0]+"&nbsp;online&nbsp;/&nbsp;"+ot_top_count[1]+"&nbsp;watching]";
+        document.getElementById("ot_channel_stats").innerHTML = "["+(window.OY_BLOCK_TEMP[2][window.OT_CHANNEL_ID][2].length+window.OY_BLOCK_TEMP[2][window.OT_CHANNEL_ID][3].length)+"&nbsp;members&nbsp;/&nbsp;"+ot_top_count[0]+"&nbsp;online&nbsp;/&nbsp;"+ot_top_count[1]+"&nbsp;watching]";
     }
     for (let ot_recall_reply_count in window.OT_RECALL_REPLY) {
         let ot_reply_array = ot_reply_render(window.OT_RECALL_REPLY[ot_recall_reply_count][0], window.OT_RECALL_REPLY[ot_recall_reply_count][1]);
