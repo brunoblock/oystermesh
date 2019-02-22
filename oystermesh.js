@@ -61,6 +61,7 @@ window.OY_CHANNEL_EXPIRETIME = 1209600;//seconds until a broadcast expires and i
 window.OY_CHANNEL_RESPOND_MAX = 30;//max amount of broadcast payloads to send in response to a channel recover request, divided by online count
 window.OY_CHANNEL_BROADCAST_PACKET_MAX = 5000;//maximum size for a packet that is routed via OY_CHANNEL_BROADCAST (OY_LOGIC_ALL)
 window.OY_CHANNEL_ALLOWANCE = 8;//broadcast allowance in seconds per public key, an anti-spam mechanism to prevent abuse of OY_LOGIC_ALL
+window.OY_AKOYA_DECIMALS = 10000;//zeros after the decimal point for akoya currency
 window.OY_KEY_BRUNO = "XLp6_wVPBF3Zg-QNRkEj6U8bOYEZddQITs1n2pyeRqwOG5k9w_1A-RMIESIrVv_5HbvzoLhq-xPLE7z2na0C6M";//prevent impersonation
 window.OY_SHORT_LENGTH = 6;//various data value such as nonce IDs, data handles, data values are shortened for efficiency
 window.OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inputs are expected
@@ -94,8 +95,10 @@ window.OY_BLACKLIST = {};//nodes to block for x amount of time
 window.OY_PUSH_HOLD = {};//holds data contents ready for pushing to mesh
 window.OY_PUSH_TALLY = {};//tracks data push nonces that were deposited on the mesh
 window.OY_BLOCK = [null];//block from the block that keeps consensus-approved transactions
+window.OY_BLOCK_BETA = [null];//decentralized block in beta phase
 window.OY_BLOCK_HASH = null;//hash of the most current block
 window.OY_BLOCK_PREV = null;//the most recent block timestamp
+window.OY_BLOCK_COMMANDS = ["OY_AKOYA_SEND", "OY_AKOYA_BURN"];
 window.OY_BLOCK_TRIGGER = new Event('oy_block_trigger');//trigger-able event for when a new block is issued
 window.OY_CHANNEL_DYNAMIC = {};//track channel broadcasts to ensure allowance compliance
 window.OY_CHANNEL_LISTEN = {};//track channels to listen for
@@ -414,7 +417,27 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     let oy_time_local = Date.now()/1000;
     window.OY_PEERS[oy_peer_id][1] = oy_time_local;//update last msg timestamp for peer, no need to update localstorage via oy_local_store() (could be expensive)
     oy_log("Mutual peer "+oy_short(oy_peer_id)+" sent data sequence with flag: "+oy_data_flag);
-    if (oy_data_flag==="OY_DATA_PUSH") {//store received data and potentially forward the push request to peers
+    if (oy_data_flag==="OY_BLOCK_BROADCAST") {
+        //oy_data_payload = [oy_route_passport_passive, oy_route_dynamic, oy_block_command, oy_command_crypt, oy_key_public]
+        if (oy_data_payload.length!==5||typeof(oy_data_payload[0])!=="object"||oy_data_payload[1].length===0) {
+            oy_log("Peer "+oy_short(oy_peer_id)+" sent invalid block broadcast, will punish");
+            oy_node_punish(oy_peer_id, "OY_PUNISH_BLOCK_INVALID");
+            return false;
+        }
+        if (window.OY_BLOCK_PREV===oy_data_payload[2][0]&&window.OY_BLOCK_COMMANDS.indexOf(oy_data_payload[2][1])!==-1) {
+            oy_key_verify(oy_data_payload[4], oy_data_payload[3], JSON.stringify(oy_data_payload[2]), function(oy_key_valid) {
+                if (oy_key_valid===true) {
+                    oy_log("Beaming block broadcast "+oy_short(oy_data_payload[1])+" forward along the mesh");
+                    oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_BROADCAST", oy_data_payload);
+
+                    if (oy_data_payload[2][1]==="OY_AKOYA_SEND") {
+
+                    }
+                }
+            });
+        }
+    }
+    else if (oy_data_flag==="OY_DATA_PUSH") {//store received data and potentially forward the push request to peers
         //oy_data_payload = [oy_route_passport_passive, oy_data_handle, oy_data_nonce, oy_data_value]
         //data received here will be committed to data_deposit with only randomness restrictions, mesh flow restrictions from oy_init() are sufficient
         if (oy_data_payload.length!==4||typeof(oy_data_payload[0])!=="object"||!oy_handle_check(oy_data_payload[1])||oy_data_payload[3].length>window.OY_DATA_CHUNK) {
@@ -506,7 +529,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     else if (oy_data_flag==="OY_CHANNEL_BROADCAST") {
         //oy_data_payload = [oy_route_passport_passive, oy_route_dynamic, oy_channel_id, oy_channel_payload, oy_payload_crypt, oy_key_public, oy_broadcast_time]
         if (oy_data_payload.length!==7||typeof(oy_data_payload[0])!=="object"||oy_data_payload[1].length===0||!oy_channel_check(oy_data_payload[2])) {
-            oy_log("Peer "+oy_short(oy_peer_id)+" sent invalid fulfill data sequence, will punish");
+            oy_log("Peer "+oy_short(oy_peer_id)+" sent invalid channel broadcast, will punish");
             oy_node_punish(oy_peer_id, "OY_PUNISH_CHANNEL_INVALID");
             return false;
         }
@@ -1701,6 +1724,14 @@ function oy_channel_mute(oy_channel_id) {
     delete window.OY_CHANNEL_TOP[oy_channel_id];
     delete window.OY_CHANNEL_RENDER[oy_channel_id];
     oy_local_store("oy_channel_keep", window.OY_CHANNEL_KEEP);
+}
+
+function oy_akoya_transfer(oy_key_private, oy_key_public, oy_transfer_amount, oy_receive_public) {
+    oy_transfer_amount = Math.floor(oy_transfer_amount*window.OY_AKOYA_DECIMALS);
+    let oy_block_command = [window.OY_BLOCK_PREV, "OY_AKOYA_SEND", oy_transfer_amount, oy_receive_public];
+    oy_key_sign(oy_key_private, JSON.stringify(oy_block_command), function(oy_command_crypt) {
+        oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_BROADCAST", [[], oy_rand_gen(), oy_block_command, oy_command_crypt, oy_key_public]);
+    });
 }
 
 function oy_block_time() {
