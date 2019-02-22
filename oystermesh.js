@@ -5,7 +5,8 @@
 
 // GLOBAL VARS
 window.OY_MESH_DYNASTY = "BRUNO_GENESIS_V2";//mesh dynasty definition, changing this will cause a hard-fork
-window.OY_MESH_EDGE = 10;//maximum seconds that it should take for a transaction to reach the furthest edge-to-edge distance of the mesh, this variable should stay at 10
+window.OY_MESH_EDGE = 2;//maximum seconds that it should take for a transaction to reach the furthest edge-to-edge distance of the mesh
+window.OY_MESH_FUTURE = 0.5;//seconds buffer a block command's timestamp is allowed to be in the future, this variable exists to deal with slight mis-calibrations between node clocks
 window.OY_MESH_FLOW = 128000;//characters per second allowed per peer, and for all aggregate non-peer nodes
 window.OY_MESH_MEASURE = 10;//seconds by which to measure mesh flow, larger means more tracking of nearby node and peer activity
 window.OY_MESH_BEAM_SAMPLE = 3;//time/data measurements to determine mesh beam flow required to state a result, too low can lead to volatile and inaccurate readings
@@ -97,8 +98,10 @@ window.OY_PUSH_TALLY = {};//tracks data push nonces that were deposited on the m
 window.OY_BLOCK = [null];//block from the block that keeps consensus-approved transactions
 window.OY_BLOCK_BETA = [null];//decentralized block in beta phase
 window.OY_BLOCK_HASH = null;//hash of the most current block
-window.OY_BLOCK_PREV = null;//the most recent block timestamp
+window.OY_BLOCK_TIME = null;//the most recent block timestamp
 window.OY_BLOCK_COMMANDS = ["OY_AKOYA_SEND", "OY_AKOYA_BURN"];
+window.OY_BLOCK_COMMAND = [];
+window.OY_BLOCK_SYNC = [];
 window.OY_BLOCK_TRIGGER = new Event('oy_block_trigger');//trigger-able event for when a new block is issued
 window.OY_CHANNEL_DYNAMIC = {};//track channel broadcasts to ensure allowance compliance
 window.OY_CHANNEL_LISTEN = {};//track channels to listen for
@@ -424,15 +427,13 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_node_punish(oy_peer_id, "OY_PUNISH_BLOCK_INVALID");
             return false;
         }
-        if (window.OY_BLOCK_PREV===oy_data_payload[2][0]&&window.OY_BLOCK_COMMANDS.indexOf(oy_data_payload[2][1])!==-1) {
+        if (window.OY_BLOCK_COMMANDS.indexOf(oy_data_payload[2][1])!==-1&&oy_data_payload[2][0]<oy_time_local+window.OY_MESH_FUTURE&&oy_time_local-oy_data_payload[2][0]<window.OY_MESH_EDGE&&window.OY_BLOCK_TIME===Math.floor(oy_data_payload[2][0]/10)*10) {
             oy_key_verify(oy_data_payload[4], oy_data_payload[3], JSON.stringify(oy_data_payload[2]), function(oy_key_valid) {
                 if (oy_key_valid===true) {
                     oy_log("Beaming block broadcast "+oy_short(oy_data_payload[1])+" forward along the mesh");
                     oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_BROADCAST", oy_data_payload);
 
-                    if (oy_data_payload[2][1]==="OY_AKOYA_SEND") {
-
-                    }
+                    window.OY_BLOCK_COMMAND.push([oy_data_payload[4], oy_data_payload[2]]);
                 }
             });
         }
@@ -1728,20 +1729,33 @@ function oy_channel_mute(oy_channel_id) {
 
 function oy_akoya_transfer(oy_key_private, oy_key_public, oy_transfer_amount, oy_receive_public) {
     oy_transfer_amount = Math.floor(oy_transfer_amount*window.OY_AKOYA_DECIMALS);
-    let oy_block_command = [window.OY_BLOCK_PREV, "OY_AKOYA_SEND", oy_transfer_amount, oy_receive_public];
+    oy_block_broadcast(oy_key_private, [-1, "OY_AKOYA_SEND", oy_transfer_amount, oy_receive_public]);
+}
+
+function oy_block_broadcast(oy_key_private, oy_key_public, oy_block_command, oy_broadcast_force) {
+    let oy_time_local = Date.now()/1000;
+    let oy_block_next = oy_block_time(true);
+    if (typeof(oy_broadcast_force)==="undefined"&&oy_block_next-oy_time_local>=window.OY_MESH_EDGE) {
+        setTimeout(function() {
+            oy_block_broadcast(oy_key_private, oy_key_public, oy_block_command, true);
+        }, ((oy_block_next-oy_time_local)*1000)+(window.OY_MESH_FUTURE*1000));
+        return true;
+    }
+    oy_block_command[0] = oy_time_local;
     oy_key_sign(oy_key_private, JSON.stringify(oy_block_command), function(oy_command_crypt) {
         oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_BROADCAST", [[], oy_rand_gen(), oy_block_command, oy_command_crypt, oy_key_public]);
     });
 }
 
-function oy_block_time() {
+function oy_block_time(oy_next) {
+    if (oy_next===true) return (Math.ceil(Date.now()/10000))*10;
     return (Math.floor(Date.now()/10000))*10;
 }
 
 function oy_block_loop() {
-    let oy_block_time_local = oy_block_time();
-    if (oy_block_time_local!==window.OY_BLOCK_PREV) {
-        window.OY_BLOCK_PREV = oy_block_time_local;
+    let oy_block_time_local = oy_block_time(false);
+    if (oy_block_time_local!==window.OY_BLOCK_TIME) {
+        window.OY_BLOCK_TIME = oy_block_time_local;
         //trigger for mesh consensus
 
         //----------transitory centralized solution
