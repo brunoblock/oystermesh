@@ -23,6 +23,7 @@ window.OY_BLOCK_CONSENSUS = 0.6;//mesh topology corroboration to agree on confir
 window.OY_BLOCK_GAP = 4000;//ms interval for processing the block in various stages
 window.OY_BLOCK_KEY_LIMIT = 4;//permitted transactions per wallet per block (10 seconds)
 window.OY_AKOYA_DECIMALS = 10000;//zeros after the decimal point for akoya currency
+window.OY_AKOYA_MAX_SUPPY = 10000000*window.OY_AKOYA_DECIMALS;//akoya max supply
 window.OY_NODE_TOLERANCE = 3;//max amount of protocol communication violations until node is blacklisted
 window.OY_NODE_BLACKTIME = 240;//seconds to blacklist a punished node for
 window.OY_NODE_PROPOSETIME = 12;//seconds for peer proposal session duration
@@ -100,12 +101,39 @@ window.OY_PUSH_HOLD = {};//holds data contents ready for pushing to mesh
 window.OY_PUSH_TALLY = {};//tracks data push nonces that were deposited on the mesh
 window.OY_BLOCK_TEMP = [null];//temporary centralized block
 window.OY_BLOCK_TEMP_HASH = null;//hash of the most current block
-window.OY_BLOCK = [[], [], []];//the current meshblock
+window.OY_BLOCK = [{}, {}, {}];//the current meshblock - [oy_akoya_sector, oy_dns_sector, oy_channel_sector]
 window.OY_BLOCK_HASH = null;//hash of the most current block
 window.OY_BLOCK_TIME = null;//the most recent block timestamp
 window.OY_BLOCK_NEXT = null;//the next block timestamp
-window.OY_BLOCK_COMMANDS = {"OY_AKOYA_SEND":5, "OY_AKOYA_BURN":4};
+window.OY_BLOCK_COMMANDS = {
+    "OY_AKOYA_SEND":[function(oy_command_array) {
+        if (oy_command_array.length===5&&//check the element count in the command
+            oy_command_array[3]>0&&//check that the sending amount is greater than zero
+            oy_command_array[3]<window.OY_AKOYA_MAX_SUPPY&&//check that the sending amount smaller than the max supply
+            typeof(window.OY_BLOCK[0][oy_command_array[1]])==="undefined"&&//check the sending wallet exists
+            oy_command_array[3]<=window.OY_BLOCK[0][oy_command_array[1]]) return true;//check the sending wallet has sufficient akoya
+        return false;
+        //TODO - check that receiving address is a valid address
+        //TODO - either one wallet transaction per block or need additional checks
+    }],
+    "OY_AKOYA_BURN":[function(oy_command_array) {
+        if (oy_command_array.length===4) return true;//check the element count in the command
+        return false;
+        //TODO
+    }],
+    "OY_DNS_SET":[function(oy_command_array) {
+        if (oy_command_array.length===4) return true;//check the element count in the command
+        return false;
+        //TODO
+    }],
+    "OY_DNS_TRANSFER":[function(oy_command_array) {
+        if (oy_command_array.length===4) return true;//check the element count in the command
+        return false;
+        //TODO
+    }]
+};
 window.OY_BLOCK_COMMAND = {};
+window.OY_BLOCK_COMMAND_PREV = {};
 window.OY_BLOCK_COMMAND_SESSION = {};
 window.OY_BLOCK_COMMAND_KEY = {};
 window.OY_BLOCK_SYNC = {};
@@ -429,7 +457,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     window.OY_PEERS[oy_peer_id][1] = oy_time_local;//update last msg timestamp for peer, no need to update localstorage via oy_local_store() (could be expensive)
     oy_log("Mutual peer "+oy_short(oy_peer_id)+" sent data sequence with flag: "+oy_data_flag);
     if (oy_data_flag==="OY_BLOCK_COMMAND") {
-        //oy_data_payload = [oy_route_passport_passive, oy_route_dynamic, oy_block_command, oy_command_crypt]
+        //oy_data_payload = [oy_route_passport_passive, oy_route_dynamic, oy_command_array, oy_command_crypt]
         if (oy_data_payload.length!==4||typeof(oy_data_payload[0])!=="object"||oy_data_payload[1].length===0) {
             oy_log("Peer "+oy_short(oy_peer_id)+" sent invalid block command, will punish");
             oy_node_punish(oy_peer_id, "OY_PUNISH_COMMAND_INVALID");
@@ -440,17 +468,14 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         else if (window.OY_BLOCK_COMMAND_KEY[oy_data_payload[2][1]]>=window.OY_BLOCK_KEY_LIMIT) return false;
         window.OY_BLOCK_COMMAND_KEY[oy_data_payload[2][1]]++;
 
-        if (typeof(oy_data_payload[2][2])!=="undefined"&&//check that a command was given
-            typeof(window.OY_BLOCK_COMMANDS[oy_data_payload[2][2]])!=="undefined"&&//check that the signed command is a recognizable command
-            oy_data_payload[2].length===window.OY_BLOCK_COMMANDS[oy_data_payload[2][2]]&&//check that the command sequence has the correct amount of elements
-            oy_data_payload[2][0]<oy_time_local+window.OY_MESH_FUTURE&&//check that the broadcast timestamp is not in the future, with buffer leniency
+        if (oy_data_payload[2][0]<oy_time_local+window.OY_MESH_FUTURE&&//check that the broadcast timestamp is not in the future, with buffer leniency
             oy_time_local-oy_data_payload[2][0]<window.OY_MESH_EDGE&&//check that the broadcast timestamp complies with MESH_EDGE restrictions
             oy_time_local-oy_data_payload[2][0]<window.OY_MESH_HOP*oy_data_payload[0].length&&//check that the broadcast timestamp complies with MESH_HOP restrictions
             oy_data_payload[2][0]-window.OY_BLOCK_TIME>=window.OY_MESH_EDGE&&//check that the broadcast timestamp is not in the first sector of the current block
             window.OY_BLOCK_NEXT-oy_data_payload[2][0]>=window.OY_MESH_EDGE&&//check that the broadcast timestamp is not in the last sector of the current block
             oy_time_local<window.OY_BLOCK_NEXT&&//check that the broadcast is being processed before the next block (current block)
             window.OY_BLOCK_TIME===Math.floor(oy_data_payload[2][0]/10)*10) {//additional redundant check that the broadcast is targeting the current block
-            oy_key_verify(oy_data_payload[2][1], oy_data_payload[3], JSON.stringify(oy_data_payload[2]), function(oy_key_valid) {
+            oy_block_command_verify([oy_data_payload[2], oy_data_payload[3]], function(oy_key_valid) {
                 if (oy_key_valid===true) {
                     let oy_command_challenge = oy_rand_gen();
                     let oy_command_hash = oy_hash_gen(JSON.stringify(oy_data_payload[2]));
@@ -522,25 +547,31 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_data_payload[2]-window.OY_BLOCK_TIME<window.OY_BLOCK_GAP*2&&//check that the broadcast timestamp is in the sync processing zone
             oy_time_local<window.OY_BLOCK_NEXT&&//check that the broadcast is being processed before the next block (current block)
             window.OY_BLOCK_TIME===Math.floor(oy_data_payload[2][0]/10)*10) {//additional redundant check that the broadcast is targeting the current block
-            for (let i in oy_data_payload[4]) {
-                if (typeof(oy_data_payload[4][i][0][2])==="undefined"||//check that a command was given
-                    typeof(window.OY_BLOCK_COMMANDS[oy_data_payload[4][i][0][2]])==="undefined"||//check that the signed command is a recognizable command
-                    oy_data_payload[4][i].length!==window.OY_BLOCK_COMMANDS[oy_data_payload[4][i][0][2]]) {//check that the command sequence has the correct amount of elements
-                    return false;
-                }
-            }
+
             let oy_sync_hash = oy_hash_gen(JSON.stringify(oy_data_payload[4]));
             oy_key_verify(oy_data_payload[5], oy_data_payload[3], oy_data_payload[2]+oy_sync_hash, function(oy_key_valid) {
                 if (oy_key_valid===true) {
-                    //TODO check command signatures
-                    let oy_sync_challenge = oy_rand_gen();
-                    window.OY_BLOCK_SYNC[oy_data_payload[5]] = [false, oy_sync_challenge+oy_sync_hash, oy_data_payload];
-                    let oy_route_skip = oy_data_payload[0].slice();
-                    let oy_route_target = oy_route_skip.shift();
-                    oy_data_route("OY_LOGIC_CHALLENGE", "OY_BLOCK_SYNC_CHALLENGE", [[], oy_rand_gen(), oy_route_skip, oy_route_target, oy_sync_challenge]);
+                    let oy_command_pool = {};
+                    let oy_command_inherit = [];
+                    for (let i in oy_data_payload[4]) {
+                        let oy_command_hash = oy_hash_gen(JSON.stringify(oy_data_payload[4][i]));
+                        if (typeof(oy_command_pool[oy_command_hash])!=="undefined") return false;//node sent same command twice, so discard their sync broadcast
+                        oy_command_pool[oy_command_hash] = oy_data_payload[4][i][0];
+                        if (typeof(window.OY_BLOCK_COMMAND_PREV[oy_command_hash])==="undefined") oy_command_inherit.push(oy_data_payload[4][i]);
+                    }
+                    oy_block_sync_verify(oy_command_inherit, function(oy_sync_verify) {
+                        if (oy_sync_verify===true) {
+                            let oy_sync_challenge = oy_rand_gen();
+                            window.OY_BLOCK_SYNC[oy_data_payload[5]] = [false, oy_sync_challenge+oy_sync_hash, oy_data_payload, oy_command_pool];
+                            let oy_route_skip = oy_data_payload[0].slice();
+                            let oy_route_target = oy_route_skip.shift();
+                            oy_data_route("OY_LOGIC_CHALLENGE", "OY_BLOCK_SYNC_CHALLENGE", [[], oy_rand_gen(), oy_route_skip, oy_route_target, oy_sync_challenge]);
+                        }
+                    });
                 }
             });
         }
+        return true;
     }
     else if (oy_data_flag==="OY_BLOCK_SYNC_CHALLENGE") {
         //oy_data_payload = [oy_route_passport_passive, oy_route_dynamic, oy_route_skip, oy_route_target, oy_route_dynamic_prev, oy_sync_challenge]
@@ -1904,6 +1935,27 @@ function oy_block_command(oy_key_private, oy_key_public, oy_command_array, oy_br
     });
 }
 
+function oy_block_command_verify(oy_command_select, oy_callback) {
+    if (typeof(oy_command_select[0][2])==="undefined"||//check that a command was given
+        typeof(window.OY_BLOCK_COMMANDS[oy_command_select[0][2]])==="undefined") {//check that the signed command is a recognizable command
+        oy_callback(false);
+    }
+    else {
+        oy_key_verify(oy_command_select[0][1], oy_command_select[1], JSON.stringify(oy_command_select[0]), function(oy_key_valid) {
+            if (oy_key_valid===true) oy_callback(window.OY_BLOCK_COMMANDS[oy_command_select[0][2]][0](oy_command_select[0]));
+            else oy_callback(false);
+        });
+    }
+}
+
+function oy_block_sync_verify(oy_command_inherit, oy_callback) {
+    if (oy_command_inherit.length===0) oy_callback(true);
+    oy_block_command_verify(oy_command_inherit.pop(), function(oy_command_valid) {
+        if (oy_command_valid===true) oy_block_sync_verify(oy_command_inherit, oy_callback);
+        else oy_callback(false);
+    });
+}
+
 function oy_block_time(oy_next) {
     if (oy_next===true) return (Math.ceil(Date.now()/10000))*10;
     return (Math.floor(Date.now()/10000))*10;
@@ -1921,11 +1973,15 @@ function oy_block_loop() {
         let oy_sync_keep = {};
         for (let oy_command_hash in window.OY_BLOCK_COMMAND) {
             if (window.OY_BLOCK_COMMAND[oy_command_hash][0]===true) {
-                oy_sync_command.push([window.OY_BLOCK_COMMAND[oy_command_hash][2][2], window.OY_BLOCK_COMMAND[oy_command_hash][2][3]]);
+                oy_sync_command.push([window.OY_BLOCK_COMMAND[oy_command_hash][2][2], window.OY_BLOCK_COMMAND[oy_command_hash][2][3]]);//[oy_command_array, oy_command_crypt]
                 oy_sync_keep[oy_command_hash] = window.OY_BLOCK_COMMAND[oy_command_hash][2][2];
             }
         }
 
+        window.OY_BLOCK_COMMAND_PREV = {};
+        for (let oy_command_hash in window.OY_BLOCK_COMMAND) {
+            window.OY_BLOCK_COMMAND_PREV[oy_command_hash] = [OY_BLOCK_COMMAND[oy_command_hash][0].slice(), OY_BLOCK_COMMAND[oy_command_hash][1]];//[oy_command_array, oy_command_crypt]
+        }
         window.OY_BLOCK_COMMAND = {};
 
         oy_sync_command.sort(function(a, b) {//TODO this might need to be random instead to increase hash diversity/security
@@ -1945,9 +2001,8 @@ function oy_block_loop() {
                 for (let oy_key_public in window.OY_BLOCK_SYNC) {
                     if (window.OY_BLOCK_SYNC[oy_key_public][0]===true) {
                         oy_node_consensus++;
-                        for (let i in window.OY_BLOCK_SYNC[oy_key_public][2][4]) {
-                            let oy_command_hash = oy_hash_gen(JSON.stringify(window.OY_BLOCK_SYNC[oy_key_public][2][4][i]));
-                            if (typeof(oy_command_pool[oy_command_hash])==="undefined") oy_command_pool[oy_command_hash] = [1, window.OY_BLOCK_SYNC[oy_key_public][2][4][i]];
+                        for (let oy_command_hash in window.OY_BLOCK_SYNC[oy_key_public][3]) {
+                            if (typeof(oy_command_pool[oy_command_hash])==="undefined") oy_command_pool[oy_command_hash] = [1, window.OY_BLOCK_SYNC[oy_key_public][3][oy_command_hash]];
                             else oy_command_pool[oy_command_hash][0]++;
                         }
                     }
@@ -1959,7 +2014,6 @@ function oy_block_loop() {
                 let oy_final_command = [];
                 oy_node_consensus = Math.ceil(oy_node_consensus*window.OY_BLOCK_CONSENSUS);
                 let oy_command_execute = [];
-                //TODO verify signatures that do not belong to sync_keep via recursive function with callback
                 for (let oy_command_hash in oy_command_pool) {
                     if (oy_command_pool[oy_command_hash]>=oy_node_consensus) oy_command_execute.push(oy_command_pool[oy_command_hash]);
                 }
@@ -1972,6 +2026,8 @@ function oy_block_loop() {
                     }
                     return a[0] - b[0];
                 });
+
+                //TODO BLOCK_FINAL, uses LOGIC_ALL without CHALLENGE, share wallets of nodes that did work, reach consensus then modify the block and restart the cycle
             }, window.OY_BLOCK_GAP);
         });
 
