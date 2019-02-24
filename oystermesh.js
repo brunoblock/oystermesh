@@ -19,6 +19,7 @@ window.OY_MESH_PUSH_CHANCE_STORED = 0.95;//probability that self will forward a 
 window.OY_MESH_DEPOSIT_CHANCE = 0.4;//probability that self will deposit pushed data
 window.OY_MESH_FULLFILL_CHANCE = 0.2;//probability that data is stored whilst fulfilling a pull request, this makes data intelligently migrate and recommit overtime
 window.OY_MESH_SOURCE = 3;//node in route passport (from destination) that is assigned with defining the source variable
+window.OY_BLOCK_CONSENSUS = 0.6;//mesh topology corroboration to agree on confirming a meshblock transaction
 window.OY_BLOCK_GAP = 4000;//ms interval for processing the block in various stages
 window.OY_BLOCK_KEY_LIMIT = 4;//permitted transactions per wallet per block (10 seconds)
 window.OY_AKOYA_DECIMALS = 10000;//zeros after the decimal point for akoya currency
@@ -103,7 +104,7 @@ window.OY_BLOCK = [[], [], []];//the current meshblock
 window.OY_BLOCK_HASH = null;//hash of the most current block
 window.OY_BLOCK_TIME = null;//the most recent block timestamp
 window.OY_BLOCK_NEXT = null;//the next block timestamp
-window.OY_BLOCK_COMMANDS = ["OY_AKOYA_SEND", "OY_AKOYA_BURN"];
+window.OY_BLOCK_COMMANDS = {"OY_AKOYA_SEND":5, "OY_AKOYA_BURN":4};
 window.OY_BLOCK_COMMAND = {};
 window.OY_BLOCK_COMMAND_SESSION = {};
 window.OY_BLOCK_COMMAND_KEY = {};
@@ -439,7 +440,9 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         else if (window.OY_BLOCK_COMMAND_KEY[oy_data_payload[2][1]]>=window.OY_BLOCK_KEY_LIMIT) return false;
         window.OY_BLOCK_COMMAND_KEY[oy_data_payload[2][1]]++;
 
-        if (window.OY_BLOCK_COMMANDS.indexOf(oy_data_payload[2][2])!==-1&&//check that the signed command is a recognizable command
+        if (typeof(oy_data_payload[2][2])!=="undefined"&&//check that a command was given
+            typeof(window.OY_BLOCK_COMMANDS[oy_data_payload[2][2]])!=="undefined"&&//check that the signed command is a recognizable command
+            oy_data_payload[2].length===window.OY_BLOCK_COMMANDS[oy_data_payload[2][2]]&&//check that the command sequence has the correct amount of elements
             oy_data_payload[2][0]<oy_time_local+window.OY_MESH_FUTURE&&//check that the broadcast timestamp is not in the future, with buffer leniency
             oy_time_local-oy_data_payload[2][0]<window.OY_MESH_EDGE&&//check that the broadcast timestamp complies with MESH_EDGE restrictions
             oy_time_local-oy_data_payload[2][0]<window.OY_MESH_HOP*oy_data_payload[0].length&&//check that the broadcast timestamp complies with MESH_HOP restrictions
@@ -519,9 +522,17 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_data_payload[2]-window.OY_BLOCK_TIME<window.OY_BLOCK_GAP*2&&//check that the broadcast timestamp is in the sync processing zone
             oy_time_local<window.OY_BLOCK_NEXT&&//check that the broadcast is being processed before the next block (current block)
             window.OY_BLOCK_TIME===Math.floor(oy_data_payload[2][0]/10)*10) {//additional redundant check that the broadcast is targeting the current block
+            for (let i in oy_data_payload[4]) {
+                if (typeof(oy_data_payload[4][i][0][2])==="undefined"||//check that a command was given
+                    typeof(window.OY_BLOCK_COMMANDS[oy_data_payload[4][i][0][2]])==="undefined"||//check that the signed command is a recognizable command
+                    oy_data_payload[4][i].length!==window.OY_BLOCK_COMMANDS[oy_data_payload[4][i][0][2]]) {//check that the command sequence has the correct amount of elements
+                    return false;
+                }
+            }
             let oy_sync_hash = oy_hash_gen(JSON.stringify(oy_data_payload[4]));
             oy_key_verify(oy_data_payload[5], oy_data_payload[3], oy_data_payload[2]+oy_sync_hash, function(oy_key_valid) {
                 if (oy_key_valid===true) {
+                    //TODO check command signatures
                     let oy_sync_challenge = oy_rand_gen();
                     window.OY_BLOCK_SYNC[oy_data_payload[5]] = [false, oy_sync_challenge+oy_sync_hash, oy_data_payload];
                     let oy_route_skip = oy_data_payload[0].slice();
@@ -569,10 +580,6 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_log("Continuing block sync challenge response for public key "+oy_short(oy_data_payload[2]));
             oy_data_route("OY_LOGIC_FOLLOW", "OY_BLOCK_SYNC_CHALLENGE_RESPONSE", oy_data_payload);
         }
-        //TODO check if challenge session exists
-
-        //TODO verify challenge and track accordingly
-
     }
     else if (oy_data_flag==="OY_DATA_PUSH") {//store received data and potentially forward the push request to peers
         //oy_data_payload = [oy_route_passport_passive, oy_data_handle, oy_data_nonce, oy_data_value]
@@ -1911,25 +1918,60 @@ function oy_block_loop() {
 
         window.OY_BLOCK_COMMAND_KEY = {};
         let oy_sync_command = [];
+        let oy_sync_keep = {};
         for (let oy_command_hash in window.OY_BLOCK_COMMAND) {
-            if (window.OY_BLOCK_COMMAND[oy_command_hash][0]===true) oy_sync_command.push(window.OY_BLOCK_COMMAND[oy_command_hash][2][2]);
+            if (window.OY_BLOCK_COMMAND[oy_command_hash][0]===true) {
+                oy_sync_command.push([window.OY_BLOCK_COMMAND[oy_command_hash][2][2], window.OY_BLOCK_COMMAND[oy_command_hash][2][3]]);
+                oy_sync_keep[oy_command_hash] = window.OY_BLOCK_COMMAND[oy_command_hash][2][2];
+            }
         }
+
+        window.OY_BLOCK_COMMAND = {};
 
         oy_sync_command.sort(function(a, b) {//TODO this might need to be random instead to increase hash diversity/security
             return a[0] - b[0];
         });
 
+        window.OY_BLOCK_SYNC = {};
         window.OY_BLOCK_SYNC_HASH = oy_hash_gen(JSON.stringify(oy_sync_command));
         window.OY_BLOCK_SYNC_DYNAMIC = oy_rand_gen();
         let oy_sync_time = Date.now/1000;
         oy_key_sign(window.OY_MAIN['oy_self_private'], oy_sync_time+window.OY_BLOCK_SYNC_HASH, function(oy_sync_crypt) {
             oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_SYNC", [[], window.OY_BLOCK_SYNC_DYNAMIC, oy_sync_time, oy_sync_crypt, oy_sync_command, window.OY_MAIN['oy_self_public']]);
+            oy_sync_command = null;
             setTimeout(function() {
+                let oy_command_pool = {};
+                let oy_node_consensus = 0;
                 for (let oy_key_public in window.OY_BLOCK_SYNC) {
                     if (window.OY_BLOCK_SYNC[oy_key_public][0]===true) {
-
+                        oy_node_consensus++;
+                        for (let i in window.OY_BLOCK_SYNC[oy_key_public][2][4]) {
+                            let oy_command_hash = oy_hash_gen(JSON.stringify(window.OY_BLOCK_SYNC[oy_key_public][2][4][i]));
+                            if (typeof(oy_command_pool[oy_command_hash])==="undefined") oy_command_pool[oy_command_hash] = [1, window.OY_BLOCK_SYNC[oy_key_public][2][4][i]];
+                            else oy_command_pool[oy_command_hash][0]++;
+                        }
                     }
                 }
+                for (let oy_command_hash in oy_sync_keep) {
+                    if (typeof(oy_command_pool[oy_command_hash])==="undefined") oy_command_pool[oy_command_hash] = [1, oy_sync_keep[oy_command_hash]];
+                    else oy_command_pool[oy_command_hash][0]++;
+                }
+                let oy_final_command = [];
+                oy_node_consensus = Math.ceil(oy_node_consensus*window.OY_BLOCK_CONSENSUS);
+                let oy_command_execute = [];
+                //TODO verify signatures that do not belong to sync_keep via recursive function with callback
+                for (let oy_command_hash in oy_command_pool) {
+                    if (oy_command_pool[oy_command_hash]>=oy_node_consensus) oy_command_execute.push(oy_command_pool[oy_command_hash]);
+                }
+                oy_command_execute.sort(function(a, b) {
+                    if (a[0]===b[0]) {
+                        let x = a[1].toLowerCase();
+                        let y = b[1].toLowerCase();
+
+                        return x < y ? -1 : x > y ? 1 : 0;
+                    }
+                    return a[0] - b[0];
+                });
             }, window.OY_BLOCK_GAP);
         });
 
