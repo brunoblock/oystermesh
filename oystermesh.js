@@ -22,8 +22,9 @@ window.OY_MESH_SOURCE = 3;//node in route passport (from destination) that is as
 window.OY_BLOCK_CONSENSUS = 0.6;//mesh topology corroboration to agree on confirming a meshblock transaction
 window.OY_BLOCK_GAP = 4000;//ms interval for processing the block in various stages
 window.OY_BLOCK_KEY_LIMIT = 4;//permitted transactions per wallet per block (10 seconds)
-window.OY_AKOYA_DECIMALS = 10000;//zeros after the decimal point for akoya currency
+window.OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
 window.OY_AKOYA_MAX_SUPPY = 10000000*window.OY_AKOYA_DECIMALS;//akoya max supply
+window.OY_AKOYA_FEE = 0.0001*window.OY_AKOYA_DECIMALS;//akoya fee per block
 window.OY_NODE_TOLERANCE = 3;//max amount of protocol communication violations until node is blacklisted
 window.OY_NODE_BLACKTIME = 240;//seconds to blacklist a punished node for
 window.OY_NODE_PROPOSETIME = 12;//seconds for peer proposal session duration
@@ -139,6 +140,7 @@ window.OY_BLOCK_COMMAND_KEY = {};
 window.OY_BLOCK_SYNC = {};
 window.OY_BLOCK_DIVE = {};
 window.OY_BLOCK_DIVE_SET = [];
+window.OY_BLOCK_DIVE_REWARD = null;
 window.OY_BLOCK_TRIGGER = new Event('oy_block_trigger');//trigger-able event for when a new block is issued
 window.OY_CHANNEL_DYNAMIC = {};//track channel broadcasts to ensure allowance compliance
 window.OY_CHANNEL_LISTEN = {};//track channels to listen for
@@ -618,8 +620,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         return true;
     }
     else if (oy_data_flag==="OY_BLOCK_DIVE") {
-        //oy_data_payload = [oy_route_passport_passive, oy_route_dynamic, oy_dive_time, oy_dive_crypt, oy_dive_pool, oy_key_public]
-        if (oy_data_payload.length!==6||typeof(oy_data_payload[0])!=="object"||oy_data_payload[1].length===0) {
+        //oy_data_payload = [oy_route_passport_passive, oy_route_dynamic, oy_dive_time, oy_dive_crypt, oy_dive_pool, oy_key_public, oy_dive_reward]
+        if (oy_data_payload.length!==7||typeof(oy_data_payload[0])!=="object"||oy_data_payload[1].length===0) {
             oy_log("Peer "+oy_short(oy_peer_id)+" sent invalid block dive, will punish");
             oy_node_punish(oy_peer_id, "OY_PUNISH_DIVE_INVALID");
             return false;
@@ -641,8 +643,9 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                     window.OY_BLOCK_DIVE_SET.push(oy_data_payload[5]);
                     oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_DIVE", oy_data_payload);
                     for (let i in oy_data_payload[4]) {
-                        if (typeof(window.OY_BLOCK_DIVE[oy_data_payload[4][i]])==="undefined") window.OY_BLOCK_DIVE[oy_data_payload[4][i]] = 0;
-                        window.OY_BLOCK_DIVE[oy_data_payload[4][i]]++;
+                        if (typeof(window.OY_BLOCK_DIVE[oy_data_payload[4][i]])==="undefined") window.OY_BLOCK_DIVE[oy_data_payload[4][i]] = [0, null];
+                        window.OY_BLOCK_DIVE[oy_data_payload[4][i]][0]++;
+                        if (oy_data_payload[5]===oy_data_payload[4][i]) window.OY_BLOCK_DIVE[oy_data_payload[4][i]][1] = oy_data_payload[6];
                     }
                 }
             });
@@ -2051,8 +2054,8 @@ function oy_block_loop() {
                 oy_node_consensus = Math.ceil(oy_node_consensus*window.OY_BLOCK_CONSENSUS);
                 let oy_command_execute = [];
                 for (let oy_command_hash in oy_command_pool) {
-                    if (oy_command_pool[oy_command_hash]>=oy_node_consensus) {
-                        oy_command_execute.push(oy_command_pool[oy_command_hash]);
+                    if (oy_command_pool[oy_command_hash][0]>=oy_node_consensus) {
+                        oy_command_execute.push(oy_command_pool[oy_command_hash][1]);
                         delete oy_command_pool[oy_command_hash];
                     }
                 }
@@ -2065,7 +2068,6 @@ function oy_block_loop() {
                     }
                     return a[0] - b[0];
                 });
-
                 let oy_dive_pool = [window.OY_MAIN['oy_self_public']];
                 for (let oy_key_public in window.OY_BLOCK_SYNC) {
                     let oy_dive_pass = true;
@@ -2082,21 +2084,52 @@ function oy_block_loop() {
                 window.OY_BLOCK_DIVE_HASH = oy_hash_gen(JSON.stringify(oy_dive_pool));
                 let oy_dive_time = Date.now/1000;
                 oy_key_sign(window.OY_MAIN['oy_self_private'], oy_dive_time+window.OY_BLOCK_DIVE_HASH, function(oy_dive_crypt) {
-                    oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_DIVE", [[], oy_rand_gen(), oy_dive_time, oy_dive_crypt, oy_dive_pool, window.OY_MAIN['oy_self_public']]);
+                    oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_DIVE", [[], oy_rand_gen(), oy_dive_time, oy_dive_crypt, oy_dive_pool, window.OY_MAIN['oy_self_public'], window.OY_BLOCK_DIVE_REWARD]);
                     oy_dive_pool = null;
                     setTimeout(function() {
                         oy_node_consensus = Math.ceil(window.OY_BLOCK_DIVE_SET.length*window.OY_BLOCK_CONSENSUS);
+                        let oy_dive_reward_pool = [];
                         for (let oy_key_public in window.OY_BLOCK_DIVE) {
-                            if (window.OY_BLOCK_DIVE[oy_key_public]<oy_node_consensus) delete window.OY_BLOCK_DIVE[oy_key_public];
+                            if (window.OY_BLOCK_DIVE[oy_key_public][0]<oy_node_consensus) delete window.OY_BLOCK_DIVE[oy_key_public];
+                            else if (window.OY_BLOCK_DIVE[oy_key_public][1]!==null) oy_dive_reward_pool.push(window.OY_BLOCK_DIVE[oy_key_public][1]);//add key_public validity check
                         }
 
                         //TODO loop through all wallets and deduct fee
 
+                        let oy_dive_bounty = 0;
+                        for (let oy_key_public in window.OY_BLOCK[0]) {
+                            let oy_balance_prev = window.OY_BLOCK[0][oy_key_public];
+                            window.OY_BLOCK[0][oy_key_public] -= window.OY_AKOYA_FEE;
+                            window.OY_BLOCK[0][oy_key_public] = Math.max(window.OY_BLOCK[0][oy_key_public], 0);
+                            oy_dive_bounty += oy_balance_prev - window.OY_BLOCK[0][oy_key_public];
+                            if (window.OY_BLOCK[0][oy_key_public]<=0) delete window.OY_BLOCK[0][oy_key_public];
+                        }
+
                         //TODO distribute fees to public keys left in BLOCK_DIVE
+
+                        if (oy_dive_reward_pool.length>0) {
+                            let oy_dive_share = Math.floor(oy_dive_bounty/oy_dive_reward_pool.length);//TODO verify math to make sure odd balances don't cause a gradual decrease of the entire supply
+                            for (let i in oy_dive_reward_pool) {
+                                if (typeof(window.OY_BLOCK[0][oy_dive_reward_pool[i]])==="undefined") window.OY_BLOCK[0][oy_dive_reward_pool[i]] = oy_dive_share;
+                                else window.OY_BLOCK[0][oy_dive_reward_pool[i]] += oy_dive_share;
+                            }
+                        }
 
                         //TODO double check supply has not changed
 
                         //TODO commit transactions from command_execute to the block
+
+                        //TODO maybe put a second layer check for command validity
+                        //[-1, oy_key_public, "OY_AKOYA_SEND", oy_transfer_amount, oy_receive_public]
+                        for (let i in oy_command_execute) {
+                            if (oy_command_execute[i][2]==="OY_AKOYA_SEND") {
+                                if (typeof(window.OY_BLOCK[0][oy_command_execute[i][1]])!=="undefined"&&window.OY_BLOCK[0][oy_command_execute[i][1]]>=oy_command_execute[i][3]) {
+                                    window.OY_BLOCK[0][oy_command_execute[i][1]] -= oy_command_execute[i][3];
+                                    if (typeof(window.OY_BLOCK[0][oy_command_execute[i][4]])==="undefined") window.OY_BLOCK[0][oy_command_execute[i][4]] = 0;
+                                    window.OY_BLOCK[0][oy_command_execute[i][4]] += oy_command_execute[i][3];
+                                }
+                            }
+                        }
 
                         //TODO double check the supply has not changed
 
