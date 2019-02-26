@@ -960,7 +960,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_PEER_LATENCY") {
         oy_log("Responding to latency request from peer "+oy_short(oy_peer_id));
-        oy_key_sign(window.OY_MAIN['oy_self_private'], window.OY_MESH_DYNASTY+oy_data_payload[0], function(oy_key_signature) {
+        oy_key_sign(window.OY_MAIN['oy_self_private'], window.OY_MESH_DYNASTY+window.OY_BLOCK_HASH+oy_data_payload[0], function(oy_key_signature) {
             oy_log("Signed peer latency sequence from "+oy_short(oy_peer_id));
             oy_data_payload[0] = oy_key_signature;
             if (oy_data_payload[1]===null) oy_data_payload[1] = window.OY_MAIN['oy_self_public'];
@@ -1283,7 +1283,7 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
         }
         window.OY_LATENCY[oy_node_id][5] = oy_data_payload[1];
     }
-    oy_key_verify(window.OY_LATENCY[oy_node_id][5], oy_data_payload[0], window.OY_MESH_DYNASTY+window.OY_LATENCY[oy_node_id][0], function(oy_key_valid) {
+    oy_key_verify(window.OY_LATENCY[oy_node_id][5], oy_data_payload[0], window.OY_MESH_DYNASTY+window.OY_BLOCK_HASH+window.OY_LATENCY[oy_node_id][0], function(oy_key_valid) {
         if (oy_key_valid===false) {
             oy_log("Node "+oy_short(oy_node_id)+" failed to sign latency sequence, will punish");
             oy_node_punish(oy_node_id, "OY_PUNISH_SIGN_FAIL");
@@ -1972,9 +1972,11 @@ function oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm)
             oy_key_sign(oy_key_private, oy_command_flat, function(oy_command_crypt) {
                 oy_block_command_verify([oy_command_array, oy_command_crypt], function(oy_verify_valid) {
                     if (oy_verify_valid===true) {
-                        window.OY_BLOCK_COMMAND_SESSION[oy_hash_gen(oy_command_flat)] = [oy_key_private, false, 0];
-                        oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_COMMAND", [[], oy_rand_gen(), oy_command_array, oy_command_crypt]);
-                        //TODO node processes its own transaction
+                        let oy_command_hash = oy_hash_gen(oy_command_flat);
+                        window.OY_BLOCK_COMMAND_SESSION[oy_command_hash] = [oy_key_private, false, 0];
+                        let oy_data_payload = [[], oy_rand_gen(), oy_command_array, oy_command_crypt];
+                        oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_COMMAND", oy_data_payload);
+                        window.OY_BLOCK_COMMAND[oy_command_hash] = [true, null, oy_data_payload];
                     }
                 });
             });
@@ -2159,13 +2161,22 @@ function oy_block_loop() {
 
                             window.OY_BLOCK_HASH = oy_hash_gen(JSON.stringify(window.OY_BLOCK));
 
+                            document.dispatchEvent(window.OY_BLOCK_TRIGGER);
                             //TODO meshblock seeding
 
-                        }, window.OY_BLOCK_GAPTIME/2);//block_gap/2 equals mesh_edge on purpose
+                            setTimeout(function() {
+                                for (let oy_peer_select in window.OY_PEERS) {
+                                    if (oy_peer_select==="oy_aggregate_node") continue;
+                                    let oy_peer_challenge = oy_rand_gen();
+                                    oy_data_beam(oy_peer_select, "OY_PEER_CHALLENGE", oy_peer_challenge);
+                                }
+                            }, window.OY_BLOCK_LAUNCHTIME);
+
+                        }, window.OY_BLOCK_GAPTIME/2);//seconds 8-10 out of 10, block_gaptime/2 equals mesh_edge on purpose
                     });
-                }, window.OY_BLOCK_GAPTIME);
+                }, window.OY_BLOCK_GAPTIME);//seconds 4-8 out of 10
             });
-        }, window.OY_BLOCK_GAPTIME);
+        }, window.OY_BLOCK_GAPTIME);//seconds 0-4 out of 10
 
         //----------transitory centralized solution
         let oy_xhttp = new XMLHttpRequest();
@@ -2173,7 +2184,7 @@ function oy_block_loop() {
             if (this.readyState===4&&this.status===200) {
                 window.OY_BLOCK_TEMP = JSON.parse(this.responseText);
                 window.OY_BLOCK_TEMP_HASH = oy_hash_gen(JSON.stringify(window.OY_BLOCK_TEMP));//this is what this line will look like in the decentralized version
-                document.dispatchEvent(window.OY_BLOCK_TRIGGER);
+                //document.dispatchEvent(window.OY_BLOCK_TRIGGER);
             }
         };
         oy_xhttp.open("POST", "https://top.oyster.org/oy_block_update.php", true);
