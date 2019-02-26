@@ -145,6 +145,7 @@ window.OY_BLOCK_DIVE_SET = [];
 window.OY_BLOCK_DIVE_REWARD = null;
 window.OY_BLOCK_CONFIRM = {};
 window.OY_BLOCK_TRIGGER = new Event('oy_block_trigger');//trigger-able event for when a new block is issued
+window.OY_CHALLENGE = {};//objects for tracking peers that are challenged for the new meshblock hash
 window.OY_CHANNEL_DYNAMIC = {};//track channel broadcasts to ensure allowance compliance
 window.OY_CHANNEL_LISTEN = {};//track channels to listen for
 window.OY_CHANNEL_KEEP = {};//stored broadcasts that are re-shared
@@ -958,8 +959,20 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_data_route("OY_LOGIC_FOLLOW", "OY_CHANNEL_RESPOND", oy_data_payload);
         }
     }
+    else if (oy_data_flag==="OY_PEER_CHALLENGE") {
+        oy_key_sign(window.OY_MAIN['oy_self_private'], window.OY_MESH_DYNASTY+window.OY_BLOCK_HASH+oy_data_payload, function(oy_key_signature) {
+            oy_log("Signed meshblock challenge from "+oy_short(oy_peer_id));
+            oy_data_beam(oy_peer_id, "OY_PEER_CHALLENGE_RESPONSE", [oy_key_signature, window.OY_MAIN['oy_self_public']]);
+        });
+    }
+    else if (oy_data_flag==="OY_PEER_CHALLENGE_RESPONSE") {
+        if (typeof(window.OY_CHALLENGE[oy_peer_id])!=="undefined"&&oy_hash_gen(oy_data_payload[1])===oy_peer_id) {
+            oy_key_verify(oy_data_payload[1], oy_data_payload[0], window.OY_MESH_DYNASTY+window.OY_BLOCK_HASH+window.OY_CHALLENGE[oy_peer_id], function(oy_key_valid) {
+               if (oy_key_valid===true) delete window.OY_CHALLENGE[oy_peer_id];
+            });
+        }
+    }
     else if (oy_data_flag==="OY_PEER_LATENCY") {
-        oy_log("Responding to latency request from peer "+oy_short(oy_peer_id));
         oy_key_sign(window.OY_MAIN['oy_self_private'], window.OY_MESH_DYNASTY+window.OY_BLOCK_HASH+oy_data_payload[0], function(oy_key_signature) {
             oy_log("Signed peer latency sequence from "+oy_short(oy_peer_id));
             oy_data_payload[0] = oy_key_signature;
@@ -2161,6 +2174,8 @@ function oy_block_loop() {
 
                             window.OY_BLOCK_HASH = oy_hash_gen(JSON.stringify(window.OY_BLOCK));
 
+                            oy_log("NEW MESHBLOCK, hash is: "+window.OY_BLOCK_HASH);
+
                             document.dispatchEvent(window.OY_BLOCK_TRIGGER);
                             //TODO meshblock seeding
 
@@ -2168,8 +2183,15 @@ function oy_block_loop() {
                                 for (let oy_peer_select in window.OY_PEERS) {
                                     if (oy_peer_select==="oy_aggregate_node") continue;
                                     let oy_peer_challenge = oy_rand_gen();
+                                    window.OY_CHALLENGE[oy_peer_select] = oy_peer_challenge;
                                     oy_data_beam(oy_peer_select, "OY_PEER_CHALLENGE", oy_peer_challenge);
                                 }
+                                setTimeout(function() {
+                                    for (let oy_peer_select in window.OY_CHALLENGE) {
+                                        oy_peer_remove(oy_peer_select, "OY_PUNISH_BLOCK_HASH");
+                                        oy_log("Removed and punished peer "+oy_short(oy_peer_select)+" who failed meshblock challenge");
+                                    }
+                                }, window.OY_MESH_HOP*2);
                             }, window.OY_BLOCK_LAUNCHTIME);
 
                         }, window.OY_BLOCK_GAPTIME/2);//seconds 8-10 out of 10, block_gaptime/2 equals mesh_edge on purpose
