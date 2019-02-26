@@ -10,44 +10,10 @@
 <input type="file" id="oy_file_upload" />
 </body>
 <script type="text/javascript">
-    function oy_travel(oy_data_value, oy_key_pass) {
-        if (typeof(oy_key_pass)==="undefined") oy_key_pass = null;
-        try {
-            let oy_encode_flag = 0;
-            let oy_data_travel = oy_crypt_encrypt(oy_data_value, oy_key_pass);
-            if (oy_key_pass!==null&&oy_crypt_decrypt(oy_data_travel, oy_key_pass)===oy_data_value) return "1"+oy_encode_flag+oy_data_travel;
-            else {
-                oy_data_travel = window.btoa(oy_data_value);
-                oy_encode_flag++;
-                if (window.atob(oy_data_travel)!==oy_data_value) {
-                    oy_data_travel = encodeURIComponent(oy_data_value);
-                    oy_encode_flag++;
-                }
-                if (oy_key_pass===null) return "0"+oy_encode_flag+oy_data_travel;
-                else return "1"+oy_encode_flag+oy_crypt_encrypt(oy_data_travel, oy_key_pass);
-            }
-        }
-        catch(e) {}
+    let oy_hash_array = [];
+    for (let i = 0; i<259200; i++) {
+        oy_hash_array.push(oy_hash_gen(oy_rand_gen()));
     }
-
-    function oy_file_read(oy_file_object, oy_callback) {
-        let file = oy_file_object.target.files[0];
-        if (!file) return false;
-        let reader = new FileReader();
-        reader.onload = function(oy_file_object) {
-            oy_callback(JSON.stringify([file.name, file.type, oy_file_object.target.result]));
-        };
-        reader.readAsBinaryString(file);
-    }
-
-    function oy_file_change(oy_file_object) {
-        oy_file_read(oy_file_object, function(oy_file_data) {
-            //console.log(oy_file_data);
-            console.log(oy_travel(encodeURIComponent(oy_file_data), "password123").length);
-            console.log(oy_travel(oy_file_data, "password123").length);
-        });
-    }
-
-    document.getElementById("oy_file_upload").addEventListener('change', oy_file_change, false);
+    console.log(JSON.stringify(oy_hash_array).length);
 </script>
 </html>
