@@ -577,7 +577,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                     }
                     oy_block_sync_verify(oy_command_inherit, function(oy_sync_verify) {
                         if (oy_sync_verify===true) {
-                            if (typeof(window.OY_ORIGINS[oy_peer_id])!=="undefined"&&oy_time_local<window.OY_ORIGINS[oy_peer_id]) window.OY_BLOCK_SYNC[oy_data_payload[2]][0] = true;
+                            if (typeof(window.OY_ORIGINS[oy_peer_id])!=="undefined"&&oy_time_local<window.OY_ORIGINS[oy_peer_id]) window.OY_BLOCK_SYNC[oy_data_payload[5]] = [true, null, oy_data_payload, oy_command_pool];
                             else {
                                 let oy_sync_challenge = oy_rand_gen();
                                 window.OY_BLOCK_SYNC[oy_data_payload[5]] = [false, oy_sync_challenge+oy_sync_hash, oy_data_payload, oy_command_pool];
@@ -2116,6 +2116,17 @@ function oy_block_loop() {
         window.OY_BLOCK_TIME = oy_block_time_local;
         window.OY_BLOCK_NEXT = oy_block_time(true);
         window.OY_BLOCK_COMMAND = {};
+
+        //BLOCK SEED--------------------------------------------------
+        if (window.OY_BLOCK_TIME===123) {
+            window.OY_BLOCK = [[null, []], [], {}, {}, {}];
+
+            window.OY_BLOCK[2][window.OY_KEY_BRUNO] = 9000*window.OY_AKOYA_DECIMALS;
+
+            window.OY_BLOCK_HASH = oy_hash_gen(JSON.stringify(window.OY_BLOCK));
+        }
+        //BLOCK SEED--------------------------------------------------
+
         window.OY_BLOCK[0][0] = oy_block_time_local;
 
         setTimeout(function() {
