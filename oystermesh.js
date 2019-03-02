@@ -25,7 +25,7 @@ window.OY_BLOCK_LAUNCHTIME = 200;//ms delay from block_trigger to launch a comma
 window.OY_BLOCK_HISTORYTIME = 3600;//seconds to keep transaction history in the meshblock
 window.OY_BLOCK_CHALLENGETIME = 2500;//ms delay until meshblock challenge to peers is enforced
 window.OY_BLOCK_KEY_LIMIT = 4;//permitted transactions per wallet per block (10 seconds)
-window.OY_BLOCK_HASH_KEEP = 60480;//how many hashes of previous blocks to keep in the current meshblock, value is for 7 days worth
+window.OY_BLOCK_HASH_KEEP = 3;//how many hashes of previous blocks to keep in the current meshblock, value is for 7 days worth//60480
 window.OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
 window.OY_AKOYA_MAX_SUPPY = 10000000*window.OY_AKOYA_DECIMALS;//akoya max supply
 window.OY_AKOYA_FEE = 0.0001*window.OY_AKOYA_DECIMALS;//akoya fee per block
@@ -116,8 +116,8 @@ window.OY_BLOCK_TEMP = [null];//temporary centralized block
 window.OY_BLOCK_TEMP_HASH = null;//hash of the most current block
 window.OY_BLOCK = [[null, []], [], {}, {}, {}];//the current meshblock - [oy_meta_sector, oy_history_sector, oy_akoya_sector, oy_dns_sector, oy_channel_sector]
 window.OY_BLOCK_HASH = null;//hash of the most current block
-window.OY_BLOCK_TIME = null;//the most recent block timestamp
-window.OY_BLOCK_NEXT = null;//the next block timestamp
+window.OY_BLOCK_TIME = oy_block_time(false);//the most recent block timestamp
+window.OY_BLOCK_NEXT = oy_block_time(true);//the next block timestamp
 window.OY_BLOCK_COMMANDS = {
     "OY_AKOYA_SEND":[function(oy_command_array) {
         if (oy_command_array.length===5&&//check the element count in the command
@@ -1200,6 +1200,10 @@ function oy_node_initiate(oy_node_id, oy_list_force) {
         oy_log("Halted initiation whilst peer list is saturated");
         return false;
     }
+    else if (window.OY_BLOCK_SEEDTIME!==null&&Date.now()/1000<=window.OY_BLOCK_SEEDTIME) {
+        oy_log("Halted initiation for pending meshblock seeding event");
+        return false;
+    }
     let oy_callback_peer = function() {
         oy_data_beam(oy_node_id, "OY_PEER_REQUEST", null);
         window.OY_PROPOSED[oy_node_id] = [(Date.now()/1000)+window.OY_NODE_PROPOSETIME, false];//set proposal session with expiration timestamp and clone flag
@@ -1304,14 +1308,17 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
     else if (oy_data_flag==="OY_CLONE_PUSH") {
         if (typeof(window.OY_ORIGINS[oy_node_id])!=="undefined"&&oy_time_local<window.OY_ORIGINS[oy_node_id]&&oy_time_local<window.OY_BLOCK_TIME+window.OY_BLOCK_GAPTIME) {
             window.OY_CLONE_BUILD[oy_data_payload[1]] = oy_data_payload[2];
+            console.log(oy_data_payload[2]);
             let oy_nonce_count = -1;
             for (let oy_clone_nonce in window.OY_CLONE_BUILD) {
                 oy_nonce_count++;
             }
             if (oy_nonce_count===oy_data_payload[0]) {
+                console.log("CLONE JOIN");
                 let oy_block_flat = window.OY_CLONE_BUILD.join("");
                 window.OY_BLOCK = JSON.parse(oy_block_flat);
                 window.OY_BLOCK_HASH = oy_hash_gen(oy_block_flat);
+                console.log(window.OY_BLOCK_HASH);
                 oy_data_beam(oy_node_id, "OY_CLONE_HASH", window.OY_BLOCK_HASH);
             }
         }
@@ -2068,7 +2075,12 @@ function oy_channel_mute(oy_channel_id) {
     oy_local_store("oy_channel_keep", window.OY_CHANNEL_KEEP);
 }
 
+function akoya_test() {
+    oy_akoya_transfer(window.OY_WALLET_PRIVATE, window.OY_WALLET_PUBLIC, 2000, 'wallet2');
+}
+
 function oy_akoya_transfer(oy_key_private, oy_key_public, oy_transfer_amount, oy_receive_public, oy_callback_confirm) {
+    console.log(oy_key_private);
     oy_transfer_amount = Math.floor(oy_transfer_amount*window.OY_AKOYA_DECIMALS);
     oy_block_command(oy_key_private, ["OY_AKOYA_SEND", -1, oy_key_public, oy_transfer_amount, oy_receive_public], oy_callback_confirm);
 }
@@ -2077,6 +2089,7 @@ function oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm)
     let oy_block_command_execute = function() {
         document.removeEventListener("oy_block_trigger", oy_block_command_execute, false);
         setTimeout(function() {
+            console.log(1);
             oy_command_array[1] = Date.now()/1000;
             let oy_command_flat = JSON.stringify(oy_command_array);
             window.OY_BLOCK_CONFIRM[oy_hash_gen(oy_command_flat)] = oy_callback_confirm;
@@ -2086,6 +2099,8 @@ function oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm)
                         let oy_command_hash = oy_hash_gen(oy_command_flat);
                         window.OY_BLOCK_COMMAND_SESSION[oy_command_hash] = [oy_key_private, false, 0];
                         let oy_data_payload = [[], oy_rand_gen(), oy_command_array, oy_command_crypt];
+                        console.log("COMMAND");
+                        console.log(oy_data_payload);
                         oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_COMMAND", oy_data_payload);
                         window.OY_BLOCK_COMMAND[oy_command_hash] = [true, null, oy_data_payload];
                     }
@@ -2128,9 +2143,10 @@ function oy_block_loop() {
         window.OY_BLOCK_TIME = oy_block_time_local;
         window.OY_BLOCK_NEXT = oy_block_time(true);
         window.OY_BLOCK_COMMAND = {};
+        console.log("BLOCK SPARK["+(Date.now()/1000)+"]: "+oy_block_time_local);
 
         //BLOCK SEED--------------------------------------------------
-        window.OY_BLOCK_SEEDTIME = 1551481450;
+        window.OY_BLOCK_SEEDTIME = 1551542500;
         if (window.OY_BLOCK_TIME===window.OY_BLOCK_SEEDTIME) {
             window.OY_BLOCK = [[null, []], [], {}, {}, {}];
 
@@ -2147,7 +2163,11 @@ function oy_block_loop() {
             for (let oy_clone_select in window.OY_CLONES) {
                 if (window.OY_CLONES[oy_clone_select][1]===0||window.OY_CLONES[oy_clone_select][1]===2||Date.now()/1000>=window.OY_CLONES[oy_clone_select][0]) delete window.OY_CLONES[oy_clone_select];
             }
-            if (window.OY_BLOCK_HASH===null) return false;
+            if (window.OY_BLOCK_HASH===null) {
+                console.log("BLOCK SKIP["+(Date.now()/1000)+"]: "+oy_block_time_local);
+                return false;
+            }
+            console.log("BLOCK PASS["+(Date.now()/1000)+"]: "+oy_block_time_local);
             window.OY_BLOCK[0][0] = oy_block_time_local;
             window.OY_BLOCK_COMMAND_KEY = {};
             let oy_sync_command = [];
@@ -2163,14 +2183,20 @@ function oy_block_loop() {
                 return a[0] - b[0];
             });
 
+            //TODO problem: there is something along the process that can hang which causes the meshblock to be assigned at the wrong time, at the minimum time checks need to be enforced
+
             window.OY_BLOCK_SYNC = {};
             window.OY_BLOCK_SYNC_HASH = oy_hash_gen(JSON.stringify(oy_sync_command));
             window.OY_BLOCK_SYNC_DYNAMIC = oy_rand_gen();
             let oy_sync_time = Date.now()/1000;
+            console.log("STAGE 1["+(Date.now()/1000)+"]: "+oy_block_time_local);
             oy_key_sign(window.OY_MAIN['oy_self_private'], oy_sync_time+window.OY_BLOCK_SYNC_HASH, function(oy_sync_crypt) {
+                console.log("STAGE 2["+(Date.now()/1000)+"]: "+oy_block_time_local);
                 oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_SYNC", [[], window.OY_BLOCK_SYNC_DYNAMIC, oy_sync_time, oy_sync_crypt, oy_sync_command, window.OY_MAIN['oy_self_public']]);
+                console.log("STAGE 3["+(Date.now()/1000)+"]: "+oy_block_time_local);
                 oy_sync_command = null;
                 setTimeout(function() {
+                    console.log("STAGE 4["+(Date.now()/1000)+"]: "+oy_block_time_local);
                     let oy_command_pool = {};
                     let oy_node_consensus = 0;
                     for (let oy_key_public in window.OY_BLOCK_SYNC) {
@@ -2219,9 +2245,12 @@ function oy_block_loop() {
                     window.OY_BLOCK_DIVE_HASH = oy_hash_gen(JSON.stringify(oy_dive_pool));
                     let oy_dive_time = Date.now/1000;
                     oy_key_sign(window.OY_MAIN['oy_self_private'], oy_dive_time+window.OY_BLOCK_DIVE_HASH, function(oy_dive_crypt) {
+                        console.log("STAGE 5["+(Date.now()/1000)+"]: "+oy_block_time_local);
                         oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_DIVE", [[], oy_rand_gen(), oy_dive_time, oy_dive_crypt, oy_dive_pool, window.OY_MAIN['oy_self_public'], window.OY_BLOCK_DIVE_REWARD]);
+                        console.log("STAGE 6["+(Date.now()/1000)+"]: "+oy_block_time_local);
                         oy_dive_pool = null;
                         setTimeout(function() {
+                            console.log("STAGE 7["+(Date.now()/1000)+"]: "+oy_block_time_local);
                             oy_node_consensus = Math.ceil(window.OY_BLOCK_DIVE_SET.length*window.OY_BLOCK_CONSENSUS);
                             let oy_dive_reward_pool = [];
                             for (let oy_key_public in window.OY_BLOCK_DIVE) {
@@ -2276,6 +2305,7 @@ function oy_block_loop() {
                             for (let oy_key_public in window.OY_BLOCK[2]) {
                                 oy_supply_post += window.OY_BLOCK[2][oy_key_public];
                             }
+                            console.log("STAGE 8["+(Date.now()/1000)+"]: "+oy_block_time_local);
                             if (oy_supply_post>oy_supply_pre||oy_supply_post>window.OY_AKOYA_MAX_SUPPY) {
                                 return false;//fallback to previous meshblock and log an error
                             }
@@ -2295,15 +2325,38 @@ function oy_block_loop() {
                             window.OY_CLONE_UPTIME = Date.now()/1000;
 
                             oy_log("NEW MESHBLOCK HASH "+window.OY_BLOCK_HASH);
+                            console.log("NEW MESHBLOCK HASH "+window.OY_BLOCK_HASH);
 
-                            oy_log_debug("HASH: "+window.OY_BLOCK_HASH);
-                            //oy_log_debug("BLOCK: "+oy_block_flat);
+                            oy_log_debug("HASH: "+window.OY_BLOCK_HASH+"\nBLOCK: "+oy_block_flat);
 
                             console.log(window.OY_BLOCK);
 
                             document.dispatchEvent(window.OY_BLOCK_TRIGGER);
 
                             setTimeout(function() {
+                                if (window.OY_BLOCK_HASH!==null&&window.OY_CLONE_UPTIME!==null&&window.OY_CLONE_UPTIME>=window.OY_CLONE_UPTIME_MIN&&window.OY_PEER_COUNT>=window.OY_CLONE_PEERS_MIN) {
+                                    if (Object.keys(window.OY_CLONES).length>0) {
+                                        let oy_block_split = null;
+                                        let oy_block_nonce_max = -1;
+                                        for (let oy_clone_select in window.OY_CLONES) {
+                                            if (Date.now()/1000>window.OY_CLONES[oy_clone_select][0]||window.OY_CLONES[oy_clone_select][1]!==1) continue;
+
+                                            if (oy_block_split===null) {
+                                                oy_block_split = [];
+                                                for (let i = 0; i < oy_block_flat.length; i += window.OY_CLONE_CHUNK) {
+                                                    oy_block_split.push(oy_block_flat.slice(i, i+window.OY_CLONE_CHUNK));
+                                                    oy_block_nonce_max++;
+                                                }
+                                            }
+
+                                            for (let oy_clone_nonce in oy_block_split) {
+                                                oy_data_beam(oy_clone_select, "OY_CLONE_PUSH", [oy_block_nonce_max, oy_clone_nonce, oy_block_split[oy_clone_nonce]]);
+                                            }
+
+                                            window.OY_CLONES[oy_clone_select][1] = 2;
+                                        }
+                                    }
+                                }
                                 for (let oy_peer_select in window.OY_PEERS) {
                                     if (oy_peer_select==="oy_aggregate_node") continue;
                                     let oy_peer_challenge = oy_rand_gen();
@@ -2315,29 +2368,6 @@ function oy_block_loop() {
                                         oy_peer_remove(oy_peer_select, "OY_PUNISH_BLOCK_HASH");
                                         delete window.OY_CHALLENGE[oy_peer_select];
                                         oy_log("Removed and punished peer "+oy_short(oy_peer_select)+" who failed meshblock challenge");
-                                    }
-                                    if (window.OY_BLOCK_HASH!==null&&window.OY_CLONE_UPTIME!==null&&window.OY_CLONE_UPTIME>=window.OY_CLONE_UPTIME_MIN&&window.OY_PEER_COUNT>=window.OY_CLONE_PEERS_MIN) {
-                                        if (Object.keys(window.OY_CLONES).length>0) {
-                                            let oy_block_split = null;
-                                            let oy_block_nonce_max = -1;
-                                            for (let oy_clone_select in window.OY_CLONES) {
-                                                if (Date.now()/1000>window.OY_CLONES[oy_clone_select][0]||window.OY_CLONES[oy_clone_select][1]!==1) continue;
-
-                                                if (oy_block_split===null) {
-                                                    oy_block_split = [];
-                                                    for (let i = 0; i < oy_block_flat.length; i += window.OY_CLONE_CHUNK) {
-                                                        oy_block_split.push(oy_block_flat.slice(i, i+window.OY_CLONE_CHUNK));
-                                                        oy_block_nonce_max++;
-                                                    }
-                                                }
-
-                                                for (let oy_clone_nonce in oy_block_split) {
-                                                    oy_data_beam(oy_clone_select, "OY_CLONE_PUSH", [oy_block_nonce_max, oy_clone_nonce, oy_block_split[oy_clone_nonce]]);
-                                                }
-
-                                                window.OY_CLONES[oy_clone_select][1] = 2;
-                                            }
-                                        }
                                     }
                                 }, window.OY_BLOCK_CHALLENGETIME);
                             }, window.OY_BLOCK_GAPTIME/2);
@@ -2573,7 +2603,7 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
     }
 
     window.OY_PURGE = oy_local_get("oy_purge");
-    window.OY_PEERS = oy_local_get("oy_peers");
+    //window.OY_PEERS = oy_local_get("oy_peers");
     window.OY_PROPOSED = oy_local_get("oy_proposed");
     window.OY_BLACKLIST = oy_local_get("oy_blacklist");
     window.OY_CHANNEL_KEEP = oy_local_get("oy_channel_keep");
