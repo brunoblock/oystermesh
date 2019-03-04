@@ -120,10 +120,11 @@ window.OY_BLOCK_TIME = oy_block_time(false);//the most recent block timestamp
 window.OY_BLOCK_NEXT = oy_block_time(true);//the next block timestamp
 window.OY_BLOCK_COMMANDS = {
     "OY_AKOYA_SEND":[function(oy_command_array) {
+        console.log(oy_command_array);
         if (oy_command_array.length===5&&//check the element count in the command
             oy_command_array[3]>0&&//check that the sending amount is greater than zero
             oy_command_array[3]<window.OY_AKOYA_MAX_SUPPY&&//check that the sending amount smaller than the max supply
-            typeof(window.OY_BLOCK[2][oy_command_array[2]])==="undefined"&&//check the sending wallet exists
+            typeof(window.OY_BLOCK[2][oy_command_array[2]])!=="undefined"&&//check the sending wallet exists
             oy_command_array[3]<=window.OY_BLOCK[2][oy_command_array[2]]) return true;//check the sending wallet has sufficient akoya
         return false;
         //TODO - check that receiving address is a valid address
@@ -482,26 +483,31 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_node_punish(oy_peer_id, "OY_PUNISH_COMMAND_INVALID");
             return false;
         }
-
+        oy_log_debug("COMMAND ONE: "+JSON.stringify(oy_data_payload));
         if (typeof(window.OY_BLOCK_COMMAND_KEY[oy_data_payload[2][1]])==="undefined") window.OY_BLOCK_COMMAND_KEY[oy_data_payload[2][1]] = 0;
         else if (window.OY_BLOCK_COMMAND_KEY[oy_data_payload[2][1]]>=window.OY_BLOCK_KEY_LIMIT) return false;
         window.OY_BLOCK_COMMAND_KEY[oy_data_payload[2][1]]++;
 
+        oy_log_debug("COMMAND TWO: "+JSON.stringify(oy_data_payload));
+
         if (oy_data_payload[2][1]<oy_time_local+window.OY_MESH_FUTURE&&//check that the broadcast timestamp is not in the future, with buffer leniency
             oy_time_local-oy_data_payload[2][1]<window.OY_MESH_EDGE&&//check that the broadcast timestamp complies with MESH_EDGE restrictions
             oy_time_local-oy_data_payload[2][1]<window.OY_MESH_HOP*oy_data_payload[0].length&&//check that the broadcast timestamp complies with MESH_HOP restrictions
-            oy_data_payload[2][1]-window.OY_BLOCK_TIME>=window.OY_MESH_EDGE&&//check that the broadcast timestamp is not in the first sector of the current block
-            window.OY_BLOCK_NEXT-oy_data_payload[2][1]>=window.OY_MESH_EDGE&&//check that the broadcast timestamp is not in the last sector of the current block
+            oy_data_payload[2][1]-window.OY_BLOCK_TIME>=0&&//check that the broadcast timestamp is in the first sector of the block
+            oy_data_payload[2][1]-window.OY_BLOCK_TIME<window.OY_BLOCK_GAPTIME&&//check that the broadcast timestamp is not in the last sector of the current block
             oy_time_local<window.OY_BLOCK_NEXT&&//check that the broadcast is being processed before the next block (current block)
             window.OY_BLOCK_TIME===Math.floor(oy_data_payload[2][1]/10)*10) {//additional redundant check that the broadcast is targeting the current block
             oy_block_command_verify([oy_data_payload[2], oy_data_payload[3]], function(oy_verify_valid) {
+                oy_log_debug("COMMAND THREE: "+JSON.stringify(oy_data_payload));
                 if (oy_verify_valid===true) {
+                    oy_log_debug("COMMAND FOUR: "+JSON.stringify(oy_data_payload));
                     let oy_command_challenge = oy_rand_gen();
                     let oy_command_hash = oy_hash_gen(JSON.stringify(oy_data_payload[2]));
                     window.OY_BLOCK_COMMAND[oy_command_hash] = [false, oy_command_challenge, oy_data_payload];
                     let oy_route_skip = oy_data_payload[0].slice();
                     let oy_route_target = oy_route_skip.shift();
                     oy_data_route("OY_LOGIC_CHALLENGE", "OY_BLOCK_COMMAND_CHALLENGE", [[], oy_rand_gen(), oy_route_skip, oy_route_target, oy_command_hash, oy_command_challenge]);
+                    oy_log_debug("COMMAND FIVE: "+JSON.stringify(oy_route_skip));
                 }
             });
         }
@@ -531,14 +537,20 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_node_punish(oy_peer_id, "OY_PUNISH_COMMAND_INVALID");
             return false;
         }
+        oy_log_debug("COMMAND_CHALLENGE_RESPONSE ONE: "+JSON.stringify(oy_data_payload));
         //TODO verify the public key matches the origin node ID
         if (oy_data_payload[1][0]===window.OY_MAIN['oy_self_short']) {
+            oy_log_debug("COMMAND_CHALLENGE_RESPONSE TWO");
             if (typeof(window.OY_BLOCK_COMMAND[oy_data_payload[2]])!=="undefined") {
+                oy_log_debug("COMMAND_CHALLENGE_RESPONSE THREE");
                 oy_key_verify(window.OY_BLOCK_COMMAND[oy_data_payload[2]][2][2][1], oy_data_payload[3], oy_data_payload[2]+window.OY_BLOCK_COMMAND[oy_data_payload[2]][1], function(oy_key_valid) {
+                    oy_log_debug("COMMAND_CHALLENGE_RESPONSE FOUR");
                     if (oy_key_valid===true) {
+                        oy_log_debug("COMMAND_CHALLENGE_RESPONSE FIVE");
                         window.OY_BLOCK_COMMAND[oy_data_payload[2]][0] = true;
                         oy_log("Beaming block command "+oy_short(oy_data_payload[1])+" forward along the mesh");
                         oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_COMMAND", window.OY_BLOCK_COMMAND[oy_data_payload[2]][2]);
+                        oy_log_debug("COMMAND_CHALLENGE_RESPONSE SIX");
                     }
                 });
             }
@@ -2089,7 +2101,6 @@ function oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm)
     let oy_block_command_execute = function() {
         document.removeEventListener("oy_block_trigger", oy_block_command_execute, false);
         setTimeout(function() {
-            console.log(1);
             oy_command_array[1] = Date.now()/1000;
             let oy_command_flat = JSON.stringify(oy_command_array);
             window.OY_BLOCK_CONFIRM[oy_hash_gen(oy_command_flat)] = oy_callback_confirm;
@@ -2139,6 +2150,7 @@ function oy_block_time(oy_next) {
 
 function oy_block_loop() {
     let oy_block_time_local = oy_block_time(false);
+    setTimeout("oy_block_loop()", window.OY_BLOCK_LOOP);
     if (oy_block_time_local!==window.OY_BLOCK_TIME) {
         window.OY_BLOCK_TIME = oy_block_time_local;
         window.OY_BLOCK_NEXT = oy_block_time(true);
@@ -2146,7 +2158,7 @@ function oy_block_loop() {
         console.log("BLOCK SPARK["+(Date.now()/1000)+"]: "+oy_block_time_local);
 
         //BLOCK SEED--------------------------------------------------
-        window.OY_BLOCK_SEEDTIME = 1551542500;
+        window.OY_BLOCK_SEEDTIME = 1551664900;
         if (window.OY_BLOCK_TIME===window.OY_BLOCK_SEEDTIME) {
             window.OY_BLOCK = [[null, []], [], {}, {}, {}];
 
@@ -2168,11 +2180,27 @@ function oy_block_loop() {
                 return false;
             }
             console.log("BLOCK PASS["+(Date.now()/1000)+"]: "+oy_block_time_local);
+
+            for (let oy_peer_select in window.OY_PEERS) {
+                if (oy_peer_select==="oy_aggregate_node") continue;
+                let oy_peer_challenge = oy_rand_gen();
+                window.OY_CHALLENGE[oy_peer_select] = oy_peer_challenge;
+                oy_data_beam(oy_peer_select, "OY_PEER_CHALLENGE", oy_peer_challenge);
+            }
+            setTimeout(function() {
+                for (let oy_peer_select in window.OY_CHALLENGE) {
+                    oy_peer_remove(oy_peer_select, "OY_PUNISH_BLOCK_HASH");
+                    delete window.OY_CHALLENGE[oy_peer_select];
+                    oy_log("Removed and punished peer "+oy_short(oy_peer_select)+" who failed meshblock challenge");
+                }
+            }, window.OY_BLOCK_CHALLENGETIME);
+
             window.OY_BLOCK[0][0] = oy_block_time_local;
             window.OY_BLOCK_COMMAND_KEY = {};
             let oy_sync_command = [];
             let oy_sync_keep = {};
             for (let oy_command_hash in window.OY_BLOCK_COMMAND) {
+                oy_log_debug("COMMAND: "+JSON.stringify(window.OY_BLOCK_COMMAND[oy_command_hash]));
                 if (window.OY_BLOCK_COMMAND[oy_command_hash][0]===true) {
                     oy_sync_command.push([window.OY_BLOCK_COMMAND[oy_command_hash][2][2], window.OY_BLOCK_COMMAND[oy_command_hash][2][3]]);//[oy_command_array, oy_command_crypt]
                     oy_sync_keep[oy_command_hash] = window.OY_BLOCK_COMMAND[oy_command_hash][2][2];
@@ -2357,21 +2385,7 @@ function oy_block_loop() {
                                         }
                                     }
                                 }
-                                for (let oy_peer_select in window.OY_PEERS) {
-                                    if (oy_peer_select==="oy_aggregate_node") continue;
-                                    let oy_peer_challenge = oy_rand_gen();
-                                    window.OY_CHALLENGE[oy_peer_select] = oy_peer_challenge;
-                                    oy_data_beam(oy_peer_select, "OY_PEER_CHALLENGE", oy_peer_challenge);
-                                }
-                                setTimeout(function() {
-                                    for (let oy_peer_select in window.OY_CHALLENGE) {
-                                        oy_peer_remove(oy_peer_select, "OY_PUNISH_BLOCK_HASH");
-                                        delete window.OY_CHALLENGE[oy_peer_select];
-                                        oy_log("Removed and punished peer "+oy_short(oy_peer_select)+" who failed meshblock challenge");
-                                    }
-                                }, window.OY_BLOCK_CHALLENGETIME);
                             }, window.OY_BLOCK_GAPTIME/2);
-
                         }, window.OY_BLOCK_GAPTIME/2);//seconds 8-10 out of 10, block_gaptime/2 equals mesh_edge on purpose
                     });
                 }, window.OY_BLOCK_GAPTIME);//seconds 4-8 out of 10
@@ -2391,11 +2405,11 @@ function oy_block_loop() {
         oy_xhttp.send();
         //----------transitory centralized solution
     }
-    setTimeout("oy_block_loop()", window.OY_BLOCK_LOOP);
 }
 
 //core loop that runs critical functions and checks
 function oy_engine(oy_thread_track) {
+    console.log("ENGINE");
     if (window.OY_ENGINE_KILL===true) {
         window.OY_ENGINE_KILL = false;
         return true;
@@ -2439,7 +2453,9 @@ function oy_engine(oy_thread_track) {
         oy_log("Asked peer "+oy_short(oy_peer_local)+" for peer recommendation");
     }
 
+    console.log(1);
     if (window.OY_PEER_COUNT<window.OY_PEER_MAX&&(oy_time_local-oy_thread_track[0])>window.OY_NODE_ASSIGNTTIME) {
+        console.log(2);
         oy_thread_track[0] = oy_time_local;
         oy_log("Engine initiating node_assign, peer count is "+window.OY_PEER_COUNT+"/"+window.OY_PEER_MAX);
         oy_node_assign();
