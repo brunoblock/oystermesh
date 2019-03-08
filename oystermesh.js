@@ -26,6 +26,7 @@ window.OY_BLOCK_HISTORYTIME = 3600;//seconds to keep transaction history in the 
 window.OY_BLOCK_CHALLENGETIME = 2500;//ms delay until meshblock challenge to peers is enforced
 window.OY_BLOCK_KEY_LIMIT = 4;//permitted transactions per wallet per block (10 seconds)
 window.OY_BLOCK_HASH_KEEP = 3;//how many hashes of previous blocks to keep in the current meshblock, value is for 7 days worth//60480
+window.OY_CHALLENGE_TRIGGER = 0.2;//higher means more challenge congestion (more secure, less scalable), lower means less challenge congestion (less secure, more scalable)
 window.OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
 window.OY_AKOYA_MAX_SUPPY = 10000000*window.OY_AKOYA_DECIMALS;//akoya max supply
 window.OY_AKOYA_FEE = 0.0001*window.OY_AKOYA_DECIMALS;//akoya fee per block
@@ -67,7 +68,7 @@ window.OY_DEPOSIT_MAX_BUFFER = 0.9;//max character length capacity factor of dat
 window.OY_ENGINE_INTERVAL = 2000;//ms interval for core mesh engine to run, the time must clear a reasonable latency round-about
 window.OY_READY_RETRY = 3000;//ms interval to retry connection if READY is still false
 window.OY_BLOCK_LOOP = 200;//a lower value means more opportunity within the 10 second window to propagate transactions
-window.OY_LOGIC_ALL_MULTI = 120;//multiplication factor for packet weight, higher means more restrictive OY_LOGIC_ALL flow and vice-versa
+window.OY_LOGIC_ALL_MULTI = 40;//multiplication factor for packet weight, higher means more restrictive OY_LOGIC_ALL flow and vice-versa
 window.OY_LOGIC_ALL_MAX = 1100;//maximum size for a packet that is routed via OY_LOGIC_ALL, except OY_CHANNEL_BROADCAST
 window.OY_CHANNEL_BROADCAST_PACKET_MAX = 5000;//maximum size for a packet that is routed via OY_CHANNEL_BROADCAST (OY_LOGIC_ALL)
 window.OY_CHANNEL_KEEPTIME = 15;//channel bearing nodes are expected to broadcast a logic_all packet within this interval
@@ -500,10 +501,17 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                 if (oy_verify_valid===true) {
                     let oy_command_challenge = oy_rand_gen();
                     let oy_command_hash = oy_hash_gen(JSON.stringify(oy_data_payload[2]));
-                    window.OY_BLOCK_COMMAND[oy_command_hash] = [false, oy_command_challenge, oy_data_payload];
-                    let oy_route_skip = oy_data_payload[0].slice();
-                    let oy_route_target = oy_route_skip.shift();
-                    oy_data_route("OY_LOGIC_CHALLENGE", "OY_BLOCK_COMMAND_CHALLENGE", [[], oy_rand_gen(), oy_route_skip, oy_route_target, oy_command_hash, oy_command_challenge]);
+                    if (Math.random()<window.OY_CHALLENGE_TRIGGER) {
+                        window.OY_BLOCK_COMMAND[oy_command_hash] = [false, oy_command_challenge, oy_data_payload];
+                        let oy_route_skip = oy_data_payload[0].slice();
+                        let oy_route_target = oy_route_skip.shift();
+                        oy_data_route("OY_LOGIC_CHALLENGE", "OY_BLOCK_COMMAND_CHALLENGE", [[], oy_rand_gen(), oy_route_skip, oy_route_target, oy_command_hash, oy_command_challenge]);
+                    }
+                    else {
+                        window.OY_BLOCK_COMMAND[oy_command_hash] = [true, oy_command_challenge, oy_data_payload];//TODO [2] might be null
+                        oy_log("Beaming block command "+oy_short(oy_data_payload[2])+" forward along the mesh");
+                        oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_COMMAND", oy_data_payload);
+                    }
                 }
             });
         }
@@ -559,8 +567,10 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_node_punish(oy_peer_id, "OY_PUNISH_SYNC_INVALID");
             return false;
         }
+        console.log(oy_data_payload);
+        console.log("A1");
         if (typeof(window.OY_BLOCK_SYNC[oy_data_payload[5]])!=="undefined") return false;
-
+        console.log("A2");
         //TODO verify the public key matches the origin node ID
 
         if (oy_data_payload[2]<oy_time_local+window.OY_MESH_FUTURE&&//check that the broadcast timestamp is not in the future, with buffer leniency
@@ -571,9 +581,13 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_time_local<window.OY_BLOCK_NEXT&&//check that the broadcast is being processed before the next block (current block)
             window.OY_BLOCK_TIME===Math.floor(oy_data_payload[2]/10)*10) {//additional redundant check that the broadcast is targeting the current block
 
+            console.log("A3");
+
             let oy_sync_hash = oy_hash_gen(JSON.stringify(oy_data_payload[4]));
             oy_key_verify(oy_data_payload[5], oy_data_payload[3], oy_data_payload[2]+oy_sync_hash, function(oy_key_valid) {
+                console.log("A4");
                 if (oy_key_valid===true) {
+                    console.log("A5");
                     let oy_command_pool = {};
                     let oy_command_inherit = [];
                     for (let i in oy_data_payload[4]) {
@@ -583,14 +597,23 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                         if (typeof(window.OY_BLOCK_COMMAND[oy_command_hash])==="undefined") oy_command_inherit.push(oy_data_payload[4][i]);
                     }
                     oy_block_sync_verify(oy_command_inherit, function(oy_sync_verify) {
+                        console.log("A6");
                         if (oy_sync_verify===true) {
+                            console.log("A7");
                             if (typeof(window.OY_ORIGINS[oy_peer_id])!=="undefined"&&oy_time_local<window.OY_ORIGINS[oy_peer_id]) window.OY_BLOCK_SYNC[oy_data_payload[5]] = [true, null, oy_data_payload, oy_command_pool];
                             else {
                                 let oy_sync_challenge = oy_rand_gen();
-                                window.OY_BLOCK_SYNC[oy_data_payload[5]] = [false, oy_sync_challenge+oy_sync_hash, oy_data_payload, oy_command_pool];
-                                let oy_route_skip = oy_data_payload[0].slice();
-                                let oy_route_target = oy_route_skip.shift();
-                                oy_data_route("OY_LOGIC_CHALLENGE", "OY_BLOCK_SYNC_CHALLENGE", [[], oy_rand_gen(), oy_route_skip, oy_route_target, oy_data_payload[1], oy_sync_challenge]);
+                                if (Math.random()<window.OY_CHALLENGE_TRIGGER) {
+                                    window.OY_BLOCK_SYNC[oy_data_payload[5]] = [false, oy_sync_challenge+oy_sync_hash, oy_data_payload, oy_command_pool];
+                                    let oy_route_skip = oy_data_payload[0].slice();
+                                    let oy_route_target = oy_route_skip.shift();
+                                    oy_data_route("OY_LOGIC_CHALLENGE", "OY_BLOCK_SYNC_CHALLENGE", [[], oy_rand_gen(), oy_route_skip, oy_route_target, oy_data_payload[1], oy_sync_challenge]);
+                                }
+                                else {
+                                    window.OY_BLOCK_SYNC[oy_data_payload[5]] = [true, oy_sync_challenge+oy_sync_hash, oy_data_payload, oy_command_pool];
+                                    oy_log("Beaming block sync "+oy_short(oy_data_payload[1])+" forward along the mesh");
+                                    oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_SYNC", oy_data_payload);
+                                }
                             }
                         }
                     });
@@ -625,18 +648,23 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_node_punish(oy_peer_id, "OY_PUNISH_SYNC_INVALID");
             return false;
         }
+        console.log("B1");
         //TODO verify the public key matches the origin node ID
 
         oy_log_debug("SYNC_CHALLENGE ONE: "+oy_data_payload);
-
+        console.log("B2");
         if (oy_data_payload[1][0]===window.OY_MAIN['oy_self_short']) {
+            console.log("B3");
             oy_log_debug("SYNC_CHALLENGE TWO");
             if (typeof(window.OY_BLOCK_SYNC[oy_data_payload[2]])!=="undefined") {
+                console.log("B4");
                 oy_log_debug("SYNC_CHALLENGE THREE: "+JSON.stringify(window.OY_BLOCK_SYNC[oy_data_payload[2]]));
                 console.log("LEMON:"+oy_data_payload[2]+" - "+oy_data_payload[3]+" - "+window.OY_BLOCK_SYNC[oy_data_payload[2]][1]);
                 oy_key_verify(oy_data_payload[2], oy_data_payload[3], window.OY_BLOCK_SYNC[oy_data_payload[2]][1], function(oy_key_valid) {
+                    console.log("B5");
                     oy_log_debug("SYNC_CHALLENGE FOUR");
                     if (oy_key_valid===true) {
+                        console.log("B6");
                         oy_log_debug("SYNC_CHALLENGE FIVE");
                         window.OY_BLOCK_SYNC[oy_data_payload[2]][0] = true;
                         oy_log("Beaming block sync "+oy_short(oy_data_payload[1])+" forward along the mesh");
@@ -2154,7 +2182,7 @@ function oy_block_loop() {
         console.log("BLOCK SPARK["+(Date.now()/1000)+"]: "+oy_block_time_local);
 
         //BLOCK SEED--------------------------------------------------
-        window.OY_BLOCK_SEEDTIME = 1552050900;
+        window.OY_BLOCK_SEEDTIME = 1552063200;
         if (window.OY_BLOCK_TIME===window.OY_BLOCK_SEEDTIME) {
             window.OY_BLOCK = [[null, []], [], {}, {}, {}];
 
@@ -2218,9 +2246,9 @@ function oy_block_loop() {
                 console.log("STAGE 2["+(Date.now()/1000)+"]: "+oy_block_time_local);
                 setTimeout(function() {
                     oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_SYNC", [[], window.OY_BLOCK_SYNC_DYNAMIC, oy_sync_time, oy_sync_crypt, oy_sync_command, window.OY_MAIN['oy_self_public']]);
+                    oy_sync_command = null;
                 }, Math.floor(Math.random()*((window.OY_BLOCK_GAPTIME*1000)/2)));
                 console.log("STAGE 3["+(Date.now()/1000)+"]: "+oy_block_time_local);
-                oy_sync_command = null;
                 setTimeout(function() {
                     console.log("STAGE 4["+(Date.now()/1000)+"]: "+oy_block_time_local);
                     let oy_command_pool = {};

@@ -1359,6 +1359,7 @@
             oy_top_node_add(window.OY_MAIN['oy_self_short'], "self");
 
             window.OY_MAP = function(oy_data_flag, oy_passport_passive, oy_passport_active) {
+                if (oy_data_flag.indexOf("OY_BLOCK_")!==-1) return false;
                 let oy_time_local = Date.now()/1000|0;
                 window.OY_MESH_RANGE.push([oy_time_local, oy_passport_passive.length]);
                 if (oy_data_flag==="OY_DATA_FULFILL"&&window.OY_EXECUTE_PULL===true&&oy_passport_passive.length>0&&oy_passport_active.length>0&&oy_passport_active[0]===window.OY_MAIN['oy_self_short']) {
