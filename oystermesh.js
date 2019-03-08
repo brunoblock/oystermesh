@@ -11,7 +11,7 @@ window.OY_MESH_HOP = 0.3;//maximum time allocation per hop for specific broadcas
 window.OY_MESH_FLOW = 128000;//characters per second allowed per peer, and for all aggregate non-peer nodes
 window.OY_MESH_MEASURE = 10;//seconds by which to measure mesh flow, larger means more tracking of nearby node and peer activity
 window.OY_MESH_BEAM_SAMPLE = 3;//time/data measurements to determine mesh beam flow required to state a result, too low can lead to volatile and inaccurate readings
-window.OY_MESH_BEAM_BUFFER = 0.8;//multiplication factor for mesh outflow/beam buffer, to give some leeway to compliant peers
+window.OY_MESH_BEAM_BUFFER = 1;//multiplication factor for mesh outflow/beam buffer, to give some leeway to compliant peers
 window.OY_MESH_SOAK_SAMPLE = 5;//time/data measurements to determine mesh soak flow required to state a result, too low can lead to volatile and inaccurate readings
 window.OY_MESH_SOAK_BUFFER = 1.5;//multiplication factor for mesh inflow/soak buffer, to give some leeway to compliant peers
 window.OY_MESH_PUSH_CHANCE = 0.85;//probability that self will forward a data_push when the nonce was not previously stored on self
@@ -113,6 +113,7 @@ window.OY_CLONES = {};
 window.OY_CLONE_UPTIME = null;
 window.OY_CLONE_BUILD = [];
 window.OY_LOGIC_ALL_TYPE = ["OY_BLOCK_COMMAND", "OY_BLOCK_COMMAND_CHALLENGE", "OY_BLOCK_SYNC", "OY_BLOCK_SYNC_CHALLENGE", "OY_BLOCK_DIVE", "OY_DATA_PULL", "OY_CHANNEL_BROADCAST"];//OY_LOGIC_ALL definitions
+window.OY_LOGIC_FOLLOW_TYPE = ["OY_BLOCK_COMMAND_CHALLENGE_RESPONSE", "OY_BLOCK_SYNC_CHALLENGE_RESPONSE", "OY_DATA_DEPOSIT", "OY_DATA_FULFILL", "OY_CHANNEL_ECHO", "OY_CHANNEL_RESPOND", "OY_CHANNEL_RECOVER"];//OY_LOGIC_FOLLOW definitions
 window.OY_BLOCK_TEMP = [null];//temporary centralized block
 window.OY_BLOCK_TEMP_HASH = null;//hash of the most current block
 window.OY_BLOCK = [[null, []], [], {}, {}, {}];//the current meshblock - [oy_meta_sector, oy_history_sector, oy_akoya_sector, oy_dns_sector, oy_channel_sector]
@@ -1535,7 +1536,7 @@ function oy_latency_check(oy_node_id) {
 }
 
 //measures data flow on the mesh in either beam or soak direction
-//returns false on mesh flow violation and true on compliance
+//returns false on mesh flow violation/cooling state and true on compliance
 function oy_data_measure(oy_data_beam, oy_node_id, oy_data_length) {
     if (!oy_peer_check(oy_node_id)&&oy_node_id!=="oy_aggregate_node") {
         oy_log("Call to data_measure was made with non-existent peer: "+oy_short(oy_node_id));
@@ -1560,7 +1561,8 @@ function oy_data_measure(oy_data_beam, oy_node_id, oy_data_length) {
     for (let i in window.OY_PEERS[oy_node_id][oy_array_select]) oy_measure_total += window.OY_PEERS[oy_node_id][oy_array_select][i][1];
     //either mesh overflow has occurred (parent function will respond accordingly), or mesh flow is in compliance
     window.OY_PEERS[oy_node_id][oy_array_select-1] = Math.round(oy_measure_total/(oy_time_local-window.OY_PEERS[oy_node_id][oy_array_select][0][0]));
-    return !(window.OY_PEERS[oy_node_id][oy_array_select-1]>(window.OY_MESH_FLOW*((oy_data_beam===false)?window.OY_MESH_SOAK_BUFFER:window.OY_MESH_BEAM_BUFFER)));
+    if (oy_data_beam===false) return (window.OY_PEERS[oy_node_id][oy_array_select-1]<=(window.OY_MESH_FLOW*window.OY_MESH_SOAK_BUFFER));
+    else return (Math.random()>window.OY_PEERS[oy_node_id][oy_array_select-1]/(window.OY_MESH_FLOW*window.OY_MESH_BEAM_BUFFER));
 }
 
 //pushes data onto the mesh, data_logic indicates strategy for data pushing
@@ -1803,7 +1805,7 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_push_def
             let oy_time_local = Date.now()/1000;
             for (let oy_clone_select in window.OY_CLONES) {
                 if (window.OY_CLONES[oy_clone_select][1]===3&&oy_time_local<window.OY_CLONES[oy_clone_select][0]) {
-                    oy_log("Routing data via clone "+oy_short(oy_peer_select)+" with flag "+oy_data_flag);
+                    oy_log("Routing data via clone "+oy_short(oy_clone_select)+" with flag "+oy_data_flag);
                     oy_data_beam(oy_clone_select, oy_data_flag, oy_data_payload);
                 }
             }
@@ -1852,7 +1854,7 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_push_def
 }
 
 function oy_data_direct(oy_data_flag) {
-    return oy_data_flag.indexOf("OY_PEER")===-1&&oy_data_flag.indexOf("OY_LATENCY")===-1&&oy_data_flag.indexOf("OY_CLONE")===-1
+    return !(oy_data_flag.indexOf("OY_PEER")===-1&&oy_data_flag.indexOf("OY_LATENCY")===-1&&oy_data_flag.indexOf("OY_CLONE")===-1);
 }
 
 //send data
@@ -1873,7 +1875,7 @@ function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
         }
         let oy_data_cool = false;
         if (oy_peer_check(oy_node_id)) oy_data_cool = !oy_data_measure(true, oy_node_id, (oy_logic_all_bool===true)?oy_data_raw.length*window.OY_LOGIC_ALL_MULTI:oy_data_raw.length);
-        if (oy_data_cool===true&&oy_data_direct_bool===true) {
+        if (oy_data_cool===true&&oy_data_direct_bool===false&&window.OY_LOGIC_FOLLOW_TYPE.indexOf(oy_data_flag)===-1) {
             oy_log("Cooling off, skipping "+oy_data_flag+" to "+oy_short(oy_node_id));
             return true;
         }
@@ -1895,7 +1897,7 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
        let oy_data = JSON.parse(oy_data_raw);
        if (oy_data&&typeof(oy_data)==="object") {
            console.log("SOAK["+oy_data[0]+"]: ");
-           if (oy_data_direct(oy_data[0])) {
+           if (!oy_data_direct(oy_data[0])) {
                let oy_peer_last = oy_data[1][0][oy_data[1][0].length-1];
                if (oy_peer_last!==oy_short(oy_node_id)) {
                    oy_log("Peer "+oy_short(oy_node_id)+" lied on the passport, will remove and punish");
@@ -2115,6 +2117,8 @@ function oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm)
 }
 
 function oy_block_command_verify(oy_command_select, oy_callback) {
+    console.log(oy_command_select);
+    console.log(oy_callback);
     if (typeof(oy_command_select[0][0])==="undefined"||//check that a command was given
         typeof(window.OY_BLOCK_COMMANDS[oy_command_select[0][0]])==="undefined") {//check that the signed command is a recognizable command
         oy_callback(false);
@@ -2129,7 +2133,7 @@ function oy_block_command_verify(oy_command_select, oy_callback) {
 
 function oy_block_sync_verify(oy_command_inherit, oy_callback) {
     if (oy_command_inherit.length===0) oy_callback(true);
-    oy_block_command_verify(oy_command_inherit.pop(), function(oy_command_valid) {
+    else oy_block_command_verify(oy_command_inherit.pop(), function(oy_command_valid) {
         if (oy_command_valid===true) oy_block_sync_verify(oy_command_inherit, oy_callback);
         else oy_callback(false);
     });
@@ -2150,7 +2154,7 @@ function oy_block_loop() {
         console.log("BLOCK SPARK["+(Date.now()/1000)+"]: "+oy_block_time_local);
 
         //BLOCK SEED--------------------------------------------------
-        window.OY_BLOCK_SEEDTIME = 1551796100;
+        window.OY_BLOCK_SEEDTIME = 1552050900;
         if (window.OY_BLOCK_TIME===window.OY_BLOCK_SEEDTIME) {
             window.OY_BLOCK = [[null, []], [], {}, {}, {}];
 
@@ -2212,7 +2216,9 @@ function oy_block_loop() {
             console.log("STAGE 1["+(Date.now()/1000)+"]: "+oy_block_time_local);
             oy_key_sign(window.OY_MAIN['oy_self_private'], oy_sync_time+window.OY_BLOCK_SYNC_HASH, function(oy_sync_crypt) {
                 console.log("STAGE 2["+(Date.now()/1000)+"]: "+oy_block_time_local);
-                oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_SYNC", [[], window.OY_BLOCK_SYNC_DYNAMIC, oy_sync_time, oy_sync_crypt, oy_sync_command, window.OY_MAIN['oy_self_public']]);
+                setTimeout(function() {
+                    oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_SYNC", [[], window.OY_BLOCK_SYNC_DYNAMIC, oy_sync_time, oy_sync_crypt, oy_sync_command, window.OY_MAIN['oy_self_public']]);
+                }, Math.floor(Math.random()*((window.OY_BLOCK_GAPTIME*1000)/2)));
                 console.log("STAGE 3["+(Date.now()/1000)+"]: "+oy_block_time_local);
                 oy_sync_command = null;
                 setTimeout(function() {
@@ -2267,7 +2273,9 @@ function oy_block_loop() {
                     let oy_dive_time = Date.now/1000;
                     oy_key_sign(window.OY_MAIN['oy_self_private'], oy_dive_time+window.OY_BLOCK_DIVE_HASH, function(oy_dive_crypt) {
                         console.log("STAGE 5["+(Date.now()/1000)+"]: "+oy_block_time_local);
-                        oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_DIVE", [[], oy_rand_gen(), oy_dive_time, oy_dive_crypt, oy_dive_pool, window.OY_MAIN['oy_self_public'], window.OY_BLOCK_DIVE_REWARD]);
+                        setTimeout(function() {
+                            oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_DIVE", [[], oy_rand_gen(), oy_dive_time, oy_dive_crypt, oy_dive_pool, window.OY_MAIN['oy_self_public'], window.OY_BLOCK_DIVE_REWARD]);
+                        }, Math.floor(Math.random()*((window.OY_BLOCK_GAPTIME*1000)/4)));
                         console.log("STAGE 6["+(Date.now()/1000)+"]: "+oy_block_time_local);
                         oy_dive_pool = null;
                         setTimeout(function() {
