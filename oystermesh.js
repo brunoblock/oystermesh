@@ -20,15 +20,16 @@ window.OY_MESH_DEPOSIT_CHANCE = 0.4;//probability that self will deposit pushed 
 window.OY_MESH_FULLFILL_CHANCE = 0.2;//probability that data is stored whilst fulfilling a pull request, this makes data intelligently migrate and recommit overtime
 window.OY_MESH_SOURCE = 3;//node in route passport (from destination) that is assigned with defining the source variable
 window.OY_BLOCK_CONSENSUS = 0.6;//mesh topology corroboration to agree on confirming a meshblock transaction
-window.OY_BLOCK_GAPTIME = 4;//seconds interval for processing the block in various stages
+window.OY_BLOCK_GAPTIME = 8;//seconds interval for processing the block in various stages
 window.OY_BLOCK_LAUNCHTIME = 200;//ms delay from block_trigger to launch a command broadcast
 window.OY_BLOCK_HISTORYTIME = 3600;//seconds to keep transaction history in the meshblock
 window.OY_BLOCK_CHALLENGETIME = 800;//ms delay until meshblock challenge to peers is enforced
+window.OY_BLOCK_CLONETIME = 800;//ms delay until meshblock clone
 window.OY_BLOCK_KEY_LIMIT = 4;//permitted transactions per wallet per block (10 seconds)
 window.OY_BLOCK_HASH_KEEP = 3;//how many hashes of previous blocks to keep in the current meshblock, value is for 7 days worth//60480
 window.OY_BLOCK_DIVE_PACKET_MAX = 8000;//maximum size for a packet that is routed via OY_BLOCK_DIVE_PACKET_MAX (OY_LOGIC_ALL)
-window.OY_CHALLENGE_TRIGGER = 0.12;//higher means more challenge congestion (more secure, less scalable), lower means less challenge congestion (less secure, more scalable)
-window.OY_CHALLENGE_BUFFER = 1;//amount of node hope buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing
+window.OY_CHALLENGE_TRIGGER = 0.4;//higher means more challenge congestion (more secure, less scalable), lower means less challenge congestion (less secure, more scalable)
+window.OY_CHALLENGE_BUFFER = 2;//amount of node hope buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing
 window.OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
 window.OY_AKOYA_MAX_SUPPY = 10000000*window.OY_AKOYA_DECIMALS;//akoya max supply
 window.OY_AKOYA_FEE = 0.0001*window.OY_AKOYA_DECIMALS;//akoya fee per block
@@ -496,8 +497,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_time_local-oy_data_payload[2][1]<(window.OY_MESH_HOP*oy_data_payload[0].length)+window.OY_MESH_FUTURE&&//check that the broadcast timestamp complies with MESH_HOP restrictions
             oy_data_payload[2][1]-window.OY_BLOCK_TIME>=0&&//check that the broadcast timestamp is in the first sector of the block
             oy_data_payload[2][1]-window.OY_BLOCK_TIME<window.OY_BLOCK_GAPTIME&&//check that the broadcast timestamp is not in the last sector of the current block
-            oy_time_local<window.OY_BLOCK_NEXT&&//check that the broadcast is being processed before the next block (current block)
-            window.OY_BLOCK_TIME===Math.floor(oy_data_payload[2][1]/10)*10) {//additional redundant check that the broadcast is targeting the current block
+            oy_time_local-window.OY_BLOCK_TIME>=0&&//check that the broadcast is being processed in the current block
+            oy_time_local<window.OY_BLOCK_NEXT) {//check that the broadcast is being processed before the next block (current block)
             oy_block_command_verify([oy_data_payload[2], oy_data_payload[3]], function(oy_verify_valid) {
                 if (oy_verify_valid===true) {
                     let oy_command_challenge = oy_rand_gen();
@@ -577,8 +578,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             //oy_time_local-oy_data_payload[2]<window.OY_MESH_HOP*oy_data_payload[0].length&&//check that the broadcast timestamp complies with MESH_HOP restrictions
             oy_data_payload[2]-window.OY_BLOCK_TIME>=window.OY_BLOCK_GAPTIME&&//check that the broadcast timestamp is in the sync processing zone
             oy_data_payload[2]-window.OY_BLOCK_TIME<(window.OY_BLOCK_GAPTIME*2)&&//check that the broadcast timestamp is in the sync processing zone
-            oy_time_local<window.OY_BLOCK_NEXT&&//check that the broadcast is being processed before the next block (current block)
-            window.OY_BLOCK_TIME===Math.floor(oy_data_payload[2]/10)*10) {//additional redundant check that the broadcast is targeting the current block
+            oy_time_local-window.OY_BLOCK_TIME>=0&&//check that the broadcast is being processed in the current block
+            oy_time_local<window.OY_BLOCK_NEXT) {//check that the broadcast is being processed before the next block (current block)
 
             let oy_sync_hash = oy_hash_gen(JSON.stringify(oy_data_payload[4]));
             oy_key_verify(oy_data_payload[5], oy_data_payload[3], oy_data_payload[2]+oy_sync_hash+oy_data_payload[6], function(oy_key_valid) {
@@ -674,8 +675,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         if (typeof(window.OY_BLOCK_SYNC[oy_data_payload[5]])!=="undefined"&&//check that the public key of the node was validated during block_sync
             oy_data_payload[2]-window.OY_BLOCK_TIME>=(window.OY_BLOCK_GAPTIME*2)&&//check that the broadcast timestamp is in the dive processing zone
             oy_data_payload[2]<window.OY_BLOCK_NEXT&&//check that the broadcast timestamp is in the dive processing zone
-            oy_time_local<window.OY_BLOCK_NEXT&&//check that the broadcast is being processed before the next block (current block)
-            window.OY_BLOCK_TIME===Math.floor(oy_data_payload[2]/10)*10) {//additional redundant check that the broadcast is targeting the current block)
+            oy_time_local-window.OY_BLOCK_TIME>=0&&//check that the broadcast is being processed in the current block
+            oy_time_local<window.OY_BLOCK_NEXT) {//check that the broadcast is being processed before the next block (current block)
 
             let oy_dive_hash = oy_hash_gen(JSON.stringify(oy_data_payload[4]));
             oy_key_verify(oy_data_payload[5], oy_data_payload[3], oy_data_payload[2]+oy_dive_hash, function(oy_key_valid) {
@@ -999,12 +1000,12 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     else if (oy_data_flag==="OY_PEER_CHALLENGE") {
         if (typeof(window.OY_CHALLENGE[oy_peer_id])!=="undefined") {
             oy_key_verify(oy_peer_id, oy_data_payload, window.OY_MESH_DYNASTY+window.OY_BLOCK_HASH, function(oy_key_valid) {
-               if (oy_key_valid===true) delete window.OY_CHALLENGE[oy_peer_id];
+                if (oy_key_valid===true) delete window.OY_CHALLENGE[oy_peer_id];
             });
         }
     }
     else if (oy_data_flag==="OY_PEER_LATENCY") {
-        oy_key_sign(window.OY_MAIN['oy_self_private'], window.OY_MESH_DYNASTY+window.OY_BLOCK_HASH+oy_data_payload[0], function(oy_key_signature) {
+        oy_key_sign(window.OY_MAIN['oy_self_private'], window.OY_MESH_DYNASTY+oy_data_payload[0], function(oy_key_signature) {
             oy_log("Signed peer latency sequence from "+oy_short(oy_peer_id));
             oy_data_payload[0] = oy_key_signature;
             oy_data_beam(oy_peer_id, "OY_LATENCY_RESPONSE", oy_data_payload);
@@ -1067,6 +1068,7 @@ function oy_peer_report() {
 }
 
 function oy_node_reset(oy_node_id) {
+    delete window.OY_CHALLENGE[oy_node_id];
     delete window.OY_LATENCY[oy_node_id];
     delete window.OY_PROPOSED[oy_node_id];
     delete window.OY_PEERS_PRE[oy_node_id];
@@ -1229,6 +1231,7 @@ function oy_node_initiate(oy_node_id, oy_list_force) {
 
 //retrieves nodes from and submit self id to top.oyster.org
 function oy_node_assign() {
+    if (window.OY_BLOCK_SEEDTIME!==null&&Date.now()/1000<=window.OY_BLOCK_SEEDTIME) return false;
     let oy_xhttp = new XMLHttpRequest();
     oy_xhttp.onreadystatechange = function() {
         if (this.readyState===4&&this.status===200) {
@@ -1272,7 +1275,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
         }
     }
     else if (oy_data_flag==="OY_PEER_LATENCY"&&(oy_node_proposed(oy_node_id, false)||oy_peer_pre_check(oy_node_id))) {//respond to latency ping from node with peer proposal arrangement
-        oy_key_sign(window.OY_MAIN['oy_self_private'], window.OY_MESH_DYNASTY+window.OY_BLOCK_HASH+oy_data_payload[0], function(oy_key_signature) {
+        oy_key_sign(window.OY_MAIN['oy_self_private'], window.OY_MESH_DYNASTY+oy_data_payload[0], function(oy_key_signature) {
             oy_log("Signed peer latency sequence from "+oy_short(oy_node_id));
             oy_data_payload[0] = oy_key_signature;
             oy_data_beam(oy_node_id, "OY_LATENCY_RESPONSE", oy_data_payload);
@@ -1380,7 +1383,7 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
         return false;
     }
     let oy_time_local = Date.now()/1000;
-    oy_key_verify(oy_node_id, oy_data_payload[0], window.OY_MESH_DYNASTY+window.OY_BLOCK_HASH+window.OY_LATENCY[oy_node_id][0], function(oy_key_valid) {
+    oy_key_verify(oy_node_id, oy_data_payload[0], window.OY_MESH_DYNASTY+window.OY_LATENCY[oy_node_id][0], function(oy_key_valid) {
         if (oy_key_valid===false) {
             oy_log("Node "+oy_short(oy_node_id)+" failed to sign latency sequence, will punish");
             oy_node_punish(oy_node_id, "OY_PUNISH_SIGN_FAIL");
@@ -2126,13 +2129,12 @@ function oy_block_time(oy_next) {
 function oy_block_loop() {
     let oy_block_time_local = oy_block_time(false);
     setTimeout("oy_block_loop()", window.OY_BLOCK_LOOP);
-    if (oy_block_time_local!==window.OY_BLOCK_TIME) {
+    if (oy_block_time_local!==window.OY_BLOCK_TIME&&(oy_block_time_local/10)%2===0) {
         window.OY_BLOCK_TIME = oy_block_time_local;
-        window.OY_BLOCK_NEXT = oy_block_time(true);
+        window.OY_BLOCK_NEXT = oy_block_time(true)+10;
         window.OY_BLOCK_COMMAND = {};
 
         //BLOCK SEED--------------------------------------------------
-        window.OY_BLOCK_SEEDTIME = 1552236400;
         if (window.OY_BLOCK_TIME===window.OY_BLOCK_SEEDTIME) {
             window.OY_BLOCK = [[null, []], [], {}, {}, {}];
 
@@ -2144,7 +2146,19 @@ function oy_block_loop() {
         }
         //BLOCK SEED--------------------------------------------------
 
+        let oy_block_challenge = function(oy_block_sign) {
+            if (oy_block_sign!==null) {
+                for (let oy_peer_select in window.OY_PEERS) {
+                    if (oy_peer_select==="oy_aggregate_node") continue;
+                    oy_data_beam(oy_peer_select, "OY_PEER_CHALLENGE", oy_block_sign);
+                }
+            }
+        };
+
+        let oy_timer = [];
+
         setTimeout(function() {
+            oy_timer[0] = Date.now()/1000;
             window.OY_CLONE_BUILD = [];
             for (let oy_clone_select in window.OY_CLONES) {
                 if (window.OY_CLONES[oy_clone_select][1]===0||window.OY_CLONES[oy_clone_select][1]===2||Date.now()/1000>=window.OY_CLONES[oy_clone_select][0]) delete window.OY_CLONES[oy_clone_select];
@@ -2155,19 +2169,16 @@ function oy_block_loop() {
                 return false;
             }
 
-            if (window.OY_BLOCK_SIGN!==null) {
-                for (let oy_peer_select in window.OY_PEERS) {
-                    if (oy_peer_select==="oy_aggregate_node") continue;
-                    oy_data_beam(oy_peer_select, "OY_PEER_CHALLENGE", window.OY_BLOCK_SIGN);
-                }
-            }
-
-            if (window.OY_BLOCK[0][0]!==null&&window.OY_BLOCK[0][0]!==oy_block_time_local-10) {
+            if (window.OY_BLOCK[0][0]!==null&&window.OY_BLOCK[0][0]!==oy_block_time_local-20) {
                 window.OY_BLOCK_HASH = null;
                 window.OY_BLOCK_SIGN = null;
                 console.log("BLOCK MISSTEP");
                 return false;
             }
+
+            oy_block_challenge(window.OY_BLOCK_SIGN);
+            oy_timer[0] -= Date.now()/1000;
+            oy_timer[1] = Date.now()/1000;
 
             window.OY_BLOCK[0][0] = oy_block_time_local;
             window.OY_BLOCK_COMMAND_KEY = {};
@@ -2191,22 +2202,23 @@ function oy_block_loop() {
             window.OY_BLOCK_SYNC_HASH = oy_hash_gen(JSON.stringify(oy_sync_command));
             window.OY_BLOCK_SYNC_DYNAMIC = oy_rand_gen();
             let oy_sync_time = Date.now()/1000;
-            let oy_dive_reward = " "+window.OY_BLOCK_DIVE_REWARD.slice(1);
+            let oy_dive_reward = (" "+window.OY_BLOCK_DIVE_REWARD).slice(1);//TODO fix problem here
+            oy_timer[1] -= Date.now()/1000;
+            oy_timer[2] = Date.now()/1000;
             oy_key_sign(window.OY_MAIN['oy_self_private'], oy_sync_time+window.OY_BLOCK_SYNC_HASH+oy_dive_reward, function(oy_sync_crypt) {
+                oy_timer[2] -= Date.now()/1000;
+                oy_timer[3] = Date.now()/1000;
                 setTimeout(function() {
                     oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_SYNC", [[], window.OY_BLOCK_SYNC_DYNAMIC, oy_sync_time, oy_sync_crypt, oy_sync_command, window.OY_MAIN['oy_self_public'], oy_dive_reward]);
                     oy_sync_command = null;
-                }, Math.floor(Math.random()*900));
+                }, Math.floor(Math.random()*((window.OY_BLOCK_GAPTIME*1000))));
+                oy_timer[3] -= Date.now()/1000;
                 setTimeout(function() {
-                    if (window.OY_BLOCK_SIGN!==null) {
-                        for (let oy_peer_select in window.OY_PEERS) {
-                            if (oy_peer_select==="oy_aggregate_node") continue;
-                            oy_data_beam(oy_peer_select, "OY_PEER_CHALLENGE", window.OY_BLOCK_SIGN);
-                        }
-                    }
+                    oy_timer[4] = Date.now()/1000;
+                    oy_block_challenge(window.OY_BLOCK_SIGN);
                     let oy_command_pool = {};
                     let oy_node_consensus = 0;
-                    oy_log_debug("SYNC: "+Object.keys(window.OY_BLOCK_SYNC).length);
+                    //oy_log_debug("SYNC: "+Object.keys(window.OY_BLOCK_SYNC).length);
                     for (let oy_key_public in window.OY_BLOCK_SYNC) {
                         if (window.OY_BLOCK_SYNC[oy_key_public][0]===true) {
                             oy_node_consensus++;
@@ -2253,20 +2265,18 @@ function oy_block_loop() {
                     window.OY_BLOCK_DIVE_SET = [];
                     window.OY_BLOCK_DIVE_HASH = oy_hash_gen(JSON.stringify(oy_dive_pool));
                     let oy_dive_time = Date.now()/1000;
+                    oy_timer[4] -= Date.now()/1000;
+                    oy_timer[5] = Date.now()/1000;
                     oy_key_sign(window.OY_MAIN['oy_self_private'], oy_dive_time+window.OY_BLOCK_DIVE_HASH, function(oy_dive_crypt) {
                         setTimeout(function() {
-                            //TODO dive_reward might need to get moved to block_sync to avoid mesh split attack vector
                             oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_DIVE", [[], oy_rand_gen(), oy_dive_time, oy_dive_crypt, oy_dive_pool, window.OY_MAIN['oy_self_public']]);
                             oy_dive_pool = null;
-                        }, Math.floor(Math.random()*900));
+                        }, Math.floor(Math.random()*((window.OY_BLOCK_GAPTIME*1000)/2)));
+                        oy_timer[5] -= Date.now()/1000;
                         setTimeout(function() {
-                            if (window.OY_BLOCK_SIGN!==null) {
-                                for (let oy_peer_select in window.OY_PEERS) {
-                                    if (oy_peer_select==="oy_aggregate_node") continue;
-                                    oy_data_beam(oy_peer_select, "OY_PEER_CHALLENGE", window.OY_BLOCK_SIGN);
-                                }
-                            }
-                            oy_log_debug("DIVE: "+Object.keys(window.OY_BLOCK_DIVE).length);
+                            oy_timer[6] = Date.now()/1000;
+                            oy_block_challenge(window.OY_BLOCK_SIGN);
+                            //oy_log_debug("DIVE: "+Object.keys(window.OY_BLOCK_DIVE).length);
                             oy_node_consensus = Math.ceil(window.OY_BLOCK_DIVE_SET.length*window.OY_BLOCK_CONSENSUS);
                             let oy_dive_reward_pool = [];
                             for (let oy_key_public in window.OY_BLOCK_DIVE) {
@@ -2343,6 +2353,9 @@ function oy_block_loop() {
 
                             while (window.OY_BLOCK[0][1].length>window.OY_BLOCK_HASH_KEEP) window.OY_BLOCK[0][1].shift();
 
+                            oy_timer[6] -= Date.now()/1000;
+                            oy_timer[7] = Date.now()/1000;
+
                             for (let oy_peer_select in window.OY_CHALLENGE) {
                                 oy_peer_remove(oy_peer_select, "OY_PUNISH_BLOCK_HASH");
                                 delete window.OY_CHALLENGE[oy_peer_select];
@@ -2360,18 +2373,17 @@ function oy_block_loop() {
 
                             window.OY_CLONE_UPTIME = Date.now()/1000;
 
+                            oy_timer[7] -= Date.now()/1000;
+
                             oy_log("NEW MESHBLOCK HASH "+window.OY_BLOCK_HASH);
                             console.log("NEW MESHBLOCK HASH "+window.OY_BLOCK_HASH);
 
-                            oy_log_debug("HASH: "+window.OY_BLOCK_HASH+"\nBLOCK: "+oy_block_flat);
+                            oy_log_debug("HASH: "+window.OY_BLOCK_HASH+"\nBLOCK: "+oy_block_flat+"\nTIMER: "+JSON.stringify(oy_timer));
 
                             setTimeout(function() {
                                 oy_key_sign(window.OY_MAIN['oy_self_private'], window.OY_MESH_DYNASTY+window.OY_BLOCK_HASH, function(oy_key_signature) {
                                     window.OY_BLOCK_SIGN = oy_key_signature;
-                                    for (let oy_peer_select in window.OY_PEERS) {
-                                        if (oy_peer_select==="oy_aggregate_node") continue;
-                                        oy_data_beam(oy_peer_select, "OY_PEER_CHALLENGE", window.OY_BLOCK_SIGN);
-                                    }
+                                    oy_block_challenge(window.OY_BLOCK_SIGN);
                                 });
                             }, window.OY_BLOCK_CHALLENGETIME);
 
@@ -2386,7 +2398,6 @@ function oy_block_loop() {
                                         let oy_block_nonce_max = -1;
                                         for (let oy_clone_select in window.OY_CLONES) {
                                             if (Date.now()/1000>window.OY_CLONES[oy_clone_select][0]||window.OY_CLONES[oy_clone_select][1]!==1) continue;
-
                                             if (oy_block_split===null) {
                                                 oy_block_split = [];
                                                 for (let i = 0; i < oy_block_flat.length; i += window.OY_CLONE_CHUNK) {
@@ -2394,21 +2405,19 @@ function oy_block_loop() {
                                                     oy_block_nonce_max++;
                                                 }
                                             }
-
                                             for (let oy_clone_nonce in oy_block_split) {
                                                 oy_data_beam(oy_clone_select, "OY_CLONE_PUSH", [oy_block_nonce_max, oy_clone_nonce, oy_block_split[oy_clone_nonce]]);
                                             }
-
                                             window.OY_CLONES[oy_clone_select][1] = 2;
                                         }
                                     }
                                 }
-                            }, (window.OY_BLOCK_GAPTIME*1000)/2);
-                        }, (window.OY_BLOCK_GAPTIME*1000)/2);//seconds 8-10 out of 10, block_gaptime/2 equals mesh_edge on purpose
+                            }, window.OY_BLOCK_CLONETIME);
+                        }, (window.OY_BLOCK_GAPTIME*1000)/2);//seconds 16-20 out of 20, block_gaptime/2 equals mesh_edge on purpose
                     });
-                }, window.OY_BLOCK_GAPTIME*1000);//seconds 4-8 out of 10
+                }, window.OY_BLOCK_GAPTIME*1000);//seconds 8-16 out of 20
             });
-        }, window.OY_BLOCK_GAPTIME*1000);//seconds 0-4 out of 10
+        }, window.OY_BLOCK_GAPTIME*1000);//seconds 0-8 out of 20
 
         //----------transitory centralized solution
         let oy_xhttp = new XMLHttpRequest();
@@ -2631,6 +2640,8 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
             return true;
         }
     }
+
+    window.OY_BLOCK_SEEDTIME = 1552319980;
 
     window.OY_PURGE = oy_local_get("oy_purge");
     //window.OY_PEERS = oy_local_get("oy_peers");
