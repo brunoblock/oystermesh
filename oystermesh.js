@@ -22,11 +22,10 @@ window.OY_MESH_SOURCE = 3;//node in route passport (from destination) that is as
 window.OY_BLOCK_CONSENSUS = 0.6;//mesh topology corroboration to agree on confirming a meshblock transaction
 window.OY_BLOCK_SECTORS = [[4, 4000], [12, 12000]];//timing definitions for the meshblock
 window.OY_BLOCK_LAUNCHTIME = 200;//ms delay from block_trigger to launch a command broadcast
-window.OY_BLOCK_HISTORYTIME = 3600;//seconds to keep transaction history in the meshblock
 window.OY_BLOCK_CHALLENGETIME = 800;//ms delay until meshblock challenge to peers is enforced
 window.OY_BLOCK_CLONETIME = 800;//ms delay until meshblock clone
 window.OY_BLOCK_KEY_LIMIT = 4;//permitted transactions per wallet per block (20 seconds)
-window.OY_BLOCK_HASH_KEEP = 3;//how many hashes of previous blocks to keep in the current meshblock, value is for 7 days worth//30240
+window.OY_BLOCK_HASH_KEEP = 20;//how many hashes of previous blocks to keep in the current meshblock, value is for 6 months worth//1577
 window.OY_BLOCK_DENSITY = 0.8;//higher means block OY_LOGIC_ALL packets are more spread out
 window.OY_BLOCK_PEERS_MIN = 3;//minimum peer count to be able to act as origin for clones and broadcast SYNC/DIVE
 window.OY_BLOCK_DIVE_PACKET_MAX = 8000;//maximum size for a packet that is routed via OY_BLOCK_DIVE_PACKET_MAX (OY_LOGIC_ALL)
@@ -2082,8 +2081,8 @@ function oy_block_sync_verify(oy_command_inherit, oy_callback) {
 }
 
 function oy_block_time(oy_next) {
-    if (oy_next===true) return (Math.ceil(Date.now()/10000))*10;
-    return (Math.floor(Date.now()/10000))*10;
+    if (oy_next===true) return (Math.ceil(Date.now()/10000)*10)+10;
+    return (Math.floor(Date.now()/10000)*10);
 }
 
 function oy_block_loop() {
@@ -2091,7 +2090,7 @@ function oy_block_loop() {
     setTimeout("oy_block_loop()", window.OY_BLOCK_LOOP);
     if (oy_block_time_local!==window.OY_BLOCK_TIME&&(oy_block_time_local/10)%2===0) {
         window.OY_BLOCK_TIME = oy_block_time_local;
-        window.OY_BLOCK_NEXT = oy_block_time(true)+10;
+        window.OY_BLOCK_NEXT = oy_block_time(true);
         window.OY_BLOCK_COMMAND = {};
 
         //BLOCK SEED--------------------------------------------------
@@ -2131,6 +2130,14 @@ function oy_block_loop() {
                 window.OY_BLOCK_SIGN = null;
                 console.log("BLOCK MISSTEP");
                 return false;
+            }
+
+            if (Math.floor((Date.now()-30000)/10000000)!==Math.floor((Date.now()-10000)/10000000)) {//10000000
+                oy_log_debug("SNAPSHOT: "+window.OY_BLOCK_HASH+"/"+JSON.stringify(window.OY_BLOCK));
+                window.OY_BLOCK[1] = {};
+                window.OY_BLOCK[0][1].push(window.OY_BLOCK_HASH);
+
+                while (window.OY_BLOCK[0][1].length>window.OY_BLOCK_HASH_KEEP) window.OY_BLOCK[0][1].shift();
             }
 
             oy_block_challenge(window.OY_BLOCK_SIGN);
@@ -2277,7 +2284,7 @@ function oy_block_loop() {
                             else {
                                 if (window.OY_BLOCK[2][oy_command_execute[i][1][2]]<=0) delete window.OY_BLOCK[2][oy_command_execute[i][1][2]];
                                 if (window.OY_BLOCK[2][oy_command_execute[i][1][4]]<=0) delete window.OY_BLOCK[2][oy_command_execute[i][1][4]];
-                                window.OY_BLOCK[1][oy_command_execute[i][0]] = oy_command_execute[i][1][1];
+                                window.OY_BLOCK[1][oy_command_execute[i][0]] = oy_command_execute[i][1];
                             }
                         }
                     }
@@ -2289,14 +2296,6 @@ function oy_block_loop() {
                     if (oy_supply_post>oy_supply_pre||oy_supply_post>window.OY_AKOYA_MAX_SUPPY) {
                         return false;//fallback to previous meshblock and log an error
                     }
-
-                    for (let oy_command_hash in window.OY_BLOCK[1]) {
-                        if (window.OY_BLOCK_TIME-window.OY_BLOCK[1][oy_command_hash]>window.OY_BLOCK_HISTORYTIME) delete window.OY_BLOCK[1][oy_command_hash];
-                    }
-
-                    window.OY_BLOCK[0][1].push(window.OY_BLOCK_HASH);
-
-                    while (window.OY_BLOCK[0][1].length>window.OY_BLOCK_HASH_KEEP) window.OY_BLOCK[0][1].shift();
 
                     for (let oy_peer_select in window.OY_PEERS) {
                         if (oy_peer_select==="oy_aggregate_node") continue;
@@ -2573,7 +2572,7 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
         }
     }
 
-    window.OY_BLOCK_SEEDTIME = 1552525200;
+    window.OY_BLOCK_SEEDTIME = 1552603900;
 
     window.OY_PURGE = oy_local_get("oy_purge");
     //window.OY_PEERS = oy_local_get("oy_peers");
