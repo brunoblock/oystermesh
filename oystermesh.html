@@ -1099,7 +1099,7 @@
         <div id="oy_graph_nonce" class="oy_center_hor oy_border oy_graph" style="top:0;width:50%;height:10%;background-color: #404040;overflow: hidden" onclick="akoya_test()"></div>
         <div id="oy_interface_main" class="oy_center_hor" style="top:18%;width:50%;height:25%;">
             <div id="oy_tab_dapper" class="oy_tab oy_left" style="position:fixed;top:-20%;left: 10%;height:20%;background-color: #404040;z-index:-50;" onclick="oy_tab(this.id)">DAPPER</div>
-            <div id="oy_tab_wallet" class="oy_tab" style="position:fixed;top:-20%;left: 37%;height:20%;transform: translateX(-50%);background-color: #7A7A7A;color:#232323;z-index:-50;" onclick="oy_tab(this.id)">WALLET</div>
+            <div id="oy_tab_wallet" class="oy_tab" style="position:fixed;top:-20%;left: 37%;height:20%;transform: translateX(-50%);background-color: #7A7A7A;color:#232323;z-index:-50;" onclick="oy_tab(this.id)">AKOYA</div>
             <div id="oy_tab_upload" class="oy_tab" style="position:fixed;top:-20%;left:57%;height:20%;transform: translateX(-50%);background-color: #7A7A7A;color:#232323;z-index:-50;" onclick="oy_tab(this.id)">UPLOAD</div>
             <div id="oy_tab_download" class="oy_tab oy_right" style="position:fixed;top:-20%;right: 10%;height:20%;background-color: #7A7A7A;color:#232323;z-index:-50;" onclick="oy_tab(this.id)">DOWNLOAD</div>
             <div id="oy_interface_dapper" class="oy_center_hor oy_border oy_interface_main" style="top:0;width:100%;height:100%;background-color: #404040;z-index:100;display:block">
@@ -1113,9 +1113,42 @@
                 </div>
             </div>
             <div id="oy_interface_wallet" class="oy_center_hor oy_border oy_interface_main" style="top:0;width:100%;height:100%;background-color: #404040;z-index:100;display:none">
-                <div align="center" style="position:absolute;top:8%;left:5%;width:50%;height:20%;font-size:2vh;background-color: #7A7A7A;border-radius: 0.2vh;color:#000;font-family: geo_med, sans-serif;">0.0000 AKYT</div>
-                <div align="center" class="oy_center_both">
-
+                <div id="oy_wallet_cont" style="position:absolute;bottom:0;width:100%;height:100%;opacity:0.85;background-color:#000000;border-bottom-left-radius: 0.5vh;border-bottom-right-radius: 0.5vh;z-index: 200;display: block;">
+                    <div align="center" class="oy_center_both oy_button oy_button_go_active" style="width:auto;height:auto;" onclick="oy_wallet_open(function(){oy_akoya_load()})">
+                        <div style="position:relative;top:-3%;">
+                            &nbsp;&nbsp;LOAD&nbsp;WALLET&nbsp;&nbsp;
+                        </div>
+                    </div><br>
+                </div>
+                <div align="center" style="position:absolute;top:8%;left:3%;width:50%;height:30%;background-color: #7A7A7A;border-radius: 0.2vh;color:#000;font-size:2.8vh;">
+                    <div id="oy_wallet_avatar_cont" class="oy_center_both" style="left:9%;width:4vh;height:4vh;background-color: #2a2a2a"></div>
+                    <div style="position:absolute;width:90%;height:100%;right:0;">
+                        <div class="oy_center_both" style="width:100%;"><span id="oy_akoya_balance_inner">------</span> AKYT</div>
+                    </div>
+                </div>
+                <div align="center" style="position:absolute;top:8%;right:3%;width:40%;height:85%;font-size:2vh;background-color: #7A7A7A;border-radius: 0.2vh;color:#000;font-family: geo_med, sans-serif;"></div>
+                <div style="position:absolute;bottom:5%;left:3%;width:50%;height:48%;border-radius: 0.2vh;">
+                    <div id="oy_send_avatar_cont" style="position:absolute;left:0.8vh;top:0.5vh;width:2.3vh;height:2.3vh;background-color: #2a2a2a"></div>
+                    <div id="oy_send_amount_cont" style="position:absolute;left:0.8vh;top:3.5vh;width:2.3vh;height:2.3vh;background-color: #2a2a2a"></div>
+                    <input id="oy_wallet_send" type="text" style="position:absolute;top:0.5vh;left:3.1vh;text-align:center;width:38%;height:2vh;font-size:1.2vh;" onclick="oy_pull_reset_handle_click()" oninput="oy_pull_reset_handle_blur()" onchange="oy_pull_reset_handle_blur()" value="" />
+                    <input id="oy_wallet_amount" type="text" style="position:absolute;top:3.5vh;left:3.1vh;text-align:center;width:38%;height:2vh;font-size:1.9vh;" onclick="oy_pull_reset_handle_click()" oninput="oy_pull_reset_handle_blur()" onchange="oy_pull_reset_handle_blur()" value="" />
+                    <div style="position:absolute;right:1.3vh;width:40%;height:50%;top:1.6vh;">
+                        <div id="oy_akoya_send" align="center" class="oy_center_hor oy_button oy_button_all_dull" style="position:absolute;bottom:65%;width:98%;height:50%;" onclick="oy_push_execute()">
+                            <div style="position:relative;">
+                                SEND AKOYA
+                            </div>
+                        </div>
+                        <div id="oy_akoya_wallet" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:0;left:0;width:52%;height:50%;" onclick="oy_push_halt()">
+                            <div style="position:relative;">
+                                WALLET
+                            </div>
+                        </div>
+                        <div id="oy_akoya_reset" align="center" class="oy_button oy_button_all_dull" style="position:absolute;bottom:0;right:0;width:41%;height:50%;" onclick="oy_push_reset()" onmouseenter="oy_push_reset_handle_enter()" onmouseleave="oy_push_reset_handle_leave()">
+                            <div style="position:relative;">
+                                RESET
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div id="oy_interface_upload" class="oy_center_hor oy_border oy_interface_main" style="top:0;width:100%;height:100%;background-color: #404040;z-index:100;display:none">
@@ -1347,6 +1380,7 @@
             });
 
             document.addEventListener("oy_key_enter", oy_dapper_launch, false);
+            document.addEventListener("oy_block_trigger", oy_block_process, false);
         }
 
         document.getElementById(window.OY_DEST_RADIO).checked = true;
@@ -1624,6 +1658,24 @@
         window.OY_CONSOLE_HOVER = false;
         document.getElementById("oy_console_hover_indicator").style.display = "none";
         document.getElementById("oy_console").scrollTo(0, document.getElementById("oy_console").scrollHeight);
+    }
+
+    function oy_akoya_load() {
+        if (window.OY_WALLET_PUBLIC!==null) {
+            oy_avatar_gen(window.OY_WALLET_PUBLIC, document.getElementById("oy_wallet_avatar_cont"));
+            document.getElementById("oy_wallet_cont").style.display = "none";
+            oy_akoya_balance();
+        }
+    }
+
+    function oy_block_process() {
+        oy_akoya_balance();
+    }
+
+    function oy_akoya_balance() {
+        if (window.OY_BLOCK_HASH!==null&&window.OY_WALLET_PUBLIC!==null) {
+            document.getElementById("oy_akoya_balance_inner").innerHTML = (typeof(window.OY_BLOCK[2][window.OY_WALLET_PUBLIC])==="undefined")?"0.0000":(window.OY_BLOCK[2][window.OY_WALLET_PUBLIC]/window.OY_AKOYA_DECIMALS).toFixed(4);
+        }
     }
 
     function oy_wallet_gen() {
