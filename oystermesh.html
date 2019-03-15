@@ -1113,7 +1113,7 @@
                 </div>
             </div>
             <div id="oy_interface_wallet" class="oy_center_hor oy_border oy_interface_main" style="top:0;width:100%;height:100%;background-color: #404040;z-index:100;display:none">
-                <div id="oy_wallet_cont" style="position:absolute;bottom:0;width:100%;height:100%;opacity:0.85;background-color:#000000;border-bottom-left-radius: 0.5vh;border-bottom-right-radius: 0.5vh;z-index: 200;display: block;">
+                <div id="oy_wallet_cont" style="position:absolute;bottom:0;width:100%;height:100%;opacity:0.85;background-color:#000000;border-bottom-left-radius: 0.5vh;border-bottom-right-radius: 0.5vh;z-index: 200;display: none;">
                     <div align="center" class="oy_center_both oy_button oy_button_go_active" style="width:auto;height:auto;" onclick="oy_wallet_open(function(){oy_akoya_load()})">
                         <div style="position:relative;top:-3%;">
                             &nbsp;&nbsp;LOAD&nbsp;WALLET&nbsp;&nbsp;
@@ -1130,8 +1130,8 @@
                 <div style="position:absolute;bottom:5%;left:3%;width:50%;height:48%;border-radius: 0.2vh;">
                     <div id="oy_send_avatar_cont" style="position:absolute;left:0.8vh;top:0.5vh;width:2.3vh;height:2.3vh;background-color: #2a2a2a"></div>
                     <div id="oy_send_amount_cont" style="position:absolute;left:0.8vh;top:3.5vh;width:2.3vh;height:2.3vh;background-color: #2a2a2a"></div>
-                    <input id="oy_wallet_send" type="text" style="position:absolute;top:0.5vh;left:3.1vh;text-align:center;width:38%;height:2vh;font-size:1.2vh;" onclick="oy_pull_reset_handle_click()" oninput="oy_pull_reset_handle_blur()" onchange="oy_pull_reset_handle_blur()" value="" />
-                    <input id="oy_wallet_amount" type="text" style="position:absolute;top:3.5vh;left:3.1vh;text-align:center;width:38%;height:2vh;font-size:1.9vh;" onclick="oy_pull_reset_handle_click()" oninput="oy_pull_reset_handle_blur()" onchange="oy_pull_reset_handle_blur()" value="" />
+                    <input id="oy_wallet_akoya_send" type="text" style="position:absolute;top:0.5vh;left:3.1vh;text-align:center;width:38%;height:2vh;font-size:1.2vh;color:#7a7a7a;" onclick="oy_akoya_reset_send_click()" oninput="oy_akoya_reset_send_change(this.value)" onchange="oy_akoya_reset_send_change(this.value)" onblur="oy_akoya_reset_send_blur(this.value)" value="Receiving Address" />
+                    <input id="oy_wallet_akoya_amount" type="text" style="position:absolute;top:3.5vh;left:3.1vh;text-align:center;width:38%;height:2vh;font-size:1.2vh;color:#7a7a7a;" onclick="oy_pull_reset_handle_click()" oninput="oy_pull_reset_handle_blur()" onchange="oy_pull_reset_handle_blur()" value="Receiving Amount" />
                     <div style="position:absolute;right:1.3vh;width:40%;height:50%;top:1.6vh;">
                         <div id="oy_akoya_send" align="center" class="oy_center_hor oy_button oy_button_all_dull" style="position:absolute;bottom:65%;width:98%;height:50%;" onclick="oy_push_execute()">
                             <div style="position:relative;">
@@ -1670,6 +1670,27 @@
 
     function oy_block_process() {
         oy_akoya_balance();
+    }
+
+    function oy_akoya_reset_send_click() {
+        document.getElementById("oy_wallet_akoya_send").value = "";
+        document.getElementById("oy_wallet_akoya_send").style.color = "#000000";
+    }
+
+    function oy_akoya_reset_send_change(oy_value) {
+        document.getElementById("oy_send_avatar_cont").innerHTML = "";
+        if (oy_value.length===0) document.getElementById("oy_send_avatar_cont").style.backgroundColor = "#2a2a2a";
+        else oy_avatar_gen(oy_value, document.getElementById("oy_send_avatar_cont"));
+        //oy_send_avatar_cont
+    }
+
+    function oy_akoya_reset_send_blur(oy_value) {
+        if (oy_value.length===0) {
+            document.getElementById("oy_send_avatar_cont").innerHTML = "";
+            document.getElementById("oy_send_avatar_cont").style.backgroundColor = "#2a2a2a";
+            document.getElementById("oy_wallet_akoya_send").style.color = "#7a7a7a";
+            document.getElementById("oy_wallet_akoya_send").value = "Receiving Address";
+        }
     }
 
     function oy_akoya_balance() {
