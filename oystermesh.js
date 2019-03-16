@@ -2019,10 +2019,6 @@ function oy_channel_mute(oy_channel_id) {
     oy_local_store("oy_channel_keep", window.OY_CHANNEL_KEEP);
 }
 
-function akoya_test() {
-    oy_akoya_transfer(window.OY_WALLET_PRIVATE, window.OY_WALLET_PUBLIC, 200, 'wallet2');
-}
-
 function oy_akoya_transfer(oy_key_private, oy_key_public, oy_transfer_amount, oy_receive_public, oy_callback_confirm) {
     console.log(oy_key_private);
     oy_transfer_amount = Math.floor(oy_transfer_amount*window.OY_AKOYA_DECIMALS);

@@ -1096,7 +1096,7 @@
         </div>
     </div>
     <div class="oy_holder oy_fade two">
-        <div id="oy_graph_nonce" class="oy_center_hor oy_border oy_graph" style="top:0;width:50%;height:10%;background-color: #404040;overflow: hidden" onclick="akoya_test()"></div>
+        <div id="oy_graph_nonce" class="oy_center_hor oy_border oy_graph" style="top:0;width:50%;height:10%;background-color: #404040;overflow: hidden"></div>
         <div id="oy_interface_main" class="oy_center_hor" style="top:18%;width:50%;height:25%;">
             <div id="oy_tab_dapper" class="oy_tab oy_left" style="position:fixed;top:-20%;left: 10%;height:20%;background-color: #404040;z-index:-50;" onclick="oy_tab(this.id)">DAPPER</div>
             <div id="oy_tab_wallet" class="oy_tab" style="position:fixed;top:-20%;left: 37%;height:20%;transform: translateX(-50%);background-color: #7A7A7A;color:#232323;z-index:-50;" onclick="oy_tab(this.id)">AKOYA</div>
@@ -1129,11 +1129,11 @@
                 <div align="center" style="position:absolute;top:8%;right:3%;width:40%;height:85%;font-size:2vh;background-color: #7A7A7A;border-radius: 0.2vh;color:#000;font-family: geo_med, sans-serif;"></div>
                 <div style="position:absolute;bottom:5%;left:3%;width:50%;height:48%;border-radius: 0.2vh;">
                     <div id="oy_send_avatar_cont" style="position:absolute;left:0.8vh;top:0.5vh;width:2.3vh;height:2.3vh;background-color: #2a2a2a"></div>
-                    <div id="oy_send_amount_cont" style="position:absolute;left:0.8vh;top:3.5vh;width:2.3vh;height:2.3vh;background-color: #2a2a2a"></div>
+                    <div id="oy_amount_avatar_cont" style="position:absolute;left:0.8vh;top:3.5vh;width:2.3vh;height:2.3vh;background-color: #2a2a2a"></div>
                     <input id="oy_wallet_akoya_send" type="text" style="position:absolute;top:0.5vh;left:3.1vh;text-align:center;width:38%;height:2vh;font-size:1.2vh;color:#7a7a7a;" onclick="oy_akoya_reset_send_click()" oninput="oy_akoya_reset_send_change(this.value)" onchange="oy_akoya_reset_send_change(this.value)" onblur="oy_akoya_reset_send_blur(this.value)" value="Receiving Address" />
-                    <input id="oy_wallet_akoya_amount" type="text" style="position:absolute;top:3.5vh;left:3.1vh;text-align:center;width:38%;height:2vh;font-size:1.2vh;color:#7a7a7a;" onclick="oy_pull_reset_handle_click()" oninput="oy_pull_reset_handle_blur()" onchange="oy_pull_reset_handle_blur()" value="Receiving Amount" />
+                    <input id="oy_wallet_akoya_amount" type="text" style="position:absolute;top:3.5vh;left:3.1vh;text-align:center;width:38%;height:2vh;font-size:1.2vh;color:#7a7a7a;" onclick="oy_akoya_reset_amount_click()" oninput="oy_akoya_reset_amount_change(this.value)" onchange="oy_akoya_reset_amount_change(this.value)" onblur="oy_akoya_reset_amount_blur(this.value)" value="Receiving Amount" />
                     <div style="position:absolute;right:1.3vh;width:40%;height:50%;top:1.6vh;">
-                        <div id="oy_akoya_send" align="center" class="oy_center_hor oy_button oy_button_all_dull" style="position:absolute;bottom:65%;width:98%;height:50%;" onclick="oy_push_execute()">
+                        <div id="oy_akoya_execute_button" align="center" class="oy_center_hor oy_button oy_button_all_dull" style="position:absolute;bottom:65%;width:98%;height:50%;" onclick="oy_akoya_execute()">
                             <div style="position:relative;">
                                 SEND AKOYA
                             </div>
@@ -1360,6 +1360,7 @@
             window.OY_LINK_KEEP = {};
             window.OY_KEY_ENTER = new Event('oy_key_enter');//trigger-able event for when the enter key is pressed
             window.OY_KEY_SHIFT = false;
+            window.OY_AKOYA_AMOUNT_PREV = "";
 
             document.getElementById("oy_push_superhandle").value = "-".repeat(82);
             document.getElementById("oy_pull_superhandle").value = "-".repeat(82);
@@ -1681,7 +1682,7 @@
         document.getElementById("oy_send_avatar_cont").innerHTML = "";
         if (oy_value.length===0) document.getElementById("oy_send_avatar_cont").style.backgroundColor = "#2a2a2a";
         else oy_avatar_gen(oy_value, document.getElementById("oy_send_avatar_cont"));
-        //oy_send_avatar_cont
+        oy_akoya_update();
     }
 
     function oy_akoya_reset_send_blur(oy_value) {
@@ -1690,6 +1691,42 @@
             document.getElementById("oy_send_avatar_cont").style.backgroundColor = "#2a2a2a";
             document.getElementById("oy_wallet_akoya_send").style.color = "#7a7a7a";
             document.getElementById("oy_wallet_akoya_send").value = "Receiving Address";
+        }
+    }
+
+    function oy_akoya_reset_amount_click() {
+        document.getElementById("oy_wallet_akoya_amount").value = "";
+        document.getElementById("oy_wallet_akoya_amount").style.color = "#000000";
+        document.getElementById("oy_wallet_akoya_amount").style.fontSize = "1.9vh";
+    }
+
+    function oy_akoya_reset_amount_change(oy_value) {
+        console.log(typeof(oy_value));
+        document.getElementById("oy_amount_avatar_cont").innerHTML = "";
+        if (oy_value.length===0) document.getElementById("oy_amount_avatar_cont").style.backgroundColor = "#2a2a2a";
+        else if ((parseInt(oy_value*window.OY_AKOYA_DECIMALS)+"").match(/^[0-9]+$/)===null) document.getElementById("oy_wallet_akoya_amount").value = window.OY_AKOYA_AMOUNT_PREV;
+        oy_akoya_update();
+    }
+
+    function oy_akoya_reset_amount_blur(oy_value) {
+        if (oy_value.length===0) {
+            document.getElementById("oy_amount_avatar_cont").innerHTML = "";
+            document.getElementById("oy_amount_avatar_cont").style.backgroundColor = "#2a2a2a";
+            document.getElementById("oy_wallet_akoya_amount").style.fontSize = "1.2vh";
+            document.getElementById("oy_wallet_akoya_amount").style.color = "#7a7a7a";
+            document.getElementById("oy_wallet_akoya_amount").value = "Receiving Amount";
+        }
+    }
+
+    function oy_akoya_execute() {
+        if (window.OY_WALLET_PRIVATE===null||window.OY_WALLET_PUBLIC===null) return false;
+        oy_akoya_transfer(window.OY_WALLET_PRIVATE, window.OY_WALLET_PUBLIC, Math.floor(document.getElementById("oy_wallet_akoya_amount").value*window.OY_AKOYA_DECIMALS), document.getElementById("oy_wallet_akoya_send").value);
+    }
+
+    function oy_akoya_update() {
+        if (document.getElementById("oy_wallet_akoya_send").value.length>0&&document.getElementById("oy_wallet_akoya_amount").value.length>0) {
+            document.getElementById("oy_akoya_execute_button").classList.remove("oy_button_all_dull");
+            document.getElementById("oy_akoya_execute_button").classList.add("oy_button_execute_active");
         }
     }
 
