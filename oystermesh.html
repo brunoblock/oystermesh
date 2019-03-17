@@ -1131,7 +1131,7 @@
                         <div class="oy_center_both" style="width:100%;"><span id="oy_akoya_balance_inner">------</span>&nbsp;<span style="color: #3b3b3b">AKYT</span></div>
                     </div>
                 </div>
-                <div align="center" style="position:absolute;top:8%;right:3%;width:40%;height:85%;font-size:2vh;background-color: #7A7A7A;border-radius: 0.2vh;color:#000;font-family: geo_med, sans-serif;"></div>
+                <div id="oy_akoya_keep" align="center" style="position:absolute;top:8%;right:3%;width:40%;height:85%;font-size:2vh;background-color: #7A7A7A;border-radius: 0.2vh;color:#000;font-family: geo_med, sans-serif;overflow:scroll"></div>
                 <div style="position:absolute;bottom:5%;left:3%;width:50%;height:48%;border-radius: 0.2vh;">
                     <div id="oy_send_avatar_cont" style="position:absolute;left:0.8vh;top:0.5vh;width:2.3vh;height:2.3vh;background-color: #2a2a2a"></div>
                     <div id="oy_amount_avatar_cont" style="position:absolute;left:0.8vh;top:3.5vh;width:2.3vh;height:2.3vh;background-color: #2a2a2a"></div>
@@ -1365,6 +1365,9 @@
             window.OY_LINK_KEEP = {};
             window.OY_KEY_ENTER = new Event('oy_key_enter');//trigger-able event for when the enter key is pressed
             window.OY_KEY_SHIFT = false;
+            window.OY_AKOYA_PROCESS = false;
+            window.OY_AKOYA_KEEP = {};
+            window.OY_AKOYA_KEEP_TOP = null;
             window.OY_AKOYA_AMOUNT_PREV = "";
 
             document.getElementById("oy_push_superhandle").value = "-".repeat(82);
@@ -1667,7 +1670,36 @@
     }
 
     function oy_block_process() {
+        if (window.OY_BLOCK_HASH===null) return false;
         oy_akoya_balance();
+        let oy_akoya_render = [];
+        if (window.OY_AKOYA_PROCESS===false) {
+            for (let oy_command_hash in window.OY_BLOCK[1]) {
+                if (window.OY_BLOCK[1][oy_command_hash][0]==="OY_AKOYA_SEND"&&typeof(window.OY_AKOYA_KEEP[oy_command_hash])==="undefined") {
+                    window.OY_AKOYA_KEEP[oy_command_hash] = true;
+                    oy_akoya_render.push([oy_command_hash, window.OY_AKOYA_KEEP[oy_command_hash]]);
+                }
+            }
+            //window.OY_AKOYA_PROCESS = true;
+        }
+        //else {}
+        oy_akoya_render.sort(function(a, b) {
+            if (a[1][1]===b[1][1]) {
+                let x = b[0].toLowerCase();
+                let y = a[0].toLowerCase();
+
+                return x < y ? -1 : x > y ? 1 : 0;
+            }
+            return b[1][1] - a[1][1];
+        });
+        for (let i in oy_akoya_render) {
+            let oy_element = document.createElement("div");
+            oy_element.setAttribute('id', "oy_akoya_keep_"+oy_akoya_render[i][0]);
+            oy_element.innerHTML = "<div id=\"oy_send_avatar_cont\" style=\"position:absolute;left:0.8vh;top:0.5vh;width:2.3vh;height:2.3vh;background-color: #2a2a2a\"></div>"+oy_akoya_render[i][0]+"<br>";
+            if (window.OY_AKOYA_KEEP_TOP===null) document.getElementById("oy_akoya_keep").appendChild(oy_element);
+            else document.getElementById("oy_akoya_keep").insertBefore(oy_element, document.getElementById("oy_akoya_keep_"+window.OY_AKOYA_KEEP_TOP));
+            window.OY_AKOYA_KEEP_TOP = oy_akoya_render[i][0];
+        }
     }
 
     function oy_akoya_load() {
@@ -1688,6 +1720,7 @@
             document.getElementById("oy_akoya_wallet_button").classList.remove("oy_button_all_dull");
             document.getElementById("oy_akoya_wallet_button").classList.add("oy_button_reset_active");
         }
+        window.OY_AKOYA_PROCESS = false;
         oy_akoya_balance();
     }
 

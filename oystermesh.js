@@ -26,7 +26,7 @@ window.OY_BLOCK_CHALLENGETIME = 800;//ms delay until meshblock challenge to peer
 window.OY_BLOCK_CLONETIME = 800;//ms delay until meshblock clone
 window.OY_BLOCK_KEY_LIMIT = 4;//permitted transactions per wallet per block (20 seconds)
 window.OY_BLOCK_HASH_KEEP = 20;//how many hashes of previous blocks to keep in the current meshblock, value is for 6 months worth//1577
-window.OY_BLOCK_DENSITY = 0.8;//higher means block OY_LOGIC_ALL packets are more spread out
+window.OY_BLOCK_DENSITY = 0.9;//higher means block OY_LOGIC_ALL packets are more spread out
 window.OY_BLOCK_PEERS_MIN = 3;//minimum peer count to be able to act as origin for clones and broadcast SYNC/DIVE
 window.OY_BLOCK_DIVE_PACKET_MAX = 8000;//maximum size for a packet that is routed via OY_BLOCK_DIVE_PACKET_MAX (OY_LOGIC_ALL)
 window.OY_CHALLENGE_EDGE = 6;//maximum seconds that it should take for a challenged transaction to reach the furthest edge-to-edge distance of the mesh
@@ -1716,7 +1716,7 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_push_def
             return false;
         }
         oy_data_payload[0].push(window.OY_MAIN['oy_self_short']);
-        oy_log("Routing data via peer "+oy_short(oy_peer_select)+" with flag "+oy_data_flag);
+        //oy_log("Routing data via peer "+oy_short(oy_peer_select)+" with flag "+oy_data_flag);
         oy_data_beam(oy_peer_select, oy_data_flag, oy_data_payload);
     }
     else if (oy_data_logic==="OY_LOGIC_ALL") {
@@ -1725,14 +1725,14 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_push_def
         oy_data_payload[0].push(window.OY_MAIN['oy_self_short']);
         for (let oy_peer_select in window.OY_PEERS) {
             if (oy_peer_select==="oy_aggregate_node"||oy_data_payload[0].indexOf(oy_short(oy_peer_select))!==-1) continue;
-            oy_log("Routing data via peer "+oy_short(oy_peer_select)+" with flag "+oy_data_flag);
+            //oy_log("Routing data via peer "+oy_short(oy_peer_select)+" with flag "+oy_data_flag);
             oy_data_beam(oy_peer_select, oy_data_flag, oy_data_payload);
         }
         if (oy_data_flag==="OY_BLOCK_SYNC"||oy_data_flag==="OY_BLOCK_DIVE") {
             let oy_time_local = Date.now()/1000;
             for (let oy_clone_select in window.OY_CLONES) {
                 if (window.OY_CLONES[oy_clone_select][1]===3&&oy_time_local<window.OY_CLONES[oy_clone_select][0]) {
-                    oy_log("Routing data via clone "+oy_short(oy_clone_select)+" with flag "+oy_data_flag);
+                    //oy_log("Routing data via clone "+oy_short(oy_clone_select)+" with flag "+oy_data_flag);
                     oy_data_beam(oy_clone_select, oy_data_flag, oy_data_payload);
                 }
             }
@@ -1750,7 +1750,7 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_push_def
         else {
             for (let oy_peer_select in window.OY_PEERS) {
                 if (oy_peer_select==="oy_aggregate_node"||oy_data_payload[0].indexOf(oy_short(oy_peer_select))!==-1||oy_data_payload[2].indexOf(oy_short(oy_peer_select))!==-1) continue;
-                oy_log("Routing data via peer "+oy_short(oy_peer_select)+" with flag "+oy_data_flag);
+                //oy_log("Routing data via peer "+oy_short(oy_peer_select)+" with flag "+oy_data_flag);
                 oy_data_beam(oy_peer_select, oy_data_flag, oy_data_payload);
             }
         }
@@ -1775,7 +1775,7 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_push_def
         }
         oy_data_payload[1] = oy_active_build.slice();
         oy_data_payload[0].push(window.OY_MAIN['oy_self_short']);
-        oy_log("Routing data via peer "+oy_short(oy_peer_final)+" with flag "+oy_data_flag);
+        //oy_log("Routing data via peer "+oy_short(oy_peer_final)+" with flag "+oy_data_flag);
         oy_data_beam(oy_peer_final, oy_data_flag, oy_data_payload);
     }
     else {
