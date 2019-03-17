@@ -1052,7 +1052,7 @@
         </div>
         <div align="center" class="oy_center_hor" style="top:45%;left:59%;width:52%;height:7vh;">
             Public Key:
-            <textarea id="oy_key_public" class="oy_key" style="background-color: #2a2a2a;color:#dfdfdf;width:100%;height:7vh;"></textarea>
+            <textarea id="oy_key_public" class="oy_key" style="background-color: #2a2a2a;color:#dfdfdf;width:100%;height:7vh;" readonly="readonly"></textarea>
         </div>
         <div align="center" class="oy_center_hor" style="bottom:4%;">
             <div id="oy_wallet_load" align="center" class="oy_center_hor oy_button oy_button_all_dull" style="transform: translate(-50%, -40%);width:auto;height:auto;" onclick="oy_wallet_load()">
@@ -1060,9 +1060,9 @@
                     &nbsp;&nbsp;LOAD&nbsp;WALLET&nbsp;&nbsp;
                 </div>
             </div><br>
-            <div id="oy_wallet_cancel" align="center" class="oy_button oy_button_reset_active" style="width:auto;height:auto;" onclick="oy_wallet_reset(true);oy_wallet_close();">
+            <div id="oy_wallet_cancel" align="center" class="oy_button oy_button_reset_active" style="width:auto;height:auto;" onclick="oy_wallet_close();">
                 <div style="position:relative;top:-3%;">
-                    &nbsp;CANCEL&nbsp;
+                    &nbsp;CLOSE&nbsp;
                 </div>
             </div>
             <div id="oy_wallet_reset" align="center" class="oy_button oy_button_all_dull" style="width:auto;height:auto;" onclick="oy_wallet_reset()">
@@ -1096,7 +1096,12 @@
         </div>
     </div>
     <div class="oy_holder oy_fade two">
-        <div id="oy_graph_nonce" class="oy_center_hor oy_border oy_graph" style="top:0;width:50%;height:10%;background-color: #404040;overflow: hidden"></div>
+        <div id="oy_graph_akoya" class="oy_center_hor oy_border oy_graph" style="top:0;width:50%;height:10%;background-color:transparent;overflow: hidden;z-index: 500">
+            <div id="oy_graph_akoya_progress" style="width:100%;height:100%;display:none">
+                <div id="oy_graph_akoya_progress_inner" style="width:0;height:100%;"></div>
+            </div>
+        </div>
+        <div id="oy_graph_nonce" class="oy_center_hor oy_border oy_graph" style="top:0;width:50%;height:10%;background-color: #404040;overflow: hidden;z-index: 400"></div>
         <div id="oy_interface_main" class="oy_center_hor" style="top:18%;width:50%;height:25%;">
             <div id="oy_tab_dapper" class="oy_tab oy_left" style="position:fixed;top:-20%;left: 10%;height:20%;background-color: #404040;z-index:-50;" onclick="oy_tab(this.id)">DAPPER</div>
             <div id="oy_tab_wallet" class="oy_tab" style="position:fixed;top:-20%;left: 37%;height:20%;transform: translateX(-50%);background-color: #7A7A7A;color:#232323;z-index:-50;" onclick="oy_tab(this.id)">AKOYA</div>
@@ -1676,6 +1681,7 @@
             oy_akoya_reset();
         }
         else {
+            document.getElementById("oy_wallet_avatar_cont").innerHTML = "";
             oy_avatar_gen(window.OY_WALLET_PUBLIC, document.getElementById("oy_wallet_avatar_cont"));
             document.getElementById("oy_wallet_cont").style.display = "none";
 
@@ -1691,7 +1697,6 @@
     }
 
     function oy_akoya_wallet_open() {
-
         oy_wallet_open(function(){oy_akoya_load()});
     }
 
@@ -1723,7 +1728,6 @@
     }
 
     function oy_akoya_reset_amount_change(oy_value) {
-        console.log(typeof(oy_value));
         document.getElementById("oy_amount_avatar_cont").innerHTML = "";
         if (oy_value.length===0) document.getElementById("oy_amount_avatar_cont").style.backgroundColor = "#2a2a2a";
         else if ((parseInt(oy_value*window.OY_AKOYA_DECIMALS)+"").match(/^[0-9]+$/)===null) document.getElementById("oy_wallet_akoya_amount").value = window.OY_AKOYA_AMOUNT_PREV;
@@ -1754,7 +1758,11 @@
     function oy_akoya_execute() {
         if (window.OY_WALLET_PRIVATE===null||window.OY_WALLET_PUBLIC===null||document.getElementById("oy_akoya_execute_button").classList.contains("oy_button_all_dull")) return false;
 
-        oy_akoya_transfer(window.OY_WALLET_PRIVATE, window.OY_WALLET_PUBLIC, Math.floor(document.getElementById("oy_wallet_akoya_amount").value*window.OY_AKOYA_DECIMALS), document.getElementById("oy_wallet_akoya_send").value);
+        oy_akoya_transfer(window.OY_WALLET_PRIVATE, window.OY_WALLET_PUBLIC, document.getElementById("oy_wallet_akoya_amount").value, document.getElementById("oy_wallet_akoya_send").value, function(oy_command_confirm) {
+            if (oy_command_confirm===true) oy_graph_akoya_set("#24ab26");
+            else oy_graph_akoya_set("#c37b2c");
+        });
+        oy_graph_akoya_set();
         oy_akoya_reset();
     }
 
@@ -1831,7 +1839,9 @@
     }
 
     function oy_wallet_activate(oy_key_public) {
+        //console.log(oy_key_public);
         document.getElementById("oy_key_public").innerHTML = oy_key_public.replace(/-/g, "&#8209;");
+        console.log(document.getElementById("oy_key_public").innerHTML);
         let oy_avatar_obj = document.getElementById("oy_avatar_cont");
         oy_avatar_obj.innerHTML = "";
         oy_avatar_gen(oy_key_public, oy_avatar_obj);
@@ -1890,21 +1900,23 @@
             let oy_key_private = oy_crypt_decrypt(window.OY_WALLET_CRYPT, oy_pass);
             let oy_key_public = window.atob(oy_key_private).substr(43);
             let oy_data = oy_rand_gen();
-            oy_key_sign(oy_key_private, oy_data, function(oy_data_crypt) {
-                oy_key_verify(oy_key_public, oy_data_crypt, oy_data, function(oy_key_valid) {
-                    if (oy_key_valid===true) {
-                        document.getElementById("oy_wallet_upload_pass_0").disabled = true;
+            if (oy_key_private.length>0) {
+                oy_key_sign(oy_key_private, oy_data, function(oy_data_crypt) {
+                    oy_key_verify(oy_key_public, oy_data_crypt, oy_data, function(oy_key_valid) {
+                        if (oy_key_valid===true) {
+                            document.getElementById("oy_wallet_upload_pass_0").disabled = true;
 
-                        document.getElementById("oy_wallet_upload_pass_0").classList.remove("oy_wallet_upload_pass_before");
-                        document.getElementById("oy_wallet_upload_pass_0").classList.add("oy_wallet_upload_pass_complete");
+                            document.getElementById("oy_wallet_upload_pass_0").classList.remove("oy_wallet_upload_pass_before");
+                            document.getElementById("oy_wallet_upload_pass_0").classList.add("oy_wallet_upload_pass_complete");
 
-                        document.getElementById("oy_wallet_load").classList.remove("oy_button_all_dull");
-                        document.getElementById("oy_wallet_load").classList.add("oy_button_go_active");
+                            document.getElementById("oy_wallet_load").classList.remove("oy_button_all_dull");
+                            document.getElementById("oy_wallet_load").classList.add("oy_button_go_active");
 
-                        oy_wallet_activate(oy_key_public);
-                    }
+                            oy_wallet_activate(oy_key_public);
+                        }
+                    });
                 });
-            });
+            }
         }
         catch(e) {}
     }
@@ -1912,7 +1924,7 @@
     function oy_wallet_read(oy_file_object) {
         oy_file_read(oy_file_object, function(oy_file_data) {
             let oy_select = JSON.parse(oy_file_data);
-            if (oy_select[0].slice(-6)===".pearl") {
+            if (oy_select[0].slice(-6)===".akoya"||oy_select[0].slice(-6)===".pearl") {//TODO remove .pearl eventually
                 window.OY_WALLET_CRYPT = oy_select[2];
                 document.getElementById("oy_wallet_upload_pass").style.display = "block";
                 document.getElementById("oy_wallet_upload_pass_0").focus();
@@ -1949,7 +1961,7 @@
         document.body.appendChild(a);
         a.style = "display: none";
         a.href = blobUrl;
-        a.download = "oyster_"+oy_short(document.getElementById("oy_key_public").value.replace(/&#8209;/g, "-"))+".pearl";
+        a.download = "oyster_"+oy_short(document.getElementById("oy_key_public").innerHTML.replace(/&#8209;/g, "-"))+".akoya";
         a.click();
         window.URL.revokeObjectURL(blobUrl);
     }
@@ -2004,7 +2016,7 @@
 
         document.getElementById("oy_file_pearl").value = null;
 
-        document.getElementById("oy_key_public").value = "";
+        document.getElementById("oy_key_public").innerHTML = "";
         document.getElementById("oy_avatar_cont").style.backgroundColor = "#2a2a2a";
         document.getElementById("oy_avatar_cont").innerHTML = "";
     }
@@ -2228,6 +2240,28 @@
     function oy_element_remove(oy_element_id) {
         let oy_element = document.getElementById(oy_element_id);
         oy_element.parentNode.removeChild(oy_element);
+    }
+
+    function oy_graph_akoya_set(oy_custom) {
+        if (typeof(oy_custom)!=="undefined") {
+            document.getElementById("oy_graph_akoya_progress_inner").style.backgroundColor = oy_custom;
+            document.getElementById("oy_graph_akoya_progress_inner").style.transition = null;
+            document.getElementById("oy_graph_akoya_progress_inner").style.width = "100%";
+            setTimeout(function() {
+                document.getElementById("oy_graph_akoya_progress").style.display = "none";
+                document.getElementById("oy_graph_akoya_progress_inner").style.backgroundColor = "transparent";
+            }, 2000);
+        }
+        else {
+            document.getElementById("oy_graph_akoya_progress_inner").style.backgroundColor = "#348fab";
+            document.getElementById("oy_graph_akoya_progress_inner").style.transition = null;
+            document.getElementById("oy_graph_akoya_progress_inner").style.width = "0";
+            document.getElementById("oy_graph_akoya_progress_inner").style.transition = "width "+Math.ceil((window.OY_BLOCK_NEXT-Date.now()/1000)+20)+"s linear";
+            setTimeout(function() {
+                document.getElementById("oy_graph_akoya_progress_inner").style.width = "100%";
+            }, 100);
+        }
+        document.getElementById("oy_graph_akoya_progress").style.display = "block";
     }
 
     function oy_graph_nonce_set(oy_nonce_max) {

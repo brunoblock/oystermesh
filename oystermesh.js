@@ -34,7 +34,7 @@ window.OY_CHALLENGE_TRIGGER = 0.2;//higher means more challenge congestion (more
 window.OY_CHALLENGE_BUFFER = 1;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing
 window.OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
 window.OY_AKOYA_MAX_SUPPY = 10000000*window.OY_AKOYA_DECIMALS;//akoya max supply
-window.OY_AKOYA_FEE = 0.0001*window.OY_AKOYA_DECIMALS;//akoya fee per block
+window.OY_AKOYA_FEE = 0.000001*window.OY_AKOYA_DECIMALS;//akoya fee per block
 window.OY_NODE_TOLERANCE = 3;//max amount of protocol communication violations until node is blacklisted
 window.OY_NODE_BLACKTIME = 600;//seconds to blacklist a punished node for
 window.OY_NODE_PROPOSETIME = 12;//seconds for peer proposal session duration
@@ -1798,7 +1798,7 @@ function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
     let oy_callback_local = function() {
         let oy_data_raw = JSON.stringify([oy_data_flag, oy_data_payload]);//convert data array to JSON
         oy_data_payload = null;
-        if (oy_data_direct(oy_data_flag)) console.log("BEAM["+oy_data_flag+"]["+oy_short(oy_node_id)+"]");
+        //if (oy_data_direct(oy_data_flag)) console.log("BEAM["+oy_data_flag+"]["+oy_short(oy_node_id)+"]");
         let oy_data_direct_bool = oy_data_direct(oy_data_flag);
         let oy_logic_all_bool = window.OY_LOGIC_ALL_TYPE.indexOf(oy_data_flag)!==-1;
         if (oy_data_raw.length>window.OY_DATA_MAX||
@@ -1813,7 +1813,6 @@ function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
         if (oy_peer_check(oy_node_id)) oy_data_cool = !oy_data_measure(true, oy_node_id, (oy_logic_all_bool===true)?oy_data_raw.length*window.OY_LOGIC_ALL_MULTI:oy_data_raw.length);
         if (oy_data_cool===true&&oy_data_direct_bool===false&&window.OY_LOGIC_FOLLOW_TYPE.indexOf(oy_data_flag)===-1) {
             oy_log("Cooling off, skipping "+oy_data_flag+" to "+oy_short(oy_node_id));
-            console.log("Cooling off, skipping "+oy_data_flag+" to "+oy_short(oy_node_id));
             return true;
         }
         window.OY_NODES[oy_node_id][0].send(oy_data_raw);//send the JSON-converted data array to the destination node
@@ -1833,7 +1832,7 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
        }
        let oy_data = JSON.parse(oy_data_raw);
        if (oy_data&&typeof(oy_data)==="object") {
-           if (oy_data_direct(oy_data[0])) console.log("SOAK["+oy_data[0]+"]["+oy_short(oy_node_id)+"]");
+           //if (oy_data_direct(oy_data[0])) console.log("SOAK["+oy_data[0]+"]["+oy_short(oy_node_id)+"]");
            if (!oy_data_direct(oy_data[0])) {
                let oy_peer_last = oy_data[1][0][oy_data[1][0].length-1];
                if (oy_peer_last!==oy_short(oy_node_id)) {
@@ -2020,7 +2019,6 @@ function oy_channel_mute(oy_channel_id) {
 }
 
 function oy_akoya_transfer(oy_key_private, oy_key_public, oy_transfer_amount, oy_receive_public, oy_callback_confirm) {
-    console.log(oy_key_private);
     oy_transfer_amount = Math.floor(oy_transfer_amount*window.OY_AKOYA_DECIMALS);
     oy_block_command(oy_key_private, ["OY_AKOYA_SEND", -1, oy_key_public, oy_transfer_amount, oy_receive_public], oy_callback_confirm);
 }
@@ -2031,7 +2029,7 @@ function oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm)
         setTimeout(function() {
             oy_command_array[1] = Date.now()/1000;
             let oy_command_flat = JSON.stringify(oy_command_array);
-            window.OY_BLOCK_CONFIRM[oy_hash_gen(oy_command_flat)] = oy_callback_confirm;
+            if (typeof(oy_callback_confirm)!=="undefined") window.OY_BLOCK_CONFIRM[oy_hash_gen(oy_command_flat)] = oy_callback_confirm;
             oy_key_sign(oy_key_private, oy_command_flat, function(oy_command_crypt) {
                 oy_block_command_verify([oy_command_array, oy_command_crypt], function(oy_verify_valid) {
                     console.log(oy_verify_valid);
@@ -2168,7 +2166,6 @@ function oy_block_loop() {
             window.OY_BLOCK_SYNC_DYNAMIC = oy_rand_gen();
 
             let oy_dive_reward = (" "+window.OY_BLOCK_DIVE_REWARD).slice(1);
-            console.log(oy_dive_reward);
             if (window.OY_PEER_COUNT>=window.OY_BLOCK_PEERS_MIN) {
                 setTimeout(function() {
                     let oy_sync_time = Date.now()/1000;
@@ -2316,8 +2313,6 @@ function oy_block_loop() {
                         });
                     }, window.OY_BLOCK_CHALLENGETIME);
 
-                    console.log(window.OY_BLOCK);
-
                     document.dispatchEvent(window.OY_BLOCK_TRIGGER);
 
                     setTimeout(function() {
@@ -2342,6 +2337,11 @@ function oy_block_loop() {
                             }
                         }
                     }, window.OY_BLOCK_CLONETIME);
+
+                    for (let oy_command_hash in window.OY_BLOCK_CONFIRM) {
+                        window.OY_BLOCK_CONFIRM[oy_command_hash](typeof(window.OY_BLOCK[1][oy_command_hash])!=="undefined");
+                    }
+                    window.OY_BLOCK_CONFIRM = {};
                 }, window.OY_BLOCK_SECTORS[0][1]);//seconds 16-20 out of 20
             }, window.OY_BLOCK_SECTORS[1][1]);//seconds 4-16 out of 20
         }, window.OY_BLOCK_SECTORS[0][1]);//seconds 0-4 out of 20
@@ -2568,7 +2568,7 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
         }
     }
 
-    window.OY_BLOCK_SEEDTIME = 1552603900;
+    window.OY_BLOCK_SEEDTIME = 1552836900;
 
     window.OY_PURGE = oy_local_get("oy_purge");
     //window.OY_PEERS = oy_local_get("oy_peers");
