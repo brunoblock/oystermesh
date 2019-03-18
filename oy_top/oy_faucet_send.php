@@ -1,4 +1,5 @@
 <?php
+header("Access-Control-Allow-Origin: *");
 $oy_send_address = str_replace("oy_send_address=", "", file_get_contents("php://input"));
 if (!$oy_send_address||!oy_address_valid($oy_send_address)) die("ERROR: Invalid address");
 

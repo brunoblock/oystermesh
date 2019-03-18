@@ -119,6 +119,7 @@ window.OY_CLONE_UPTIME = null;
 window.OY_CLONE_BUILD = [];
 window.OY_LOGIC_ALL_TYPE = ["OY_BLOCK_COMMAND", "OY_BLOCK_SYNC", "OY_BLOCK_SYNC_CHALLENGE", "OY_BLOCK_DIVE", "OY_DATA_PULL", "OY_CHANNEL_BROADCAST"];//OY_LOGIC_ALL definitions
 window.OY_LOGIC_FOLLOW_TYPE = ["OY_BLOCK_SYNC_CHALLENGE_RESPONSE", "OY_DATA_DEPOSIT", "OY_DATA_FULFILL", "OY_CHANNEL_ECHO", "OY_CHANNEL_RESPOND", "OY_CHANNEL_RECOVER"];//OY_LOGIC_FOLLOW definitions
+window.OY_MESH_SIZE = 0;
 window.OY_BLOCK_TEMP = [null];//temporary centralized block
 window.OY_BLOCK_TEMP_HASH = null;//hash of the most current block
 window.OY_BLOCK = [[null, []], {}, {}, {}, {}];//the current meshblock - [oy_meta_sector, oy_history_sector, oy_akoya_sector, oy_dns_sector, oy_channel_sector]
@@ -159,6 +160,7 @@ window.OY_BLOCK_SYNC = {};
 window.OY_BLOCK_DIVE = {};
 window.OY_BLOCK_DIVE_SET = [];
 window.OY_BLOCK_DIVE_REWARD = "OY_NULL";
+window.OY_BLOCK_DIVE_TRACK = 0;
 window.OY_BLOCK_NEW = {};
 window.OY_BLOCK_CONFIRM = {};
 window.OY_BLOCK_SEEDTIME = null;
@@ -2115,6 +2117,7 @@ function oy_block_loop() {
                 if (window.OY_CLONES[oy_clone_select][1]===0||window.OY_CLONES[oy_clone_select][1]===2||Date.now()/1000>=window.OY_CLONES[oy_clone_select][0]) delete window.OY_CLONES[oy_clone_select];
             }
             if (window.OY_BLOCK_HASH===null) {
+                window.OY_MESH_SIZE = 0;
                 window.OY_CHALLENGE = {};
                 console.log("BLOCK SKIP["+(Date.now()/1000)+"]: "+oy_block_time_local);
                 return false;
@@ -2229,7 +2232,8 @@ function oy_block_loop() {
                     }, Math.floor(Math.random()*window.OY_BLOCK_SECTORS[0][1]*window.OY_BLOCK_DENSITY));
                 }
                 setTimeout(function() {
-                    oy_node_consensus = Math.ceil(window.OY_BLOCK_DIVE_SET.length*window.OY_BLOCK_CONSENSUS);
+                    window.OY_MESH_SIZE = window.OY_BLOCK_DIVE_SET.length;
+                    oy_node_consensus = Math.ceil(window.OY_MESH_SIZE*window.OY_BLOCK_CONSENSUS);
                     oy_log_debug("DIVE: "+JSON.stringify(window.OY_BLOCK_DIVE)+"\nCONSENSUS: "+oy_node_consensus);
                     let oy_dive_reward_pool = [];
                     for (let oy_key_dive in window.OY_BLOCK_DIVE) {
@@ -2256,6 +2260,7 @@ function oy_block_loop() {
                         let oy_dive_share = Math.floor(oy_dive_bounty/oy_dive_reward_pool.length);//TODO verify math to make sure odd balances don't cause a gradual decrease of the entire supply
                         if (oy_dive_share>0) {
                             for (let i in oy_dive_reward_pool) {
+                                if (oy_dive_reward===oy_dive_reward_pool[i]) window.OY_BLOCK_DIVE_TRACK += oy_dive_share;
                                 if (typeof(window.OY_BLOCK[2][oy_dive_reward_pool[i]])==="undefined") window.OY_BLOCK[2][oy_dive_reward_pool[i]] = oy_dive_share;
                                 else window.OY_BLOCK[2][oy_dive_reward_pool[i]] += oy_dive_share;
                             }

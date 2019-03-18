@@ -1276,6 +1276,7 @@
                     MESH&nbsp;RANGE<br>
                     BEAM&nbsp;FLOW<br>
                     SOAK&nbsp;FLOW<br>
+                    AKOYA&nbsp;DIVE<br>
                 </div>
                 <div class="oy_center_hor" style="top:0;width:0.7%;height:85%;background-color: #2a2a2a;">
                 </div>
@@ -1285,9 +1286,10 @@
                     <span id="oy_avg_peership">0</span>&nbsp;min<br>
                     <span id="oy_peer_count_cont"><span id="oy_peer_count">0</span>&nbsp;peer(s)</span><br>
                     <span id="oy_blacklisted">0</span>&nbsp;node(s)<br>
-                    <span id="oy_mesh_range">0</span>&nbsp;node(s)<br>
+                    <span id="oy_mesh_size">0</span>&nbsp;node(s)<br>
                     <span id="oy_beam_flow">0</span>&nbsp;kbps<br>
                     <span id="oy_soak_flow">0</span>&nbsp;kbps<br>
+                    <span id="oy_akoya_dive_track">0</span>&nbsp;AKYT<br>
                 </div>
                 <div id="oy_self_reset" align="center" class="oy_button oy_button_all_active" style="position:absolute;bottom:-12%;left:30%;transform:translateX(-50%);width:40%;height:10%;" onclick="oy_self_reset()">
                     <div style="position:relative;">
@@ -1325,7 +1327,6 @@
             window.OY_LINK_ADDTIME = 60;
             window.OY_LINK_ACTIVETIME = 110;
             window.OY_HOP_KEEP = 100;
-            window.OY_MESH_RANGETIME = 30;
             window.OY_DEST_RADIO = "oy_dest_view";
 
             window.OY_DAPPER_MINIMIZED = false;
@@ -1338,7 +1339,6 @@
             window.OY_FILE_DATA = null;
             window.OY_FILE_KEEP = null;
             window.OY_MESH_GLUE = [];
-            window.OY_MESH_RANGE = [];
             window.OY_HANDLE_PUSH = null;
             window.OY_HANDLE_PUSH_COPY = null;
             window.OY_NONCE_MAX_PUSH = null;
@@ -1408,7 +1408,6 @@
             window.OY_MAP = function(oy_data_flag, oy_passport_passive, oy_passport_active) {
                 if (oy_data_flag.indexOf("OY_BLOCK_")!==-1) return false;
                 let oy_time_local = Date.now()/1000|0;
-                window.OY_MESH_RANGE.push([oy_time_local, oy_passport_passive.length]);
                 if (oy_data_flag==="OY_DATA_FULFILL"&&window.OY_EXECUTE_PULL===true&&oy_passport_passive.length>0&&oy_passport_active.length>0&&oy_passport_active[0]===window.OY_MAIN['oy_self_short']) {
                     window.OY_PULL_AVG_HOP.push(oy_passport_passive.length);
                     while (window.OY_PULL_AVG_HOP.length>window.OY_HOP_KEEP) window.OY_PULL_AVG_HOP.shift();
@@ -1518,10 +1517,12 @@
 
         if (oy_avg_latency.length>0) document.getElementById("oy_avg_latency").innerHTML = (oy_avg_latency.reduce(oy_reduce_sum)/oy_avg_latency.length).toFixed(3);
         if (oy_avg_peership.length>0) document.getElementById("oy_avg_peership").innerHTML = ((oy_time_local - Math.round(oy_avg_peership.reduce(oy_reduce_sum)/oy_avg_peership.length))/60).toFixed(2);
+        document.getElementById("oy_mesh_size").innerHTML = window.OY_MESH_SIZE;
         if (oy_avg_beam.length>0) document.getElementById("oy_beam_flow").innerHTML = (oy_avg_beam.reduce(oy_reduce_sum)/1000).toFixed(2);
         else document.getElementById("oy_beam_flow").innerHTML = "0";
         if (oy_avg_soak.length>0) document.getElementById("oy_soak_flow").innerHTML = (oy_avg_soak.reduce(oy_reduce_sum)/1000).toFixed(2);
         else document.getElementById("oy_soak_flow").innerHTML = "0";
+        document.getElementById("oy_akoya_dive_track").innerHTML = window.OY_BLOCK_DIVE_TRACK/window.OY_AKOYA_DECIMALS;
 
         oy_peer_keep.sort(function(a, b) {
             return b[1] - a[1];
@@ -1589,17 +1590,6 @@
                 oy_top_link_remove(oy_split[0], oy_split[1]);
             }
         }
-
-        let oy_mesh_range_new = [];
-        let oy_mesh_range_highest = 0;
-        for (let i in window.OY_MESH_RANGE) {
-            if (oy_time_local-window.OY_MESH_RANGE[i][0]<=window.OY_MESH_RANGETIME) {
-                oy_mesh_range_new.push(window.OY_MESH_RANGE[i]);
-                if (window.OY_MESH_RANGE[i][1]>oy_mesh_range_highest) oy_mesh_range_highest = window.OY_MESH_RANGE[i][1];
-            }
-        }
-        window.OY_MESH_RANGE = oy_mesh_range_new;
-        document.getElementById("oy_mesh_range").innerHTML = ""+oy_mesh_range_highest;
 
         if (window.OY_EXECUTE_PUSH===true) {
             let oy_local_elapsed = ((Date.now()/1000)-window.OY_PUSH_ELAPSED);
@@ -1742,7 +1732,7 @@
         for (let i in oy_akoya_render) {
             let oy_element = document.createElement("div");
             oy_element.setAttribute('id', "oy_akoya_keep_"+oy_akoya_render[i][0]);
-            oy_element.innerHTML = "<div id='oy_akoya_keep_alpha_"+oy_akoya_render[i][0]+"' style='position:relative;width:2vh;height:2vh;background-color: #2a2a2a;display:inline-block' onmouseover='this.style.cursor = \"pointer\"' onclick='oy_copy_key(1, this.id)'></div><div id='oy_akoya_keep_alpha_key_"+oy_akoya_render[i][0]+"' style='display:none;'></div><div style='position: relative;width:3.5vh;height:2vh;font-size:2.8vh;color:#3b3b3b;display: inline-block'><div class='oy_center_both'>"+((oy_akoya_render[i][2]===true)?"&rarr;":"&larr;")+"</div></div><div id='oy_akoya_keep_beta_"+oy_akoya_render[i][0]+"' style='position:relative;width:2vh;height:2vh;background-color: #2a2a2a;display:inline-block' onmouseover='this.style.cursor = \"pointer\"' onclick='oy_copy_key(2, this.id)'></div><div id='oy_akoya_keep_beta_key_"+oy_akoya_render[i][0]+"' style='display:none;'></div><div style='position: relative;width:66%;height:2vh;display: inline-block'><div class='oy_center_both'>"+(oy_akoya_render[i][1][3]/window.OY_AKOYA_DECIMALS).toFixed(2)+"&nbsp;<span style='color: #3b3b3b'>AKYT</span>&nbsp;|&nbsp;<span style='font-size:0.9vh;color: #3b3b3b'>"+oy_time_print(Math.floor(oy_akoya_render[i][1][1]))+"</span></div></div><br>";
+            oy_element.innerHTML = "<div id='oy_akoya_keep_alpha_"+oy_akoya_render[i][0]+"' style='position:relative;width:2vh;height:2vh;background-color: #2a2a2a;display:inline-block' onmouseover='this.style.cursor = \"pointer\"' onclick='oy_copy_key(1, this.id)'></div><div id='oy_akoya_keep_alpha_key_"+oy_akoya_render[i][0]+"' style='display:none;'></div><div align='center' style='position: relative;bottom:0;width:3vh;height:2vh;font-size:2.2vh;color:#3b3b3b;display: inline-block;'><div style='position:relative;top:55%;transform:perspective(1px) translateY(-50%);'>"+((oy_akoya_render[i][2]===true)?"&rarr;":"&larr;")+"</div></div><div id='oy_akoya_keep_beta_"+oy_akoya_render[i][0]+"' style='position:relative;width:2vh;height:2vh;background-color: #2a2a2a;display:inline-block' onmouseover='this.style.cursor = \"pointer\"' onclick='oy_copy_key(2, this.id)'></div><div id='oy_akoya_keep_beta_key_"+oy_akoya_render[i][0]+"' style='display:none;'></div><div style='position: relative;width:66%;height:2vh;display: inline-block'><div class='oy_center_both'>"+(oy_akoya_render[i][1][3]/window.OY_AKOYA_DECIMALS).toFixed(2)+"&nbsp;<span style='color: #3b3b3b'>AKYT</span>&nbsp;|&nbsp;<span style='font-size:0.9vh;color: #3b3b3b'>"+oy_time_print(Math.floor(oy_akoya_render[i][1][1]))+"</span></div></div><br>";
             if (window.OY_AKOYA_KEEP_TOP===null) {
                 document.getElementById("oy_akoya_keep_void").style.display = "none";
                 document.getElementById("oy_akoya_keep_inner").appendChild(oy_element);
