@@ -18,7 +18,7 @@ function ot_render(oy_broadcast_hash, oy_render_payload) {
     }
     else ot_render_stats = "H"+oy_render_payload[0].length;
 
-    ot_render_stats += "&nbsp;/&nbsp;"+ot_time_print(oy_render_payload[6]);
+    ot_render_stats += "&nbsp;/&nbsp;"+oy_time_print(oy_render_payload[6]);
 
     let ot_panel_color;
     if (oy_render_payload[5]===window.OY_KEY_BRUNO) ot_panel_color = window.OT_MSG_COLOR_BRUNO;
@@ -73,29 +73,6 @@ function ot_render(oy_broadcast_hash, oy_render_payload) {
     });
 
     document.getElementById("ot_render_cont").scrollTo(0, document.getElementById("ot_render_cont").scrollHeight);
-}
-
-function ot_time_print(ot_time) {
-    let d = new Date(ot_time * 1000),	// Convert the passed timestamp to milliseconds
-        dd = d.getDate(),
-        hh = d.getHours(),
-        h = hh,
-        min = ('0' + d.getMinutes()).slice(-2),
-        ampm = 'AM';
-    if (hh > 12) {
-        h = hh - 12;
-        ampm = 'PM';
-    }
-    else if (hh===12) {
-        h = 12;
-        ampm = 'PM';
-    }
-    else if (hh === 0) h = 12;
-    let z = "th";
-    if (dd===1) z = "st";
-    else if (dd===2) z = "nd";
-    else if (dd===3) z = "rd";
-    return dd+z+"&nbsp;/&nbsp;"+h+":"+min+'&nbsp;'+ampm;
 }
 
 function ot_input() {

@@ -1096,6 +1096,7 @@
         </div>
     </div>
     <div class="oy_holder oy_fade two">
+        <input type="text" id="oy_copy_key_input" style="position:absolute;bottom:-100vh;left:0;opacity:0" />
         <div id="oy_graph_akoya" class="oy_center_hor oy_border oy_graph" style="top:0;width:50%;height:10%;background-color:transparent;overflow: hidden;z-index: 500">
             <div id="oy_graph_akoya_progress" style="width:100%;height:100%;display:none">
                 <div id="oy_graph_akoya_progress_inner" style="width:0;height:100%;"></div>
@@ -1126,12 +1127,15 @@
                     </div><br>
                 </div>
                 <div align="center" style="position:absolute;top:8%;left:3%;width:50%;height:30%;background-color: #7A7A7A;border-radius: 0.2vh;color:#000;font-size:2.4vh;">
-                    <div id="oy_wallet_avatar_cont" class="oy_center_both" style="left:9%;width:4vh;height:4vh;background-color: #2a2a2a"></div>
-                    <div style="position:absolute;width:90%;height:100%;right:0;">
+                    <div id="oy_wallet_avatar_cont" class="oy_center_both" style="left:9%;width:4vh;height:4vh;background-color: #2a2a2a;z-index: 200;" onmouseover="this.style.cursor = 'pointer'" onclick="oy_copy_key(0, null)"></div>
+                    <div style="position:absolute;width:90%;height:100%;right:0;z-index: 100;">
                         <div class="oy_center_both" style="width:100%;"><span id="oy_akoya_balance_inner">------</span>&nbsp;<span style="color: #3b3b3b">AKYT</span></div>
                     </div>
                 </div>
-                <div id="oy_akoya_keep" align="center" style="position:absolute;top:8%;right:3%;width:40%;height:85%;font-size:2vh;background-color: #7A7A7A;border-radius: 0.2vh;color:#000;font-family: geo_med, sans-serif;overflow:scroll"></div>
+                <div id="oy_akoya_keep" align="left" style="position:absolute;top:8%;right:3%;width:38%;height:80%;font-size:1.3vh;padding-top:0.5vh;padding-left:1vh;background-color: #7A7A7A;border-radius: 0.2vh;color:#000;overflow:scroll">
+                    <div id="oy_akoya_keep_void" style="font-size:1.5vh;color:#3b3b3b">No&nbsp;Transaction&nbsp;History</div>
+                    <div id="oy_akoya_keep_inner" style="position: absolute;top:0.5vh;left:1vh;width:calc(100% - 1vh);height:calc(100% - 0.5vh);"></div>
+                </div>
                 <div style="position:absolute;bottom:5%;left:3%;width:50%;height:48%;border-radius: 0.2vh;">
                     <div id="oy_send_avatar_cont" style="position:absolute;left:0.8vh;top:0.5vh;width:2.3vh;height:2.3vh;background-color: #2a2a2a"></div>
                     <div id="oy_amount_avatar_cont" style="position:absolute;left:0.8vh;top:3.5vh;width:2.3vh;height:2.3vh;background-color: #2a2a2a"></div>
@@ -1286,7 +1290,7 @@
                     <span id="oy_soak_flow">0</span>&nbsp;kbps<br>
                 </div>
                 <div id="oy_self_reset" align="center" class="oy_button oy_button_all_active" style="position:absolute;bottom:-12%;left:30%;transform:translateX(-50%);width:40%;height:10%;" onclick="oy_self_reset()">
-                    <div style="position:relative;top:-3%;">
+                    <div style="position:relative;">
                         RESET&nbsp;NODE
                     </div>
                 </div>
@@ -1669,35 +1673,93 @@
         document.getElementById("oy_console").scrollTo(0, document.getElementById("oy_console").scrollHeight);
     }
 
+    function oy_time_print(oy_time) {
+        let d = new Date(oy_time * 1000),
+            dd = d.getDate(),
+            hh = d.getHours(),
+            h = hh,
+            min = ('0' + d.getMinutes()).slice(-2),
+            ampm = 'AM';
+        if (hh > 12) {
+            h = hh - 12;
+            ampm = 'PM';
+        }
+        else if (hh===12) {
+            h = 12;
+            ampm = 'PM';
+        }
+        else if (hh === 0) h = 12;
+        let z = "th";
+        if (dd===1) z = "st";
+        else if (dd===2) z = "nd";
+        else if (dd===3) z = "rd";
+        return dd+z+"&nbsp;/&nbsp;"+h+":"+min+'&nbsp;'+ampm;
+    }
+
+    function oy_copy_key(oy_copy_type, oy_object_id) {
+        if (oy_copy_type===0) document.getElementById("oy_copy_key_input").value = window.OY_WALLET_PUBLIC;
+        else if (oy_copy_type===1) document.getElementById("oy_copy_key_input").value = document.getElementById("oy_akoya_keep_alpha_key_"+oy_object_id.substr(20)).innerHTML;
+        else if (oy_copy_type===2) document.getElementById("oy_copy_key_input").value = document.getElementById("oy_akoya_keep_beta_key_"+oy_object_id.substr(19)).innerHTML;
+        else return false;
+        document.getElementById("oy_copy_key_input").select();
+        document.execCommand("copy");
+    }
+
     function oy_block_process() {
-        if (window.OY_BLOCK_HASH===null) return false;
+        if (window.OY_BLOCK_HASH===null||window.OY_WALLET_PUBLIC===null) return false;
         oy_akoya_balance();
         let oy_akoya_render = [];
         if (window.OY_AKOYA_PROCESS===false) {
             for (let oy_command_hash in window.OY_BLOCK[1]) {
-                if (window.OY_BLOCK[1][oy_command_hash][0]==="OY_AKOYA_SEND"&&typeof(window.OY_AKOYA_KEEP[oy_command_hash])==="undefined") {
+                let oy_send_bool = window.OY_BLOCK[1][oy_command_hash][2]===window.OY_WALLET_PUBLIC;
+                if (window.OY_BLOCK[1][oy_command_hash][0]==="OY_AKOYA_SEND"&&(oy_send_bool||window.OY_BLOCK[1][oy_command_hash][4]===window.OY_WALLET_PUBLIC)&&typeof(window.OY_AKOYA_KEEP[oy_command_hash])==="undefined") {
                     window.OY_AKOYA_KEEP[oy_command_hash] = true;
-                    oy_akoya_render.push([oy_command_hash, window.OY_AKOYA_KEEP[oy_command_hash]]);
+                    oy_akoya_render.push([oy_command_hash, window.OY_BLOCK[1][oy_command_hash], oy_send_bool]);
                 }
             }
-            //window.OY_AKOYA_PROCESS = true;
+            window.OY_AKOYA_PROCESS = true;
+        }
+        else {
+            for (let oy_command_hash in window.OY_BLOCK_NEW) {
+                let oy_send_bool = window.OY_BLOCK_NEW[oy_command_hash][2]===window.OY_WALLET_PUBLIC;
+                if (window.OY_BLOCK_NEW[oy_command_hash][0]==="OY_AKOYA_SEND"&&(oy_send_bool||window.OY_BLOCK_NEW[oy_command_hash][4]===window.OY_WALLET_PUBLIC)&&typeof(window.OY_AKOYA_KEEP[oy_command_hash])==="undefined") {
+                    window.OY_AKOYA_KEEP[oy_command_hash] = true;
+                    oy_akoya_render.push([oy_command_hash, window.OY_BLOCK_NEW[oy_command_hash], oy_send_bool]);
+                }
+            }
         }
         //else {}
+        //["OY_AKOYA_SEND", -1, oy_key_public, oy_transfer_amount, oy_receive_public]
         oy_akoya_render.sort(function(a, b) {
             if (a[1][1]===b[1][1]) {
-                let x = b[0].toLowerCase();
-                let y = a[0].toLowerCase();
+                let x = a[0].toLowerCase();
+                let y = b[0].toLowerCase();
 
                 return x < y ? -1 : x > y ? 1 : 0;
             }
-            return b[1][1] - a[1][1];
+            return a[1][1] - b[1][1];
         });
         for (let i in oy_akoya_render) {
             let oy_element = document.createElement("div");
             oy_element.setAttribute('id', "oy_akoya_keep_"+oy_akoya_render[i][0]);
-            oy_element.innerHTML = "<div id=\"oy_send_avatar_cont\" style=\"position:absolute;left:0.8vh;top:0.5vh;width:2.3vh;height:2.3vh;background-color: #2a2a2a\"></div>"+oy_akoya_render[i][0]+"<br>";
-            if (window.OY_AKOYA_KEEP_TOP===null) document.getElementById("oy_akoya_keep").appendChild(oy_element);
-            else document.getElementById("oy_akoya_keep").insertBefore(oy_element, document.getElementById("oy_akoya_keep_"+window.OY_AKOYA_KEEP_TOP));
+            oy_element.innerHTML = "<div id='oy_akoya_keep_alpha_"+oy_akoya_render[i][0]+"' style='position:relative;width:2vh;height:2vh;background-color: #2a2a2a;display:inline-block' onmouseover='this.style.cursor = \"pointer\"' onclick='oy_copy_key(1, this.id)'></div><div id='oy_akoya_keep_alpha_key_"+oy_akoya_render[i][0]+"' style='display:none;'></div><div style='position: relative;width:3.5vh;height:2vh;font-size:2.8vh;color:#3b3b3b;display: inline-block'><div class='oy_center_both'>"+((oy_akoya_render[i][2]===true)?"&rarr;":"&larr;")+"</div></div><div id='oy_akoya_keep_beta_"+oy_akoya_render[i][0]+"' style='position:relative;width:2vh;height:2vh;background-color: #2a2a2a;display:inline-block' onmouseover='this.style.cursor = \"pointer\"' onclick='oy_copy_key(2, this.id)'></div><div id='oy_akoya_keep_beta_key_"+oy_akoya_render[i][0]+"' style='display:none;'></div><div style='position: relative;width:66%;height:2vh;display: inline-block'><div class='oy_center_both'>"+(oy_akoya_render[i][1][3]/window.OY_AKOYA_DECIMALS).toFixed(2)+"&nbsp;<span style='color: #3b3b3b'>AKYT</span>&nbsp;|&nbsp;<span style='font-size:0.9vh;color: #3b3b3b'>"+oy_time_print(Math.floor(oy_akoya_render[i][1][1]))+"</span></div></div><br>";
+            if (window.OY_AKOYA_KEEP_TOP===null) {
+                document.getElementById("oy_akoya_keep_void").style.display = "none";
+                document.getElementById("oy_akoya_keep_inner").appendChild(oy_element);
+            }
+            else document.getElementById("oy_akoya_keep_inner").insertBefore(oy_element, document.getElementById("oy_akoya_keep_"+window.OY_AKOYA_KEEP_TOP));
+            if (oy_akoya_render[i][2]===true) {
+                document.getElementById("oy_akoya_keep_alpha_key_"+oy_akoya_render[i][0]).innerHTML = oy_akoya_render[i][1][2];
+                document.getElementById("oy_akoya_keep_beta_key_"+oy_akoya_render[i][0]).innerHTML = oy_akoya_render[i][1][4];
+                oy_avatar_gen(oy_akoya_render[i][1][2], document.getElementById("oy_akoya_keep_alpha_"+oy_akoya_render[i][0]));
+                oy_avatar_gen(oy_akoya_render[i][1][4], document.getElementById("oy_akoya_keep_beta_"+oy_akoya_render[i][0]));
+            }
+            else {
+                document.getElementById("oy_akoya_keep_alpha_key_"+oy_akoya_render[i][0]).innerHTML = oy_akoya_render[i][1][4];
+                document.getElementById("oy_akoya_keep_beta_key_"+oy_akoya_render[i][0]).innerHTML = oy_akoya_render[i][1][2];
+                oy_avatar_gen(oy_akoya_render[i][1][4], document.getElementById("oy_akoya_keep_alpha_"+oy_akoya_render[i][0]));
+                oy_avatar_gen(oy_akoya_render[i][1][2], document.getElementById("oy_akoya_keep_beta_"+oy_akoya_render[i][0]));
+            }
             window.OY_AKOYA_KEEP_TOP = oy_akoya_render[i][0];
         }
     }
@@ -1720,13 +1782,17 @@
             document.getElementById("oy_akoya_wallet_button").classList.remove("oy_button_all_dull");
             document.getElementById("oy_akoya_wallet_button").classList.add("oy_button_reset_active");
         }
+        document.getElementById("oy_akoya_keep_void").style.display = "block";
+        document.getElementById("oy_akoya_keep_inner").innerHTML = "";
+        window.OY_AKOYA_KEEP_TOP = null;
+        window.OY_AKOYA_KEEP = {};
         window.OY_AKOYA_PROCESS = false;
-        oy_akoya_balance();
+        document.getElementById("oy_akoya_balance_inner").innerHTML = "------";
+        oy_block_process();
     }
 
     function oy_akoya_balance() {
         if (window.OY_BLOCK_HASH!==null&&window.OY_WALLET_PUBLIC!==null) document.getElementById("oy_akoya_balance_inner").innerHTML = (typeof(window.OY_BLOCK[2][window.OY_WALLET_PUBLIC])==="undefined")?"0.0000":(window.OY_BLOCK[2][window.OY_WALLET_PUBLIC]/window.OY_AKOYA_DECIMALS).toFixed(4);
-        else document.getElementById("oy_akoya_balance_inner").innerHTML = "------";
     }
 
     function oy_akoya_wallet_open() {

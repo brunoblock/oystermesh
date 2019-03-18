@@ -159,6 +159,7 @@ window.OY_BLOCK_SYNC = {};
 window.OY_BLOCK_DIVE = {};
 window.OY_BLOCK_DIVE_SET = [];
 window.OY_BLOCK_DIVE_REWARD = "OY_NULL";
+window.OY_BLOCK_NEW = {};
 window.OY_BLOCK_CONFIRM = {};
 window.OY_BLOCK_SEEDTIME = null;
 window.OY_BLOCK_TRIGGER = new Event('oy_block_trigger');//trigger-able event for when a new block is issued
@@ -2237,6 +2238,7 @@ function oy_block_loop() {
                         }
                     }
 
+                    window.OY_BLOCK_NEW = {};
                     window.OY_BLOCK_DIVE = {};
 
                     let oy_supply_pre = 0;
@@ -2278,6 +2280,7 @@ function oy_block_loop() {
                                 if (window.OY_BLOCK[2][oy_command_execute[i][1][2]]<=0) delete window.OY_BLOCK[2][oy_command_execute[i][1][2]];
                                 if (window.OY_BLOCK[2][oy_command_execute[i][1][4]]<=0) delete window.OY_BLOCK[2][oy_command_execute[i][1][4]];
                                 window.OY_BLOCK[1][oy_command_execute[i][0]] = oy_command_execute[i][1];
+                                window.OY_BLOCK_NEW[oy_command_execute[i][0]] = oy_command_execute[i][1];
                             }
                         }
                     }
