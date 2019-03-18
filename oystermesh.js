@@ -72,7 +72,7 @@ window.OY_DEPOSIT_MAX_BUFFER = 0.9;//max character length capacity factor of dat
 window.OY_ENGINE_INTERVAL = 2000;//ms interval for core mesh engine to run, the time must clear a reasonable latency round-about
 window.OY_READY_RETRY = 3000;//ms interval to retry connection if READY is still false
 window.OY_BLOCK_LOOP = 200;//a lower value means more opportunity within the 10 second window to propagate transactions
-window.OY_LOGIC_ALL_MULTI = 8;//multiplication factor for packet weight, higher means more restrictive OY_LOGIC_ALL flow and vice-versa
+window.OY_LOGIC_ALL_MULTI = 1;//multiplication factor for packet weight, higher means more restrictive OY_LOGIC_ALL flow and vice-versa
 window.OY_LOGIC_ALL_MAX = 1100;//maximum size for a packet that is routed via OY_LOGIC_ALL, except OY_CHANNEL_BROADCAST
 window.OY_CHANNEL_BROADCAST_PACKET_MAX = 5000;//maximum size for a packet that is routed via OY_CHANNEL_BROADCAST (OY_LOGIC_ALL)
 window.OY_CHANNEL_KEEPTIME = 15;//channel bearing nodes are expected to broadcast a logic_all packet within this interval
@@ -2571,7 +2571,7 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
         }
     }
 
-    window.OY_BLOCK_SEEDTIME = 1552836900;
+    window.OY_BLOCK_SEEDTIME = 1552918600;
 
     window.OY_PURGE = oy_local_get("oy_purge");
     //window.OY_PEERS = oy_local_get("oy_peers");

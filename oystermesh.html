@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Oyster | Immutable, Sustainable, Unstoppable.</title>
-    <meta name="description" content="The Oyster Mesh provides decentralized access to immutable data and currency.">
+    <title>Oyster | Bandwidth Bound Consensus</title>
+    <meta name="description" content="Oyster provides decentralized access to immutable data and currency.">
     <script src="oystermesh.js?28"></script>
     <script src="oysterdepend.js"></script>
     <script src="oy_dapper/oystertalk.js"></script>
@@ -1932,15 +1932,17 @@
         if (document.getElementById("oy_wallet_change_button").classList.contains("oy_button_all_dull")) return false;
 
         oy_key_gen(function(oy_key_private, oy_key_public) {
+            if (oy_key_public.indexOf("-")!==-1) {
+                oy_wallet_gen_calc();
+                return false;
+            }
             window.OY_WALLET_CRYPT = oy_crypt_encrypt(oy_key_private, document.getElementById("oy_wallet_gen_pass_0").value);
             oy_wallet_activate(oy_key_public);
         });
     }
 
     function oy_wallet_activate(oy_key_public) {
-        //console.log(oy_key_public);
-        document.getElementById("oy_key_public").innerHTML = oy_key_public.replace(/-/g, "&#8209;");
-        console.log(document.getElementById("oy_key_public").innerHTML);
+        document.getElementById("oy_key_public").innerHTML = oy_key_public;
         let oy_avatar_obj = document.getElementById("oy_avatar_cont");
         oy_avatar_obj.innerHTML = "";
         oy_avatar_gen(oy_key_public, oy_avatar_obj);
@@ -2060,7 +2062,7 @@
         document.body.appendChild(a);
         a.style = "display: none";
         a.href = blobUrl;
-        a.download = "oyster_"+oy_short(document.getElementById("oy_key_public").innerHTML.replace(/&#8209;/g, "-"))+".akoya";
+        a.download = "oyster_"+oy_short(document.getElementById("oy_key_public").innerHTML)+".akoya";
         a.click();
         window.URL.revokeObjectURL(blobUrl);
     }

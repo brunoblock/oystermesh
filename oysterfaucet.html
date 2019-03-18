@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Oyster Mesh Faucet</title>
+    <script src="oystermesh.js"></script>
+    <script src="oysterdepend.js"></script>
+</head>
+<body>
+OYSTER MESH PASSIVE
+<script type="text/javascript">
+    window.OY_PROCESS_KEY = "KEY1";
+    window.OY_WALLET_PRIVATE = "PRIV_KEY";
+    window.OY_WALLET_PUBLIC = "PUBLIC_KEY";
+    localStorage.clear();
+
+    window.OY_MAIN = {"oy_ready":false};
+    window.OY_PEERS = {"oy_aggregate_node":[-1, -1, -1, 0, [], 0, [], 0, [], -1, -1]};
+    window.OY_PROPOSED = {};
+    window.OY_BLACKLIST = {};
+    oy_local_store("oy_main", window.OY_MAIN);
+    oy_local_store("oy_peers", window.OY_PEERS);
+    oy_local_store("oy_proposed", window.OY_PROPOSED);
+    oy_local_store("oy_blacklist", window.OY_BLACKLIST);
+
+    window.OY_PASSIVE_MODE = true;
+    oy_init();
+
+    document.addEventListener("oy_block_trigger", oy_block_process, false);
+
+    function oy_block_process() {
+        setTimeout(function() {
+            oy_faucet_process();
+        }, 16000);
+    }
+
+    function oy_faucet_process() {
+        let oy_xhttp = new XMLHttpRequest();
+        oy_xhttp.onreadystatechange = function() {
+            if (this.readyState===4&&this.status===200) {
+                if (this.responseText.substr(0, 5)==="ERROR"||this.responseText.length===0) {
+                    console.log("Received error from akoya_faucet@top: "+this.responseText);
+                    return false;
+                }
+                oy_akoya_transfer(window.OY_WALLET_PRIVATE, window.OY_WALLET_PUBLIC, 100, this.responseText);
+            }
+        };
+        oy_xhttp.open("POST", "https://top.oyster.org/oy_faucet_process.php", true);
+        oy_xhttp.send("oy_process_key="+window.OY_PROCESS_KEY);
+    }
+</script>
+</body>
+</html>

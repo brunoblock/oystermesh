@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Akoya Testnet Faucet</title>
+    <script src="../oy_resources/blockies.js"></script>
+</head>
+<body>
+Akoya Testnet Faucet<br><br>
+<input id="oy_input_address" type="text" style="width:150px;" />
+<input id="oy_faucet_button" type="button" value="SEND 100 AKYT" onclick="oy_faucet_send()" />
+<script type="text/javascript">
+    function oy_avatar_gen(oy_key_public, oy_object) {
+        const canvas = createIcon({
+            seed:oy_key_public,
+            size: 10,
+            scale: 8
+        });
+        oy_object.appendChild(canvas);
+        oy_object.style.backgroundColor = "transparent";
+    }
+    function oy_faucet_send() {
+        let oy_xhttp = new XMLHttpRequest();
+        oy_xhttp.onreadystatechange = function() {
+            if (this.readyState===4&&this.status===200) {
+                if (this.responseText.substr(0, 5)==="ERROR"||this.responseText.length===0) {
+                    console.log("Received error from akoya_faucet@top: "+this.responseText);
+                    return false;
+                }
+            }
+        };
+        oy_xhttp.open("POST", "https://top.oyster.org/oy_faucet_send.php", true);
+        oy_xhttp.send("oy_send_address="+document.getElementById("oy_input_address").value);
+    }
+</script>
+</body>
+</html>
