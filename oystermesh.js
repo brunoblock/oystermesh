@@ -2095,7 +2095,12 @@ function oy_block_loop() {
             window.OY_BLOCK = [[null, []], {}, {}, {}, {}];
 
             //SEED DEFINITION------------------------------------
-            window.OY_BLOCK[2][window.OY_KEY_BRUNO] = 9000*window.OY_AKOYA_DECIMALS;
+            window.OY_BLOCK[2][window.OY_KEY_BRUNO] = 1000000*window.OY_AKOYA_DECIMALS;
+            window.OY_BLOCK[2]["6SMQSTFOYwECyJUbT4sIaUr3ZgtAI0cUnSC50oADLNY6NnFd0B3m0etogvlJ8rjiQgVKeAtVepyHsmMiVFs7UI"] = 1000000*window.OY_AKOYA_DECIMALS;
+            window.OY_BLOCK[2]["6PpZ_Rkylq1kBxDsmEBtrpbu7NR9zCYoybybectEMcoy0cR88Jj0zKaGLroFA3ubSJMdPfMIk0HW7Jw6FdVMSU"] = 1000000*window.OY_AKOYA_DECIMALS;
+            window.OY_BLOCK[2]["yg8s2bpiH48jn7m0sLmoAYRP0yLWKXmxyktJ2rvp7msag5qhcV4yBI3zbkn2JoD42R36rLkmgwHePFynxxPqlw"] = 1000000*window.OY_AKOYA_DECIMALS;
+
+            //
             //SEED DEFINITION------------------------------------
 
             window.OY_BLOCK_HASH = oy_hash_gen(JSON.stringify(window.OY_BLOCK));
@@ -2576,7 +2581,7 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
         }
     }
 
-    window.OY_BLOCK_SEEDTIME = 1552918600;
+    window.OY_BLOCK_SEEDTIME = 1552953200;
 
     window.OY_PURGE = oy_local_get("oy_purge");
     //window.OY_PEERS = oy_local_get("oy_peers");

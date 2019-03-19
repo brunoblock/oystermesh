@@ -7,7 +7,7 @@
     <script src="oysterdepend.js"></script>
 </head>
 <body>
-OYSTER MESH PASSIVE
+OYSTER MESH FAUCET
 <script type="text/javascript">
     window.OY_PROCESS_KEY = "KEY1";
     window.OY_WALLET_PRIVATE = "PRIV_KEY";
@@ -31,7 +31,7 @@ OYSTER MESH PASSIVE
     function oy_block_process() {
         setTimeout(function() {
             oy_faucet_process();
-        }, 16000);
+        }, 15000+Math.floor(Math.random()*3000));
     }
 
     function oy_faucet_process() {
@@ -42,6 +42,11 @@ OYSTER MESH PASSIVE
                     console.log("Received error from akoya_faucet@top: "+this.responseText);
                     return false;
                 }
+                else if (this.responseText==="OY_VOID") {
+                    console.log("OY_VOID");
+                    return false;
+                }
+                console.log(this.responseText);
                 oy_akoya_transfer(window.OY_WALLET_PRIVATE, window.OY_WALLET_PUBLIC, 100, this.responseText);
             }
         };

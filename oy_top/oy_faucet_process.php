@@ -6,8 +6,8 @@ if (!$oy_process_key||!in_array($oy_process_key, $oy_process_key_array)) die("ER
 
 $oy_send_array = glob("/dev/shm/oy_faucet/*.send");
 $oy_send_key_array = array_rand($oy_send_array, 1);
-foreach ($oy_send_key_array as $oy_send_key_unique) {
-    echo file_get_contents($oy_send_array[$oy_send_key_unique]);
-    unlink($oy_send_array[$oy_send_key_unique]);
-    break;
+if ($oy_send_key_array===NULL) echo "OY_VOID";
+else {
+    echo file_get_contents($oy_send_array[$oy_send_key_array]);
+    unlink($oy_send_array[$oy_send_key_array]);
 }
