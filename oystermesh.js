@@ -11,11 +11,11 @@ window.OY_MESH_HOP = 0.8;//maximum time allocation per hop for specific broadcas
 window.OY_MESH_FLOW = 128000;//characters per second allowed per peer, and for all aggregate non-peer nodes
 window.OY_MESH_MEASURE = 10;//seconds by which to measure mesh flow, larger means more tracking of nearby node and peer activity
 window.OY_MESH_BEAM_SAMPLE = 3;//time/data measurements to determine mesh beam flow required to state a result, too low can lead to volatile and inaccurate readings
-window.OY_MESH_BEAM_BUFFER = 1.5;//multiplication factor for mesh outflow/beam buffer, to give some leeway to compliant peers
+window.OY_MESH_BEAM_BUFFER = 1.2;//multiplication factor for mesh outflow/beam buffer, to give some leeway to compliant peers
 window.OY_MESH_SOAK_SAMPLE = 5;//time/data measurements to determine mesh soak flow required to state a result, too low can lead to volatile and inaccurate readings
-window.OY_MESH_SOAK_BUFFER = 1;//multiplication factor for mesh inflow/soak buffer, to give some leeway to compliant peers
-window.OY_MESH_PUSH_CHANCE = 0.85;//probability that self will forward a data_push when the nonce was not previously stored on self
-window.OY_MESH_PUSH_CHANCE_STORED = 0.95;//probability that self will forward a data_push when the nonce was previously stored on self
+window.OY_MESH_SOAK_BUFFER = 1.6;//multiplication factor for mesh inflow/soak buffer, to give some leeway to compliant peers
+window.OY_MESH_PUSH_CHANCE = 0.6;//probability that self will forward a data_push when the nonce was not previously stored on self
+window.OY_MESH_PUSH_CHANCE_STORED = 0.8;//probability that self will forward a data_push when the nonce was previously stored on self
 window.OY_MESH_DEPOSIT_CHANCE = 0.4;//probability that self will deposit pushed data
 window.OY_MESH_FULLFILL_CHANCE = 0.2;//probability that data is stored whilst fulfilling a pull request, this makes data intelligently migrate and recommit overtime
 window.OY_MESH_SOURCE = 3;//node in route passport (from destination) that is assigned with defining the source variable
@@ -26,7 +26,7 @@ window.OY_BLOCK_CHALLENGETIME = 800;//ms delay until meshblock challenge to peer
 window.OY_BLOCK_CLONETIME = 800;//ms delay until meshblock clone
 window.OY_BLOCK_KEY_LIMIT = 4;//permitted transactions per wallet per block (20 seconds)
 window.OY_BLOCK_HASH_KEEP = 20;//how many hashes of previous blocks to keep in the current meshblock, value is for 6 months worth//1577
-window.OY_BLOCK_DENSITY = 0.9;//higher means block OY_LOGIC_ALL packets are more spread out
+window.OY_BLOCK_DENSITY = 0.6;//higher means block OY_LOGIC_ALL packets are more spread out
 window.OY_BLOCK_PEERS_MIN = 3;//minimum peer count to be able to act as origin for clones and broadcast SYNC/DIVE
 window.OY_BLOCK_DIVE_PACKET_MAX = 8000;//maximum size for a packet that is routed via OY_BLOCK_DIVE_PACKET_MAX (OY_LOGIC_ALL)
 window.OY_CHALLENGE_EDGE = 6;//maximum seconds that it should take for a challenged transaction to reach the furthest edge-to-edge distance of the mesh
@@ -61,9 +61,9 @@ window.OY_LATENCY_GEO_SENS = 90;//percentage buffer for comparing latency with p
 window.OY_DATA_MAX = 64000;//max size of data that can be sent to another node
 window.OY_DATA_CHUNK = 48000;//chunk size by which data is split up and sent per transmission
 window.OY_DATA_PURGE = 4;//how many handles to delete if localstorage limit is reached
-window.OY_DATA_PUSH_INTERVAL = 190;//ms per chunk per push loop iteration
-window.OY_DATA_PUSH_NONCE_MAX = 15;//maximum amount of nonces to push per push loop iteration
-window.OY_DATA_PULL_INTERVAL = 500;//ms per pull loop iteration
+window.OY_DATA_PUSH_INTERVAL = 400;//ms per chunk per push loop iteration
+window.OY_DATA_PUSH_NONCE_MAX = 12;//maximum amount of nonces to push per push loop iteration
+window.OY_DATA_PULL_INTERVAL = 1500;//ms per pull loop iteration
 window.OY_DATA_PULL_NONCE_MAX = 5;//maximum amount of nonces to request per pull beam, if too high fulfill will overrun soak limits and cause time/resource waste
 window.OY_DATA_FULFILL_INTERVAL = 4000;//ms per chunk per fulfill loop iteration
 window.OY_DATA_FULFILL_EXPIRE = 25;//seconds before self will resent a pull fulfillment to the same node for the same handle
@@ -118,7 +118,7 @@ window.OY_CLONES = {};
 window.OY_CLONE_UPTIME = null;
 window.OY_CLONE_BUILD = [];
 window.OY_LOGIC_ALL_TYPE = ["OY_BLOCK_COMMAND", "OY_BLOCK_SYNC", "OY_BLOCK_SYNC_CHALLENGE", "OY_BLOCK_DIVE", "OY_DATA_PULL", "OY_CHANNEL_BROADCAST"];//OY_LOGIC_ALL definitions
-window.OY_LOGIC_FOLLOW_TYPE = ["OY_BLOCK_SYNC_CHALLENGE_RESPONSE", "OY_DATA_DEPOSIT", "OY_DATA_FULFILL", "OY_CHANNEL_ECHO", "OY_CHANNEL_RESPOND", "OY_CHANNEL_RECOVER"];//OY_LOGIC_FOLLOW definitions
+window.OY_LOGIC_EXCEPT_TYPE = ["OY_BLOCK_SYNC_CHALLENGE_RESPONSE", "OY_CHANNEL_ECHO", "OY_CHANNEL_RESPOND", "OY_CHANNEL_RECOVER"];
 window.OY_MESH_SIZE = 0;
 window.OY_BLOCK_TEMP = [null];//temporary centralized block
 window.OY_BLOCK_TEMP_HASH = null;//hash of the most current block
@@ -1814,7 +1814,7 @@ function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
         }
         let oy_data_cool = false;
         if (oy_peer_check(oy_node_id)) oy_data_cool = !oy_data_measure(true, oy_node_id, (oy_logic_all_bool===true)?oy_data_raw.length*window.OY_LOGIC_ALL_MULTI:oy_data_raw.length);
-        if (oy_data_cool===true&&oy_data_direct_bool===false&&window.OY_LOGIC_FOLLOW_TYPE.indexOf(oy_data_flag)===-1) {
+        if (oy_data_cool===true&&oy_data_direct_bool===false&&window.OY_LOGIC_EXCEPT_TYPE.indexOf(oy_data_flag)===-1) {
             oy_log("Cooling off, skipping "+oy_data_flag+" to "+oy_short(oy_node_id));
             return true;
         }
@@ -2082,6 +2082,19 @@ function oy_block_time(oy_next) {
     return (Math.floor(Date.now()/10000)*10);
 }
 
+function oy_block_reset() {
+    window.OY_BLOCK_HASH = null;
+    window.OY_BLOCK_SIGN = null;
+    window.OY_BLOCK = [[null, []], {}, {}, {}, {}];
+    window.OY_ORIGINS = {};
+    window.OY_CLONES = {};
+    window.OY_CLONE_UPTIME = null;
+    window.OY_CLONE_BUILD = [];
+    window.OY_MESH_SIZE = 0;
+    window.OY_CHALLENGE = {};
+    oy_log("MESHBLOCK RESET");
+}
+
 function oy_block_loop() {
     let oy_block_time_local = oy_block_time(false);
     setTimeout("oy_block_loop()", window.OY_BLOCK_LOOP);
@@ -2129,9 +2142,8 @@ function oy_block_loop() {
             }
 
             if (window.OY_BLOCK[0][0]!==null&&window.OY_BLOCK[0][0]!==oy_block_time_local-20) {
-                window.OY_BLOCK_HASH = null;
-                window.OY_BLOCK_SIGN = null;
-                console.log("BLOCK MISSTEP");
+                oy_block_reset();
+                oy_log("MESHBLOCK MISSTEP");
                 return false;
             }
 
@@ -2168,8 +2180,6 @@ function oy_block_loop() {
 
             oy_log_debug("COMMAND: "+JSON.stringify(window.OY_BLOCK_COMMAND)+"\nSYNC COMMAND: "+JSON.stringify(oy_sync_command));
 
-            //TODO problem: there is something along the process that can hang which causes the meshblock to be assigned at the wrong time, at the minimum time checks need to be enforced
-
             window.OY_BLOCK_SYNC = {};
             window.OY_BLOCK_SYNC_HASH = oy_hash_gen(JSON.stringify(oy_sync_command));
             window.OY_BLOCK_SYNC_DYNAMIC = oy_rand_gen();
@@ -2185,6 +2195,11 @@ function oy_block_loop() {
                 }, Math.floor(Math.random()*window.OY_BLOCK_SECTORS[1][1]*window.OY_BLOCK_DENSITY));
             }
             setTimeout(function() {
+                if (window.OY_BLOCK_HASH===null) {
+                    oy_block_reset();
+                    oy_log("MESHBLOCK CANCEL: "+oy_block_time_local);
+                    return false;
+                }
                 let oy_command_pool = {};
                 let oy_node_consensus = 0;
                 //oy_log_debug("SYNC: "+Object.keys(window.OY_BLOCK_SYNC).length);
@@ -2237,6 +2252,11 @@ function oy_block_loop() {
                     }, Math.floor(Math.random()*window.OY_BLOCK_SECTORS[0][1]*window.OY_BLOCK_DENSITY));
                 }
                 setTimeout(function() {
+                    if (window.OY_BLOCK_HASH===null) {
+                        oy_block_reset();
+                        oy_log("MESHBLOCK CANCEL: "+oy_block_time_local);
+                        return false;
+                    }
                     window.OY_MESH_SIZE = window.OY_BLOCK_DIVE_SET.length;
                     oy_node_consensus = Math.ceil(window.OY_MESH_SIZE*window.OY_BLOCK_CONSENSUS);
                     oy_log_debug("DIVE: "+JSON.stringify(window.OY_BLOCK_DIVE)+"\nCONSENSUS: "+oy_node_consensus);
@@ -2320,6 +2340,11 @@ function oy_block_loop() {
                     oy_log_debug("HASH: "+window.OY_BLOCK_HASH+"\nBLOCK: "+oy_block_flat);
 
                     setTimeout(function() {
+                        if (window.OY_BLOCK_HASH===null) {
+                            oy_block_reset();
+                            oy_log("MESHBLOCK CANCEL: "+oy_block_time_local);
+                            return false;
+                        }
                         oy_key_sign(window.OY_MAIN['oy_self_private'], window.OY_MESH_DYNASTY+window.OY_BLOCK_HASH, function(oy_key_signature) {
                             window.OY_BLOCK_SIGN = oy_key_signature;
                             oy_block_challenge(window.OY_BLOCK_SIGN);
@@ -2329,6 +2354,11 @@ function oy_block_loop() {
                     document.dispatchEvent(window.OY_BLOCK_TRIGGER);
 
                     setTimeout(function() {
+                        if (window.OY_BLOCK_HASH===null) {
+                            oy_block_reset();
+                            oy_log("MESHBLOCK CANCEL: "+oy_block_time_local);
+                            return false;
+                        }
                         if (window.OY_BLOCK_HASH!==null&&window.OY_CLONE_UPTIME!==null&&window.OY_CLONE_UPTIME>=window.OY_CLONE_UPTIME_MIN&&window.OY_PEER_COUNT>=window.OY_BLOCK_PEERS_MIN) {
                             if (Object.keys(window.OY_CLONES).length>0) {
                                 let oy_block_split = null;
@@ -2556,6 +2586,8 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
         }
         window.OY_INIT = 1;
         oy_log("Oyster Mesh initializing...");
+
+        document.addEventListener("oy_peers_null", oy_block_reset, false);
 
         //recover session variables from localstorage
         window.OY_MAIN = oy_local_get("oy_main");

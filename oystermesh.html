@@ -1394,6 +1394,7 @@
 
             document.addEventListener("oy_key_enter", oy_dapper_launch, false);
             document.addEventListener("oy_block_trigger", oy_block_process, false);
+            document.addEventListener("oy_peers_null", oy_block_reset_local, false);
         }
 
         document.getElementById(window.OY_DEST_RADIO).checked = true;
@@ -1693,6 +1694,12 @@
         else return false;
         document.getElementById("oy_copy_key_input").select();
         document.execCommand("copy");
+    }
+
+    function oy_block_reset_local() {
+        window.OY_AKOYA_PROCESS = false;
+        document.getElementById("oy_graph_akoya_progress").style.display = "none";
+        document.getElementById("oy_graph_akoya_progress_inner").style.backgroundColor = "transparent";
     }
 
     function oy_block_process() {

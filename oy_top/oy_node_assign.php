@@ -27,7 +27,7 @@ if ($fh = opendir("/dev/shm/oy_nodes")) {
 closedir($fh);
 
 $oy_node_array = glob("/dev/shm/oy_nodes/*.node");
-$oy_node_key_array = array_rand($oy_node_array, 3);
+$oy_node_key_array = array_rand($oy_node_array, 8);
 $oy_node_send = array();
 foreach ($oy_node_key_array as $oy_node_key_unique) {
     if ($oy_node_array[$oy_node_key_unique]=="/dev/shm/oy_nodes/".$_SERVER['REMOTE_ADDR'].".node") continue;
