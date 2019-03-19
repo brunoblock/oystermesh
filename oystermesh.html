@@ -1285,17 +1285,17 @@
                 </div>
                 <div style="position:absolute;right:-2.5%;top:0;width:50%;height:100%;font-weight:bold;">
                     <span id="oy_self_short">null</span><br>
-                    <span id="oy_avg_latency">0</span>&nbsp;sec<br>
-                    <span id="oy_avg_peership">0</span>&nbsp;min<br>
-                    <span id="oy_peer_count_cont"><span id="oy_peer_count">0</span>&nbsp;peer(s)</span><br>
-                    <span id="oy_blacklisted">0</span>&nbsp;node(s)<br>
-                    <span id="oy_mesh_range">0</span>&nbsp;node(s)<br>
-                    <span id="oy_beam_flow">0</span>&nbsp;kbps<br>
-                    <span id="oy_soak_flow">0</span>&nbsp;kbps<br>
-                    <span id="oy_block_uptime">---</span>&nbsp;min<br>
-                    <span id="oy_block_weight">0</span>&nbsp;kb<br>
-                    <span id="oy_block_stability">0</span>&nbsp;SD<br>
-                    <span id="oy_akoya_dive_track">0</span>&nbsp;AKYT<br>
+                    <span id="oy_avg_latency">null</span>&nbsp;sec<br>
+                    <span id="oy_avg_peership">null</span>&nbsp;min<br>
+                    <span id="oy_peer_count_cont"><span id="oy_peer_count">null</span>&nbsp;peer(s)</span><br>
+                    <span id="oy_blacklisted">null</span>&nbsp;node(s)<br>
+                    <span id="oy_mesh_range">null</span>&nbsp;node(s)<br>
+                    <span id="oy_beam_flow">null</span>&nbsp;kbps<br>
+                    <span id="oy_soak_flow">null</span>&nbsp;kbps<br>
+                    <span id="oy_block_uptime">null</span>&nbsp;min<br>
+                    <span id="oy_block_weight">null</span>&nbsp;KB<br>
+                    <span id="oy_block_stability">null</span>&nbsp;SD<br>
+                    <span id="oy_akoya_dive_track">null</span>&nbsp;AKYT<br>
                 </div>
                 <div id="oy_self_reset" align="center" class="oy_button oy_button_all_active" style="position:absolute;bottom:-25%;left:30%;transform:translateX(-50%);width:40%;height:10%;" onclick="oy_self_reset()">
                     <div style="position:relative;">
@@ -1522,6 +1522,7 @@
             oy_avg_soak.push(window.OY_PEERS[oy_peer_local][7]);
         }
 
+        let oy_blank = "---";
         if (oy_avg_latency.length>0) document.getElementById("oy_avg_latency").innerHTML = (oy_avg_latency.reduce(oy_reduce_sum)/oy_avg_latency.length).toFixed(3);
         if (oy_avg_peership.length>0) document.getElementById("oy_avg_peership").innerHTML = ((oy_time_local - Math.round(oy_avg_peership.reduce(oy_reduce_sum)/oy_avg_peership.length))/60).toFixed(2);
         document.getElementById("oy_mesh_range").innerHTML = window.OY_MESH_RANGE;
@@ -1529,9 +1530,10 @@
         else document.getElementById("oy_beam_flow").innerHTML = "0";
         if (oy_avg_soak.length>0) document.getElementById("oy_soak_flow").innerHTML = (oy_avg_soak.reduce(oy_reduce_sum)/1000).toFixed(2);
         else document.getElementById("oy_soak_flow").innerHTML = "0";
-        document.getElementById("oy_block_uptime").innerHTML = (window.OY_BLOCK_UPTIME===null)?"---":((oy_time_local - window.OY_BLOCK_UPTIME)/60).toFixed(2);
-        document.getElementById("oy_block_weight").innerHTML = (window.OY_BLOCK_WEIGHT===null)?"---":(window.OY_BLOCK_WEIGHT/1024).toFixed(2);
-        document.getElementById("oy_akoya_dive_track").innerHTML = window.OY_BLOCK_DIVE_TRACK/window.OY_AKOYA_DECIMALS;
+        document.getElementById("oy_block_uptime").innerHTML = (window.OY_BLOCK_UPTIME===null)?oy_blank:((oy_time_local - window.OY_BLOCK_UPTIME)/60).toFixed(2);
+        document.getElementById("oy_block_weight").innerHTML = (window.OY_BLOCK_WEIGHT===null)?oy_blank:(window.OY_BLOCK_WEIGHT/1024).toFixed(2);
+        document.getElementById("oy_block_stability").innerHTML = (window.OY_BLOCK_STABILITY.length<2)?oy_blank:oy_stability_calc(window.OY_BLOCK_STABILITY).toFixed(4);
+        document.getElementById("oy_akoya_dive_track").innerHTML = (window.OY_BLOCK_DIVE_TRACK===0)?oy_blank:window.OY_BLOCK_DIVE_TRACK/window.OY_AKOYA_DECIMALS;
 
         oy_peer_keep.sort(function(a, b) {
             return b[1] - a[1];
@@ -1646,6 +1648,23 @@
         setTimeout("oy_maintain()", 4000);
     }
 
+    function oy_stability_calc(oy_list) {
+        let oy_stability_avg = function(oy_data){
+            let oy_sum = oy_data.reduce(function(oy_sum, oy_value){
+                return oy_sum + oy_value;
+            }, 0);
+            return oy_sum/oy_data.length;
+        };
+        let oy_avg = oy_stability_avg(oy_list);
+
+        let oy_square_diffs = oy_list.map(function(oy_value){
+            let oy_diff = oy_value - oy_avg;
+            return oy_diff * oy_diff;
+        });
+
+        return Math.sqrt(oy_stability_avg(oy_square_diffs));
+    }
+
     function oy_superhandle_check(oy_value) {
         return (oy_value.substr(0, 2)==="OY"&&oy_value.length>40);
     }
@@ -1706,6 +1725,7 @@
 
     function oy_block_reset_local() {
         window.OY_AKOYA_PROCESS = false;
+        document.getElementById("oy_akoya_balance_inner").innerHTML = "------";
         document.getElementById("oy_graph_akoya_progress").style.display = "none";
         document.getElementById("oy_graph_akoya_progress_inner").style.backgroundColor = "transparent";
     }
@@ -1863,7 +1883,7 @@
         if (window.OY_WALLET_PRIVATE===null||window.OY_WALLET_PUBLIC===null||document.getElementById("oy_akoya_execute_button").classList.contains("oy_button_all_dull")) return false;
 
         oy_akoya_transfer(window.OY_WALLET_PRIVATE, window.OY_WALLET_PUBLIC, document.getElementById("oy_wallet_akoya_amount").value, document.getElementById("oy_wallet_akoya_send").value, function(oy_command_confirm) {
-            if (oy_command_confirm===true) oy_graph_akoya_set("#24ab26");
+            if (oy_command_confirm===true) oy_graph_akoya_set("#00C800");
             else oy_graph_akoya_set("#c37b2c");
         });
         oy_graph_akoya_set();
@@ -2077,6 +2097,7 @@
 
         window.OY_WALLET_PRIVATE = null;
         window.OY_WALLET_PUBLIC = null;
+        window.OY_BLOCK_DIVE_REWARD = "OY_NULL";
 
         document.getElementById("oy_wallet_load").classList.remove("oy_button_go_active");
         document.getElementById("oy_wallet_load").classList.add("oy_button_all_dull");
@@ -2350,19 +2371,19 @@
 
     function oy_graph_akoya_set(oy_custom) {
         if (typeof(oy_custom)!=="undefined") {
-            document.getElementById("oy_graph_akoya_progress_inner").style.backgroundColor = oy_custom;
             document.getElementById("oy_graph_akoya_progress_inner").style.transition = null;
             document.getElementById("oy_graph_akoya_progress_inner").style.width = "100%";
+            document.getElementById("oy_graph_akoya_progress_inner").style.backgroundColor = oy_custom;
             setTimeout(function() {
                 document.getElementById("oy_graph_akoya_progress").style.display = "none";
                 document.getElementById("oy_graph_akoya_progress_inner").style.backgroundColor = "transparent";
-            }, 2000);
+            }, 4000);
         }
         else {
-            document.getElementById("oy_graph_akoya_progress_inner").style.backgroundColor = "#348fab";
+            document.getElementById("oy_graph_akoya_progress_inner").style.backgroundColor = "#46C9F4";
             document.getElementById("oy_graph_akoya_progress_inner").style.transition = null;
             document.getElementById("oy_graph_akoya_progress_inner").style.width = "0";
-            document.getElementById("oy_graph_akoya_progress_inner").style.transition = "width "+Math.ceil((window.OY_BLOCK_NEXT-Date.now()/1000)+20)+"s linear";
+            document.getElementById("oy_graph_akoya_progress_inner").style.transition = "width "+((window.OY_BLOCK_NEXT-Date.now()/1000)+20).toFixed(3)+"s linear";
             setTimeout(function() {
                 document.getElementById("oy_graph_akoya_progress_inner").style.width = "100%";
             }, 100);

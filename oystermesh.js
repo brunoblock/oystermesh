@@ -44,8 +44,9 @@ window.OY_NODE_DELAYTIME = 6;//minimum expected time to connect or transmit data
 window.OY_NODE_EXPIRETIME = 600;//seconds of non-interaction until a node's connection session is deleted
 window.OY_CLONE_AFFINITY = 0.3;//higher means more likely to ask a node to become a clone than a peer and vice-versa
 window.OY_CLONE_UPTIME_MIN = 60;//seconds since able to keep up with the meshblock required to become a clone origin
-window.OY_CLONE_LIVETIME = 40;//seconds to keep a node as a clone
+window.OY_CLONE_LIVETIME = 80;//seconds to keep a node as a clone
 window.OY_CLONE_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per clone transmission
+window.OY_CLONE_ORIGIN_MAX = 4;//maximum simultaneous origin count
 window.OY_PEER_LATENCYTIME = 60;//peers are expected to establish latency timing with each other within this interval in seconds
 window.OY_PEER_KEEPTIME = 20;//peers are expected to communicate with each other within this interval in seconds
 window.OY_PEER_REFERTIME = 15;//interval in which self asks peers for peer recommendations (as needed)
@@ -1175,7 +1176,7 @@ function oy_node_initiate(oy_node_id) {
         oy_local_store("oy_proposed", window.OY_PROPOSED);
     };
     let oy_callback_rand = function() {
-        if (Math.random()<window.OY_CLONE_AFFINITY) oy_callback_clone();
+        if (Math.random()<window.OY_CLONE_AFFINITY&&Object.keys(window.OY_ORIGINS).length<window.OY_CLONE_ORIGIN_MAX) oy_callback_clone();
         else oy_callback_peer();
     };
     oy_node_connect(oy_node_id, (window.OY_BLOCK_HASH===null&&window.OY_PEER_COUNT===0)?oy_callback_clone:((window.OY_BLOCK_HASH!==null&&window.OY_PEER_COUNT===0)?oy_callback_rand:oy_callback_peer));
@@ -2141,6 +2142,7 @@ function oy_block_loop() {
             for (let oy_clone_select in window.OY_CLONES) {
                 if (window.OY_CLONES[oy_clone_select][1]===0||window.OY_CLONES[oy_clone_select][1]===2||Date.now()/1000>=window.OY_CLONES[oy_clone_select][0]) delete window.OY_CLONES[oy_clone_select];
             }
+            if (window.OY_BLOCK_DIVE_REWARD==="OY_NULL") window.OY_BLOCK_DIVE_TRACK = 0;
             if (window.OY_BLOCK_HASH===null) {
                 window.OY_MESH_RANGE = 0;
                 window.OY_CHALLENGE = {};
@@ -2491,6 +2493,13 @@ function oy_engine(oy_thread_track) {
         }
     }
 
+    for (let oy_origin_select in window.OY_ORIGINS) {
+        if (oy_time_local>window.OY_ORIGINS[oy_origin_select]) {
+            delete window.OY_ORIGINS[oy_origin_select];
+            oy_log("Cleaned up expired origin session for node: "+oy_short(oy_origin_select));
+        }
+    }
+
     for (let oy_node_select in window.OY_WARM) {
         if (oy_time_local-window.OY_WARM[oy_node_select]>window.OY_NODE_DELAYTIME) {
             if (oy_peer_check(oy_node_select)) {
@@ -2699,7 +2708,6 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
                 }
             }
             else {
-                oy_log("Node "+oy_short(oy_conn.peer)+" is either unknown or was recently proposed to for peering");
                 if (oy_data_measure(false, "oy_aggregate_node", oy_data_raw.length)===false) oy_log("Node "+oy_short(oy_conn.peer)+" pushed aggregate mesh flow compliance beyond limit");
                 else oy_node_negotiate(oy_conn.peer, oy_data[0], oy_data[1]);
             }
