@@ -408,7 +408,7 @@
             }
 
             .oy_stats {
-                font-size:1.6vh;
+                font-size:1.4vh;
             }
 
             .oy_data_stats {
@@ -772,7 +772,7 @@
             }
 
             .oy_stats {
-                font-size:1.6vw;
+                font-size:1.4vw;
             }
 
             .oy_data_stats {
@@ -1266,19 +1266,22 @@
             <div id="oy_top_inner" style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);overflow:hidden;"></div>
         </div>
         <div id="oy_stats" class="oy_border oy_graph" style="position:absolute;top:0;left:0;width:23%;height:43%;background-color: #404040;overflow:hidden;">
-            <div class="oy_center_both oy_stats" style="top:46%;height:72%;width:100%;">
+            <div class="oy_center_both oy_stats" style="top:40%;height:72%;width:100%;">
                 <div align="right" style="position:absolute;left:-2.5%;top:0;width:50%;height:100%;">
                     SELF&nbsp;SHORT&nbsp;ID<br>
                     AVG&nbsp;LATENCY<br>
                     AVG&nbsp;PEERSHIP<br>
                     PEER&nbsp;COUNT<br>
                     BLACKLISTED<br>
-                    MESH&nbsp;SIZE<br>
+                    MESH&nbsp;RANGE<br>
                     BEAM&nbsp;FLOW<br>
                     SOAK&nbsp;FLOW<br>
+                    MB&nbsp;UPTIME<br>
+                    MB&nbsp;STABILITY<br>
+                    MB&nbsp;WEIGHT<br>
                     AKOYA&nbsp;DIVE<br>
                 </div>
-                <div class="oy_center_hor" style="top:0;width:0.7%;height:85%;background-color: #2a2a2a;">
+                <div class="oy_center_hor" style="top:0;width:0.7%;height:108%;background-color: #2a2a2a;">
                 </div>
                 <div style="position:absolute;right:-2.5%;top:0;width:50%;height:100%;font-weight:bold;">
                     <span id="oy_self_short">null</span><br>
@@ -1286,17 +1289,20 @@
                     <span id="oy_avg_peership">0</span>&nbsp;min<br>
                     <span id="oy_peer_count_cont"><span id="oy_peer_count">0</span>&nbsp;peer(s)</span><br>
                     <span id="oy_blacklisted">0</span>&nbsp;node(s)<br>
-                    <span id="oy_mesh_size">0</span>&nbsp;node(s)<br>
+                    <span id="oy_mesh_range">0</span>&nbsp;node(s)<br>
                     <span id="oy_beam_flow">0</span>&nbsp;kbps<br>
                     <span id="oy_soak_flow">0</span>&nbsp;kbps<br>
+                    <span id="oy_block_uptime">0</span>&nbsp;min<br>
+                    <span id="oy_block_stability">0</span>&nbsp;SD<br>
+                    <span id="oy_block_size">0</span>&nbsp;kb<br>
                     <span id="oy_akoya_dive_track">0</span>&nbsp;AKYT<br>
                 </div>
-                <div id="oy_self_reset" align="center" class="oy_button oy_button_all_active" style="position:absolute;bottom:-12%;left:30%;transform:translateX(-50%);width:40%;height:10%;" onclick="oy_self_reset()">
+                <div id="oy_self_reset" align="center" class="oy_button oy_button_all_active" style="position:absolute;bottom:-25%;left:30%;transform:translateX(-50%);width:40%;height:10%;" onclick="oy_self_reset()">
                     <div style="position:relative;">
                         RESET&nbsp;NODE
                     </div>
                 </div>
-                <div id="oy_obj_top" align="center" class="oy_button oy_button_all_active" style="position:absolute;bottom:-12%;left:70%;transform:translateX(-50%);width:30%;height:10%;" onclick="oy_self_reset()">
+                <div id="oy_obj_top" align="center" class="oy_button oy_button_all_active" style="position:absolute;bottom:-25%;left:70%;transform:translateX(-50%);width:30%;height:10%;" onclick="oy_self_reset()">
                     <a href="https://top.oyster.org" style="text-decoration: none">
                         <div style="position:relative;top:-3%">
                             OBJ&nbsp;TOP
@@ -1518,7 +1524,7 @@
 
         if (oy_avg_latency.length>0) document.getElementById("oy_avg_latency").innerHTML = (oy_avg_latency.reduce(oy_reduce_sum)/oy_avg_latency.length).toFixed(3);
         if (oy_avg_peership.length>0) document.getElementById("oy_avg_peership").innerHTML = ((oy_time_local - Math.round(oy_avg_peership.reduce(oy_reduce_sum)/oy_avg_peership.length))/60).toFixed(2);
-        document.getElementById("oy_mesh_size").innerHTML = window.OY_MESH_SIZE;
+        document.getElementById("oy_mesh_range").innerHTML = window.OY_MESH_SIZE;
         if (oy_avg_beam.length>0) document.getElementById("oy_beam_flow").innerHTML = (oy_avg_beam.reduce(oy_reduce_sum)/1000).toFixed(2);
         else document.getElementById("oy_beam_flow").innerHTML = "0";
         if (oy_avg_soak.length>0) document.getElementById("oy_soak_flow").innerHTML = (oy_avg_soak.reduce(oy_reduce_sum)/1000).toFixed(2);
