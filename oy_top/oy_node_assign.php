@@ -19,9 +19,7 @@ fclose($fh);
 
 if ($fh = opendir("/dev/shm/oy_nodes")) {
     while (($oy_file = readdir($fh))!==false) {
-        if ((time()-filemtime("/dev/shm/oy_nodes/".$oy_file)) >= 240) {
-            if (preg_match('/\.node$/i', $oy_file)) unlink("/dev/shm/oy_nodes/".$oy_file);
-        }
+        if (preg_match('/\.node$/i', $oy_file)&&(time()-filemtime("/dev/shm/oy_nodes/".$oy_file)) >= 240) unlink("/dev/shm/oy_nodes/".$oy_file);
     }
 }
 closedir($fh);
