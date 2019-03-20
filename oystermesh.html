@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Oyster | Bandwidth Bound Consensus</title>
     <meta name="description" content="Oyster provides decentralized access to immutable data and currency.">
-    <script src="oystermesh.js?28"></script>
+    <script src="oystermesh.js?30"></script>
     <script src="oysterdepend.js"></script>
     <script src="oy_dapper/oystertalk.js"></script>
     <script src="oy_resources/d3.v3.min.js"></script>
@@ -1098,7 +1098,7 @@
     <div class="oy_holder oy_fade two">
         <input type="text" id="oy_copy_key_input" style="position:absolute;bottom:-100vh;left:0;opacity:0" />
         <div id="oy_graph_akoya" class="oy_center_hor oy_border oy_graph" style="top:0;width:50%;height:10%;background-color:transparent;overflow: hidden;z-index: 500">
-            <div id="oy_graph_akoya_progress" style="width:100%;height:100%;display:none">
+            <div id="oy_graph_akoya_progress" style="position:relative;width:100%;height:100%;display:none">
                 <div id="oy_graph_akoya_progress_inner" style="width:0;height:100%;"></div>
             </div>
         </div>
@@ -1404,6 +1404,12 @@
             document.addEventListener("oy_block_trigger", oy_block_process, false);
             document.addEventListener("oy_peers_null", oy_block_reset_local, false);
             document.addEventListener("oy_peers_recover", oy_block_process, false);
+
+            window.OY_ERROR_BROWSER = function() {
+                document.getElementById("oy_graph_akoya_progress").innerHTML = "<div class='oy_center_both' style='font-size:2.8vh;color:#000000;font-weight:bold;font-family: \'Courier New\''>INCOMPATIBLE&nbsp;BROWSER</div>";
+                document.getElementById("oy_graph_akoya_progress").style.backgroundColor = "#cbba3c";
+                document.getElementById("oy_graph_akoya_progress").style.display = "block";
+            };
         }
 
         document.getElementById(window.OY_DEST_RADIO).checked = true;

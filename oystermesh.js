@@ -30,6 +30,7 @@ window.OY_BLOCK_DENSITY = 0.65;//higher means block OY_LOGIC_ALL packets are mor
 window.OY_BLOCK_PEERS_MIN = 3;//minimum peer count to be able to act as origin for clones and broadcast SYNC/DIVE
 window.OY_BLOCK_DIVE_PACKET_MAX = 8000;//maximum size for a packet that is routed via OY_BLOCK_DIVE_PACKET_MAX (OY_LOGIC_ALL)
 window.OY_BLOCK_STABILITY_KEEP = 30;//mesh range history to keep to calculate meshblock stability, time is effectively value x 20 seconds
+window.OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a seeding event
 window.OY_CHALLENGE_EDGE = 6;//maximum seconds that it should take for a challenged transaction to reach the furthest edge-to-edge distance of the mesh
 window.OY_CHALLENGE_TRIGGER = 0.2;//higher means more challenge congestion (more secure, less scalable), lower means less challenge congestion (less secure, more scalable)
 window.OY_CHALLENGE_BUFFER = 3;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing
@@ -177,6 +178,7 @@ window.OY_CHANNEL_KEEP = {};//stored broadcasts that are re-shared
 window.OY_CHANNEL_ECHO = {};//track channels to listen for
 window.OY_CHANNEL_TOP = {};//track current channel topology
 window.OY_CHANNEL_RENDER = {};//track channel broadcasts that have been rendered
+window.OY_ERROR_BROWSER = null;
 
 function oy_log(oy_log_msg, oy_log_flag) {
     //oy_log_debug(oy_log_msg);
@@ -492,7 +494,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     }
     let oy_time_local = Date.now()/1000;
     if (typeof(window.OY_ORIGINS[oy_peer_id])==="undefined") window.OY_PEERS[oy_peer_id][1] = oy_time_local;//update last msg timestamp for peer, no need to update localstorage via oy_local_store() (could be expensive)
-    oy_log("Mutual peer "+oy_short(oy_peer_id)+" sent data sequence with flag: "+oy_data_flag);
+    if (oy_data_flag!=="OY_BLOCK_SYNC"&&oy_data_flag!=="OY_BLOCK_SYNC_CHALLENGE"&&oy_data_flag!=="OY_BLOCK_SYNC_CHALLENGE_RESPONSE"&&oy_data_flag!=="OY_BLOCK_DIVE") oy_log("Mutual peer "+oy_short(oy_peer_id)+" sent data sequence with flag: "+oy_data_flag);
     if (oy_data_flag==="OY_BLOCK_COMMAND") {
         //oy_data_payload = [oy_route_passport_passive, oy_route_dynamic, oy_command_array, oy_command_crypt]
         if (oy_data_payload.length!==4||typeof(oy_data_payload[0])!=="object"||oy_data_payload[1].length===0) {
@@ -1181,7 +1183,7 @@ function oy_node_initiate(oy_node_id) {
     let oy_callback_select;
     if (window.OY_BLOCK_HASH===null&&window.OY_PEER_COUNT===0) oy_callback_select = oy_callback_clone;
     else if (window.OY_BLOCK_HASH!==null&&window.OY_PEER_COUNT===0) {
-        if (Object.keys(window.OY_ORIGINS).length<window.OY_CLONE_ORIGIN_MAX) oy_callback_select = oy_callback_clone;
+        if (Object.keys(window.OY_ORIGINS).length<window.OY_CLONE_ORIGIN_MAX&&Date.now()/1000-window.OY_BLOCK_SEEDTIME>window.OY_BLOCK_SEED_BUFFER) oy_callback_select = oy_callback_clone;
         else oy_callback_select = oy_callback_peer;
     }
     else oy_callback_select = oy_callback_peer;
@@ -1200,12 +1202,16 @@ function oy_node_assign() {
                 return false;
             }
             let oy_node_array = JSON.parse(this.responseText);
+            let oy_delay = 0;
             for (let i in oy_node_array) {
-                oy_node_initiate(oy_node_array[i]);
+                setTimeout(function() {
+                    oy_node_initiate(oy_node_array[i]);
+                }, oy_delay);
+                oy_delay += 200;
             }
         }
     };
-    oy_xhttp.open("POST", "https://top.oyster.org/oy_node_assign_beta.php", true);
+    oy_xhttp.open("POST", "https://top.oyster.org/oy_node_assign.php", true);
     oy_xhttp.send("oy_node_id="+window.OY_MAIN['oy_self_public']);
 }
 
@@ -1862,10 +1868,7 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
                    return false;
                }
                if (typeof(window.OY_MAP)==="function") window.OY_MAP(oy_data[0], oy_data[1][0], (oy_data[0]==="OY_DATA_DEPOSIT"||oy_data[0]==="OY_DATA_FULFILL")?oy_data[1][1]:null);
-               if (typeof(oy_data[1][0])==="object"&&oy_data[1][0].length>1&&!!oy_peer_find(oy_data[1][0][0])) {
-                   oy_log("We are peers with the origination node "+oy_data[1][0][0]+", will cease routing");
-                   return true;
-               }
+               if (typeof(oy_data[1][0])==="object"&&oy_data[1][0].length>1&&!!oy_peer_find(oy_data[1][0][0])) return true;
                if (window.OY_LOGIC_ALL_TYPE.indexOf(oy_data[0])!==-1) {
                    let oy_time_local = Date.now()/1000;
                    if (!oy_peer_check(oy_node_id)&&typeof(window.OY_ORIGINS[oy_node_id])==="undefined") {
@@ -2165,6 +2168,12 @@ function oy_block_loop() {
             }
 
             let oy_time_local = Date.now()/1000;
+
+            if (window.OY_PEER_COUNT===0&&Object.keys(window.OY_ORIGINS).length===0&&oy_time_local-window.OY_BLOCK_SEEDTIME>window.OY_BLOCK_SEED_BUFFER) {
+                oy_block_reset();
+                oy_log("MESHBLOCK DROP");
+                return false;
+            }
 
             //latency routine test
             let oy_peer_local;
@@ -2631,7 +2640,7 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
 
         //recover session variables from localstorage
         window.OY_MAIN = oy_local_get("oy_main");
-        if (window.OY_MAIN['oy_ready']===true) {
+        if (false&&window.OY_MAIN['oy_ready']===true) {
             window.OY_MAIN['oy_ready'] = false;
             oy_log("Recovering P2P session with recovered ID "+window.OY_MAIN['oy_self_short']);
         }
@@ -2653,7 +2662,7 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
         }
     }
 
-    window.OY_BLOCK_SEEDTIME = 1552953200;
+    window.OY_BLOCK_SEEDTIME = 1553084900;
 
     window.OY_PURGE = oy_local_get("oy_purge");
     //window.OY_PEERS = oy_local_get("oy_peers");
@@ -2724,6 +2733,7 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
 
     window.OY_CONN.on('error', function(oy_error) {
         oy_log("PeerJS Error: "+oy_error.type);
+        if (oy_error.type==="browser-incompatible"&&typeof(window.OY_ERROR_BROWSER)==="function") window.OY_ERROR_BROWSER();
     }, null);
 
     setTimeout(function() {
