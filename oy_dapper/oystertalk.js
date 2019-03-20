@@ -243,6 +243,7 @@ function ot_approve() {
 
 function ot_load() {
     if (window.OY_WALLET_PUBLIC!==null) {
+        document.getElementById("ot_broadcast_avatar_cont").innerHTML = "";
         oy_avatar_gen(window.OY_WALLET_PUBLIC, document.getElementById("ot_broadcast_avatar_cont"));
         document.getElementById("ot_wallet_load_cont").style.display = "none";
         document.getElementById("ot_approval_cont").style.display = "block";
@@ -329,6 +330,7 @@ function ot_init() {
     oy_channel_listen(window.OT_CHANNEL_ID, function(oy_broadcast_hash, oy_render_payload) {
         ot_render(oy_broadcast_hash, oy_render_payload);
     });
+    ot_load();
     document.getElementById("ot_bar_cover").style.display = "block";
 
     if (window.OY_PEER_COUNT===0) ot_peers_halt();
