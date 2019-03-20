@@ -2157,6 +2157,29 @@ function oy_block_loop() {
                 return false;
             }
 
+            let oy_time_local = Date.now()/1000;
+
+            //latency routine test
+            let oy_peer_local;
+            for (oy_peer_local in window.OY_PEERS) {
+                if (oy_peer_local==="oy_aggregate_node") continue;
+                let oy_time_diff_last = oy_time_local-window.OY_PEERS[oy_peer_local][1];
+                let oy_time_diff_latency = oy_time_local-window.OY_PEERS[oy_peer_local][2];
+                if (oy_time_diff_last>=window.OY_PEER_KEEPTIME||oy_time_diff_latency>=window.OY_PEER_LATENCYTIME) {
+                    if (typeof(window.OY_ENGINE[0][oy_peer_local])==="undefined") {
+                        oy_log("Initiating latency test with peer "+oy_short(oy_peer_local)+", time_diff_last: "+oy_time_diff_last+"/"+window.OY_PEER_KEEPTIME+", time_diff_latency: "+oy_time_diff_latency+"/"+window.OY_PEER_LATENCYTIME);
+                        if (oy_latency_test(oy_peer_local, "OY_PEER_ROUTINE", true)) window.OY_ENGINE[0][oy_peer_local] = oy_time_local;
+                        else oy_log("Latency test with peer "+oy_short(oy_peer_local)+" was unable to launch");
+                    }
+                    else if (oy_time_local-window.OY_ENGINE[0][oy_peer_local]>window.OY_LATENCY_MAX) {
+                        oy_log("Found non-responsive peer "+oy_short(oy_peer_local)+" with latency lag: "+(oy_time_local-window.OY_ENGINE[0][oy_peer_local])+", will punish");
+                        oy_node_punish(oy_peer_local, "OY_PUNISH_LATENCY_LAG");
+                    }
+                }
+                else delete window.OY_ENGINE[0][oy_peer_local];
+            }
+            //latency routine test
+
             if (Math.floor((Date.now()-30000)/10000000)!==Math.floor((Date.now()-10000)/10000000)) {//10000000
                 oy_log_debug("SNAPSHOT: "+window.OY_BLOCK_HASH+"/"+JSON.stringify(window.OY_BLOCK));
                 window.OY_BLOCK[1] = {};
@@ -2443,35 +2466,14 @@ function oy_engine(oy_thread_track) {
         return true;
     }
 
-    //service check on all peers
     let oy_time_local = Date.now()/1000;
     if (typeof(oy_thread_track)==="undefined") oy_thread_track = [0, oy_time_local];
-    let oy_time_diff_last;
-    let oy_time_diff_latency;
-    let oy_peer_local;
-    for (oy_peer_local in window.OY_PEERS) {
-        if (oy_peer_local==="oy_aggregate_node") continue;
-        oy_time_diff_last = oy_time_local-window.OY_PEERS[oy_peer_local][1];
-        oy_time_diff_latency = oy_time_local-window.OY_PEERS[oy_peer_local][2];
-        if (oy_time_diff_last>=window.OY_PEER_KEEPTIME||oy_time_diff_latency>=window.OY_PEER_LATENCYTIME) {
-            if (typeof(window.OY_ENGINE[0][oy_peer_local])==="undefined") {
-                oy_log("Engine initiating latency test with peer "+oy_short(oy_peer_local)+", time_diff_last: "+oy_time_diff_last+"/"+window.OY_PEER_KEEPTIME+", time_diff_latency: "+oy_time_diff_latency+"/"+window.OY_PEER_LATENCYTIME);
-                if (oy_latency_test(oy_peer_local, "OY_PEER_ROUTINE", true)) window.OY_ENGINE[0][oy_peer_local] = oy_time_local;
-                else oy_log("Latency test with peer "+oy_short(oy_peer_local)+" was unable to launch");
-            }
-            else if (oy_time_local-window.OY_ENGINE[0][oy_peer_local]>window.OY_LATENCY_MAX) {
-                oy_log("Engine found non-responsive peer "+oy_short(oy_peer_local)+" with latency lag: "+(oy_time_local-window.OY_ENGINE[0][oy_peer_local])+", will punish");
-                oy_node_punish(oy_peer_local, "OY_PUNISH_LATENCY_LAG");
-            }
-        }
-        else delete window.OY_ENGINE[0][oy_peer_local];
-    }
 
     let oy_peer_refer = oy_peer_rand([]);
     if (oy_peer_refer!==false&&window.OY_PEER_COUNT<=window.OY_PEER_MAX&&(oy_time_local-window.OY_REFER_LAST)>window.OY_PEER_REFERTIME) {
         window.OY_REFER_LAST = oy_time_local;
         oy_data_beam(oy_peer_refer, "OY_PEER_REFER", null);
-        oy_log("Asked peer "+oy_short(oy_peer_local)+" for peer recommendation");
+        oy_log("Asked peer "+oy_short(oy_peer_refer)+" for peer recommendation");
     }
 
     if (window.OY_PEER_COUNT<window.OY_PEER_MAX&&(oy_time_local-oy_thread_track[0])>window.OY_NODE_ASSIGNTTIME) {

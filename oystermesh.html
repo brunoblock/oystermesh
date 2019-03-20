@@ -1137,10 +1137,10 @@
                     <div id="oy_akoya_keep_inner" style="position: absolute;top:0.5vh;left:1vh;width:calc(100% - 1vh);height:calc(100% - 0.5vh);"></div>
                 </div>
                 <div style="position:absolute;bottom:5%;left:3%;width:50%;height:48%;border-radius: 0.2vh;">
-                    <div id="oy_send_avatar_cont" style="position:absolute;left:0.8vh;top:0.5vh;width:2.3vh;height:2.3vh;background-color: #2a2a2a"></div>
-                    <div id="oy_amount_avatar_cont" style="position:absolute;left:0.8vh;top:3.5vh;width:2.3vh;height:2.3vh;background-color: #2a2a2a"></div>
-                    <input id="oy_wallet_akoya_send" type="text" style="position:absolute;top:0.5vh;left:3.1vh;text-align:center;width:38%;height:2vh;font-size:1.2vh;color:#7a7a7a;" onclick="oy_akoya_reset_send_click()" oninput="oy_akoya_reset_send_change(this.value)" onchange="oy_akoya_reset_send_change(this.value)" onblur="oy_akoya_reset_send_blur(this.value)" value="Receiving Address" />
-                    <input id="oy_wallet_akoya_amount" type="text" style="position:absolute;top:3.5vh;left:3.1vh;text-align:center;width:38%;height:2vh;font-size:1.2vh;color:#7a7a7a;" onclick="oy_akoya_reset_amount_click()" oninput="oy_akoya_reset_amount_change(this.value)" onchange="oy_akoya_reset_amount_change(this.value)" onblur="oy_akoya_reset_amount_blur(this.value)" value="Receiving Amount" />
+                    <div id="oy_send_avatar_cont" style="position:absolute;left:0.8vh;top:0.5vh;width:2.5vh;height:2.5vh;background-color: #2a2a2a"></div>
+                    <div id="oy_amount_avatar_cont" style="position:absolute;left:0.8vh;top:3.5vh;width:2.5vh;height:2.5vh;background-color: #2a2a2a"></div>
+                    <input id="oy_wallet_akoya_send" type="text" style="position:absolute;top:0.5vh;left:3.3vh;text-align:center;width:38%;height:2vh;font-size:1.2vh;color:#7a7a7a;" onclick="oy_akoya_reset_send_click()" oninput="oy_akoya_reset_send_change(this.value)" onchange="oy_akoya_reset_send_change(this.value)" onblur="oy_akoya_reset_send_blur(this.value)" value="Receiving Address" />
+                    <input id="oy_wallet_akoya_amount" type="text" style="position:absolute;top:3.5vh;left:3.3vh;text-align:center;width:38%;height:2vh;font-size:1.2vh;color:#7a7a7a;" onclick="oy_akoya_reset_amount_click()" oninput="oy_akoya_reset_amount_change(this.value)" onchange="oy_akoya_reset_amount_change(this.value)" onblur="oy_akoya_reset_amount_blur(this.value)" value="Receiving Amount" />
                     <div style="position:absolute;right:1.3vh;width:40%;height:50%;top:1.6vh;">
                         <div id="oy_akoya_execute_button" align="center" class="oy_center_hor oy_button oy_button_all_dull" style="position:absolute;bottom:65%;width:98%;height:50%;" onclick="oy_akoya_execute()">
                             <div style="position:relative;">
@@ -1833,7 +1833,7 @@
         document.getElementById("oy_send_avatar_cont").innerHTML = "";
         if (oy_value.length===0) document.getElementById("oy_send_avatar_cont").style.backgroundColor = "#2a2a2a";
         else oy_avatar_gen(oy_value, document.getElementById("oy_send_avatar_cont"));
-        oy_akoya_update();
+        oy_akoya_update(false);
     }
 
     function oy_akoya_reset_send_blur(oy_value) {
@@ -1853,10 +1853,16 @@
 
     function oy_akoya_reset_amount_change(oy_value) {
         document.getElementById("oy_amount_avatar_cont").innerHTML = "";
+        if (oy_value.length>0&&(parseInt(oy_value*window.OY_AKOYA_DECIMALS)+"").match(/^[0-9]+$/)===null) document.getElementById("oy_wallet_akoya_amount").value = window.OY_AKOYA_AMOUNT_PREV;
+        else window.OY_AKOYA_AMOUNT_PREV = oy_value;
+        let oy_amount_pass = false;
         if (oy_value.length===0) document.getElementById("oy_amount_avatar_cont").style.backgroundColor = "#2a2a2a";
-        else if ((parseInt(oy_value*window.OY_AKOYA_DECIMALS)+"").match(/^[0-9]+$/)===null) document.getElementById("oy_wallet_akoya_amount").value = window.OY_AKOYA_AMOUNT_PREV;
-        window.OY_AKOYA_AMOUNT_PREV = oy_value;
-        oy_akoya_update();
+        else if (typeof(window.OY_BLOCK[2][window.OY_WALLET_PUBLIC])!=="undefined"&&parseInt(document.getElementById("oy_wallet_akoya_amount").value)*window.OY_AKOYA_DECIMALS<=window.OY_BLOCK[2][window.OY_WALLET_PUBLIC]) {
+            oy_amount_pass = true;
+            document.getElementById("oy_amount_avatar_cont").style.backgroundColor = "#00C800";
+        }
+        else document.getElementById("oy_amount_avatar_cont").style.backgroundColor = "#c37b2c";
+        oy_akoya_update(oy_amount_pass);
     }
 
     function oy_akoya_reset_amount_blur(oy_value) {
@@ -1874,7 +1880,7 @@
 
         oy_akoya_reset_send_blur("");
         oy_akoya_reset_amount_blur("");
-        oy_akoya_update();
+        oy_akoya_update(false);
         document.getElementById("oy_akoya_reset_button").classList.remove("oy_button_reset_active");
         document.getElementById("oy_akoya_reset_button").classList.add("oy_button_all_dull");
     }
@@ -1890,12 +1896,12 @@
         oy_akoya_reset();
     }
 
-    function oy_akoya_update() {
+    function oy_akoya_update(oy_amount_pass) {
         if ((document.getElementById("oy_wallet_akoya_send").value!=="Receiving Address"&&document.getElementById("oy_wallet_akoya_send").value.length>0)||(document.getElementById("oy_wallet_akoya_amount").value!=="Receiving Amount"&&document.getElementById("oy_wallet_akoya_amount").value.length>0)) {
             document.getElementById("oy_akoya_reset_button").classList.remove("oy_button_all_dull");
             document.getElementById("oy_akoya_reset_button").classList.add("oy_button_reset_active");
         }
-        if (document.getElementById("oy_wallet_akoya_send").value!=="Receiving Address"&&document.getElementById("oy_wallet_akoya_send").value.length>0&&document.getElementById("oy_wallet_akoya_amount").value!=="Receiving Amount"&&document.getElementById("oy_wallet_akoya_amount").value.length>0) {
+        if (oy_amount_pass===true&&document.getElementById("oy_wallet_akoya_send").value!=="Receiving Address"&&document.getElementById("oy_wallet_akoya_send").value.length>0&&document.getElementById("oy_wallet_akoya_amount").value!=="Receiving Amount"&&document.getElementById("oy_wallet_akoya_amount").value.length>0) {
             document.getElementById("oy_akoya_execute_button").classList.remove("oy_button_all_dull");
             document.getElementById("oy_akoya_execute_button").classList.add("oy_button_execute_active");
         }
