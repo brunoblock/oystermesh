@@ -11,9 +11,9 @@ window.OY_MESH_HOP = 0.8;//maximum time allocation per hop for specific broadcas
 window.OY_MESH_FLOW = 168000;//characters per second allowed per peer, and for all aggregate non-peer nodes
 window.OY_MESH_MEASURE = 10;//seconds by which to measure mesh flow, larger means more tracking of nearby node and peer activity
 window.OY_MESH_BEAM_SAMPLE = 3;//time/data measurements to determine mesh beam flow required to state a result, too low can lead to volatile and inaccurate readings
-window.OY_MESH_BEAM_BUFFER = 1.2;//multiplication factor for mesh outflow/beam buffer, to give some leeway to compliant peers
+window.OY_MESH_BEAM_BUFFER = 1;//multiplication factor for mesh outflow/beam buffer, to give some leeway to compliant peers
 window.OY_MESH_SOAK_SAMPLE = 5;//time/data measurements to determine mesh soak flow required to state a result, too low can lead to volatile and inaccurate readings
-window.OY_MESH_SOAK_BUFFER = 1.4;//multiplication factor for mesh inflow/soak buffer, to give some leeway to compliant peers
+window.OY_MESH_SOAK_BUFFER = 1.2;//multiplication factor for mesh inflow/soak buffer, to give some leeway to compliant peers
 window.OY_MESH_PUSH_CHANCE = 0.6;//probability that self will forward a data_push when the nonce was not previously stored on self
 window.OY_MESH_PUSH_CHANCE_STORED = 0.8;//probability that self will forward a data_push when the nonce was previously stored on self
 window.OY_MESH_DEPOSIT_CHANCE = 0.4;//probability that self will deposit pushed data
@@ -34,7 +34,7 @@ window.OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloni
 window.OY_BLOCK_RANGE_MIN = 10;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 window.OY_CHALLENGE_EDGE = 6;//maximum seconds that it should take for a challenged transaction to reach the furthest edge-to-edge distance of the mesh
 window.OY_CHALLENGE_TRIGGER = 0.2;//higher means more challenge congestion (more secure, less scalable), lower means less challenge congestion (less secure, more scalable)
-window.OY_CHALLENGE_BUFFER = 3;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing
+window.OY_CHALLENGE_BUFFER = 2;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing
 window.OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
 window.OY_AKOYA_MAX_SUPPY = 10000000*window.OY_AKOYA_DECIMALS;//akoya max supply
 window.OY_AKOYA_FEE = 0.000001*window.OY_AKOYA_DECIMALS;//akoya fee per block
@@ -84,7 +84,7 @@ window.OY_CHANNEL_KEEPTIME = 5;//channel bearing nodes are expected to broadcast
 window.OY_CHANNEL_FORGETIME = 60;//seconds since last signed message from channel bearing node
 window.OY_CHANNEL_RECOVERTIME = 10;//second interval between channel recovery requests per node, should be at least MESH_EDGE*2
 window.OY_CHANNEL_EXPIRETIME = 1209600;//seconds until a broadcast expires and is dropped from nodes listening on the channel
-window.OY_CHANNEL_RESPOND_MAX = 30;//max amount of broadcast payloads to send in response to a channel recover request, divided by online count
+window.OY_CHANNEL_RESPOND_MAX = 10;//max amount of broadcast payloads to send in response to a channel recover request, divided by online count
 window.OY_CHANNEL_ALLOWANCE = 8;//broadcast allowance in seconds per public key, an anti-spam mechanism to prevent abuse of OY_LOGIC_ALL
 window.OY_KEY_BRUNO = "XLp6_wVPBF3Zg-QNRkEj6U8bOYEZddQITs1n2pyeRqwOG5k9w_1A-RMIESIrVv_5HbvzoLhq-xPLE7z2na0C6M";//prevent impersonation
 window.OY_SHORT_LENGTH = 6;//various data value such as nonce IDs, data handles, data values are shortened for efficiency
@@ -446,7 +446,7 @@ function oy_peer_remove_all() {
         oy_data_beam(oy_peer_select, "OY_PEER_TERMINATE", "OY_REASON_PEER_REMOVE");
         oy_node_reset(oy_peer_select);
     }
-    window.OY_PEERS = {};
+    window.OY_PEERS = {"oy_aggregate_node":[-1, -1, -1, 0, [], 0, [], 0, [], -1, -1]};
     if (window.OY_PEER_COUNT!==0) document.dispatchEvent(window.OY_PEERS_NULL);
     window.OY_PEER_COUNT = 0;
 }
