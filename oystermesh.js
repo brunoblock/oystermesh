@@ -2121,11 +2121,8 @@ function oy_block_reset() {
     window.OY_MESH_RANGE = 0;
     window.OY_CHALLENGE = {};
     window.OY_BLACKLIST = {};
-
-    for (let oy_peer_select in window.OY_PEERS) {
-        oy_peer_remove(oy_peer_select);
-    }
-
+    window.OY_PEERS = {};
+    window.OY_PEER_COUNT = 0;
     oy_log("MESHBLOCK RESET");
 }
 
