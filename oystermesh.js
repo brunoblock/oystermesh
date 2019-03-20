@@ -44,10 +44,11 @@ window.OY_NODE_PROPOSETIME = 12;//seconds for peer proposal session duration
 window.OY_NODE_ASSIGNTTIME = 10;//minimum interval between node_assign instances to/from top
 window.OY_NODE_DELAYTIME = 6;//minimum expected time to connect or transmit data to a node
 window.OY_NODE_EXPIRETIME = 600;//seconds of non-interaction until a node's connection session is deleted
+window.OY_CLONE_AFFINITY = 0.3;//higher means more likely to ask a node to become a clone than a peer and vice-versa
 window.OY_CLONE_UPTIME_MIN = 60;//seconds since able to keep up with the meshblock required to become a clone origin
-window.OY_CLONE_LIVETIME = 80;//seconds to keep a node as a clone
+window.OY_CLONE_LIVETIME = 40;//seconds to keep a node as a clone
 window.OY_CLONE_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per clone transmission
-window.OY_CLONE_ORIGIN_MAX = 2;//maximum simultaneous origin count
+window.OY_CLONE_ORIGIN_MAX = 3;//maximum simultaneous origin count
 window.OY_PEER_LATENCYTIME = 60;//peers are expected to establish latency timing with each other within this interval in seconds
 window.OY_PEER_KEEPTIME = 20;//peers are expected to communicate with each other within this interval in seconds
 window.OY_PEER_REFERTIME = 15;//interval in which self asks peers for peer recommendations (as needed)
@@ -1184,7 +1185,7 @@ function oy_node_initiate(oy_node_id) {
     let oy_callback_select;
     if (window.OY_BLOCK_HASH===null&&window.OY_PEER_COUNT===0) oy_callback_select = oy_callback_clone;
     else if (window.OY_BLOCK_HASH!==null&&window.OY_PEER_COUNT===0) {
-        if (Object.keys(window.OY_ORIGINS).length<window.OY_CLONE_ORIGIN_MAX&&Date.now()/1000-window.OY_BLOCK_SEEDTIME>window.OY_BLOCK_SEED_BUFFER) oy_callback_select = oy_callback_clone;
+        if (Object.keys(window.OY_ORIGINS).length<window.OY_CLONE_ORIGIN_MAX&&Math.random()<window.OY_CLONE_AFFINITY&&Date.now()/1000-window.OY_BLOCK_SEEDTIME>window.OY_BLOCK_SEED_BUFFER) oy_callback_select = oy_callback_clone;
         else oy_callback_select = oy_callback_peer;
     }
     else oy_callback_select = oy_callback_peer;
