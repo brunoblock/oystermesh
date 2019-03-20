@@ -123,7 +123,7 @@ window.OY_CLONES = {};
 window.OY_CLONE_UPTIME = null;
 window.OY_CLONE_BUILD = [];
 window.OY_LOGIC_ALL_TYPE = ["OY_BLOCK_COMMAND", "OY_BLOCK_SYNC", "OY_BLOCK_SYNC_CHALLENGE", "OY_BLOCK_DIVE", "OY_DATA_PULL", "OY_CHANNEL_BROADCAST"];//OY_LOGIC_ALL definitions
-window.OY_LOGIC_EXCEPT_TYPE = ["OY_BLOCK_SYNC_CHALLENGE_RESPONSE", "OY_CHANNEL_BROADCAST", "OY_CHANNEL_ECHO", "OY_CHANNEL_RESPOND", "OY_CHANNEL_RECOVER"];
+window.OY_LOGIC_EXCEPT_TYPE = ["OY_BLOCK_SYNC", "OY_BLOCK_SYNC_CHALLENGE_RESPONSE", "OY_BLOCK_DIVE", "OY_CHANNEL_BROADCAST", "OY_CHANNEL_ECHO", "OY_CHANNEL_RESPOND", "OY_CHANNEL_RECOVER"];
 window.OY_MESH_RANGE = 0;
 window.OY_BLOCK_TEMP = [[null, []], {}, {}, {}, {}];//temporary centralized block
 window.OY_BLOCK_TEMP_HASH = null;//hash of the most current block
@@ -439,6 +439,16 @@ function oy_peer_remove(oy_peer_id, oy_punish_reason) {
     }
     oy_log("Removed peer "+oy_short(oy_peer_id)+" with reason "+oy_punish_reason);
     if (typeof(oy_punish_reason)!=="undefined") oy_node_punish(oy_peer_id, oy_punish_reason);
+}
+
+function oy_peer_remove_all() {
+    for (let oy_peer_select in window.OY_PEERS) {
+        oy_data_beam(oy_peer_select, "OY_PEER_TERMINATE", "OY_REASON_PEER_REMOVE");
+        oy_node_reset(oy_peer_select);
+    }
+    window.OY_PEERS = {};
+    if (window.OY_PEER_COUNT!==0) document.dispatchEvent(window.OY_PEERS_NULL);
+    window.OY_PEER_COUNT = 0;
 }
 
 function oy_peer_pre_add(oy_node_id) {
@@ -1497,6 +1507,7 @@ function oy_data_measure(oy_data_beam, oy_node_id, oy_data_length) {
     let oy_array_select;
     if (oy_data_beam===false) oy_array_select = 8;
     else oy_array_select = 6;
+    if (typeof(window.OY_PEERS[oy_node_id])==="undefined") return false;
     if (typeof(window.OY_PEERS[oy_node_id][oy_array_select][0])==="undefined"||typeof(window.OY_PEERS[oy_node_id][oy_array_select][0][0])==="undefined") {
         window.OY_PEERS[oy_node_id][oy_array_select-1] = 0;
         window.OY_PEERS[oy_node_id][oy_array_select].push([oy_time_local, oy_data_length]);
@@ -2121,8 +2132,7 @@ function oy_block_reset() {
     window.OY_MESH_RANGE = 0;
     window.OY_CHALLENGE = {};
     window.OY_BLACKLIST = {};
-    window.OY_PEERS = {};
-    window.OY_PEER_COUNT = 0;
+    oy_peer_remove_all();
     oy_log("MESHBLOCK RESET");
 }
 
