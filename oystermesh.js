@@ -8,7 +8,7 @@ window.OY_MESH_DYNASTY = "BRUNO_GENESIS_V3";//mesh dynasty definition, changing 
 window.OY_MESH_EDGE = 2;//maximum seconds that it should take for a transaction to reach the furthest edge-to-edge distance of the mesh, do not change this unless you know what you are doing
 window.OY_MESH_FUTURE = 0.5;//seconds buffer a block command's timestamp is allowed to be in the future, this variable exists to deal with slight mis-calibrations between node clocks
 window.OY_MESH_HOP = 0.8;//maximum time allocation per hop for specific broadcasts, in seconds
-window.OY_MESH_FLOW = 128000;//characters per second allowed per peer, and for all aggregate non-peer nodes
+window.OY_MESH_FLOW = 168000;//characters per second allowed per peer, and for all aggregate non-peer nodes
 window.OY_MESH_MEASURE = 10;//seconds by which to measure mesh flow, larger means more tracking of nearby node and peer activity
 window.OY_MESH_BEAM_SAMPLE = 3;//time/data measurements to determine mesh beam flow required to state a result, too low can lead to volatile and inaccurate readings
 window.OY_MESH_BEAM_BUFFER = 1.2;//multiplication factor for mesh outflow/beam buffer, to give some leeway to compliant peers
@@ -80,7 +80,7 @@ window.OY_BLOCK_LOOP = 200;//a lower value means more opportunity within the 10 
 window.OY_LOGIC_ALL_MULTI = 1;//multiplication factor for packet weight, higher means more restrictive OY_LOGIC_ALL flow and vice-versa
 window.OY_LOGIC_ALL_MAX = 1100;//maximum size for a packet that is routed via OY_LOGIC_ALL, except OY_CHANNEL_BROADCAST
 window.OY_CHANNEL_BROADCAST_PACKET_MAX = 5000;//maximum size for a packet that is routed via OY_CHANNEL_BROADCAST (OY_LOGIC_ALL)
-window.OY_CHANNEL_KEEPTIME = 15;//channel bearing nodes are expected to broadcast a logic_all packet within this interval
+window.OY_CHANNEL_KEEPTIME = 5;//channel bearing nodes are expected to broadcast a logic_all packet within this interval
 window.OY_CHANNEL_FORGETIME = 60;//seconds since last signed message from channel bearing node
 window.OY_CHANNEL_RECOVERTIME = 10;//second interval between channel recovery requests per node, should be at least MESH_EDGE*2
 window.OY_CHANNEL_EXPIRETIME = 1209600;//seconds until a broadcast expires and is dropped from nodes listening on the channel
@@ -125,7 +125,7 @@ window.OY_CLONE_BUILD = [];
 window.OY_LOGIC_ALL_TYPE = ["OY_BLOCK_COMMAND", "OY_BLOCK_SYNC", "OY_BLOCK_SYNC_CHALLENGE", "OY_BLOCK_DIVE", "OY_DATA_PULL", "OY_CHANNEL_BROADCAST"];//OY_LOGIC_ALL definitions
 window.OY_LOGIC_EXCEPT_TYPE = ["OY_BLOCK_SYNC_CHALLENGE_RESPONSE", "OY_CHANNEL_BROADCAST", "OY_CHANNEL_ECHO", "OY_CHANNEL_RESPOND", "OY_CHANNEL_RECOVER"];
 window.OY_MESH_RANGE = 0;
-window.OY_BLOCK_TEMP = [null];//temporary centralized block
+window.OY_BLOCK_TEMP = [[null, []], {}, {}, {}, {}];//temporary centralized block
 window.OY_BLOCK_TEMP_HASH = null;//hash of the most current block
 window.OY_BLOCK = [[null, []], {}, {}, {}, {}];//the current meshblock - [oy_meta_sector, oy_history_sector, oy_akoya_sector, oy_dns_sector, oy_channel_sector]
 window.OY_BLOCK_HASH = null;//hash of the most current block
@@ -955,18 +955,22 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         }
     }
     else if (oy_data_flag==="OY_PEER_CHALLENGE") {
+        if (window.OY_BLOCK_HASH===null) return false;
         if (typeof(window.OY_CHALLENGE[oy_peer_id])!=="undefined") {
             oy_key_verify(oy_peer_id, oy_data_payload, window.OY_MESH_DYNASTY+window.OY_BLOCK_HASH, function(oy_key_valid) {
                 if (oy_key_valid===true) delete window.OY_CHALLENGE[oy_peer_id];
             });
         }
+        return true;
     }
     else if (oy_data_flag==="OY_PEER_LATENCY") {
+        if (window.OY_BLOCK_HASH===null) return false;
         oy_key_sign(window.OY_MAIN['oy_self_private'], window.OY_MESH_DYNASTY+window.OY_BLOCK_HASH+oy_data_payload[0], function(oy_key_signature) {
             oy_log("Signed peer latency sequence from "+oy_short(oy_peer_id));
             oy_data_payload[0] = oy_key_signature;
             oy_data_beam(oy_peer_id, "OY_LATENCY_RESPONSE", oy_data_payload);
         });
+        return true;
     }
     else if (oy_data_flag==="OY_PEER_TERMINATE") {
         oy_peer_remove(oy_peer_id, "OY_PUNISH_TERMINATE_RETURN");//return the favour
@@ -991,6 +995,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             return false;
         }
         oy_data_beam(oy_peer_id, "OY_PEER_RECOMMEND", oy_peer_select);
+        return true;
     }
     else if (oy_data_flag==="OY_PEER_RECOMMEND") {
         if (oy_peer_id===oy_data_payload) {
@@ -999,6 +1004,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             return false;
         }
         oy_node_initiate(oy_data_payload);
+        return true;
     }
 }
 
@@ -1243,11 +1249,13 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
         }
     }
     else if (oy_data_flag==="OY_PEER_LATENCY"&&(oy_node_proposed(oy_node_id, false)||oy_peer_pre_check(oy_node_id))) {//respond to latency ping from node with peer proposal arrangement
+        if (window.OY_BLOCK_HASH===null) return false;
         oy_key_sign(window.OY_MAIN['oy_self_private'], window.OY_MESH_DYNASTY+window.OY_BLOCK_HASH+oy_data_payload[0], function(oy_key_signature) {
             oy_log("Signed peer latency sequence from "+oy_short(oy_node_id));
             oy_data_payload[0] = oy_key_signature;
             oy_data_beam(oy_node_id, "OY_LATENCY_RESPONSE", oy_data_payload);
         });
+        return true;
     }
     else if (oy_data_flag==="OY_PEER_LATENCY") {
         oy_log("Node "+oy_short(oy_node_id)+" sent a latency spark request whilst not a peer, will decline");
@@ -1979,7 +1987,6 @@ function oy_channel_top_count(oy_channel_id) {
 
 //checks if the public key is on the admin or approve list in the current block
 function oy_channel_approved(oy_channel_id, oy_key_public) {
-    //TODO the public key might need to get referenced from the pearl wallet list section of the block, to save block space
     return (typeof(window.OY_BLOCK_TEMP[2][oy_channel_id])!=="undefined"&&(window.OY_BLOCK_TEMP[2][oy_channel_id][2].indexOf(oy_key_public)!==-1||window.OY_BLOCK_TEMP[2][oy_channel_id][3].indexOf(oy_key_public)!==-1));
 }
 
@@ -2114,6 +2121,11 @@ function oy_block_reset() {
     window.OY_MESH_RANGE = 0;
     window.OY_CHALLENGE = {};
     window.OY_BLACKLIST = {};
+
+    for (let oy_peer_select in window.OY_PEERS) {
+        oy_peer_remove(oy_peer_select);
+    }
+
     oy_log("MESHBLOCK RESET");
 }
 
@@ -2541,7 +2553,7 @@ function oy_engine(oy_thread_track) {
         for (let oy_broadcast_hash in window.OY_CHANNEL_KEEP[oy_channel_id]) {
             if (!oy_channel_approved(oy_channel_id, window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash][5])||oy_time_local-window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash][6]>window.OY_CHANNEL_EXPIRETIME) {
                 delete window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash];
-                delete window.OY_CHANNEL_RENDER[oy_channel_id][oy_broadcast_hash];
+                if (typeof(window.OY_CHANNEL_RENDER[oy_channel_id])!=="undefined") delete window.OY_CHANNEL_RENDER[oy_channel_id][oy_broadcast_hash];
                 if (typeof(window.OY_CHANNEL_LISTEN[oy_channel_id])!=="undefined") window.OY_CHANNEL_LISTEN[oy_channel_id][2](oy_broadcast_hash, null);
                 oy_local_store("oy_channel_keep", window.OY_CHANNEL_KEEP);
                 continue;
