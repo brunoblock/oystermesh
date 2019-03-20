@@ -1403,6 +1403,7 @@
             document.addEventListener("oy_key_enter", oy_dapper_launch, false);
             document.addEventListener("oy_block_trigger", oy_block_process, false);
             document.addEventListener("oy_peers_null", oy_block_reset_local, false);
+            document.addEventListener("oy_peers_recover", oy_block_process, false);
         }
 
         document.getElementById(window.OY_DEST_RADIO).checked = true;
@@ -1460,7 +1461,8 @@
             if (typeof(oy_block)==="undefined") {
                 oy_maintain();
 
-                if (location.hash.indexOf(".mesh")!==-1) {
+                if (location.hash==="#akoya") oy_tab("oy_tab_wallet");
+                else if (location.hash.indexOf(".mesh")!==-1) {
                     oy_tab("oy_tab_dapper");
                     document.getElementById("oy_dapper_input").value = location.hash.substr(1);
                     oy_dapper_input();
@@ -1836,7 +1838,7 @@
         document.getElementById("oy_send_avatar_cont").innerHTML = "";
         if (oy_value.length===0) document.getElementById("oy_send_avatar_cont").style.backgroundColor = "#2a2a2a";
         else oy_avatar_gen(oy_value, document.getElementById("oy_send_avatar_cont"));
-        oy_akoya_update(false);
+        oy_akoya_update();
     }
 
     function oy_akoya_reset_send_blur(oy_value) {
@@ -1846,26 +1848,27 @@
             document.getElementById("oy_wallet_akoya_send").style.color = "#7a7a7a";
             document.getElementById("oy_wallet_akoya_send").value = "Receiving Address";
         }
+        oy_akoya_update();
     }
 
     function oy_akoya_reset_amount_click() {
-        document.getElementById("oy_wallet_akoya_amount").value = "";
-        document.getElementById("oy_wallet_akoya_amount").style.color = "#000000";
-        document.getElementById("oy_wallet_akoya_amount").style.fontSize = "1.9vh";
+        if (document.getElementById("oy_wallet_akoya_amount").value==="Receiving Amount") {
+            document.getElementById("oy_wallet_akoya_amount").value = "";
+            document.getElementById("oy_wallet_akoya_amount").style.color = "#000000";
+            document.getElementById("oy_wallet_akoya_amount").style.fontSize = "1.9vh";
+        }
     }
 
     function oy_akoya_reset_amount_change(oy_value) {
         document.getElementById("oy_amount_avatar_cont").innerHTML = "";
         if (oy_value.length>0&&(parseInt(oy_value*window.OY_AKOYA_DECIMALS)+"").match(/^[0-9]+$/)===null) document.getElementById("oy_wallet_akoya_amount").value = window.OY_AKOYA_AMOUNT_PREV;
         else window.OY_AKOYA_AMOUNT_PREV = oy_value;
-        let oy_amount_pass = false;
         if (oy_value.length===0) document.getElementById("oy_amount_avatar_cont").style.backgroundColor = "#2a2a2a";
         else if (typeof(window.OY_BLOCK[2][window.OY_WALLET_PUBLIC])!=="undefined"&&parseInt(document.getElementById("oy_wallet_akoya_amount").value)*window.OY_AKOYA_DECIMALS<=window.OY_BLOCK[2][window.OY_WALLET_PUBLIC]) {
-            oy_amount_pass = true;
             document.getElementById("oy_amount_avatar_cont").style.backgroundColor = "#00C800";
         }
         else document.getElementById("oy_amount_avatar_cont").style.backgroundColor = "#c37b2c";
-        oy_akoya_update(oy_amount_pass);
+        oy_akoya_update();
     }
 
     function oy_akoya_reset_amount_blur(oy_value) {
@@ -1876,6 +1879,7 @@
             document.getElementById("oy_wallet_akoya_amount").style.color = "#7a7a7a";
             document.getElementById("oy_wallet_akoya_amount").value = "Receiving Amount";
         }
+        oy_akoya_update();
     }
 
     function oy_akoya_reset() {
@@ -1883,7 +1887,7 @@
 
         oy_akoya_reset_send_blur("");
         oy_akoya_reset_amount_blur("");
-        oy_akoya_update(false);
+        oy_akoya_update();
         document.getElementById("oy_akoya_reset_button").classList.remove("oy_button_reset_active");
         document.getElementById("oy_akoya_reset_button").classList.add("oy_button_all_dull");
     }
@@ -1899,12 +1903,16 @@
         oy_akoya_reset();
     }
 
-    function oy_akoya_update(oy_amount_pass) {
+    function oy_akoya_update() {
         if ((document.getElementById("oy_wallet_akoya_send").value!=="Receiving Address"&&document.getElementById("oy_wallet_akoya_send").value.length>0)||(document.getElementById("oy_wallet_akoya_amount").value!=="Receiving Amount"&&document.getElementById("oy_wallet_akoya_amount").value.length>0)) {
             document.getElementById("oy_akoya_reset_button").classList.remove("oy_button_all_dull");
             document.getElementById("oy_akoya_reset_button").classList.add("oy_button_reset_active");
         }
-        if (oy_amount_pass===true&&document.getElementById("oy_wallet_akoya_send").value!=="Receiving Address"&&document.getElementById("oy_wallet_akoya_send").value.length>0&&document.getElementById("oy_wallet_akoya_amount").value!=="Receiving Amount"&&document.getElementById("oy_wallet_akoya_amount").value.length>0) {
+        else {
+            document.getElementById("oy_akoya_reset_button").classList.remove("oy_button_reset_active");
+            document.getElementById("oy_akoya_reset_button").classList.add("oy_button_all_dull");
+        }
+        if (oy_public_check(document.getElementById("oy_wallet_akoya_send").value)&&(typeof(window.OY_BLOCK[2][window.OY_WALLET_PUBLIC])!=="undefined"&&parseInt(document.getElementById("oy_wallet_akoya_amount").value)*window.OY_AKOYA_DECIMALS<=window.OY_BLOCK[2][window.OY_WALLET_PUBLIC])&&document.getElementById("oy_wallet_akoya_send").value!=="Receiving Address"&&document.getElementById("oy_wallet_akoya_send").value.length>0&&document.getElementById("oy_wallet_akoya_amount").value!=="Receiving Amount"&&document.getElementById("oy_wallet_akoya_amount").value.length>0) {
             document.getElementById("oy_akoya_execute_button").classList.remove("oy_button_all_dull");
             document.getElementById("oy_akoya_execute_button").classList.add("oy_button_execute_active");
         }
@@ -1912,6 +1920,7 @@
             document.getElementById("oy_akoya_execute_button").classList.remove("oy_button_execute_active");
             document.getElementById("oy_akoya_execute_button").classList.add("oy_button_all_dull");
         }
+        oy_akoya_balance();
     }
 
     function oy_wallet_gen() {

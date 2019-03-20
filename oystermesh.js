@@ -138,9 +138,9 @@ window.OY_BLOCK_COMMANDS = {
             oy_command_array[3]>0&&//check that the sending amount is greater than zero
             oy_command_array[3]<window.OY_AKOYA_MAX_SUPPY&&//check that the sending amount smaller than the max supply
             typeof(window.OY_BLOCK[2][oy_command_array[2]])!=="undefined"&&//check the sending wallet exists
-            oy_command_array[3]<=window.OY_BLOCK[2][oy_command_array[2]]) return true;//check the sending wallet has sufficient akoya
+            oy_command_array[3]<=window.OY_BLOCK[2][oy_command_array[2]]&&//check the sending wallet has sufficient akoya
+            oy_public_check(oy_command_array[4])) return true;//check that receiving address is a valid address
         return false;
-        //TODO - check that receiving address is a valid address
         //TODO - either one wallet transaction per block or need additional checks
     }],
     "OY_AKOYA_BURN":[function(oy_command_array) {
@@ -370,6 +370,10 @@ function oy_reduce_sum(oy_reduce_total, oy_reduce_num) {
 
 function oy_handle_check(oy_data_handle) {
     return typeof(oy_data_handle)==="string"&&oy_data_handle.substr(0, 2)==="OY"&&oy_data_handle.length>20;
+}
+
+function oy_public_check(oy_key_public) {
+    return oy_key_public.length===86;
 }
 
 function oy_local_store(oy_local_name, oy_local_data) {
@@ -2104,6 +2108,7 @@ function oy_block_reset() {
     window.OY_CLONE_BUILD = [];
     window.OY_MESH_RANGE = 0;
     window.OY_CHALLENGE = {};
+    window.OY_BLACKLIST = {};
     oy_log("MESHBLOCK RESET");
 }
 
