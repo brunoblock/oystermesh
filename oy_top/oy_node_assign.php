@@ -10,7 +10,7 @@ function oy_node_valid($oy_node_id) {
 
 if (!is_dir("/dev/shm/oy_nodes")) mkdir("/dev/shm/oy_nodes");
 
-if (is_file("/dev/shm/oy_nodes/".$_SERVER['REMOTE_ADDR'].".node")&&(time()-filemtime("/dev/shm/oy_nodes/".$_SERVER['REMOTE_ADDR'].".node")) < 10) die("ERROR: Asked too early");
+if (is_file("/dev/shm/oy_nodes/".$_SERVER['REMOTE_ADDR'].".node")&&(time()-filemtime("/dev/shm/oy_nodes/".$_SERVER['REMOTE_ADDR'].".node")) < 5) die("ERROR: Asked too early");
 
 //chance of DB failing > chance of filesystem failing, data persistence is not needed here anyways
 $fh = fopen("/dev/shm/oy_nodes/".$_SERVER['REMOTE_ADDR'].".node", "w");

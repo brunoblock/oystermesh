@@ -31,6 +31,7 @@ window.OY_BLOCK_PEERS_MIN = 3;//minimum peer count to be able to act as origin f
 window.OY_BLOCK_DIVE_PACKET_MAX = 8000;//maximum size for a packet that is routed via OY_BLOCK_DIVE_PACKET_MAX (OY_LOGIC_ALL)
 window.OY_BLOCK_STABILITY_KEEP = 30;//mesh range history to keep to calculate meshblock stability, time is effectively value x 20 seconds
 window.OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a seeding event
+window.OY_BLOCK_RANGE_MIN = 10;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 window.OY_CHALLENGE_EDGE = 6;//maximum seconds that it should take for a challenged transaction to reach the furthest edge-to-edge distance of the mesh
 window.OY_CHALLENGE_TRIGGER = 0.2;//higher means more challenge congestion (more secure, less scalable), lower means less challenge congestion (less secure, more scalable)
 window.OY_CHALLENGE_BUFFER = 3;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing
@@ -2156,7 +2157,7 @@ function oy_block_loop() {
             if (window.OY_BLOCK_HASH===null) {
                 window.OY_MESH_RANGE = 0;
                 window.OY_CHALLENGE = {};
-                console.log("BLOCK SKIP["+(Date.now()/1000)+"]: "+oy_block_time_local);
+                oy_log("MESHBLOCK SKIP: "+oy_block_time_local);
                 return false;
             }
             if (window.OY_BLOCK_UPTIME===null&&window.OY_PEER_COUNT>0) window.OY_BLOCK_UPTIME = Date.now()/1000|0;
@@ -2171,7 +2172,7 @@ function oy_block_loop() {
 
             if (window.OY_PEER_COUNT===0&&Object.keys(window.OY_ORIGINS).length===0&&oy_time_local-window.OY_BLOCK_SEEDTIME>window.OY_BLOCK_SEED_BUFFER) {
                 oy_block_reset();
-                oy_log("MESHBLOCK DROP");
+                oy_log("MESHBLOCK DROP [ORIGIN]");
                 return false;
             }
 
@@ -2207,7 +2208,7 @@ function oy_block_loop() {
             oy_block_challenge(window.OY_BLOCK_SIGN);
 
             window.OY_BLOCK[0][0] = oy_block_time_local;
-            //oy_log_debug("COMMAND KEY: "+JSON.stringify(window.OY_BLOCK_COMMAND_KEY));
+
             window.OY_BLOCK_COMMAND_KEY = {};
             let oy_sync_command = [];
             let oy_sync_keep = {};
@@ -2308,10 +2309,14 @@ function oy_block_loop() {
                     window.OY_MESH_RANGE = window.OY_BLOCK_DIVE_SET.length;
                     window.OY_BLOCK_STABILITY.push(window.OY_MESH_RANGE);
                     while (window.OY_BLOCK_STABILITY.length>window.OY_BLOCK_STABILITY_KEEP) window.OY_BLOCK_STABILITY.shift();
+
+                    if (window.OY_MESH_RANGE<window.OY_BLOCK_RANGE_MIN&&Date.now()/1000-window.OY_BLOCK_SEEDTIME>window.OY_BLOCK_SEED_BUFFER) {
+                        oy_block_reset();
+                        oy_log("MESHBLOCK DROP [RANGE_MIN]");
+                        return false;
+                    }
+
                     oy_node_consensus = Math.ceil(window.OY_MESH_RANGE*window.OY_BLOCK_CONSENSUS);
-
-                    //oy_log_debug("DIVE: "+JSON.stringify(window.OY_BLOCK_DIVE)+"\nCONSENSUS: "+oy_node_consensus);
-
                     let oy_dive_reward_pool = [];
                     for (let oy_key_dive in window.OY_BLOCK_DIVE) {
                         for (let oy_key_public in window.OY_BLOCK_DIVE[oy_key_dive]) {
