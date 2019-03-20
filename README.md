@@ -1,13 +1,13 @@
 # Oyster
 
-Immutable, Sustainable, Unstoppable.
+Bandwidth Bound Consensus.
 
 ## The Mesh
 
 The Oyster Mesh Protocol provides:
 
 - Decentralized and immutable data storage, hosting, retrieval and sharing.
-- Peer-to-peer decentralized, deflationary currency with a 10 second confirmation time, sustainable low-energy consumption, no mining, and no transaction fees. 
+- Peer-to-peer decentralized, deflationary currency with a 20 second confirmation time, sustainable low-energy consumption, no mining, and no transaction fees. 
 - Automated geolocation-aware load balancing of data.
 - Proof of Latency (PoL) anti-spam mechanism has low and sustainable CPU/energy requirements.
 - Implicitly DDOS-proof data hosting; service denial requires physical proximity to the data’s location whilst the location is obfuscated.
