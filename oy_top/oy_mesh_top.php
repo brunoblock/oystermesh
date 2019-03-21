@@ -37,6 +37,13 @@ function oy_flow_format($oy_bytes, $oy_precision = 2) {
     return round(pow(1000, $oy_base - floor($oy_base)), $oy_precision)." ".$oy_suffixes[intval(floor($oy_base))];
 }
 
+if ($fh = opendir("/dev/shm/oy_peers")) {
+    while (($oy_file = readdir($fh))!==false) {
+        if (preg_match('/\.peer$/i', $oy_file)&&(time()-filemtime("/dev/shm/oy_peers/".$oy_file))>=20) unlink("/dev/shm/oy_peers/".$oy_file);
+    }
+}
+closedir($fh);
+
 //[0] is nodes, [1] is peer relationships [2] is stats
 $oy_mesh_top = [[], [], [["oy_stat_avg_latency"=>[], "oy_stat_avg_peership"=>[], "oy_stat_mesh_size"=>0, "oy_stat_mesh_flow"=>0], []]];
 $oy_mesh_keep = [];
@@ -49,7 +56,7 @@ if (count($oy_mesh_file_array)<=2) {
 }
 foreach ($oy_mesh_file_array as $oy_mesh_file_unique) {
     $oy_mesh_data = json_decode(file_get_contents($oy_mesh_file_unique), true);
-    //var_dump($oy_mesh_data);
+    var_dump($oy_mesh_data);
     $oy_mesh_data[0] = sha1($oy_mesh_data[0]);
     $oy_mesh_top[0][] = $oy_mesh_data[0];
     $oy_mesh_keep[] = $oy_mesh_data;
@@ -60,7 +67,7 @@ $oy_punish_track = [];
 foreach ($oy_mesh_keep as $oy_mesh_data) {
     foreach ($oy_mesh_data[1] as $oy_mesh_peer => $oy_peer_data) {
         $oy_mesh_peer = sha1($oy_mesh_peer);
-        if ($oy_mesh_peer!="oy_aggregate_node"&&in_array($oy_mesh_peer, $oy_mesh_top[0])) {
+        if (in_array($oy_mesh_peer, $oy_mesh_top[0])) {
             $oy_peer_add = true;
             foreach ($oy_mesh_top[1] as $oy_mesh_unique) {
                 if ($oy_mesh_unique[0]===$oy_mesh_peer&&$oy_mesh_unique[1]===$oy_mesh_data[0]) {

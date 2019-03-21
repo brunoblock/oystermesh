@@ -18,9 +18,7 @@ fclose($fh);
 
 if ($fh = opendir("/dev/shm/oy_peers")) {
     while (($oy_file = readdir($fh))!==false) {
-        if ((time()-filemtime("/dev/shm/oy_peers/".$oy_file)) >= 20) {
-            if (preg_match('/\.peer$/i', $oy_file)) unlink("/dev/shm/oy_peers/".$oy_file);
-        }
+        if (preg_match('/\.peer$/i', $oy_file)&&(time()-filemtime("/dev/shm/oy_peers/".$oy_file))>=20) unlink("/dev/shm/oy_peers/".$oy_file);
     }
 }
 closedir($fh);
