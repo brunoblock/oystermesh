@@ -19,7 +19,7 @@ window.OY_MESH_PUSH_CHANCE_STORED = 0.8;//probability that self will forward a d
 window.OY_MESH_DEPOSIT_CHANCE = 0.4;//probability that self will deposit pushed data
 window.OY_MESH_FULLFILL_CHANCE = 0.2;//probability that data is stored whilst fulfilling a pull request, this makes data intelligently migrate and recommit overtime
 window.OY_MESH_SOURCE = 3;//node in route passport (from destination) that is assigned with defining the source variable
-window.OY_BLOCK_CONSENSUS = 0.6;//mesh topology corroboration to agree on confirming a meshblock transaction
+window.OY_BLOCK_CONSENSUS = 0.8;//mesh topology corroboration to agree on confirming a meshblock transaction
 window.OY_BLOCK_SECTORS = [[4, 4000], [12, 12000]];//timing definitions for the meshblock
 window.OY_BLOCK_LAUNCHTIME = 200;//ms delay from block_trigger to launch a command broadcast
 window.OY_BLOCK_CHALLENGETIME = 800;//ms delay until meshblock challenge to peers is enforced
@@ -33,7 +33,7 @@ window.OY_BLOCK_STABILITY_KEEP = 30;//mesh range history to keep to calculate me
 window.OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a seeding event
 window.OY_BLOCK_RANGE_MIN = 10;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 window.OY_CHALLENGE_EDGE = 6;//maximum seconds that it should take for a challenged transaction to reach the furthest edge-to-edge distance of the mesh
-window.OY_CHALLENGE_TRIGGER = 0.3;//higher means more challenge congestion (more secure, less scalable), lower means less challenge congestion (less secure, more scalable)
+window.OY_CHALLENGE_TRIGGER = 0.35;//higher means more challenge congestion (more secure, less scalable), lower means less challenge congestion (less secure, more scalable)
 window.OY_CHALLENGE_BUFFER = 3;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing
 window.OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
 window.OY_AKOYA_MAX_SUPPY = 10000000*window.OY_AKOYA_DECIMALS;//akoya max supply
@@ -1038,14 +1038,8 @@ function oy_node_connect(oy_node_id, oy_callback) {
         return false;
     }
     let oy_time_local = Date.now()/1000;
-    if (typeof(window.OY_WARM[oy_node_id])!=="undefined") {
-        oy_log("Connection with node "+oy_short(oy_node_id)+" is already warming up");
-        return false;
-    }
-    else if (typeof(window.OY_COLD[oy_node_id])!=="undefined") {
-        oy_log("Connection with node "+oy_short(oy_node_id)+" is cold");
-        return false;
-    }
+    if (typeof(window.OY_WARM[oy_node_id])!=="undefined") return false;
+    else if (typeof(window.OY_COLD[oy_node_id])!=="undefined") return false;
     else if (typeof(window.OY_NODES[oy_node_id])==="undefined"||window.OY_NODES[oy_node_id][0].open===false) {
         if (typeof(window.OY_NODES[oy_node_id])!=="undefined") window.OY_NODES[oy_node_id][0].close();
         window.OY_WARM[oy_node_id] = oy_time_local;
