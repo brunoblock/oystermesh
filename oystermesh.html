@@ -39,12 +39,10 @@
 
         .node {
             fill: #348fab;
-            z-index: 100;
         }
 
         .link {
             stroke: #314a91;
-            z-index: -100;
         }
 
         @-webkit-keyframes fade_in {
@@ -1379,6 +1377,8 @@
             window.OY_AKOYA_KEEP = {};
             window.OY_AKOYA_KEEP_TOP = null;
             window.OY_AKOYA_AMOUNT_PREV = "";
+            window.OY_MAP_NODES = {};
+            window.OY_MAP_LINKS = {};
 
             document.getElementById("oy_push_superhandle").value = "-".repeat(82);
             document.getElementById("oy_pull_superhandle").value = "-".repeat(82);
@@ -1417,12 +1417,22 @@
         oy_console_local("Loading console...");
 
         oy_init(function() {
-            oy_top_init();
-            window.OY_NODE_KEEP[window.OY_MAIN['oy_self_short']] = true;
-            oy_top_node_add(window.OY_MAIN['oy_self_short'], "self");
+            //oy_top_init();
+            //window.OY_NODE_KEEP[window.OY_MAIN['oy_self_short']] = true;
+            //oy_top_node_add(window.OY_MAIN['oy_self_short'], "self");
 
             window.OY_MESH_MAP = function(oy_passport_passive) {
-
+                let oy_node_prev = null;
+                for (let i in oy_passport_passive) {
+                    window.OY_MAP_NODES[oy_passport_passive[i]] = true;
+                    if (oy_node_prev!==null) {
+                        let oy_node_array = [oy_node_prev, oy_passport_passive[i]];
+                        oy_node_array.sort();
+                        if (typeof(window.OY_MAP_LINKS[oy_node_array[0]])==="undefined") window.OY_MAP_LINKS[oy_node_array[0]] = [];
+                        if (window.OY_MAP_LINKS[oy_node_array[0]].indexOf(oy_node_array[1])===-1) window.OY_MAP_LINKS[oy_node_array[0]].push(oy_node_array[1]);
+                    }
+                    oy_node_prev = oy_passport_passive[i];
+                }
             };
 
             if (typeof(oy_block)==="undefined") {
@@ -1460,10 +1470,6 @@
         window.OY_PEER_COUNT = 0;
         window.OY_PROPOSED = {};
         window.OY_BLACKLIST = {};
-        oy_local_store("oy_main", window.OY_MAIN);
-        oy_local_store("oy_peers", window.OY_PEERS);
-        oy_local_store("oy_proposed", window.OY_PROPOSED);
-        oy_local_store("oy_blacklist", window.OY_BLACKLIST);
 
         window.OY_ENGINE_KILL = true;
         window.OY_CONN = null;
@@ -1520,57 +1526,6 @@
         while (i <= 4) {
             oy_graph_peer(i, null, null, 0);
             i++;
-        }
-
-        for (let i in window.OY_GRAPH_PEERS) {
-            if (window.OY_GRAPH_PEERS[i]===false) continue;
-            if (window.OY_GRAPH_PEERS_PREV.indexOf(window.OY_GRAPH_PEERS[i])===-1) {
-                if (typeof(window.OY_NODE_KEEP[window.OY_GRAPH_PEERS[i]])!=="undefined") oy_top_node_remove(window.OY_GRAPH_PEERS[i]);
-                window.OY_NODE_KEEP[window.OY_GRAPH_PEERS[i]] = true;
-                oy_top_node_add(window.OY_GRAPH_PEERS[i], "peer");
-                oy_top_link_add(window.OY_MAIN['oy_self_short'], window.OY_GRAPH_PEERS[i], "#314a91");
-                let oy_node_present = false;
-                for (let oy_node_short in window.OY_NODE_KEEP) {
-                    if (window.OY_NODE_KEEP[oy_node_short]!==true) {
-                        oy_node_present = true;
-                        break;
-                    }
-                }
-            }
-        }
-
-        let oy_local_remove;
-        for (let i in window.OY_GRAPH_PEERS_PREV) {
-            if (window.OY_GRAPH_PEERS_PREV[i]===false) continue;
-            if (window.OY_GRAPH_PEERS.indexOf(window.OY_GRAPH_PEERS_PREV[i])===-1) {
-                oy_local_remove = window.OY_GRAPH_PEERS_PREV[i];
-                setTimeout(function() {
-                    oy_top_node_remove(oy_local_remove);
-                }, 150);
-                let oy_node_present = false;
-                for (let oy_node_short in window.OY_NODE_KEEP) {
-                    if (window.OY_NODE_KEEP[oy_node_short]!==true) {
-                        oy_node_present = true;
-                        break;
-                    }
-                }
-            }
-        }
-
-        for (let i in window.OY_GRAPH_PEERS) {
-            window.OY_GRAPH_PEERS_PREV[i] = window.OY_GRAPH_PEERS[i];
-        }
-
-        for (let oy_node_short in window.OY_NODE_KEEP) {
-            if (window.OY_NODE_KEEP[oy_node_short]!==true&&oy_time_local>window.OY_NODE_KEEP[oy_node_short]) oy_top_node_remove(oy_node_short);
-        }
-
-        for (let oy_link_key in window.OY_LINK_KEEP) {
-            if (oy_time_local>window.OY_LINK_KEEP[oy_link_key]) {
-                delete window.OY_LINK_KEEP[oy_link_key];
-                let oy_split = oy_link_key.split("@");
-                oy_top_link_remove(oy_split[0], oy_split[1]);
-            }
         }
 
         if (window.OY_EXECUTE_PUSH===true) {
@@ -1702,7 +1657,31 @@
     }
 
     function oy_block_process() {
-        if (window.OY_BLOCK_HASH===null||window.OY_WALLET_PUBLIC===null) return false;
+        if (window.OY_BLOCK_HASH===null) return false;
+        window.OY_MAP_NODES[window.OY_MAIN['oy_self_short']] = true;
+        document.getElementById("oy_top_inner").innerHTML = "";
+        setTimeout(function() {
+            //if (Object.keys(window.OY_MAP_NODES).length<=2) return false;
+            oy_top_init();
+            for (let oy_node_short in window.OY_MAP_NODES) {
+                window.OY_TOP_NODES.push({id:oy_node_short, x: Math.random()*window.OY_TOP_WIDTH|0, y: Math.random()*window.OY_TOP_HEIGHT|0,});
+            }
+            for (let oy_link_lead in window.OY_MAP_LINKS) {
+                for (let i in window.OY_MAP_LINKS[oy_link_lead]) {
+                    let oy_node_collect = [];
+                    window.OY_TOP_NODES.forEach(function(target) {
+                        if (target.id===oy_link_lead||target.id===window.OY_MAP_LINKS[oy_link_lead][i]) oy_node_collect.push(target);
+                    });
+                    console.log(oy_node_collect.length);
+                    if (oy_node_collect.length===2) window.OY_TOP_LINKS.push({source: oy_node_collect[0], target: oy_node_collect[1]});
+                }
+            }
+            oy_top_restart();
+            window.OY_MAP_NODES = {};
+            window.OY_MAP_LINKS = {};
+        }, 400);
+
+        if (window.OY_WALLET_PUBLIC===null) return false;
         oy_akoya_balance();
         let oy_akoya_render = [];
         if (window.OY_AKOYA_PROCESS===false) {
@@ -1724,8 +1703,7 @@
                 }
             }
         }
-        //else {}
-        //["OY_AKOYA_SEND", -1, oy_key_public, oy_transfer_amount, oy_receive_public]
+
         oy_akoya_render.sort(function(a, b) {
             if (a[1][1]===b[1][1]) {
                 let x = a[0].toLowerCase();
@@ -1735,6 +1713,7 @@
             }
             return a[1][1] - b[1][1];
         });
+
         for (let i in oy_akoya_render) {
             let oy_element = document.createElement("div");
             oy_element.setAttribute('id', "oy_akoya_keep_"+oy_akoya_render[i][0]);
@@ -2229,17 +2208,16 @@
     }
 
     function oy_top_init() {
-        window.OY_MESH_TOP_PREV = [[], []];
         window.OY_TOP_WIDTH = screen.width/3;
         window.OY_TOP_HEIGHT = screen.height/3;
 
         window.OY_TOP_FORCE = d3.layout.force()
             .size([window.OY_TOP_WIDTH, window.OY_TOP_HEIGHT])
             .nodes([])
-            .gravity(.1)
-            .linkDistance(35)
-            .linkStrength(0.7)
-            .charge(-35)
+            .gravity(0.1)
+            .linkDistance(5)
+            .linkStrength(0.5)
+            .charge(-75)
             .on("tick", oy_top_tick);
 
         let oy_svg = d3.select("#oy_top_inner").append("svg")
@@ -2255,53 +2233,7 @@
         window.OY_TOP_NODE = oy_svg.selectAll(".node");
         window.OY_TOP_LINK = oy_svg.selectAll(".link");
 
-        oy_top_restart("#348fab");
-    }
-
-    function oy_top_node_add(oy_node_short, oy_type) {
-        if (typeof(window.OY_NODE_CHECK[oy_node_short])==="undefined") {
-            window.OY_NODE_CHECK[oy_node_short] = true;
-            window.OY_TOP_NODES.push({short:oy_node_short, x: Math.random()*window.OY_TOP_WIDTH|0, y: Math.random()*window.OY_TOP_HEIGHT|0,});
-            if (oy_type==="self") oy_top_restart("#24ab26");
-            else oy_top_restart("#348fab");
-        }
-    }
-
-    function oy_top_node_remove(oy_node_short) {
-        if (typeof(window.OY_NODE_KEEP[oy_node_short])!=="undefined") {
-            delete window.OY_NODE_KEEP[oy_node_short];
-            delete window.OY_NODE_CHECK[oy_node_short];
-            for (let i in window.OY_TOP_NODES) {
-                if (window.OY_TOP_NODES[i].short===oy_node_short) {
-                    let oy_links_remove = [];
-                    window.OY_TOP_LINKS = window.OY_TOP_LINKS.filter(function (l) {
-                        let oy_condition = l.source.short !== window.OY_TOP_NODES[i].short && l.target.short !== window.OY_TOP_NODES[i].short;
-                        if (!oy_condition) oy_links_remove.push([l.source.short, l.target.short]);
-                        return oy_condition;
-                    });
-                    window.OY_TOP_NODES.splice(i, 1);
-                    oy_top_restart("#348fab");
-                }
-            }
-        }
-    }
-
-    function oy_top_link_add(oy_node_a, oy_node_b, oy_fill) {
-        let oy_node_collect = [];
-        window.OY_TOP_NODES.forEach(function(target) {
-            if (target.short===oy_node_a||target.short===oy_node_b) oy_node_collect.push(target);
-        });
-        if (oy_node_collect.length===2) {
-            window.OY_TOP_LINKS.push({source: oy_node_collect[0], target: oy_node_collect[1]});
-            oy_top_restart(oy_fill);
-        }
-    }
-
-    function oy_top_link_remove(oy_node_a, oy_node_b) {
-        window.OY_TOP_LINKS = window.OY_TOP_LINKS.filter(function(l) {
-            return !((l.source.short===oy_node_a&&l.target.short===oy_node_b)||
-                (l.source.short===oy_node_b&&l.target.short===oy_node_a));
-        });
+        oy_top_restart();
     }
 
     function oy_top_clear() {
@@ -2319,14 +2251,12 @@
             .attr("cy", function(d) { return d.y; });
     }
 
-    function oy_top_restart(oy_fill) {
-        if (window.OY_TOP_FORCE===null) return false;
+    function oy_top_restart() {
         window.OY_TOP_NODE = window.OY_TOP_NODE.data(window.OY_TOP_NODES);
 
         window.OY_TOP_NODE.enter().insert("circle")
             .attr("class", "node")
-            .attr("r", 5)
-            .style("fill", oy_fill);
+            .attr("r", 5);
 
         window.OY_TOP_NODE.exit()
             .remove();
@@ -2334,9 +2264,7 @@
         window.OY_TOP_LINK = window.OY_TOP_LINK.data(window.OY_TOP_LINKS);
 
         window.OY_TOP_LINK.enter().insert("line", ".node")
-            .attr("class", "link")
-            .style("stroke", oy_fill);
-
+            .attr("class", "link");
         window.OY_TOP_LINK.exit()
             .remove();
 
