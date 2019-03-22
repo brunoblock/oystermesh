@@ -981,7 +981,7 @@
             </div>
             <div id="ot_bar_cover" style="position:absolute;bottom:0;width:100%;height:8vh;opacity:0.85;background-color:#000000;border-bottom-left-radius: 0.5vh;border-bottom-right-radius: 0.5vh;z-index: 200;">
                 <div id="ot_wallet_load_cont" style="display:block;">
-                    <div id="ot_wallet_load" align="center" class="oy_center_both oy_button oy_button_go_active" style="width:auto;height:auto;" onclick="oy_wallet_open(function(){ot_load()})">
+                    <div id="ot_wallet_load" align="center" class="oy_center_both oy_button oy_button_go_active" style="width:auto;height:auto;" onclick="oy_wallet_open()">
                         <div style="position:relative;top:-3%;">
                             &nbsp;&nbsp;LOAD&nbsp;WALLET&nbsp;&nbsp;
                         </div>
@@ -1118,7 +1118,7 @@
             </div>
             <div id="oy_interface_wallet" class="oy_center_hor oy_border oy_interface_main" style="top:0;width:100%;height:100%;background-color: #404040;z-index:100;display:none">
                 <div id="oy_wallet_cont" style="position:absolute;bottom:0;width:100%;height:100%;opacity:0.85;background-color:#000000;border-bottom-left-radius: 0.5vh;border-bottom-right-radius: 0.5vh;z-index: 200;display: block;">
-                    <div align="center" class="oy_center_both oy_button oy_button_go_active" style="width:auto;height:auto;" onclick="oy_wallet_open(function(){oy_akoya_load()})">
+                    <div align="center" class="oy_center_both oy_button oy_button_go_active" style="width:auto;height:auto;" onclick="oy_wallet_open()">
                         <div style="position:relative;top:-3%;">
                             &nbsp;&nbsp;LOAD&nbsp;WALLET&nbsp;&nbsp;
                         </div>
@@ -1322,105 +1322,102 @@
     </div>
 </div>
 <script type="text/javascript">
-    let oy_local_init = function(oy_block) {
-        if (typeof(oy_block)==="undefined") {
-            window.OY_CONSOLE_SIZE = 400;
-            window.OY_NODE_MAX = 30;
-            window.OY_NODE_ADDTIME = 40;
-            window.OY_NODE_ACTIVETIME = 150;
-            window.OY_LINK_ADDTIME = 60;
-            window.OY_LINK_ACTIVETIME = 110;
-            window.OY_HOP_KEEP = 100;
-            window.OY_DEST_RADIO = "oy_dest_view";
+    let oy_local_init = function() {
+        window.OY_CONSOLE_SIZE = 400;
+        window.OY_NODE_MAX = 30;
+        window.OY_NODE_ADDTIME = 40;
+        window.OY_NODE_ACTIVETIME = 150;
+        window.OY_LINK_ADDTIME = 60;
+        window.OY_LINK_ACTIVETIME = 110;
+        window.OY_HOP_KEEP = 100;
+        window.OY_DEST_RADIO = "oy_dest_view";
 
-            window.OY_DAPPER_MINIMIZED = false;
-            window.OY_MAINTAIN_TRIGGER = new Event('oy_maintain_trigger');//trigger-able event for maintain cadence
-            window.OY_COVER = false;
-            window.OY_WALLET_PRIVATE = null;
-            window.OY_WALLET_PUBLIC = null;
-            window.OY_WALLET_CALLBACK = null;
-            window.OY_WALLET_CRYPT = null;
-            window.OY_FILE_DATA = null;
-            window.OY_FILE_KEEP = null;
-            window.OY_MESH_GLUE = [];
-            window.OY_HANDLE_PUSH = null;
-            window.OY_HANDLE_PUSH_COPY = null;
-            window.OY_NONCE_MAX_PUSH = null;
-            window.OY_NONCE_MAX_PULL = null;
-            window.OY_HANDLE_PULL = null;
-            window.OY_GRAPH_NONCE_STORE = {};
-            window.OY_EXECUTE_LAST = null;
-            window.OY_EXECUTE_PUSH = false;
-            window.OY_EXECUTE_PULL = false;
-            window.OY_EXECUTE_RECOMMIT = false;
-            window.OY_EXECUTE_SEND = false;
-            window.OY_EXECUTE_RECEIVE = false;
-            window.OY_CONSOLE_COUNTER = 0;
-            window.OY_CONSOLE_HOVER = false;
-            window.OY_PUSH_ELAPSED = null;
-            window.OY_PUSH_AVG_HOP = [];
-            window.OY_PULL_AVG_HOP = [];
-            window.OY_PULL_ELAPSED = null;
-            window.OY_PULL_COVERAGE = [];
-            window.OY_PULL_CONFLICTS = {};
-            window.OY_PUSH_PAUSE = null;
-            window.OY_PULL_PAUSE = null;
-            window.OY_RECOMMIT_PAUSE = null;
-            window.OY_GRAPH_PEERS = [false, false, false, false, false];
-            window.OY_GRAPH_PEERS_PREV = [false, false, false, false, false];
-            window.OY_NODE_KEEP = {};
-            window.OY_NODE_CHECK = {};
-            window.OY_LINK_KEEP = {};
-            window.OY_KEY_ENTER = new Event('oy_key_enter');//trigger-able event for when the enter key is pressed
-            window.OY_KEY_SHIFT = false;
-            window.OY_AKOYA_PROCESS = false;
-            window.OY_AKOYA_KEEP = {};
-            window.OY_AKOYA_KEEP_TOP = null;
-            window.OY_AKOYA_AMOUNT_PREV = "";
-            window.OY_MAP_NODES = {};
-            window.OY_MAP_LINKS = {};
+        window.OY_DAPPER_MINIMIZED = false;
+        window.OY_MAINTAIN_TRIGGER = new Event('oy_maintain_trigger');//trigger-able event for maintain cadence
+        window.OY_COVER = false;
+        window.OY_WALLET_PRIVATE = null;
+        window.OY_WALLET_PUBLIC = null;
+        window.OY_WALLET_CALLBACK = null;
+        window.OY_WALLET_CRYPT = null;
+        window.OY_FILE_DATA = null;
+        window.OY_FILE_KEEP = null;
+        window.OY_MESH_GLUE = [];
+        window.OY_HANDLE_PUSH = null;
+        window.OY_HANDLE_PUSH_COPY = null;
+        window.OY_NONCE_MAX_PUSH = null;
+        window.OY_NONCE_MAX_PULL = null;
+        window.OY_HANDLE_PULL = null;
+        window.OY_GRAPH_NONCE_STORE = {};
+        window.OY_EXECUTE_LAST = null;
+        window.OY_EXECUTE_PUSH = false;
+        window.OY_EXECUTE_PULL = false;
+        window.OY_EXECUTE_RECOMMIT = false;
+        window.OY_EXECUTE_SEND = false;
+        window.OY_EXECUTE_RECEIVE = false;
+        window.OY_CONSOLE_COUNTER = 0;
+        window.OY_CONSOLE_HOVER = false;
+        window.OY_PUSH_ELAPSED = null;
+        window.OY_PUSH_AVG_HOP = [];
+        window.OY_PULL_AVG_HOP = [];
+        window.OY_PULL_ELAPSED = null;
+        window.OY_PULL_COVERAGE = [];
+        window.OY_PULL_CONFLICTS = {};
+        window.OY_PUSH_PAUSE = null;
+        window.OY_PULL_PAUSE = null;
+        window.OY_RECOMMIT_PAUSE = null;
+        window.OY_GRAPH_PEERS = [false, false, false, false, false];
+        window.OY_GRAPH_PEERS_PREV = [false, false, false, false, false];
+        window.OY_NODE_KEEP = {};
+        window.OY_NODE_CHECK = {};
+        window.OY_LINK_KEEP = {};
+        window.OY_KEY_ENTER = new Event('oy_key_enter');//trigger-able event for when the enter key is pressed
+        window.OY_KEY_SHIFT = false;
+        window.OY_WALLET_CLOSE = new Event('oy_wallet_close');//trigger-able event for when the enter key is pressed
+        window.OY_AKOYA_PROCESS = false;
+        window.OY_AKOYA_KEEP = {};
+        window.OY_AKOYA_KEEP_TOP = null;
+        window.OY_AKOYA_AMOUNT_PREV = "";
+        window.OY_MAP_NODES = {};
+        window.OY_MAP_LINKS = {};
 
-            document.getElementById("oy_push_superhandle").value = "-".repeat(82);
-            document.getElementById("oy_pull_superhandle").value = "-".repeat(82);
+        oy_dapper_input();
 
-            document.getElementById("oy_file_upload").addEventListener('change', oy_file_change, false);
-            document.getElementById("oy_file_pearl").addEventListener('change', oy_wallet_read, false);
+        document.getElementById("oy_push_superhandle").value = "-".repeat(82);
+        document.getElementById("oy_pull_superhandle").value = "-".repeat(82);
 
-            document.addEventListener("keydown", function(oy_event) {
-                let oy_key = oy_event.which || oy_event.charCode || oy_event.keyCode || 0;
-                if (window.OY_KEY_SHIFT===false&&(oy_event.key==="Enter"||oy_key===13)) {
-                    oy_event.preventDefault();
-                    document.dispatchEvent(window.OY_KEY_ENTER);
-                }
-                else if (oy_event.key==="Shift"||oy_key===16) window.OY_KEY_SHIFT = true;
-            });
+        document.getElementById("oy_file_upload").addEventListener('change', oy_file_change, false);
+        document.getElementById("oy_file_pearl").addEventListener('change', oy_wallet_read, false);
 
-            document.addEventListener("keyup", function(oy_event) {
-                let oy_key = oy_event.which || oy_event.charCode || oy_event.keyCode || 0;
-                if (oy_event.key==="Shift"||oy_key===16) window.OY_KEY_SHIFT = false;
-            });
+        document.addEventListener("keydown", function(oy_event) {
+            let oy_key = oy_event.which || oy_event.charCode || oy_event.keyCode || 0;
+            if (window.OY_KEY_SHIFT===false&&(oy_event.key==="Enter"||oy_key===13)) {
+                oy_event.preventDefault();
+                document.dispatchEvent(window.OY_KEY_ENTER);
+            }
+            else if (oy_event.key==="Shift"||oy_key===16) window.OY_KEY_SHIFT = true;
+        });
 
-            document.addEventListener("oy_key_enter", oy_dapper_launch, false);
-            document.addEventListener("oy_block_trigger", oy_block_process, false);
-            document.addEventListener("oy_peers_null", oy_block_reset_local, false);
-            document.addEventListener("oy_peers_recover", oy_block_process, false);
+        document.addEventListener("keyup", function(oy_event) {
+            let oy_key = oy_event.which || oy_event.charCode || oy_event.keyCode || 0;
+            if (oy_event.key==="Shift"||oy_key===16) window.OY_KEY_SHIFT = false;
+        });
 
-            window.OY_ERROR_BROWSER = function() {
-                document.getElementById("oy_graph_akoya_progress").innerHTML = "<div class='oy_center_both' style='font-size:2.8vh;color:#000000;font-weight:bold;font-family: \'Courier New\''>INCOMPATIBLE&nbsp;BROWSER</div>";
-                document.getElementById("oy_graph_akoya_progress").style.backgroundColor = "#cbba3c";
-                document.getElementById("oy_graph_akoya_progress").style.display = "block";
-            };
-        }
+        document.addEventListener("oy_key_enter", oy_dapper_launch, false);
+        document.addEventListener("oy_block_trigger", oy_block_process, false);
+        document.addEventListener("oy_peers_null", oy_block_reset_local, false);
+        document.addEventListener("oy_peers_recover", oy_block_process, false);
+
+        window.OY_ERROR_BROWSER = function() {
+            document.getElementById("oy_graph_akoya_progress").innerHTML = "<div class='oy_center_both' style='font-size:2.8vh;color:#000000;font-weight:bold;font-family: \'Courier New\''>INCOMPATIBLE&nbsp;BROWSER</div>";
+            document.getElementById("oy_graph_akoya_progress").style.backgroundColor = "#cbba3c";
+            document.getElementById("oy_graph_akoya_progress").style.display = "block";
+        };
 
         document.getElementById(window.OY_DEST_RADIO).checked = true;
 
         oy_console_local("Loading console...");
 
         oy_init(function() {
-            //oy_top_init();
-            //window.OY_NODE_KEEP[window.OY_MAIN['oy_self_short']] = true;
-            //oy_top_node_add(window.OY_MAIN['oy_self_short'], "self");
-
             window.OY_MESH_MAP = function(oy_passport_passive) {
                 let oy_node_prev = null;
                 for (let i in oy_passport_passive) {
@@ -1435,22 +1432,20 @@
                 }
             };
 
-            if (typeof(oy_block)==="undefined") {
-                oy_maintain();
+            oy_maintain();
 
-                if (location.hash==="#akoya") oy_tab("oy_tab_wallet");
-                else if (location.hash.indexOf(".mesh")!==-1) {
-                    oy_tab("oy_tab_dapper");
-                    document.getElementById("oy_dapper_input").value = location.hash.substr(1);
-                    oy_dapper_input();
-                    oy_dapper_launch();
-                }
-                else if (location.hash.substr(0, 3)==="#OY"&&location.hash.length>=46) {
-                    document.getElementById('oy_pull_superhandle').value = location.hash.substr(1);
-                    oy_pull_reset_handle_blur();
-                    oy_tab("oy_tab_download");
-                    oy_pull_execute();
-                }
+            if (location.hash==="#akoya") oy_tab("oy_tab_wallet");
+            else if (location.hash.indexOf(".mesh")!==-1) {
+                oy_tab("oy_tab_dapper");
+                document.getElementById("oy_dapper_input").value = location.hash.substr(1);
+                oy_dapper_input();
+                oy_dapper_launch();
+            }
+            else if (location.hash.substr(0, 3)==="#OY"&&location.hash.length>=46) {
+                document.getElementById('oy_pull_superhandle').value = location.hash.substr(1);
+                oy_pull_reset_handle_blur();
+                oy_tab("oy_tab_download");
+                oy_pull_execute();
             }
         }, null,
         function(oy_console_msg) {
@@ -1463,19 +1458,7 @@
     };
 
     function oy_self_reset() {
-        oy_top_clear();
-
-        window.OY_MAIN = {"oy_ready":false, "oy_deposit_size":0, "oy_deposit_counter":0};
-        window.OY_PEERS = {"oy_aggregate_node":[-1, -1, -1, 0, [], 0, [], 0, []]};
-        window.OY_PEER_COUNT = 0;
-        window.OY_PROPOSED = {};
-        window.OY_BLACKLIST = {};
-
-        window.OY_ENGINE_KILL = true;
-        window.OY_CONN = null;
-
-        window.OY_INIT = 0;
-        oy_local_init(true);
+        location.reload(true);
     }
 
     function oy_maintain() {
@@ -1772,7 +1755,7 @@
     }
 
     function oy_akoya_wallet_open() {
-        oy_wallet_open(function(){oy_akoya_load()});
+        oy_wallet_open();
     }
 
     function oy_akoya_reset_send_click() {
@@ -1980,6 +1963,8 @@
         }
         document.getElementById("oy_key_interface_cont").style.display = "none";
 
+        oy_akoya_load();
+        document.dispatchEvent(window.OY_WALLET_CLOSE);
         if (window.OY_WALLET_CALLBACK!==null) window.OY_WALLET_CALLBACK();
         window.OY_WALLET_CALLBACK = null;
         document.removeEventListener('oy_key_enter', oy_wallet_load, false);

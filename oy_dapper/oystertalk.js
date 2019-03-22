@@ -4,10 +4,7 @@ function ot_render(oy_broadcast_hash, oy_render_payload) {
         return true;
     }
 
-    if (document.getElementById("ot_render_"+oy_broadcast_hash)) {
-        //console.log(oy_broadcast_hash+" was already rendered");
-        return false;
-    }
+    if (document.getElementById("ot_render_"+oy_broadcast_hash)) return false;
 
     let ot_render_opacity = "";
     let ot_render_stats;
@@ -238,6 +235,11 @@ function ot_approve() {
             ot_render(oy_broadcast_hash, oy_render_payload);
         });
         document.getElementById("ot_bar_cover").style.display = "block";
+        document.getElementById("ot_broadcast_avatar_cont").innerHTML = "";
+        if (window.OY_WALLET_PUBLIC===null) {
+            document.getElementById("ot_wallet_load_cont").style.display = "block";
+            document.getElementById("ot_approval_cont").style.display = "none";
+        }
     }
 }
 
@@ -247,9 +249,13 @@ function ot_load() {
         oy_avatar_gen(window.OY_WALLET_PUBLIC, document.getElementById("ot_broadcast_avatar_cont"));
         document.getElementById("ot_wallet_load_cont").style.display = "none";
         document.getElementById("ot_approval_cont").style.display = "block";
-
-        if (typeof(window.OY_BLOCK_TEMP[2][window.OT_CHANNEL_ID])!=="undefined") ot_approve();
     }
+    else {
+        document.getElementById("ot_broadcast_avatar_cont").innerHTML = "";
+        document.getElementById("ot_wallet_load_cont").style.display = "block";
+        document.getElementById("ot_approval_cont").style.display = "none";
+    }
+    if (typeof(window.OY_BLOCK_TEMP[2][window.OT_CHANNEL_ID])!=="undefined") ot_approve();
 }
 
 function ot_peers_resume() {
@@ -284,6 +290,7 @@ function ot_close() {
     document.removeEventListener("oy_peers_null", ot_peers_halt, false);
     document.removeEventListener("oy_peers_recover", ot_peers_resume, false);
     document.removeEventListener("oy_key_enter", ot_broadcast, false);
+    document.removeEventListener("oy_wallet_close", ot_load, false);
 
     document.getElementById("ot_channel_stats").innerHTML = "";
     document.getElementById("ot_channel_stats").style.display = "none";
@@ -293,7 +300,6 @@ function ot_close() {
 
 function ot_maintain() {
     if (window.OY_BLOCK_HASH!==null&&typeof(window.OY_BLOCK_TEMP[2][window.OT_CHANNEL_ID])!=="undefined") {
-
         let ot_top_count = oy_channel_top_count(window.OT_CHANNEL_ID);
 
         if (window.OY_WALLET_PUBLIC!==null&&oy_channel_approved(window.OT_CHANNEL_ID, window.OY_WALLET_PUBLIC)) ot_top_count[0]++;
@@ -330,8 +336,8 @@ function ot_init() {
     oy_channel_listen(window.OT_CHANNEL_ID, function(oy_broadcast_hash, oy_render_payload) {
         ot_render(oy_broadcast_hash, oy_render_payload);
     });
-    ot_load();
     document.getElementById("ot_bar_cover").style.display = "block";
+    ot_load();
 
     if (window.OY_PEER_COUNT===0) ot_peers_halt();
     else ot_peers_resume();
@@ -341,4 +347,5 @@ function ot_init() {
     document.addEventListener("oy_peers_null", ot_peers_halt, false);
     document.addEventListener("oy_peers_recover", ot_peers_resume, false);
     document.addEventListener("oy_key_enter", ot_broadcast, false);
+    document.addEventListener("oy_wallet_close", ot_load, false);
 }

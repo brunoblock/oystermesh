@@ -212,9 +212,9 @@
             .size([window.OY_TOP_WIDTH, window.OY_TOP_HEIGHT])
             .nodes([])
             .gravity(0.1)
-            .linkDistance(25)
+            .linkDistance(5)
             .linkStrength(0.3)
-            .charge(-75)
+            .charge(-160)
             .on("tick", oy_top_tick);
 
         let oy_svg = d3.select("#oy_top_inner").append("svg")
