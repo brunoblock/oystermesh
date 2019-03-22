@@ -42,7 +42,7 @@
         }
 
         .link {
-            stroke: #314a91;
+            stroke: #3a5aae;
         }
 
         @-webkit-keyframes fade_in {
@@ -1657,13 +1657,14 @@
     }
 
     function oy_block_process() {
-        if (window.OY_BLOCK_HASH===null) return false;
         window.OY_MAP_NODES[window.OY_MAIN['oy_self_short']] = true;
         document.getElementById("oy_top_inner").innerHTML = "";
         setTimeout(function() {
-            //if (Object.keys(window.OY_MAP_NODES).length<=2) return false;
             oy_top_init();
+            window.OY_TOP_NODES.push({id:window.OY_MAIN['oy_self_short'], x: Math.random()*window.OY_TOP_WIDTH|0, y: Math.random()*window.OY_TOP_HEIGHT|0,});
+            oy_top_restart("#24ab26");
             for (let oy_node_short in window.OY_MAP_NODES) {
+                if (oy_node_short===window.OY_MAIN['oy_self_short']) continue;
                 window.OY_TOP_NODES.push({id:oy_node_short, x: Math.random()*window.OY_TOP_WIDTH|0, y: Math.random()*window.OY_TOP_HEIGHT|0,});
             }
             for (let oy_link_lead in window.OY_MAP_LINKS) {
@@ -1672,16 +1673,15 @@
                     window.OY_TOP_NODES.forEach(function(target) {
                         if (target.id===oy_link_lead||target.id===window.OY_MAP_LINKS[oy_link_lead][i]) oy_node_collect.push(target);
                     });
-                    console.log(oy_node_collect.length);
                     if (oy_node_collect.length===2) window.OY_TOP_LINKS.push({source: oy_node_collect[0], target: oy_node_collect[1]});
                 }
             }
-            oy_top_restart();
+            oy_top_restart("#348fab");
             window.OY_MAP_NODES = {};
             window.OY_MAP_LINKS = {};
-        }, 400);
+        }, 100);
 
-        if (window.OY_WALLET_PUBLIC===null) return false;
+        if (window.OY_BLOCK_HASH===null||window.OY_WALLET_PUBLIC===null) return false;
         oy_akoya_balance();
         let oy_akoya_render = [];
         if (window.OY_AKOYA_PROCESS===false) {
@@ -2215,8 +2215,8 @@
             .size([window.OY_TOP_WIDTH, window.OY_TOP_HEIGHT])
             .nodes([])
             .gravity(0.1)
-            .linkDistance(5)
-            .linkStrength(0.5)
+            .linkDistance(8)
+            .linkStrength(0.6)
             .charge(-75)
             .on("tick", oy_top_tick);
 
@@ -2251,12 +2251,13 @@
             .attr("cy", function(d) { return d.y; });
     }
 
-    function oy_top_restart() {
+    function oy_top_restart(oy_fill) {
         window.OY_TOP_NODE = window.OY_TOP_NODE.data(window.OY_TOP_NODES);
 
         window.OY_TOP_NODE.enter().insert("circle")
             .attr("class", "node")
-            .attr("r", 5);
+            .attr("r", 5)
+            .style("fill", oy_fill);
 
         window.OY_TOP_NODE.exit()
             .remove();
