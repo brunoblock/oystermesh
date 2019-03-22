@@ -92,7 +92,7 @@ foreach ($oy_mesh_keep as $oy_mesh_data) {
 if (count($oy_mesh_top[2][0]["oy_stat_avg_latency"])===0) $oy_mesh_top[2][0]["oy_stat_avg_latency"] = 0;
 else $oy_mesh_top[2][0]["oy_stat_avg_latency"] = round(array_sum($oy_mesh_top[2][0]["oy_stat_avg_latency"])/count($oy_mesh_top[2][0]["oy_stat_avg_latency"]), 4);
 if (count($oy_mesh_top[2][0]["oy_stat_avg_peership"])===0) $oy_mesh_top[2][0]["oy_stat_avg_peership"] = 0;
-else $oy_mesh_top[2][0]["oy_stat_avg_peership"] = round((((array_sum($oy_mesh_top[2][0]["oy_stat_avg_peership"])/count($oy_mesh_top[2][0]["oy_stat_avg_peership"])/60)/60)/24), 2);
+else $oy_mesh_top[2][0]["oy_stat_avg_peership"] = round(((array_sum($oy_mesh_top[2][0]["oy_stat_avg_peership"])/count($oy_mesh_top[2][0]["oy_stat_avg_peership"])/60)), 2);
 $oy_mesh_top[2][0]["oy_stat_mesh_size"] = count($oy_mesh_top[0]);
 $oy_mesh_top[2][0]["oy_stat_mesh_flow"] = oy_flow_format($oy_mesh_top[2][0]["oy_stat_mesh_flow"]);
 arsort($oy_punish_track);

@@ -46,8 +46,9 @@ window.OY_NODE_DELAYTIME = 6;//minimum expected time to connect or transmit data
 window.OY_NODE_EXPIRETIME = 600;//seconds of non-interaction until a node's connection session is deleted
 window.OY_CLONE_AFFINITY = 0.3;//higher means more likely to ask a node to become a clone than a peer and vice-versa
 window.OY_CLONE_UPTIME_MIN = 60;//seconds since able to keep up with the meshblock required to become a clone origin
-window.OY_CLONE_LIVETIME = 40;//seconds to keep a node as a clone
+window.OY_CLONE_LIVETIME = 80;//seconds to keep a node as a clone
 window.OY_CLONE_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per clone transmission
+window.OY_CLONE_CLONE_MAX = 5;//maximum simultaneous clone count
 window.OY_CLONE_ORIGIN_MAX = 2;//maximum simultaneous origin count
 window.OY_PEER_LATENCYTIME = 60;//peers are expected to establish latency timing with each other within this interval in seconds
 window.OY_PEER_KEEPTIME = 20;//peers are expected to communicate with each other within this interval in seconds
@@ -62,7 +63,7 @@ window.OY_LATENCY_REPEAT = 2;//how many ping round trips should be performed to 
 window.OY_LATENCY_TOLERANCE = 2;//tolerance buffer factor for receiving ping requested from a proposed-to node
 window.OY_LATENCY_MAX = 20;//max amount of seconds for latency test before peership is refused or starts breaking down
 window.OY_LATENCY_TRACK = 200;//how many latency measurements to keep at a time per peer
-window.OY_LATENCY_GEO_SENS = 60;//percentage buffer for comparing latency with peers, higher means less likely weakest peer will be dropped and mesh is less geo-sensitive
+window.OY_LATENCY_GEO_SENS = 40;//percentage buffer for comparing latency with peers, higher means less likely weakest peer will be dropped and mesh is less geo-sensitive
 window.OY_DATA_MAX = 64000;//max size of data that can be sent to another node
 window.OY_DATA_CHUNK = 48000;//chunk size by which data is split up and sent per transmission
 window.OY_DATA_PURGE = 4;//how many handles to delete if localstorage limit is reached
@@ -1270,7 +1271,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_CLONE_REQUEST") {
         let oy_callback_local;
-        if ((window.OY_BLOCK_SEEDTIME===null||oy_time_local>window.OY_BLOCK_SEEDTIME)&&window.OY_BLOCK_HASH!==null&&window.OY_CLONE_UPTIME!==null&&window.OY_CLONE_UPTIME>=window.OY_CLONE_UPTIME_MIN&&window.OY_PEER_COUNT>=window.OY_BLOCK_PEERS_MIN) {
+        if ((window.OY_BLOCK_SEEDTIME===null||oy_time_local>window.OY_BLOCK_SEEDTIME)&&window.OY_BLOCK_HASH!==null&&window.OY_CLONE_UPTIME!==null&&window.OY_CLONE_UPTIME>=window.OY_CLONE_UPTIME_MIN&&window.OY_PEER_COUNT>=window.OY_BLOCK_PEERS_MIN&&Object.keys(window.OY_CLONES).length<window.OY_CLONE_CLONE_MAX) {
             oy_callback_local = function() {
                 window.OY_CLONES[oy_node_id] = [oy_time_local+window.OY_CLONE_LIVETIME, 0];
                 oy_data_beam(oy_node_id, "OY_CLONE_ACCEPT", null);
