@@ -56,7 +56,7 @@ window.OY_PEER_KEEPTIME = 20;//peers are expected to communicate with each other
 window.OY_PEER_REPORTTIME = 10;//interval to report peer list to top
 window.OY_PEER_PRETIME = 20;//seconds which a node is waiting as a 'pre-peer'
 window.OY_PEER_MAX = 5;//maximum mutual peers
-window.OY_PEER_SYNC_CHANCE = 0.4;//chance of initiation with a peer from their block_sync packet
+window.OY_PEER_SYNC_CHANCE = 0.4;//chance of initiation with a peer from their block_sync packet whilst peer_count is greater than block_peers_min
 window.OY_ROUTE_DYNAMIC_KEEP = 1000;//how many dynamic identifiers for a routed data sequence to remember and block
 window.OY_LATENCY_SIZE = 80;//size of latency ping payload, larger is more accurate yet more taxing, vice-versa applies
 window.OY_LATENCY_LENGTH = 8;//length of rand sequence which is repeated for payload and signed for ID verification
@@ -604,7 +604,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                     if (oy_key_valid===true) {
                         window.OY_BLOCK_SYNC[oy_data_payload[2]][0] = true;
                         oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_SYNC", window.OY_BLOCK_SYNC[oy_data_payload[2]][2]);
-                        if (Math.random()<window.OY_PEER_SYNC_CHANCE) oy_node_initiate(oy_data_payload[2]);
+                        if (window.OY_PEER_COUNT<=window.OY_BLOCK_PEERS_MIN||Math.random()<window.OY_PEER_SYNC_CHANCE) oy_node_initiate(oy_data_payload[2]);
                     }
                 });
             }
