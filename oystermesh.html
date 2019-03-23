@@ -1260,7 +1260,9 @@
             <div id="oy_console_hover_indicator" style="position:absolute;top:1%;right:1%;width:2.5%;height:4%;background-color: #c37b2c;border-radius: 50%;display: none;z-index: 200;"></div>
             <div id="oy_console" class="oy_center_both">***<br></div>
         </div>
-        <div id="oy_graph_nodes" class="oy_border oy_graph" style="position:absolute;bottom:0;right:0;width:49%;height:53%;background-color: #404040;overflow:hidden;">
+        <div id="oy_graph_block" class="oy_border oy_graph" style="position:absolute;bottom:0;right:41.4%;width:8%;height:53%;background-color: #404040;overflow:hidden;">
+        </div>
+        <div id="oy_graph_nodes" class="oy_border oy_graph" style="position:absolute;bottom:0;right:0;width:40%;height:53%;background-color: #404040;overflow:hidden;">
             <div id="oy_top_inner" style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);overflow:hidden;"></div>
         </div>
         <div id="oy_stats" class="oy_border oy_graph" style="position:absolute;top:0;left:0;width:23%;height:43%;background-color: #404040;overflow:hidden;">
@@ -1434,6 +1436,7 @@
             };
 
             oy_maintain();
+            oy_top_process();
 
             if (location.hash==="#akoya") oy_tab("oy_tab_wallet");
             else if (location.hash.indexOf(".mesh")!==-1) {
@@ -2205,7 +2208,7 @@
             .nodes([])
             .gravity(0.1)
             .linkDistance(5)
-            .linkStrength(0.3)
+            .linkStrength(0.4)
             .charge(-160)
             .on("tick", oy_top_tick);
 
@@ -2240,7 +2243,7 @@
 
         window.OY_TOP_NODE.enter().insert("circle")
             .attr("class", "node")
-            .attr("r", 5)
+            .attr("r", 4)
             .style("fill", oy_fill);
 
         window.OY_TOP_NODE.exit()

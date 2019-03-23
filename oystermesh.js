@@ -39,7 +39,7 @@ window.OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya c
 window.OY_AKOYA_MAX_SUPPY = 10000000*window.OY_AKOYA_DECIMALS;//akoya max supply
 window.OY_AKOYA_FEE = 0.000001*window.OY_AKOYA_DECIMALS;//akoya fee per block
 window.OY_NODE_TOLERANCE = 3;//max amount of protocol communication violations until node is blacklisted
-window.OY_NODE_BLACKTIME = 180;//seconds to blacklist a punished node for
+window.OY_NODE_BLACKTIME = 300;//seconds to blacklist a punished node for
 window.OY_NODE_PROPOSETIME = 12;//seconds for peer proposal session duration
 window.OY_NODE_ASSIGNTTIME = 10;//minimum interval between node_assign instances to/from top
 window.OY_NODE_DELAYTIME = 6;//minimum expected time to connect or transmit data to a node
@@ -52,10 +52,10 @@ window.OY_CLONE_CLONE_MAX = 5;//maximum simultaneous clone count
 window.OY_CLONE_ORIGIN_MAX = 2;//maximum simultaneous origin count
 window.OY_PEER_LATENCYTIME = 60;//peers are expected to establish latency timing with each other within this interval in seconds
 window.OY_PEER_KEEPTIME = 20;//peers are expected to communicate with each other within this interval in seconds
-window.OY_PEER_REFERTIME = 15;//interval in which self asks peers for peer recommendations (as needed)
 window.OY_PEER_REPORTTIME = 10;//interval to report peer list to top
 window.OY_PEER_PRETIME = 20;//seconds which a node is waiting as a 'pre-peer'
 window.OY_PEER_MAX = 5;//maximum mutual peers
+window.OY_PEER_SYNC_CHANCE = 0.4;//chance of initiation with a peer from their block_sync packet
 window.OY_ROUTE_DYNAMIC_KEEP = 1000;//how many dynamic identifiers for a routed data sequence to remember and block
 window.OY_LATENCY_SIZE = 80;//size of latency ping payload, larger is more accurate yet more taxing, vice-versa applies
 window.OY_LATENCY_LENGTH = 8;//length of rand sequence which is repeated for payload and signed for ID verification
@@ -63,7 +63,7 @@ window.OY_LATENCY_REPEAT = 2;//how many ping round trips should be performed to 
 window.OY_LATENCY_TOLERANCE = 2;//tolerance buffer factor for receiving ping requested from a proposed-to node
 window.OY_LATENCY_MAX = 20;//max amount of seconds for latency test before peership is refused or starts breaking down
 window.OY_LATENCY_TRACK = 200;//how many latency measurements to keep at a time per peer
-window.OY_LATENCY_GEO_SENS = 40;//percentage buffer for comparing latency with peers, higher means less likely weakest peer will be dropped and mesh is less geo-sensitive
+window.OY_LATENCY_GEO_SENS = 35;//percentage buffer for comparing latency with peers, higher means less likely weakest peer will be dropped and mesh is less geo-sensitive
 window.OY_DATA_MAX = 64000;//max size of data that can be sent to another node
 window.OY_DATA_CHUNK = 48000;//chunk size by which data is split up and sent per transmission
 window.OY_DATA_PURGE = 4;//how many handles to delete if localstorage limit is reached
@@ -97,8 +97,7 @@ window.OY_CONSOLE = null;//custom function for handling console
 window.OY_MESH_MAP = null;//custom function for tracking mesh map
 window.OY_INIT = 0;//prevents multiple instances of oy_init() from running simultaneously
 window.OY_PEER_COUNT = 0;//how many active connections with mutual peers
-window.OY_REFER_LAST = 0;//last time self asked a peer for a peer recommendation
-window.OY_MAIN = {"oy_ready":false};//tracks important information that is worth persisting between sessions such as self ID
+window.OY_MAIN = {"oy_ready":false};//tracks important information
 window.OY_ENGINE = [{}, {}];//tracking object for core engine variables, [0] is latency tracking
 window.OY_PURGE = [];//track order of DEPOSIT to determine what data gets deleted ('purged') first
 window.OY_COLLECT = {};//object for tracking pull fulfillments
@@ -607,6 +606,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                     if (oy_key_valid===true) {
                         window.OY_BLOCK_SYNC[oy_data_payload[2]][0] = true;
                         oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_SYNC", window.OY_BLOCK_SYNC[oy_data_payload[2]][2]);
+                        if (Math.random()<window.OY_PEER_SYNC_CHANCE) oy_node_initiate(oy_data_payload[2]);
                     }
                 });
             }
@@ -983,24 +983,6 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         oy_node_punish(oy_peer_id, "OY_PUNISH_LATENCY_DECLINE");
         return false;
     }
-    else if (oy_data_flag==="OY_PEER_REFER") {//is self's peer asking for self to refer some of self's other peers
-        let oy_peer_select = oy_peer_rand([oy_short(oy_peer_id)]);
-        if (oy_peer_select===false) {
-            oy_log("Self doesn't have any available peers to recommend");
-            return false;
-        }
-        oy_data_beam(oy_peer_id, "OY_PEER_RECOMMEND", oy_peer_select);
-        return true;
-    }
-    else if (oy_data_flag==="OY_PEER_RECOMMEND") {
-        if (oy_peer_id===oy_data_payload) {
-            oy_log("Peer "+oy_short(oy_peer_id)+" recommended themselves, will punish");
-            oy_node_punish(oy_peer_id, "OY_PUNISH_RECOMMEND_SELF");
-            return false;
-        }
-        oy_node_initiate(oy_data_payload);
-        return true;
-    }
 }
 
 //checks if node is in mutually paired list
@@ -1113,7 +1095,7 @@ function oy_node_proposed(oy_node_id, oy_clone_flag) {
 
 //checks if node is in blacklist
 function oy_node_blocked(oy_node_id) {
-    if (typeof(window.OY_BLACKLIST[oy_node_id])!=="undefined"&&window.OY_BLACKLIST[oy_node_id][0]>window.OY_NODE_TOLERANCE) {
+    if (typeof(window.OY_BLACKLIST[oy_node_id])!=="undefined"&&window.OY_BLACKLIST[oy_node_id][0]>=window.OY_NODE_TOLERANCE) {
         if (window.OY_BLACKLIST[oy_node_id][1]<(Date.now()/1000)) {
             delete window.OY_BLACKLIST[oy_node_id];//remove node from blacklist if block expiration was reached
             return false;
@@ -1130,14 +1112,20 @@ function oy_node_punish(oy_node_id, oy_punish_reason) {
     if (typeof(oy_punish_reason)==="undefined") oy_punish_reason = null;
     if (typeof(window.OY_BLACKLIST[oy_node_id])==="undefined") {
         //[0] is inform count, [1] is blacklist expiration time, [2] is inform boolean (if node was informed of blacklist), [3] is punish reason tracking (for diagnostics, reported to top)
-        window.OY_BLACKLIST[oy_node_id] = [1, (Date.now()/1000)+window.OY_NODE_BLACKTIME, false, [oy_punish_reason]];//ban expiration time is defined here since we do not know if OY_NODE_TOLERANCE will change in the future
+        window.OY_BLACKLIST[oy_node_id] = [(oy_punish_reason==="OY_PUNISH_BLACKLIST_RETURN")?window.OY_NODE_TOLERANCE:1, (Date.now()/1000)+window.OY_NODE_BLACKTIME, false, [oy_punish_reason]];//ban expiration time is defined here since we do not know if OY_NODE_TOLERANCE will change in the future
     }
     else {
         window.OY_BLACKLIST[oy_node_id][0]++;
         window.OY_BLACKLIST[oy_node_id][1] = (Date.now()/1000)+window.OY_NODE_BLACKTIME;
         window.OY_BLACKLIST[oy_node_id][3].push(oy_punish_reason);
     }
-    if (window.OY_BLACKLIST[oy_node_id][0]>window.OY_NODE_TOLERANCE&&oy_peer_check(oy_node_id)) oy_peer_remove(oy_node_id, oy_punish_reason);
+    if (window.OY_BLACKLIST[oy_node_id][0]>=window.OY_NODE_TOLERANCE) {
+        if (window.OY_BLACKLIST[oy_node_id][2]===false) {
+            window.OY_BLACKLIST[oy_node_id][2] = true;
+            oy_data_beam(oy_node_id, "OY_PEER_BLACKLIST", oy_punish_reason);
+        }
+        if (oy_peer_check(oy_node_id)) oy_peer_remove(oy_node_id, oy_punish_reason);
+    }
     oy_log("Punished node "+oy_short(oy_node_id)+" with reason "+oy_punish_reason);
     return true;
 }
@@ -2431,24 +2419,22 @@ function oy_block_loop() {
                             oy_log("MESHBLOCK CANCEL: "+oy_block_time_local);
                             return false;
                         }
-                        if (window.OY_BLOCK_HASH!==null&&window.OY_CLONE_UPTIME!==null&&window.OY_CLONE_UPTIME>=window.OY_CLONE_UPTIME_MIN&&window.OY_PEER_COUNT>=window.OY_BLOCK_PEERS_MIN) {
-                            if (Object.keys(window.OY_CLONES).length>0) {
-                                let oy_block_split = null;
-                                let oy_block_nonce_max = -1;
-                                for (let oy_clone_select in window.OY_CLONES) {
-                                    if (Date.now()/1000>window.OY_CLONES[oy_clone_select][0]||window.OY_CLONES[oy_clone_select][1]!==1) continue;
-                                    if (oy_block_split===null) {
-                                        oy_block_split = [];
-                                        for (let i = 0; i < oy_block_flat.length; i += window.OY_CLONE_CHUNK) {
-                                            oy_block_split.push(oy_block_flat.slice(i, i+window.OY_CLONE_CHUNK));
-                                            oy_block_nonce_max++;
-                                        }
+                        if (window.OY_BLOCK_HASH!==null&&window.OY_CLONE_UPTIME!==null&&window.OY_CLONE_UPTIME>=window.OY_CLONE_UPTIME_MIN&&window.OY_PEER_COUNT>=window.OY_BLOCK_PEERS_MIN&&Object.keys(window.OY_CLONES).length>0) {
+                            let oy_block_split = null;
+                            let oy_block_nonce_max = -1;
+                            for (let oy_clone_select in window.OY_CLONES) {
+                                if (Date.now()/1000>window.OY_CLONES[oy_clone_select][0]||window.OY_CLONES[oy_clone_select][1]!==1) continue;
+                                if (oy_block_split===null) {
+                                    oy_block_split = [];
+                                    for (let i = 0; i < oy_block_flat.length; i += window.OY_CLONE_CHUNK) {
+                                        oy_block_split.push(oy_block_flat.slice(i, i+window.OY_CLONE_CHUNK));
+                                        oy_block_nonce_max++;
                                     }
-                                    for (let oy_clone_nonce in oy_block_split) {
-                                        oy_data_beam(oy_clone_select, "OY_CLONE_PUSH", [oy_block_nonce_max, oy_clone_nonce, oy_block_split[oy_clone_nonce]]);
-                                    }
-                                    window.OY_CLONES[oy_clone_select][1] = 2;
                                 }
+                                for (let oy_clone_nonce in oy_block_split) {
+                                    oy_data_beam(oy_clone_select, "OY_CLONE_PUSH", [oy_block_nonce_max, oy_clone_nonce, oy_block_split[oy_clone_nonce]]);
+                                }
+                                window.OY_CLONES[oy_clone_select][1] = 2;
                             }
                         }
                     }, window.OY_BLOCK_CLONETIME);
@@ -2492,13 +2478,6 @@ function oy_engine(oy_thread_track) {
 
     let oy_time_local = Date.now()/1000;
     if (typeof(oy_thread_track)==="undefined") oy_thread_track = [0, oy_time_local];
-
-    let oy_peer_refer = oy_peer_rand([]);
-    if (oy_peer_refer!==false&&window.OY_PEER_COUNT<=window.OY_PEER_MAX&&(oy_time_local-window.OY_REFER_LAST)>window.OY_PEER_REFERTIME) {
-        window.OY_REFER_LAST = oy_time_local;
-        oy_data_beam(oy_peer_refer, "OY_PEER_REFER", null);
-        oy_log("Asked peer "+oy_short(oy_peer_refer)+" for peer recommendation");
-    }
 
     if (window.OY_PEER_COUNT<window.OY_PEER_MAX&&(oy_time_local-oy_thread_track[0])>window.OY_NODE_ASSIGNTTIME) {
         oy_thread_track[0] = oy_time_local;
@@ -2698,9 +2677,7 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
                 oy_node_punish(oy_conn.peer, "OY_PUNISH_DATA_INVALID");
                 return false;
             }
-            if (oy_data[0]==="OY_LATENCY_RESPONSE") {
-                oy_latency_response(oy_conn.peer, oy_data[1]);
-            }
+            if (oy_data[0]==="OY_LATENCY_RESPONSE") oy_latency_response(oy_conn.peer, oy_data[1]);
             else if (oy_peer_check(oy_conn.peer)) {
                 if (oy_data_measure(false, oy_conn.peer, oy_data_raw.length)===false) {
                     oy_log("Peer "+oy_short(oy_conn.peer)+" exceeded mesh flow compliance limits, will punish");
@@ -2711,13 +2688,7 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
             else if ((oy_data[0]==="OY_BLOCK_SYNC"||oy_data[0]==="OY_BLOCK_DIVE")&&(typeof(window.OY_ORIGINS[oy_conn.peer])!=="undefined"&&Date.now()/1000<window.OY_ORIGINS[oy_conn.peer])) {
                 oy_peer_process(oy_conn.peer, oy_data[0], oy_data[1]);
             }
-            else if (oy_node_blocked(oy_conn.peer)) {
-                oy_log("Node "+oy_short(oy_conn.peer)+" is on blacklist, informed: "+window.OY_BLACKLIST[oy_conn.peer][2]);
-                if (window.OY_BLACKLIST[oy_conn.peer][2]===false) {
-                    window.OY_BLACKLIST[oy_conn.peer][2] = true;
-                    oy_data_beam(oy_conn.peer, "OY_PEER_BLACKLIST", null);
-                }
-            }
+            else if (oy_node_blocked(oy_conn.peer)) oy_node_punish(oy_conn.peer, "OY_PUNISH_PEER_BLACKLIST");
             else {
                 if (oy_data_measure(false, "oy_aggregate_node", oy_data_raw.length)===false) oy_log("Node "+oy_short(oy_conn.peer)+" pushed aggregate mesh flow compliance beyond limit");
                 else oy_node_negotiate(oy_conn.peer, oy_data[0], oy_data[1]);
