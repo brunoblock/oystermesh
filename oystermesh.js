@@ -64,7 +64,7 @@ window.OY_LATENCY_REPEAT = 2;//how many ping round trips should be performed to 
 window.OY_LATENCY_TOLERANCE = 2;//tolerance buffer factor for receiving ping requested from a proposed-to node
 window.OY_LATENCY_MAX = 20;//max amount of seconds for latency test before peership is refused or starts breaking down
 window.OY_LATENCY_TRACK = 200;//how many latency measurements to keep at a time per peer
-window.OY_LATENCY_GEO_SENS = 35;//percentage buffer for comparing latency with peers, higher means less likely weakest peer will be dropped and mesh is less geo-sensitive
+window.OY_LATENCY_GEO_SENS = 30;//percentage buffer for comparing latency with peers, higher means less likely weakest peer will be dropped and mesh is less geo-sensitive
 window.OY_DATA_MAX = 64000;//max size of data that can be sent to another node
 window.OY_DATA_CHUNK = 48000;//chunk size by which data is split up and sent per transmission
 window.OY_DATA_PURGE = 4;//how many handles to delete if localstorage limit is reached
@@ -239,12 +239,17 @@ function oy_buffer_decode(oy_buffer_buffer, oy_buffer_base64) {
     return binary;
 }
 
-function oy_base_encode(oy_base_raw) {
-    return window.btoa(oy_base_raw);
+function oy_base_encode(str) {
+    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
+        function toSolidBytes(match, p1) {
+            return String.fromCharCode('0x' + p1);
+        }));
 }
 
-function oy_base_decode(oy_base_encoded) {
-    return window.atob(oy_base_encoded);
+function oy_base_decode(str) {
+    return decodeURIComponent(atob(str).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
 }
 
 function oy_crypt_encrypt(oy_crypt_data, oy_crypt_pass) {
