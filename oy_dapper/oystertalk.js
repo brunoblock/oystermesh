@@ -35,9 +35,9 @@ function ot_render(oy_broadcast_hash, oy_render_payload) {
         oy_render_payload[3] = oy_render_payload[3].substr(49);
         let ot_reply_array = ot_reply_render(oy_broadcast_hash, ot_reply_hash);
         if (!ot_reply_array) {
-            let ot_recall_reply_count = Object.keys(window.OT_RECALL_REPLY).length;
-            ot_reply = "<div id='ot_recall_reply_"+ot_recall_reply_count+"'></div>";
-            window.OT_RECALL_REPLY[ot_recall_reply_count] = [oy_broadcast_hash, ot_reply_hash];
+            ot_reply = "<div id='ot_recall_reply_"+window.OT_RECALL_REPLY_COUNTER+"'></div>";
+            window.OT_RECALL_REPLY["ot_recall_reply_"+window.OT_RECALL_REPLY_COUNTER] = [oy_broadcast_hash, ot_reply_hash];
+            window.OT_RECALL_REPLY_COUNTER++;
         }
         else {
             ot_reply_key_public = ot_reply_array[0];
@@ -155,8 +155,7 @@ function ot_reply_reset(ot_reply_delay) {
 
 function ot_scroll() {
     let ot_render = document.getElementById("ot_render_cont");
-
-    if (ot_render.offsetHeight+ot_render.scrollTop===ot_render.scrollHeight||ot_render.offsetHeight+ot_render.scrollTop===ot_render.scrollHeight+1) document.getElementById("ot_scroll_jump").style.display = "none";
+    if (ot_render.offsetHeight+ot_render.scrollTop===ot_render.scrollHeight||ot_render.offsetHeight+ot_render.scrollTop===ot_render.scrollHeight+1||ot_render.offsetHeight+ot_render.scrollTop===ot_render.scrollHeight-1) document.getElementById("ot_scroll_jump").style.display = "none";
     else document.getElementById("ot_scroll_jump").style.display = "block";
 }
 
@@ -318,14 +317,15 @@ function ot_maintain() {
 
         document.getElementById("ot_channel_stats").innerHTML = "["+(window.OY_BLOCK_TEMP[2][window.OT_CHANNEL_ID][2].length+window.OY_BLOCK_TEMP[2][window.OT_CHANNEL_ID][3].length)+"&nbsp;members&nbsp;/&nbsp;"+ot_top_count[0]+"&nbsp;online&nbsp;/&nbsp;"+ot_top_count[1]+"&nbsp;watching]";
     }
-    for (let ot_recall_reply_count in window.OT_RECALL_REPLY) {
-        let ot_reply_array = ot_reply_render(window.OT_RECALL_REPLY[ot_recall_reply_count][0], window.OT_RECALL_REPLY[ot_recall_reply_count][1]);
+
+    for (let ot_recall_reply in window.OT_RECALL_REPLY) {
+        let ot_reply_array = ot_reply_render(window.OT_RECALL_REPLY[ot_recall_reply][0], window.OT_RECALL_REPLY[ot_recall_reply][1]);
         if (!!ot_reply_array) {
-            document.getElementById("ot_render_append_"+window.OT_RECALL_REPLY[ot_recall_reply_count][0]).innerHTML = "<br>";
-            document.getElementById("ot_recall_reply_"+ot_recall_reply_count).innerHTML = ot_reply_array[1];
-            oy_avatar_gen(ot_reply_array[0], document.getElementById("ot_reply_avatar_"+window.OT_RECALL_REPLY[ot_recall_reply_count][0]));
+            document.getElementById("ot_render_append_"+window.OT_RECALL_REPLY[ot_recall_reply][0]).innerHTML = "<br>";
+            document.getElementById(ot_recall_reply).innerHTML = ot_reply_array[1];
+            oy_avatar_gen(ot_reply_array[0], document.getElementById("ot_reply_avatar_"+window.OT_RECALL_REPLY[ot_recall_reply][0]));
             if (document.getElementById("ot_scroll_jump").style.display==="none") document.getElementById("ot_render_cont").scrollTo(0, document.getElementById("ot_render_cont").scrollHeight);
-            delete window.OT_RECALL_REPLY[ot_recall_reply_count];
+            delete window.OT_RECALL_REPLY[ot_recall_reply];
         }
     }
 }
@@ -337,7 +337,8 @@ function ot_init() {
     window.OT_MSG_COLOR_BRUNO = "#7bb3ee";
 
     window.OT_RENDER_KEEP = [];
-    window.OT_RECALL_REPLY = [];
+    window.OT_RECALL_REPLY = {};
+    window.OT_RECALL_REPLY_COUNTER = 0;
     window.OT_APPROVED_KEEP = {};
     window.OT_INPUT_SNAPSHOT = "";
     window.OT_PEERS_NULL = null;
@@ -359,4 +360,6 @@ function ot_init() {
     document.addEventListener("oy_peers_recover", ot_peers_resume, false);
     document.addEventListener("oy_key_enter", ot_broadcast, false);
     document.addEventListener("oy_wallet_close", ot_load, false);
+
+    document.getElementById("ot_render_cont").scrollTo(0, document.getElementById("ot_render_cont").scrollHeight);
 }
