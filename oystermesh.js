@@ -528,7 +528,6 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     else if (oy_data_flag==="OY_BLOCK_SYNC") {
         //oy_data_payload = [oy_route_passport_passive, oy_route_dynamic, oy_sync_time, oy_sync_crypt, oy_sync_command, oy_key_public, oy_dive_reward]
         if (oy_data_payload.length!==7||typeof(oy_data_payload[0])!=="object"||oy_data_payload[1].length===0||oy_data_payload[0][0]!==oy_short(oy_data_payload[5])) {
-            //oy_log_debug("PUNISH1: "+JSON.stringify(oy_data_payload));
             oy_log("Peer "+oy_short(oy_peer_id)+" sent invalid block sync, will punish");
             oy_node_punish(oy_peer_id, "OY_PUNISH_SYNC_INVALID");
             return false;
@@ -582,7 +581,6 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     else if (oy_data_flag==="OY_BLOCK_SYNC_CHALLENGE") {
         //oy_data_payload = [oy_route_passport_passive, oy_route_dynamic, oy_route_skip, oy_route_target, oy_route_dynamic_prev, oy_sync_challenge]
         if (oy_data_payload.length!==6||typeof(oy_data_payload[0])!=="object"||oy_data_payload[1].length===0) {
-            //oy_log_debug("PUNISH2: "+JSON.stringify(oy_data_payload));
             oy_log("Peer "+oy_short(oy_peer_id)+" sent invalid block sync challenge will punish");
             oy_node_punish(oy_peer_id, "OY_PUNISH_SYNC_INVALID");
             return false;
@@ -601,7 +599,6 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     else if (oy_data_flag==="OY_BLOCK_SYNC_CHALLENGE_RESPONSE") {
         //oy_data_payload = [oy_route_passport_passive, oy_route_passport_active, oy_key_public, oy_challenge_crypt]
         if (oy_data_payload.length!==4||typeof(oy_data_payload[0])!=="object"||typeof(oy_data_payload[1])!=="object"||oy_data_payload[1].length===0||oy_data_payload[0][0]!==oy_short(oy_data_payload[2])) {
-            //oy_log_debug("PUNISH3: "+JSON.stringify(oy_data_payload));
             oy_log("Peer "+oy_short(oy_peer_id)+" sent invalid block sync challenge response, will punish");
             oy_node_punish(oy_peer_id, "OY_PUNISH_SYNC_INVALID");
             return false;
@@ -2207,7 +2204,7 @@ function oy_block_loop() {
             //latency routine test
 
             if (Math.floor((Date.now()-30000)/10000000)!==Math.floor((Date.now()-10000)/10000000)) {//10000000
-                oy_log_debug("SNAPSHOT: "+window.OY_BLOCK_HASH+"/"+JSON.stringify(window.OY_BLOCK));
+                //oy_log_debug("SNAPSHOT: "+window.OY_BLOCK_HASH+"/"+JSON.stringify(window.OY_BLOCK));
                 window.OY_BLOCK[1] = {};
                 window.OY_BLOCK[0][1].push(window.OY_BLOCK_HASH);
 
