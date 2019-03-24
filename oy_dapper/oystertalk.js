@@ -73,7 +73,7 @@ function ot_render(oy_broadcast_hash, oy_render_payload) {
 }
 
 function ot_input() {
-    if (document.getElementById("ot_broadcast_input").value.length===0||window.OT_BROADCAST_FREEZE===true) {
+    if (document.getElementById("ot_broadcast_input").value.length===0||window.OT_BROADCAST_FREEZE===true||window.OY_PEER_COUNT===0) {
         document.getElementById("ot_broadcast_button").classList.remove("oy_button_broadcast_active");
         document.getElementById("ot_broadcast_button").classList.add("oy_button_all_dull");
     }
@@ -298,7 +298,9 @@ function ot_close() {
     document.removeEventListener("oy_maintain_trigger", ot_maintain, false);
     document.removeEventListener("oy_block_trigger", ot_approve, false);
     document.removeEventListener("oy_peers_null", ot_peers_halt, false);
+    document.removeEventListener("oy_peers_null", ot_input, false);
     document.removeEventListener("oy_peers_recover", ot_peers_resume, false);
+    document.removeEventListener("oy_peers_recover", ot_input, false);
     document.removeEventListener("oy_key_enter", ot_broadcast, false);
     document.removeEventListener("oy_wallet_close", ot_load, false);
 
@@ -357,7 +359,9 @@ function ot_init() {
     document.addEventListener("oy_maintain_trigger", ot_maintain, false);
     document.addEventListener("oy_block_trigger", ot_approve, false);
     document.addEventListener("oy_peers_null", ot_peers_halt, false);
+    document.addEventListener("oy_peers_null", ot_input, false);
     document.addEventListener("oy_peers_recover", ot_peers_resume, false);
+    document.addEventListener("oy_peers_recover", ot_input, false);
     document.addEventListener("oy_key_enter", ot_broadcast, false);
     document.addEventListener("oy_wallet_close", ot_load, false);
 

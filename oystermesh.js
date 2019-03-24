@@ -87,6 +87,7 @@ window.OY_CHANNEL_RECOVERTIME = 10;//second interval between channel recovery re
 window.OY_CHANNEL_EXPIRETIME = 1209600;//seconds until a broadcast expires and is dropped from nodes listening on the channel
 window.OY_CHANNEL_RESPOND_MAX = 10;//max amount of broadcast payloads to send in response to a channel recover request
 window.OY_CHANNEL_ALLOWANCE = 8;//broadcast allowance in seconds per public key, an anti-spam mechanism to prevent abuse of OY_LOGIC_ALL
+window.OY_CHANNEL_CONSENSUS = 0.4;//node signature requirement for a broadcast to be retained in channel_keep
 window.OY_KEY_BRUNO = "XLp6_wVPBF3Zg-QNRkEj6U8bOYEZddQITs1n2pyeRqwOG5k9w_1A-RMIESIrVv_5HbvzoLhq-xPLE7z2na0C6M";//prevent impersonation
 window.OY_SHORT_LENGTH = 6;//various data value such as nonce IDs, data handles, data values are shortened for efficiency
 window.OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inputs are expected
@@ -418,8 +419,8 @@ function oy_peer_add(oy_peer_id) {
     let oy_callback_local = function() {
         //[peership timestamp, last msg timestamp, last latency timestamp, latency avg, latency history, data beam, data beam history, data soak, data soak history]
         window.OY_PEERS[oy_peer_id] = [Date.now()/1000|0, -1, -1, 0, [], 0, [], 0, []];
-        if (window.OY_PEER_COUNT===0) document.dispatchEvent(window.OY_PEERS_RECOVER);
         window.OY_PEER_COUNT++;
+        if (window.OY_PEER_COUNT===1) document.dispatchEvent(window.OY_PEERS_RECOVER);
         oy_node_reset(oy_peer_id);
     };
     oy_node_connect(oy_peer_id, oy_callback_local);
@@ -2544,7 +2545,7 @@ function oy_engine(oy_thread_track) {
                 oy_local_store("oy_channel_keep", window.OY_CHANNEL_KEEP);
                 continue;
             }
-            if (typeof(window.OY_CHANNEL_LISTEN[oy_channel_id])!=="undefined"&&window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash][7].length>=Math.floor(oy_top_count[0]*0.1)) {
+            if (typeof(window.OY_CHANNEL_LISTEN[oy_channel_id])!=="undefined"&&window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash][7].length>=Math.floor(oy_top_count[0]*window.OY_CHANNEL_CONSENSUS)) {
                 oy_hash_keep.push(oy_broadcast_hash);
                 if (typeof(window.OY_CHANNEL_RENDER[oy_channel_id])==="undefined") window.OY_CHANNEL_RENDER[oy_channel_id] = {};
                 if (typeof(window.OY_CHANNEL_RENDER[oy_channel_id][oy_broadcast_hash])==="undefined") {
