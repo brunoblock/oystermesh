@@ -155,12 +155,9 @@ function ot_reply_reset(ot_reply_delay) {
 
 function ot_scroll() {
     let ot_render = document.getElementById("ot_render_cont");
-    if (ot_render.offsetHeight+ot_render.scrollTop===ot_render.scrollHeight) {
-        document.getElementById("ot_scroll_jump").style.display = "none";
-    }
-    else {
-        document.getElementById("ot_scroll_jump").style.display = "block";
-    }
+
+    if (ot_render.offsetHeight+ot_render.scrollTop===ot_render.scrollHeight||ot_render.offsetHeight+ot_render.scrollTop===ot_render.scrollHeight+1) document.getElementById("ot_scroll_jump").style.display = "none";
+    else document.getElementById("ot_scroll_jump").style.display = "block";
 }
 
 function ot_scroll_jump() {
@@ -250,7 +247,6 @@ function ot_approve() {
             ot_render(oy_broadcast_hash, oy_render_payload);
         });
         document.getElementById("ot_bar_cover").style.display = "block";
-        document.getElementById("ot_broadcast_avatar_cont").innerHTML = "";
         if (window.OY_WALLET_PUBLIC===null) {
             document.getElementById("ot_wallet_load_cont").style.display = "block";
             document.getElementById("ot_approval_cont").style.display = "none";
