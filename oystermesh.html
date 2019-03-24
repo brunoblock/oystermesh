@@ -1333,9 +1333,11 @@
         window.OY_HOP_KEEP = 100;
         window.OY_DEST_RADIO = "oy_dest_view";
 
+        window.OY_MAINTAIN_DELAY = 500;
         window.OY_DAPPER_MINIMIZED = false;
         window.OY_MAINTAIN_TRIGGER = new Event('oy_maintain_trigger');//trigger-able event for maintain cadence
         window.OY_COVER = false;
+        window.OY_COVER_THREAD = {};
         window.OY_WALLET_PRIVATE = null;
         window.OY_WALLET_PUBLIC = null;
         window.OY_WALLET_CALLBACK = null;
@@ -1380,9 +1382,11 @@
         window.OY_AKOYA_AMOUNT_PREV = "";
         window.OY_MAP_NODES = {};
         window.OY_MAP_LINKS = {};
+        window.OY_BLOCK_RENDER_ACTIVE = false;
         window.OY_BLOCK_MAP_FUNC = null;
         window.OY_MESH_MAP_FUNC = null;
         window.OY_LOW_POWER = false;
+        window.OY_LOW_POWER_THREAD = {};
         window.OY_BLOCK_GRAPH = "<div id='oy_graph_block_inner' style='position:absolute;bottom:0.5%;left:2%;width:96%;height:0;background-color: #565656;transition:height 19.5s linear;overflow:hidden;z-index: 10;'></div><div class='oy_center_both' style='width:120%;height:60%;border:0.2vh dashed #000000;z-index: 60;'></div>";
 
         document.getElementById("oy_graph_block").innerHTML = window.OY_BLOCK_GRAPH;
@@ -1425,10 +1429,19 @@
 
         document.getElementById(window.OY_DEST_RADIO).checked = true;
 
+        window.onblur = function() {
+            oy_low_power_on("OY_THREAD_BLUR");
+        };
+
+        window.onfocus = function() {
+            oy_low_power_off("OY_THREAD_BLUR");
+        };
+
         oy_console_local("Loading console...");
 
         oy_init(function() {
             window.OY_BLOCK_MAP_FUNC = function(oy_sector, oy_self) {
+                if (window.OY_BLOCK_RENDER_ACTIVE===false) return false;
                 let oy_block_diff = Date.now()/1000 - window.OY_BLOCK_TIME;
                 let oy_element = document.createElement("div");
                 oy_element.style.position = "absolute";
@@ -1498,13 +1511,22 @@
     };
 
     function oy_low_power_toggle() {
+        if (window.OY_LOW_POWER===false) oy_low_power_on("OY_THREAD_TOGGLE");
+        else if (window.OY_LOW_POWER===true) oy_low_power_off("OY_THREAD_TOGGLE");
+    }
+
+    function oy_low_power_on(oy_thread) {
+        window.OY_LOW_POWER_THREAD[oy_thread] = true;
         if (window.OY_LOW_POWER===false) {
             window.OY_LOW_POWER = true;
             window.OY_BLOCK_MAP = null;
             window.OY_MESH_MAP = null;
+            window.OY_MAINTAIN_DELAY = 2000;
+            window.OY_BLOCK_RENDER_ACTIVE = false;
 
             document.getElementById("oy_graph_block").innerHTML = window.OY_BLOCK_GRAPH;
-            document.getElementById("oy_top_inner").innerHTML = "<div class='oy_center_both' style='font-size:2vh;color:#4a4a4a;'>LOW&nbsp;POWER&nbsp;MODE</div>";
+            document.getElementById("oy_top_inner").style.overflow = "visible";
+            document.getElementById("oy_top_inner").innerHTML = "<div class='oy_center_both' style='font-family:geo_med, sans-serif;font-size:1.5vh;color:#e2e2e2;'>LOW&nbsp;POWER&nbsp;MODE</div>";
 
             oy_element_add("oy_console", "span", "oy_console_line_"+window.OY_CONSOLE_COUNTER, "***LOW POWER MODE***<br>");
             window.OY_CONSOLE_COUNTER++;
@@ -1513,14 +1535,23 @@
             document.getElementById("oy_low_power").classList.remove("oy_button_all_active");
             document.getElementById("oy_low_power").classList.add("oy_button_execute_active");
         }
-        else if (window.OY_LOW_POWER===true) {
+    }
+
+    function oy_low_power_off(oy_thread) {
+        delete window.OY_LOW_POWER_THREAD[oy_thread];
+        if (Object.keys(window.OY_LOW_POWER_THREAD).length===0&&window.OY_LOW_POWER===true) {
             window.OY_LOW_POWER = false;
             window.OY_BLOCK_MAP = window.OY_BLOCK_MAP_FUNC;
             window.OY_MESH_MAP = window.OY_MESH_MAP_FUNC;
+            window.OY_MAINTAIN_DELAY = 500;
 
             document.getElementById("oy_graph_block").innerHTML = window.OY_BLOCK_GRAPH;
             document.getElementById("oy_top_inner").innerHTML = "";
-            oy_top_render();
+            document.getElementById("oy_top_inner").style.overflow = "hidden";
+
+            oy_top_init();
+            window.OY_TOP_NODES.push({id:window.OY_MAIN['oy_self_short'], x: Math.random()*window.OY_TOP_WIDTH|0, y: Math.random()*window.OY_TOP_HEIGHT|0,});
+            oy_top_restart("#24ab26");
 
             document.getElementById("oy_low_power").classList.remove("oy_button_execute_active");
             document.getElementById("oy_low_power").classList.add("oy_button_all_active");
@@ -1620,7 +1651,7 @@
             document.getElementById("oy_peer_count_cont").style.backgroundColor = null;
         }
         document.getElementById("oy_blacklisted").innerHTML = ""+Object.keys(window.OY_BLACKLIST).length;
-        setTimeout("oy_maintain()", 500);
+        setTimeout("oy_maintain()", window.OY_MAINTAIN_DELAY);
     }
 
     function oy_stability_calc(oy_list) {
@@ -1698,8 +1729,30 @@
         document.execCommand("copy");
     }
 
+    function oy_cover_on(oy_thread) {
+        window.OY_COVER_THREAD[oy_thread] = true;
+        if (window.OY_COVER===false) {
+            window.OY_COVER = true;
+            document.getElementById("oy_cover").style.display = "block";
+
+            oy_low_power_on("OY_THREAD_COVER");
+        }
+    }
+
+    function oy_cover_off(oy_thread) {
+        delete window.OY_COVER_THREAD[oy_thread];
+        if (Object.keys(window.OY_COVER_THREAD).length===0&&window.OY_COVER===true) {
+            window.OY_COVER = false;
+            document.getElementById("oy_cover").style.display = "none";
+
+            oy_low_power_off("OY_THREAD_COVER");
+        }
+    }
+
     function oy_block_render() {
         if (window.OY_LOW_POWER===true) return false;
+
+        window.OY_BLOCK_RENDER_ACTIVE = true;
 
         document.getElementById("oy_graph_block").innerHTML = window.OY_BLOCK_GRAPH;
         setTimeout(function() {
@@ -1997,10 +2050,7 @@
     function oy_wallet_open(oy_callback) {
         if (typeof(oy_callback)==="function") window.OY_WALLET_CALLBACK = oy_callback;
 
-        if (window.OY_COVER===false) {
-            window.OY_COVER = "oy_key_interface";
-            document.getElementById("oy_cover").style.display = "block";
-        }
+        oy_cover_on("OY_THREAD_WALLET");
 
         if (window.OY_WALLET_PUBLIC!==null) oy_wallet_activate(window.OY_WALLET_PUBLIC);
 
@@ -2009,10 +2059,7 @@
     }
 
     function oy_wallet_close() {
-        if (window.OY_COVER==="oy_key_interface") {
-            window.OY_COVER = false;
-            document.getElementById("oy_cover").style.display = "none";
-        }
+        oy_cover_off("OY_THREAD_WALLET");
         document.getElementById("oy_key_interface_cont").style.display = "none";
 
         oy_akoya_load();
@@ -2173,7 +2220,7 @@
     }
 
     function oy_dapper_launch() {
-        if (document.getElementById("oy_dapper_launch").classList.contains("oy_button_all_dull")||document.getElementById("oy_interface_dapper").style.display==="none"||document.getElementById("oy_cover").style.display==="block") return false;
+        if (document.getElementById("oy_dapper_launch").classList.contains("oy_button_all_dull")||document.getElementById("oy_interface_dapper").style.display==="none"||window.OY_COVER===true) return false;
 
         let oy_dapper_murl = document.getElementById("oy_dapper_input").value;
         if (oy_dapper_murl.indexOf(".mesh")===-1) return false;
@@ -2184,10 +2231,7 @@
             document.getElementById("oy_dapper_input").disabled = true;
             document.getElementById("oy_dapper").style.display = "block";
 
-            if (window.OY_COVER===false) {
-                window.OY_COVER = "oy_dapper";
-                document.getElementById("oy_cover").style.display = "block";
-            }
+            oy_cover_on("OY_THREAD_DAPPER");
 
             document.getElementById("oy_dapper_launch").classList.remove("oy_button_execute_active");
             document.getElementById("oy_dapper_launch").classList.add("oy_button_all_dull");
@@ -2214,8 +2258,9 @@
             document.getElementById("oy_dapper").style.backgroundColor = "#000000";
             document.getElementById("oy_dapper").style.border = "0.2vh solid #141414";
             document.getElementById("oy_dapper_control").style.backgroundColor = "#606060";
-            document.getElementById("oy_cover").style.display = "block";
             document.getElementById("ot_toggle_inner").innerHTML = "&nbsp;&nbsp;MINIMIZE&nbsp;&nbsp;";
+
+            oy_cover_on("OY_THREAD_DAPPER");
         }
         else {
             window.OY_DAPPER_MINIMIZED = true;
@@ -2225,14 +2270,15 @@
             document.getElementById("oy_dapper").style.backgroundColor = null;
             document.getElementById("oy_dapper").style.border = null;
             document.getElementById("oy_dapper_control").style.backgroundColor = "#3b3b3b";
-            document.getElementById("oy_cover").style.display = "none";
             document.getElementById("ot_toggle_inner").innerHTML = "&nbsp;&nbsp;RESTORE&nbsp;&nbsp;";
+
+            oy_cover_off("OY_THREAD_DAPPER");
         }
     }
 
     function oy_dapper_close() {
         oy_dapper_toggle(true);
-        document.getElementById("oy_cover").style.display = "none";
+        oy_cover_off("OY_THREAD_DAPPER");
 
         if (window.OY_COVER==="oy_dapper") {
             window.OY_COVER = false;
@@ -2516,34 +2562,29 @@
 
     function oy_file_view() {
         if (window.OY_FILE_KEEP===null) return false;
-        let oy_cover_render = function() {
-            if (window.OY_COVER===false) {
-                window.OY_COVER = "oy_file_view";
-                document.getElementById("oy_cover").style.display = "block";
-            }
-        };
+
         if (oy_file_view_check("oy_image")) {
             document.getElementById("oy_file_view_data").innerHTML = "<img style=\"width:auto;height:auto;max-height:85vh;max-width:85vw;\" src=\"data:"+window.OY_FILE_KEEP[1]+";base64,"+window.OY_FILE_KEEP[2]+"\">";
             document.getElementById("oy_file_view_cont").style.display = "block";
-            oy_cover_render();
+            oy_cover_on("OY_THREAD_FILE");
             return true;
         }
         else if (oy_file_view_check("oy_audio")) {
             document.getElementById("oy_file_view_data").innerHTML = "<audio controls src=\"data:"+window.OY_FILE_KEEP[1]+";base64,"+window.OY_FILE_KEEP[2]+"\">";
             document.getElementById("oy_file_view_cont").style.display = "block";
-            oy_cover_render();
+            oy_cover_on("OY_THREAD_FILE");
             return true;
         }
         else if (oy_file_view_check("oy_video")) {
             document.getElementById("oy_file_view_data").innerHTML = "<video controls src=\"data:"+window.OY_FILE_KEEP[1]+";base64,"+window.OY_FILE_KEEP[2]+"\">";
             document.getElementById("oy_file_view_cont").style.display = "block";
-            oy_cover_render();
+            oy_cover_on("OY_THREAD_FILE");
             return true;
         }
         else if (oy_file_view_check("oy_document")) {
             document.getElementById("oy_file_view_data").innerHTML = "<embed style=\"height:85vh;width:75vw;\" src=\"data:"+window.OY_FILE_KEEP[1]+";base64,"+window.OY_FILE_KEEP[2]+"\">";
             document.getElementById("oy_file_view_cont").style.display = "block";
-            oy_cover_render();
+            oy_cover_on("OY_THREAD_FILE");
             return true;
         }
         return false;
@@ -2551,11 +2592,9 @@
 
     function oy_file_view_close() {
         document.getElementById("oy_file_view_cont").style.display = "none";
-        if (window.OY_COVER==="oy_file_view") {
-            window.OY_COVER = false;
-            document.getElementById("oy_cover").style.display = "none";
-        }
         document.getElementById("oy_file_view_data").innerHTML = "";
+
+        oy_cover_off("OY_THREAD_FILE");
     }
 
     function oy_file_download() {
