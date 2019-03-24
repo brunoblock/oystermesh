@@ -1260,9 +1260,7 @@
             <div id="oy_console_hover_indicator" style="position:absolute;top:1%;right:1%;width:2.5%;height:4%;background-color: #c37b2c;border-radius: 50%;display: none;z-index: 200;"></div>
             <div id="oy_console" class="oy_center_both">***<br></div>
         </div>
-        <div id="oy_graph_block" class="oy_border oy_graph" style="position:absolute;bottom:0;right:41.4%;width:8%;height:53%;background-color: #404040;overflow:hidden;">
-            <div class='oy_center_both' style='width:120%;height:60%;border:0.2vh dashed #000000;z-index: 20;'></div>
-        </div>
+        <div id="oy_graph_block" class="oy_border oy_graph" style="position:absolute;bottom:0;right:41.4%;width:8%;height:53%;background-color: #404040;overflow:hidden;"></div>
         <div id="oy_graph_nodes" class="oy_border oy_graph" style="position:absolute;bottom:0;right:0;width:40%;height:53%;background-color: #404040;overflow:hidden;">
             <div id="oy_top_inner" style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);overflow:hidden;"></div>
         </div>
@@ -1298,7 +1296,7 @@
                     <span id="oy_block_stability">null</span>&nbsp;SD<br>
                     <span id="oy_akoya_dive_track">null</span>&nbsp;AKYT<br>
                 </div>
-                <div id="oy_self_reset" align="center" class="oy_button oy_button_all_active" style="position:absolute;bottom:-25%;left:30%;transform:translateX(-50%);width:40%;height:10%;" onclick="oy_self_reset()">
+                <div id="oy_low_power" align="center" class="oy_button oy_button_all_active" style="position:absolute;bottom:-25%;left:30%;transform:translateX(-50%);width:40%;height:10%;" onclick="oy_low_power_toggle()">
                     <div style="position:relative;">
                         LOW&nbsp;POWER
                     </div>
@@ -1382,6 +1380,12 @@
         window.OY_AKOYA_AMOUNT_PREV = "";
         window.OY_MAP_NODES = {};
         window.OY_MAP_LINKS = {};
+        window.OY_BLOCK_MAP_FUNC = null;
+        window.OY_MESH_MAP_FUNC = null;
+        window.OY_LOW_POWER = false;
+        window.OY_BLOCK_GRAPH = "<div id='oy_graph_block_inner' style='position:absolute;bottom:0.5%;left:2%;width:96%;height:0;background-color: #565656;transition:height 19.5s linear;overflow:hidden;z-index: 10;'></div><div class='oy_center_both' style='width:120%;height:60%;border:0.2vh dashed #000000;z-index: 60;'></div>";
+
+        document.getElementById("oy_graph_block").innerHTML = window.OY_BLOCK_GRAPH;
 
         oy_dapper_input();
 
@@ -1424,12 +1428,11 @@
         oy_console_local("Loading console...");
 
         oy_init(function() {
-            window.OY_BLOCK_MAP = function(oy_sector, oy_self) {
-                if (Math.random()<0.33) return false;
+            window.OY_BLOCK_MAP_FUNC = function(oy_sector, oy_self) {
                 let oy_block_diff = Date.now()/1000 - window.OY_BLOCK_TIME;
                 let oy_element = document.createElement("div");
                 oy_element.style.position = "absolute";
-                oy_element.style.bottom = ((oy_block_diff/20)*100)+"%";
+                oy_element.style.bottom = (1+((oy_block_diff/20)*98))+"%";
                 oy_element.style.left = "2%";
                 oy_element.style.width = "96%";
                 oy_element.style.height = "0.1vh";
@@ -1451,7 +1454,7 @@
                 }
                 document.getElementById("oy_graph_block").appendChild(oy_element);
             };
-            window.OY_MESH_MAP = function(oy_passport_passive) {
+            window.OY_MESH_MAP_FUNC = function(oy_passport_passive) {
                 let oy_node_prev = null;
                 for (let i in oy_passport_passive) {
                     window.OY_MAP_NODES[oy_passport_passive[i]] = true;
@@ -1464,6 +1467,9 @@
                     oy_node_prev = oy_passport_passive[i];
                 }
             };
+
+            window.OY_BLOCK_MAP = window.OY_BLOCK_MAP_FUNC;
+            window.OY_MESH_MAP = window.OY_MESH_MAP_FUNC;
 
             oy_maintain();
             oy_top_render();
@@ -1491,8 +1497,34 @@
         oy_local_init();
     };
 
-    function oy_self_reset() {
-        location.reload(true);
+    function oy_low_power_toggle() {
+        if (window.OY_LOW_POWER===false) {
+            window.OY_LOW_POWER = true;
+            window.OY_BLOCK_MAP = null;
+            window.OY_MESH_MAP = null;
+
+            document.getElementById("oy_graph_block").innerHTML = window.OY_BLOCK_GRAPH;
+            document.getElementById("oy_top_inner").innerHTML = "<div class='oy_center_both' style='font-size:2vh;color:#4a4a4a;'>LOW&nbsp;POWER&nbsp;MODE</div>";
+
+            oy_element_add("oy_console", "span", "oy_console_line_"+window.OY_CONSOLE_COUNTER, "***LOW POWER MODE***<br>");
+            window.OY_CONSOLE_COUNTER++;
+            document.getElementById("oy_console").scrollTo(0, document.getElementById("oy_console").scrollHeight);
+
+            document.getElementById("oy_low_power").classList.remove("oy_button_all_active");
+            document.getElementById("oy_low_power").classList.add("oy_button_execute_active");
+        }
+        else if (window.OY_LOW_POWER===true) {
+            window.OY_LOW_POWER = false;
+            window.OY_BLOCK_MAP = window.OY_BLOCK_MAP_FUNC;
+            window.OY_MESH_MAP = window.OY_MESH_MAP_FUNC;
+
+            document.getElementById("oy_graph_block").innerHTML = window.OY_BLOCK_GRAPH;
+            document.getElementById("oy_top_inner").innerHTML = "";
+            oy_top_render();
+
+            document.getElementById("oy_low_power").classList.remove("oy_button_execute_active");
+            document.getElementById("oy_low_power").classList.add("oy_button_all_active");
+        }
     }
 
     function oy_maintain() {
@@ -1613,7 +1645,7 @@
     }
 
     function oy_console_local(oy_console_msg) {
-        if (window.OY_CONSOLE_HOVER===true) return false;
+        if (window.OY_CONSOLE_HOVER===true||window.OY_LOW_POWER===true) return false;
         let oy_msg_build = "<span>";
         if (typeof(window.OY_MAIN['oy_self_short'])==="undefined") oy_msg_build += "null@mesh$ ";
         else oy_msg_build += window.OY_MAIN['oy_self_short']+"@mesh$ ";
@@ -1664,6 +1696,15 @@
         else return false;
         document.getElementById("oy_copy_key_input").select();
         document.execCommand("copy");
+    }
+
+    function oy_block_render() {
+        if (window.OY_LOW_POWER===true) return false;
+
+        document.getElementById("oy_graph_block").innerHTML = window.OY_BLOCK_GRAPH;
+        setTimeout(function() {
+            document.getElementById("oy_graph_block_inner").style.height = "99%";
+        }, 100);
     }
 
     function oy_block_reset_local() {
@@ -2203,14 +2244,9 @@
         location.hash = "";
     }
 
-    function oy_block_render() {
-        document.getElementById("oy_graph_block").innerHTML = "<div id='oy_graph_block_inner' style='position:absolute;bottom:0.5%;left:2%;width:96%;height:0;background-color: #565656;transition:height 19.5s linear;overflow:hidden;z-index: 10;'></div><div class='oy_center_both' style='width:120%;height:60%;border:0.2vh dashed #000000;z-index: 20;'></div>";
-        setTimeout(function() {
-            document.getElementById("oy_graph_block_inner").style.height = "99%";
-        }, 100);
-    }
-
     function oy_top_render() {
+        if (window.OY_LOW_POWER===true) return false;
+
         window.OY_MAP_NODES[window.OY_MAIN['oy_self_short']] = true;
         document.getElementById("oy_top_inner").innerHTML = "";
         setTimeout(function() {
