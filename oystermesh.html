@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Oyster | Bandwidth Bound Consensus</title>
     <meta name="description" content="Oyster provides decentralized access to immutable data and currency.">
-    <script src="oystermesh.js?30"></script>
+    <script src="oystermesh.js?70"></script>
     <script src="oysterdepend.js"></script>
     <script src="oy_dapper/oystertalk.js"></script>
     <script src="oy_resources/d3.v3.min.js"></script>
@@ -1530,6 +1530,7 @@
 
             oy_element_add("oy_console", "span", "oy_console_line_"+window.OY_CONSOLE_COUNTER, "***LOW POWER MODE***<br>");
             window.OY_CONSOLE_COUNTER++;
+            if (window.OY_CONSOLE_COUNTER>=window.OY_CONSOLE_SIZE) oy_element_remove("oy_console_line_"+(window.OY_CONSOLE_COUNTER-window.OY_CONSOLE_SIZE));
             document.getElementById("oy_console").scrollTo(0, document.getElementById("oy_console").scrollHeight);
 
             document.getElementById("oy_low_power").classList.remove("oy_button_all_active");
