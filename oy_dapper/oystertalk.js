@@ -69,7 +69,7 @@ function ot_render(oy_broadcast_hash, oy_render_payload) {
         return b[1] - a[1];
     });
 
-    document.getElementById("ot_render_cont").scrollTo(0, document.getElementById("ot_render_cont").scrollHeight);
+    if (document.getElementById("ot_scroll_jump").style.display==="none") document.getElementById("ot_render_cont").scrollTo(0, document.getElementById("ot_render_cont").scrollHeight);
 }
 
 function ot_input() {
@@ -151,6 +151,21 @@ function ot_reply_reset(ot_reply_delay) {
         document.getElementById("ot_broadcast_reply").innerHTML = "";
         document.getElementById("ot_broadcast_reply").style.display = "none";
     }
+}
+
+function ot_scroll() {
+    let ot_render = document.getElementById("ot_render_cont");
+    if (ot_render.offsetHeight+ot_render.scrollTop===ot_render.scrollHeight) {
+        document.getElementById("ot_scroll_jump").style.display = "none";
+    }
+    else {
+        document.getElementById("ot_scroll_jump").style.display = "block";
+    }
+}
+
+function ot_scroll_jump() {
+    document.getElementById("ot_render_cont").scrollTo(0, document.getElementById("ot_render_cont").scrollHeight);
+    document.getElementById("ot_scroll_jump").style.display = "none";
 }
 
 function ot_broadcast() {
@@ -313,7 +328,7 @@ function ot_maintain() {
             document.getElementById("ot_render_append_"+window.OT_RECALL_REPLY[ot_recall_reply_count][0]).innerHTML = "<br>";
             document.getElementById("ot_recall_reply_"+ot_recall_reply_count).innerHTML = ot_reply_array[1];
             oy_avatar_gen(ot_reply_array[0], document.getElementById("ot_reply_avatar_"+window.OT_RECALL_REPLY[ot_recall_reply_count][0]));
-            document.getElementById("ot_render_cont").scrollTo(0, document.getElementById("ot_render_cont").scrollHeight);
+            if (document.getElementById("ot_scroll_jump").style.display==="none") document.getElementById("ot_render_cont").scrollTo(0, document.getElementById("ot_render_cont").scrollHeight);
             delete window.OT_RECALL_REPLY[ot_recall_reply_count];
         }
     }
