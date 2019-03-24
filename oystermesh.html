@@ -1261,6 +1261,7 @@
             <div id="oy_console" class="oy_center_both">***<br></div>
         </div>
         <div id="oy_graph_block" class="oy_border oy_graph" style="position:absolute;bottom:0;right:41.4%;width:8%;height:53%;background-color: #404040;overflow:hidden;">
+            <div class='oy_center_both' style='width:120%;height:60%;border:0.2vh dashed #000000;z-index: 20;'></div>
         </div>
         <div id="oy_graph_nodes" class="oy_border oy_graph" style="position:absolute;bottom:0;right:0;width:40%;height:53%;background-color: #404040;overflow:hidden;">
             <div id="oy_top_inner" style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);overflow:hidden;"></div>
@@ -1299,7 +1300,7 @@
                 </div>
                 <div id="oy_self_reset" align="center" class="oy_button oy_button_all_active" style="position:absolute;bottom:-25%;left:30%;transform:translateX(-50%);width:40%;height:10%;" onclick="oy_self_reset()">
                     <div style="position:relative;">
-                        RESET&nbsp;NODE
+                        LOW&nbsp;POWER
                     </div>
                 </div>
                 <div id="oy_obj_top" align="center" class="oy_button oy_button_all_active" style="position:absolute;bottom:-25%;left:70%;transform:translateX(-50%);width:30%;height:10%;">
@@ -1405,8 +1406,10 @@
         });
 
         document.addEventListener("oy_key_enter", oy_dapper_launch, false);
+        document.addEventListener("oy_block_init", oy_block_render, false);
         document.addEventListener("oy_block_trigger", oy_block_process, false);
-        document.addEventListener("oy_block_trigger", oy_top_process, false);
+        document.addEventListener("oy_block_trigger", oy_top_render, false);
+        document.addEventListener("oy_peers_null", oy_top_render, false);
         document.addEventListener("oy_peers_null", oy_block_reset_local, false);
         document.addEventListener("oy_peers_recover", oy_block_process, false);
 
@@ -1421,6 +1424,33 @@
         oy_console_local("Loading console...");
 
         oy_init(function() {
+            window.OY_BLOCK_MAP = function(oy_sector, oy_self) {
+                if (Math.random()<0.33) return false;
+                let oy_block_diff = Date.now()/1000 - window.OY_BLOCK_TIME;
+                let oy_element = document.createElement("div");
+                oy_element.style.position = "absolute";
+                oy_element.style.bottom = ((oy_block_diff/20)*100)+"%";
+                oy_element.style.left = "2%";
+                oy_element.style.width = "96%";
+                oy_element.style.height = "0.1vh";
+                if (oy_self===true) {
+                    oy_element.style.backgroundColor = "#24ab26";
+                    oy_element.style.zIndex = "40";
+                }
+                else if (oy_sector===0) {
+                    oy_element.style.backgroundColor = "#964bab";
+                    oy_element.style.zIndex = "30";
+                }
+                else if (oy_sector===1) {
+                    oy_element.style.backgroundColor = "#348fab";
+                    oy_element.style.zIndex = "30";
+                }
+                else if (oy_sector===2) {
+                    oy_element.style.backgroundColor = "#1d5aab";
+                    oy_element.style.zIndex = "30";
+                }
+                document.getElementById("oy_graph_block").appendChild(oy_element);
+            };
             window.OY_MESH_MAP = function(oy_passport_passive) {
                 let oy_node_prev = null;
                 for (let i in oy_passport_passive) {
@@ -1436,7 +1466,7 @@
             };
 
             oy_maintain();
-            oy_top_process();
+            oy_top_render();
 
             if (location.hash==="#akoya") oy_tab("oy_tab_wallet");
             else if (location.hash.indexOf(".mesh")!==-1) {
@@ -2173,7 +2203,14 @@
         location.hash = "";
     }
 
-    function oy_top_process() {
+    function oy_block_render() {
+        document.getElementById("oy_graph_block").innerHTML = "<div id='oy_graph_block_inner' style='position:absolute;bottom:0.5%;left:2%;width:96%;height:0;background-color: #565656;transition:height 19.5s linear;overflow:hidden;z-index: 10;'></div><div class='oy_center_both' style='width:120%;height:60%;border:0.2vh dashed #000000;z-index: 20;'></div>";
+        setTimeout(function() {
+            document.getElementById("oy_graph_block_inner").style.height = "99%";
+        }, 100);
+    }
+
+    function oy_top_render() {
         window.OY_MAP_NODES[window.OY_MAIN['oy_self_short']] = true;
         document.getElementById("oy_top_inner").innerHTML = "";
         setTimeout(function() {
@@ -2208,8 +2245,8 @@
             .nodes([])
             .gravity(0.1)
             .linkDistance(5)
-            .linkStrength(0.4)
-            .charge(-160)
+            .linkStrength(0.5)
+            .charge(-90)
             .on("tick", oy_top_tick);
 
         let oy_svg = d3.select("#oy_top_inner").append("svg")
@@ -2243,7 +2280,7 @@
 
         window.OY_TOP_NODE.enter().insert("circle")
             .attr("class", "node")
-            .attr("r", 4)
+            .attr("r", 3)
             .style("fill", oy_fill);
 
         window.OY_TOP_NODE.exit()
