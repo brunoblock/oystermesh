@@ -183,6 +183,7 @@ window.OY_BLOCK_CONFIRM = {};
 window.OY_BLOCK_SEEDTIME = null;
 window.OY_BLOCK_INIT = new Event('oy_block_init');//trigger-able event for when a new block is issued
 window.OY_BLOCK_TRIGGER = new Event('oy_block_trigger');//trigger-able event for when a new block is issued
+window.OY_BLOCK_RESET = new Event('oy_block_reset');//trigger-able event for when a new block is issued
 window.OY_BLOCK_TRIGGER_TEMP = new Event('oy_block_trigger_temp');//trigger-able event for when a new block is issued
 window.OY_CHALLENGE = {};//objects for tracking peers that are challenged for the new meshblock hash
 window.OY_CHANNEL_DYNAMIC = {};//track channel broadcasts to ensure allowance compliance
@@ -2134,6 +2135,8 @@ function oy_block_reset() {
     }
 
     oy_log("MESHBLOCK RESET");
+
+    document.dispatchEvent(window.OY_BLOCK_RESET);
 
     oy_boost();
 }

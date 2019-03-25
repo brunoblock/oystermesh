@@ -1096,7 +1096,7 @@
     </div>
     <div class="oy_holder oy_fade two">
         <input type="text" id="oy_copy_key_input" style="position:absolute;bottom:-100vh;left:0;opacity:0" />
-        <div id="oy_graph_akoya" class="oy_center_hor oy_border oy_graph" style="top:0;width:50%;height:10%;background-color:transparent;overflow: hidden;z-index: 500">
+        <div id="oy_graph_akoya" class="oy_center_hor oy_border oy_graph" style="top:0;width:50%;height:10%;background-color:transparent;overflow: hidden;z-index: 500" onclick="oy_block_reset()">
             <div id="oy_graph_akoya_progress" style="position:relative;width:100%;height:100%;display:none">
                 <div id="oy_graph_akoya_progress_inner" style="width:0;height:100%;"></div>
             </div>
@@ -1416,6 +1416,7 @@
 
         document.addEventListener("oy_key_enter", oy_dapper_launch, false);
         document.addEventListener("oy_block_init", oy_block_render, false);
+        document.addEventListener("oy_block_reset", oy_block_render_reset, false);
         document.addEventListener("oy_block_trigger", oy_block_process, false);
         document.addEventListener("oy_block_trigger", oy_top_render, false);
         document.addEventListener("oy_peers_null", oy_top_render, false);
@@ -1760,6 +1761,16 @@
         setTimeout(function() {
             document.getElementById("oy_graph_block_inner").style.height = "99%";
         }, 100);
+    }
+
+    function oy_block_render_reset() {
+        document.getElementById("oy_graph_block").innerHTML = window.OY_BLOCK_GRAPH;
+        document.getElementById("oy_graph_block_inner").style.transition = "background-color .3s ease-out";
+        document.getElementById("oy_graph_block_inner").style.backgroundColor = "#c37b2c";
+        document.getElementById("oy_graph_block_inner").style.height = "99%";
+        setTimeout(function() {
+            document.getElementById("oy_graph_block").innerHTML = window.OY_BLOCK_GRAPH;
+        }, 300);
     }
 
     function oy_block_reset_local() {
