@@ -406,7 +406,7 @@
             }
 
             .oy_stats {
-                font-size:1.4vh;
+                font-size:1.6vh;
             }
 
             .oy_data_stats {
@@ -770,7 +770,7 @@
             }
 
             .oy_stats {
-                font-size:1.4vw;
+                font-size:1.6vw;
             }
 
             .oy_data_stats {
@@ -1272,7 +1272,6 @@
                     AVG&nbsp;LATENCY<br>
                     AVG&nbsp;PEERSHIP<br>
                     PEER&nbsp;COUNT<br>
-                    BLACKLISTED<br>
                     MESH&nbsp;RANGE<br>
                     BEAM&nbsp;FLOW<br>
                     SOAK&nbsp;FLOW<br>
@@ -1288,7 +1287,6 @@
                     <span id="oy_avg_latency">null</span>&nbsp;sec<br>
                     <span id="oy_avg_peership">null</span>&nbsp;min<br>
                     <span id="oy_peer_count_cont"><span id="oy_peer_count">null</span>&nbsp;peer(s)</span><br>
-                    <span id="oy_blacklisted">null</span>&nbsp;node(s)<br>
                     <span id="oy_mesh_range">null</span>&nbsp;node(s)<br>
                     <span id="oy_beam_flow">null</span>&nbsp;kbps<br>
                     <span id="oy_soak_flow">null</span>&nbsp;kbps<br>
@@ -1654,7 +1652,6 @@
             document.getElementById("oy_peer_count_cont").style.color = null;
             document.getElementById("oy_peer_count_cont").style.backgroundColor = null;
         }
-        document.getElementById("oy_blacklisted").innerHTML = ""+Object.keys(window.OY_BLACKLIST).length;
         setTimeout("oy_maintain()", window.OY_MAINTAIN_DELAY);
     }
 
@@ -1776,8 +1773,6 @@
         setTimeout(function() {
             document.getElementById("oy_graph_block").innerHTML = window.OY_BLOCK_GRAPH;
         }, 300);
-
-        oy_top_render();
     }
 
     function oy_block_reset_local() {
