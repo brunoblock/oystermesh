@@ -296,7 +296,7 @@ function ot_peers_halt() {
 
 function ot_close() {
     document.removeEventListener("oy_maintain_trigger", ot_maintain, false);
-    document.removeEventListener("oy_block_trigger", ot_approve, false);
+    document.removeEventListener("oy_block_trigger_temp", ot_approve, false);
     document.removeEventListener("oy_peers_null", ot_peers_halt, false);
     document.removeEventListener("oy_peers_null", ot_input, false);
     document.removeEventListener("oy_peers_recover", ot_peers_resume, false);
@@ -357,7 +357,7 @@ function ot_init() {
     else ot_peers_resume();
 
     document.addEventListener("oy_maintain_trigger", ot_maintain, false);
-    document.addEventListener("oy_block_trigger", ot_approve, false);
+    document.addEventListener("oy_block_trigger_temp", ot_approve, false);
     document.addEventListener("oy_peers_null", ot_peers_halt, false);
     document.addEventListener("oy_peers_null", ot_input, false);
     document.addEventListener("oy_peers_recover", ot_peers_resume, false);

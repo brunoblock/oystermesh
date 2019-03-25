@@ -1552,7 +1552,7 @@
             document.getElementById("oy_top_inner").style.overflow = "hidden";
 
             oy_top_init();
-            window.OY_TOP_NODES.push({id:window.OY_MAIN['oy_self_short'], x: Math.random()*window.OY_TOP_WIDTH|0, y: Math.random()*window.OY_TOP_HEIGHT|0,});
+            window.OY_TOP_NODES.push({id:window.OY_SELF_SHORT, x: Math.random()*window.OY_TOP_WIDTH|0, y: Math.random()*window.OY_TOP_HEIGHT|0,});
             oy_top_restart("#24ab26");
 
             document.getElementById("oy_low_power").classList.remove("oy_button_execute_active");
@@ -1638,7 +1638,7 @@
             document.getElementById("oy_pull_stats_elapsed").innerHTML = oy_local_elapsed.toFixed(1)+oy_suffix;
         }
 
-        document.getElementById("oy_self_short").innerHTML = ""+window.OY_MAIN['oy_self_short'];
+        document.getElementById("oy_self_short").innerHTML = ""+window.OY_SELF_SHORT;
         document.getElementById("oy_peer_count").innerHTML = ""+window.OY_PEER_COUNT;
         if (window.OY_PEER_COUNT===0) {
             document.getElementById("oy_peer_count_cont").style.color = "#000000";
@@ -1680,8 +1680,8 @@
     function oy_console_local(oy_console_msg) {
         if (window.OY_CONSOLE_HOVER===true||window.OY_LOW_POWER===true) return false;
         let oy_msg_build = "<span>";
-        if (typeof(window.OY_MAIN['oy_self_short'])==="undefined") oy_msg_build += "null@mesh$ ";
-        else oy_msg_build += window.OY_MAIN['oy_self_short']+"@mesh$ ";
+        if (typeof(window.OY_SELF_SHORT)==="undefined") oy_msg_build += "null@mesh$ ";
+        else oy_msg_build += window.OY_SELF_SHORT+"@mesh$ ";
         oy_element_add("oy_console", "span", "oy_console_line_"+window.OY_CONSOLE_COUNTER, oy_msg_build+oy_console_msg+"<br>");
         window.OY_CONSOLE_COUNTER++;
         if (window.OY_CONSOLE_COUNTER>=window.OY_CONSOLE_SIZE) oy_element_remove("oy_console_line_"+(window.OY_CONSOLE_COUNTER-window.OY_CONSOLE_SIZE));
@@ -2263,6 +2263,9 @@
             document.getElementById("ot_toggle_inner").innerHTML = "&nbsp;&nbsp;MINIMIZE&nbsp;&nbsp;";
 
             oy_cover_on("OY_THREAD_DAPPER");
+
+            //TODO there should be nothing ot in this oy section once the container system is setup properly
+            document.getElementById("ot_render_cont").scrollTo(0, document.getElementById("ot_render_cont").scrollHeight);
         }
         else {
             window.OY_DAPPER_MINIMIZED = true;
@@ -2293,14 +2296,14 @@
     function oy_top_render() {
         if (window.OY_LOW_POWER===true) return false;
 
-        window.OY_MAP_NODES[window.OY_MAIN['oy_self_short']] = true;
+        window.OY_MAP_NODES[window.OY_SELF_SHORT] = true;
         document.getElementById("oy_top_inner").innerHTML = "";
         setTimeout(function() {
             oy_top_init();
-            window.OY_TOP_NODES.push({id:window.OY_MAIN['oy_self_short'], x: Math.random()*window.OY_TOP_WIDTH|0, y: Math.random()*window.OY_TOP_HEIGHT|0,});
+            window.OY_TOP_NODES.push({id:window.OY_SELF_SHORT, x: Math.random()*window.OY_TOP_WIDTH|0, y: Math.random()*window.OY_TOP_HEIGHT|0,});
             oy_top_restart("#24ab26");
             for (let oy_node_short in window.OY_MAP_NODES) {
-                if (oy_node_short===window.OY_MAIN['oy_self_short']) continue;
+                if (oy_node_short===window.OY_SELF_SHORT) continue;
                 window.OY_TOP_NODES.push({id:oy_node_short, x: Math.random()*window.OY_TOP_WIDTH|0, y: Math.random()*window.OY_TOP_HEIGHT|0,});
             }
             for (let oy_link_lead in window.OY_MAP_LINKS) {
