@@ -1764,6 +1764,8 @@
     }
 
     function oy_block_render_reset() {
+        window.OY_BLOCK_RENDER_ACTIVE = false;
+
         document.getElementById("oy_graph_block").innerHTML = window.OY_BLOCK_GRAPH;
         document.getElementById("oy_graph_block_inner").style.transition = "background-color .3s ease-out";
         document.getElementById("oy_graph_block_inner").style.backgroundColor = "#c37b2c";
@@ -1771,6 +1773,8 @@
         setTimeout(function() {
             document.getElementById("oy_graph_block").innerHTML = window.OY_BLOCK_GRAPH;
         }, 300);
+
+        oy_top_render();
     }
 
     function oy_block_reset_local() {
