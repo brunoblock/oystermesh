@@ -152,6 +152,7 @@ window.OY_BLOCK_COMMANDS = {
             oy_command_array[3]<window.OY_AKOYA_MAX_SUPPY&&//check that the sending amount smaller than the max supply
             typeof(window.OY_BLOCK[2][oy_command_array[2]])!=="undefined"&&//check the sending wallet exists
             oy_command_array[3]<=window.OY_BLOCK[2][oy_command_array[2]]&&//check the sending wallet has sufficient akoya
+            oy_command_array[2]!==oy_command_array[4]&&//check that the sender and the receiver are different
             oy_public_check(oy_command_array[4])) return true;//check that receiving address is a valid address
         return false;
         //TODO - either one wallet transaction per block or need additional checks

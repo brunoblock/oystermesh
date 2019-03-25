@@ -265,6 +265,10 @@ function ot_load() {
         document.getElementById("ot_wallet_load_cont").style.display = "block";
         document.getElementById("ot_approval_cont").style.display = "none";
     }
+
+    document.getElementById("ot_message").style.display = "none";
+    document.getElementById("ot_message").innerHTML = "";
+
     if (typeof(window.OY_BLOCK_TEMP[2][window.OT_CHANNEL_ID])!=="undefined") ot_approve();
 }
 
