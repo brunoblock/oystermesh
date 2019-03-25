@@ -14,15 +14,6 @@ OYSTER MESH FAUCET
     window.OY_WALLET_PUBLIC = "PUBLIC_KEY";
     localStorage.clear();
 
-    window.OY_MAIN = {"oy_ready":false};
-    window.OY_PEERS = {"oy_aggregate_node":[-1, -1, -1, 0, [], 0, [], 0, [], -1, -1]};
-    window.OY_PROPOSED = {};
-    window.OY_BLACKLIST = {};
-    oy_local_store("oy_main", window.OY_MAIN);
-    oy_local_store("oy_peers", window.OY_PEERS);
-    oy_local_store("oy_proposed", window.OY_PROPOSED);
-    oy_local_store("oy_blacklist", window.OY_BLACKLIST);
-
     window.OY_PASSIVE_MODE = true;
     oy_init();
 
