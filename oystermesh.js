@@ -47,6 +47,7 @@ window.OY_NODE_DELAYTIME = 6;//minimum expected time to connect or transmit data
 window.OY_NODE_EXPIRETIME = 600;//seconds of non-interaction until a node's connection session is deleted
 window.OY_BOOST_KEEP = 80;//node IDs to retain in boost memory, higher means more nodes retained but less average node quality
 window.OY_BOOST_DELAY = 100;//ms delay per boost node initiation
+window.OY_BOOST_EXPIRETIME = 3600;//seconds until boost localstorage retention is discarded
 window.OY_CLONE_AFFINITY = 0.3;//higher means more likely to ask a node to become a clone than a peer and vice-versa
 window.OY_CLONE_UPTIME_MIN = 60;//seconds since able to keep up with the meshblock required to become a clone origin
 window.OY_CLONE_LIVETIME = 60;//seconds to keep a node as a clone
@@ -83,11 +84,11 @@ window.OY_READY_RETRY = 2000;//ms interval to retry connection if READY is still
 window.OY_BLOCK_LOOP = 200;//a lower value means more opportunity within the 10 second window to propagate transactions
 window.OY_LOGIC_ALL_MAX = 1100;//maximum size for a packet that is routed via OY_LOGIC_ALL, except OY_CHANNEL_BROADCAST
 window.OY_CHANNEL_BROADCAST_PACKET_MAX = 5000;//maximum size for a packet that is routed via OY_CHANNEL_BROADCAST (OY_LOGIC_ALL)
-window.OY_CHANNEL_KEEPTIME = 15;//channel bearing nodes are expected to broadcast a logic_all packet within this interval
-window.OY_CHANNEL_FORGETIME = 60;//seconds since last signed message from channel bearing node
-window.OY_CHANNEL_RECOVERTIME = 10;//second interval between channel recovery requests per node, should be at least MESH_EDGE*2
+window.OY_CHANNEL_KEEPTIME = 10;//channel bearing nodes are expected to broadcast a logic_all packet within this interval
+window.OY_CHANNEL_FORGETIME = 25;//seconds since last signed message from channel bearing node
+window.OY_CHANNEL_RECOVERTIME = 4;//second interval between channel recovery requests per node, should be at least MESH_EDGE*2
 window.OY_CHANNEL_EXPIRETIME = 1209600;//seconds until a broadcast expires and is dropped from nodes listening on the channel
-window.OY_CHANNEL_RESPOND_MAX = 10;//max amount of broadcast payloads to send in response to a channel recover request
+window.OY_CHANNEL_RESPOND_MAX = 12;//max amount of broadcast payloads to send in response to a channel recover request
 window.OY_CHANNEL_ALLOWANCE = 8;//broadcast allowance in seconds per public key, an anti-spam mechanism to prevent abuse of OY_LOGIC_ALL
 window.OY_CHANNEL_CONSENSUS = 0.4;//node signature requirement for a broadcast to be retained in channel_keep
 window.OY_KEY_BRUNO = "XLp6_wVPBF3Zg-QNRkEj6U8bOYEZddQITs1n2pyeRqwOG5k9w_1A-RMIESIrVv_5HbvzoLhq-xPLE7z2na0C6M";//prevent impersonation
@@ -397,7 +398,7 @@ function oy_public_check(oy_key_public) {
     return oy_key_public.length===86;
 }
 
-function oy_local_store(oy_local_name, oy_local_data) {
+function oy_local_set(oy_local_name, oy_local_data) {
     try {
         localStorage.setItem(oy_local_name, JSON.stringify(oy_local_data));
     }
@@ -1945,7 +1946,7 @@ function oy_data_deposit(oy_data_handle, oy_data_nonce, oy_data_value) {
     oy_deposit_object = null;
     window.OY_PURGE = window.OY_PURGE.filter(oy_handle => oy_handle!==oy_data_handle);
     window.OY_PURGE.push(oy_data_handle);
-    oy_local_store("oy_purge", window.OY_PURGE);
+    oy_local_set("oy_purge", window.OY_PURGE);
 
     oy_log("Stored handle "+oy_data_handle+" at nonce "+oy_data_nonce);
     return true;
@@ -2066,7 +2067,6 @@ function oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm)
             if (typeof(oy_callback_confirm)!=="undefined") window.OY_BLOCK_CONFIRM[oy_hash_gen(oy_command_flat)] = oy_callback_confirm;
             oy_key_sign(oy_key_private, oy_command_flat, function(oy_command_crypt) {
                 oy_block_command_verify([oy_command_array, oy_command_crypt], function(oy_verify_valid) {
-                    console.log(oy_verify_valid);
                     if (oy_verify_valid===true) {
                         let oy_command_hash = oy_hash_gen(oy_command_flat);
                         let oy_data_payload = [[], null, oy_command_array, oy_command_crypt];
@@ -2076,7 +2076,6 @@ function oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm)
                             setTimeout(function() {
                                 let oy_broadcast_payload = oy_data_payload.slice();
                                 oy_broadcast_payload[1] = oy_rand_gen();
-                                console.log(oy_broadcast_payload);
                                 oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_COMMAND", oy_broadcast_payload);
                             }, oy_delay);
                         }
@@ -2482,7 +2481,8 @@ function oy_block_loop() {
                     window.OY_BLOCK_CONFIRM = {};
 
                     while (window.OY_BOOST.length>window.OY_BOOST_KEEP) window.OY_BOOST.shift();
-                    oy_local_store("oy_boost", window.OY_BOOST);
+                    oy_local_set("oy_boost", window.OY_BOOST);
+                    oy_local_set("oy_boost_expire", (Date.now()/1000|0)+window.OY_BOOST_EXPIRETIME);
                 }, window.OY_BLOCK_SECTORS[0][1]);//seconds 16-20 out of 20
             }, window.OY_BLOCK_SECTORS[1][1]);//seconds 4-16 out of 20
         }, window.OY_BLOCK_SECTORS[0][1]);//seconds 0-4 out of 20
@@ -2680,10 +2680,12 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
     window.OY_BLOCK_SEEDTIME = 1553189900;
 
     window.OY_PURGE = oy_local_get("oy_purge");
-    window.OY_BOOST = oy_local_get("oy_boost");
+    let oy_boost_expire = oy_local_get("oy_boost_expire");
+    if (typeof(oy_boost_expire)!=="object"&&Date.now()/1000<oy_boost_expire) window.OY_BOOST = oy_local_get("oy_boost");
+    else oy_local_set("oy_boost", {});
 
     //TODO remove this line after purging browsers
-    oy_local_store("oy_channel_keep", {});
+    oy_local_set("oy_channel_keep", {});
 
     window.OY_CONN = new Peer(window.OY_SELF_PUBLIC, {host: 'top.oyster.org', port: 8200, path: '/', secure:true});
 
