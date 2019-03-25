@@ -1417,6 +1417,7 @@
         document.addEventListener("oy_key_enter", oy_dapper_launch, false);
         document.addEventListener("oy_block_init", oy_block_render, false);
         document.addEventListener("oy_block_reset", oy_block_render_reset, false);
+        document.addEventListener("oy_block_reset", oy_block_reset_local, false);
         document.addEventListener("oy_block_trigger", oy_block_process, false);
         document.addEventListener("oy_block_trigger", oy_top_render, false);
         document.addEventListener("oy_peers_null", oy_top_render, false);
@@ -1764,6 +1765,8 @@
     }
 
     function oy_block_render_reset() {
+        if (window.OY_LOW_POWER===true) return false;
+
         window.OY_BLOCK_RENDER_ACTIVE = false;
 
         document.getElementById("oy_graph_block").innerHTML = window.OY_BLOCK_GRAPH;
