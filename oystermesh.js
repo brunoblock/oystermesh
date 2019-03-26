@@ -91,6 +91,7 @@ window.OY_CHANNEL_EXPIRETIME = 1209600;//seconds until a broadcast expires and i
 window.OY_CHANNEL_RESPOND_MAX = 12;//max amount of broadcast payloads to send in response to a channel recover request
 window.OY_CHANNEL_ALLOWANCE = 8;//broadcast allowance in seconds per public key, an anti-spam mechanism to prevent abuse of OY_LOGIC_ALL
 window.OY_CHANNEL_CONSENSUS = 0.4;//node signature requirement for a broadcast to be retained in channel_keep
+window.OY_CHANNEL_TOP_TOLERANCE = 2;//node count difference allowed between broadcast claim and perceived claim
 window.OY_KEY_BRUNO = "XLp6_wVPBF3Zg-QNRkEj6U8bOYEZddQITs1n2pyeRqwOG5k9w_1A-RMIESIrVv_5HbvzoLhq-xPLE7z2na0C6M";//prevent impersonation
 window.OY_SHORT_LENGTH = 6;//various data value such as nonce IDs, data handles, data values are shortened for efficiency
 window.OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inputs are expected
@@ -782,6 +783,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                         oy_echo_beam();
                         return true;
                     }
+
+                    if (Math.abs(oy_data_payload[7]-oy_channel_top_count(oy_data_payload[2]))>window.OY_CHANNEL_TOP_TOLERANCE) return false;
 
                     if (typeof(window.OY_CHANNEL_RENDER[oy_data_payload[2]])==="undefined") window.OY_CHANNEL_RENDER[oy_data_payload[2]] = {};
 
