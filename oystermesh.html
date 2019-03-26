@@ -1418,7 +1418,7 @@
         document.addEventListener("oy_block_reset", oy_block_reset_local, false);
         document.addEventListener("oy_block_trigger", oy_block_process, false);
         document.addEventListener("oy_block_trigger", oy_top_render, false);
-        document.addEventListener("oy_peers_null", oy_top_render, false);
+        document.addEventListener("oy_peers_null", oy_top_render_reset, false);
         document.addEventListener("oy_peers_null", oy_block_reset_local, false);
         document.addEventListener("oy_peers_recover", oy_block_process, false);
 
@@ -2332,6 +2332,13 @@
             window.OY_MAP_NODES = {};
             window.OY_MAP_LINKS = {};
         }, 100);
+    }
+
+    function oy_top_render_reset() {
+        window.OY_MAP_NODES = {};
+        window.OY_MAP_LINKS = {};
+
+        oy_top_render();
     }
 
     function oy_top_init() {
