@@ -8,7 +8,7 @@ function ot_render(oy_broadcast_hash, oy_render_payload) {
 
     let ot_render_opacity = "";
     let ot_render_stats;
-    if (oy_render_payload[0]===null) ot_render_stats = "S"+oy_render_payload[7].length;
+    if (oy_render_payload[0]===null) ot_render_stats = "S"+oy_render_payload[8].length+"A"+oy_render_payload[7];
     else if (oy_render_payload[5]===window.OY_WALLET_PUBLIC) {
         ot_render_stats = "<span id='ot_render_stats_echo_"+oy_broadcast_hash+"' style='color:indianred'>E0</span>";
         ot_render_opacity = "opacity:0.5;";
