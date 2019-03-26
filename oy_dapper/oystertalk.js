@@ -195,7 +195,7 @@ function ot_broadcast() {
 function ot_broadcast_freeze(ot_count) {
     if (typeof(ot_count)==="undefined") {
         window.OT_BROADCAST_FREEZE = true;
-        ot_count = 9;
+        ot_count = window.OY_CHANNEL_ALLOWANCE+2;
     }
     else if (ot_count===0) {
         window.OT_BROADCAST_FREEZE = false;
