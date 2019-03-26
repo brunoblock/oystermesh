@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <title>Oyster | Bandwidth Bound Consensus</title>
     <meta name="description" content="Oyster provides decentralized access to immutable data and currency.">
-    <script src="oystermesh.js?70"></script>
-    <script src="oysterdepend.js"></script>
-    <script src="oy_dapper/oystertalk.js"></script>
+    <script src="oystermesh.js?77"></script>
+    <script src="oysterdepend.js?3"></script>
+    <script src="oy_dapper/oystertalk.js?14"></script>
     <script src="oy_resources/d3.v3.min.js"></script>
     <script src="oy_resources/blockies.js"></script>
     <script src="oy_resources/linkify.min.js"></script>
@@ -1398,6 +1398,10 @@
         document.getElementById("oy_file_upload").addEventListener('change', oy_file_change, false);
         document.getElementById("oy_file_pearl").addEventListener('change', oy_wallet_read, false);
 
+        window.addEventListener("orientationchange", function() {
+            oy_top_render();
+        });
+
         document.addEventListener("keydown", function(oy_event) {
             let oy_key = oy_event.which || oy_event.charCode || oy_event.keyCode || 0;
             if (window.OY_KEY_SHIFT===false&&(oy_event.key==="Enter"||oy_key===13)) {
@@ -1553,7 +1557,7 @@
 
             oy_top_init();
             window.OY_TOP_NODES.push({id:window.OY_SELF_SHORT, x: Math.random()*window.OY_TOP_WIDTH|0, y: Math.random()*window.OY_TOP_HEIGHT|0,});
-            oy_top_restart("#24ab26");
+            oy_top_restart(true);
 
             document.getElementById("oy_low_power").classList.remove("oy_button_execute_active");
             document.getElementById("oy_low_power").classList.add("oy_button_all_active");
@@ -2313,11 +2317,12 @@
         document.getElementById("oy_top_inner").innerHTML = "";
         setTimeout(function() {
             oy_top_init();
-            window.OY_TOP_NODES.push({id:window.OY_SELF_SHORT, x: Math.random()*window.OY_TOP_WIDTH|0, y: Math.random()*window.OY_TOP_HEIGHT|0,});
-            oy_top_restart("#24ab26");
+            if (Object.keys(window.OY_MAP_NODES).length===1) window.OY_TOP_NODES.push({id:window.OY_SELF_SHORT, x: (Math.random()*window.OY_TOP_WIDTH)|0, y: (Math.random()*window.OY_TOP_HEIGHT)|0});
+            else window.OY_TOP_NODES.push({id:window.OY_SELF_SHORT, x: window.OY_TOP_WIDTH/2|0, y: window.OY_TOP_HEIGHT/2|0});
+            oy_top_restart(true);
             for (let oy_node_short in window.OY_MAP_NODES) {
                 if (oy_node_short===window.OY_SELF_SHORT) continue;
-                window.OY_TOP_NODES.push({id:oy_node_short, x: Math.random()*window.OY_TOP_WIDTH|0, y: Math.random()*window.OY_TOP_HEIGHT|0,});
+                window.OY_TOP_NODES.push({id:oy_node_short, x: (window.OY_TOP_WIDTH/4)+(Math.random()*(window.OY_TOP_WIDTH/2))|0, y: (window.OY_TOP_HEIGHT/4)+(Math.random()*(window.OY_TOP_HEIGHT/2))|0});
             }
             for (let oy_link_lead in window.OY_MAP_LINKS) {
                 for (let i in window.OY_MAP_LINKS[oy_link_lead]) {
@@ -2328,7 +2333,7 @@
                     if (oy_node_collect.length===2) window.OY_TOP_LINKS.push({source: oy_node_collect[0], target: oy_node_collect[1]});
                 }
             }
-            oy_top_restart("#348fab");
+            oy_top_restart(false);
             window.OY_MAP_NODES = {};
             window.OY_MAP_LINKS = {};
         }, 100);
@@ -2342,16 +2347,22 @@
     }
 
     function oy_top_init() {
-        window.OY_TOP_WIDTH = screen.width/3;
-        window.OY_TOP_HEIGHT = screen.height/3;
+        if (window.innerHeight < window.innerWidth) {
+            window.OY_TOP_WIDTH = screen.height/1.5;
+            window.OY_TOP_HEIGHT = screen.width/1.5;
+        }
+        else {
+            window.OY_TOP_WIDTH = screen.width/1.5;
+            window.OY_TOP_HEIGHT = screen.height/1.5;
+        }
 
         window.OY_TOP_FORCE = d3.layout.force()
             .size([window.OY_TOP_WIDTH, window.OY_TOP_HEIGHT])
             .nodes([])
-            .gravity(0.1)
-            .linkDistance(5)
-            .linkStrength(0.5)
-            .charge(-90)
+            .gravity(0.3)
+            .linkDistance(7)
+            .linkStrength(0.4)
+            .charge(-120)
             .on("tick", oy_top_tick);
 
         let oy_svg = d3.select("#oy_top_inner").append("svg")
@@ -2380,13 +2391,21 @@
             .attr("cy", function(d) { return d.y; });
     }
 
-    function oy_top_restart(oy_fill) {
+    function oy_top_restart(oy_self) {
         window.OY_TOP_NODE = window.OY_TOP_NODE.data(window.OY_TOP_NODES);
 
-        window.OY_TOP_NODE.enter().insert("circle")
-            .attr("class", "node")
-            .attr("r", 3)
-            .style("fill", oy_fill);
+        if (oy_self===true) {
+            window.OY_TOP_NODE.enter().insert("circle")
+                .attr("class", "node")
+                .attr("r", 3)
+                .style("fill", "#24ab26");
+        }
+        else {
+            window.OY_TOP_NODE.enter().insert("circle")
+                .attr("class", "node")
+                .attr("r", 2.8)
+                .style("fill", "#348fab");
+        }
 
         window.OY_TOP_NODE.exit()
             .remove();
