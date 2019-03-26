@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Oyster | Bandwidth Bound Consensus</title>
     <meta name="description" content="Oyster provides decentralized access to immutable data and currency.">
-    <script src="oystermesh.js?77"></script>
+    <script src="oystermesh.js?78"></script>
     <script src="oysterdepend.js?3"></script>
     <script src="oy_dapper/oystertalk.js?14"></script>
     <script src="oy_resources/d3.v3.min.js"></script>
@@ -2359,10 +2359,10 @@
         window.OY_TOP_FORCE = d3.layout.force()
             .size([window.OY_TOP_WIDTH, window.OY_TOP_HEIGHT])
             .nodes([])
-            .gravity(0.3)
-            .linkDistance(7)
-            .linkStrength(0.4)
-            .charge(-120)
+            .gravity(0.15)
+            .linkDistance(5)
+            .linkStrength(0.5)
+            .charge(-90)
             .on("tick", oy_top_tick);
 
         let oy_svg = d3.select("#oy_top_inner").append("svg")
