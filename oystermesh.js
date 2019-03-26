@@ -937,7 +937,16 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                                             if (oy_key_valid===true) {
                                                 oy_log("Valid secondary signature for broadcast hash "+oy_short(oy_data_payload[3][i][0])+" from channel "+oy_short(oy_data_payload[2]));
                                                 if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_data_payload[3][i][0]])==="undefined") window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_data_payload[3][i][0]] = [oy_data_payload[3][i][1][0], oy_data_payload[3][i][1][1], oy_data_payload[3][i][1][2], oy_data_payload[3][i][1][3], oy_data_payload[3][i][1][4], oy_data_payload[3][i][1][5], oy_data_payload[3][i][1][6], [[oy_data_payload[3][i][1][7][x][0], oy_data_payload[3][i][1][7][x][1]]]];
-                                                else if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_data_payload[3][i][0]][7])!=="undefined") window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_data_payload[3][i][0]][7].push([oy_data_payload[3][i][1][7][x][0], oy_data_payload[3][i][1][7][x][1]]);
+                                                else if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_data_payload[3][i][0]][7])!=="undefined") {
+                                                    let oy_push = true;
+                                                    for (let y in window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_data_payload[3][i][0]][7]) {
+                                                        if (window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_data_payload[3][i][0]][7][y][1]===oy_data_payload[3][i][1][7][x][1]) {
+                                                            oy_push = false;
+                                                            break;
+                                                        }
+                                                    }
+                                                    if (oy_push===true) window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_data_payload[3][i][0]][7].push([oy_data_payload[3][i][1][7][x][0], oy_data_payload[3][i][1][7][x][1]]);
+                                                }
                                                 else oy_log("Could not record channel respond sequence for broadcast hash "+oy_short(oy_data_payload[3][i][0])+" from channel "+oy_short(oy_data_payload[2])+", go tell Bruno", 1);
                                             }
                                             else oy_log("Invalid secondary signature for broadcast hash "+oy_short(oy_data_payload[3][i][0])+" from channel "+oy_short(oy_data_payload[2]));
