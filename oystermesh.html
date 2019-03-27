@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <title>Oyster | Bandwidth Bound Consensus</title>
     <meta name="description" content="Oyster provides decentralized access to immutable data and currency.">
-    <script src="oystermesh.js?78"></script>
+    <script src="oystermesh.js?92"></script>
     <script src="oysterdepend.js?3"></script>
-    <script src="oy_dapper/oystertalk.js?14"></script>
+    <script src="oy_dapper/oystertalk.js?18"></script>
     <script src="oy_resources/d3.v3.min.js"></script>
     <script src="oy_resources/blockies.js"></script>
     <script src="oy_resources/linkify.min.js"></script>
@@ -1780,7 +1780,9 @@
     }
 
     function oy_block_reset_local() {
+        window.OY_BLOCK_RENDER_ACTIVE = false;
         window.OY_AKOYA_PROCESS = false;
+
         document.getElementById("oy_akoya_balance_inner").innerHTML = "------";
         document.getElementById("oy_graph_akoya_progress").style.display = "none";
         document.getElementById("oy_graph_akoya_progress_inner").style.backgroundColor = "transparent";
