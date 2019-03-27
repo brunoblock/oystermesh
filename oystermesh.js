@@ -901,7 +901,12 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                 oy_channel_respond.sort(function(a, b) {
                     return b[6] - a[6];
                 });
+
+                let oy_respond_multi = Math.max(1, oy_channel_top_count(oy_data_payload[2])[0]);
+                while (oy_channel_respond.length>window.OY_CHANNEL_RESPOND_MAX*oy_respond_multi) oy_channel_respond.pop();
+                oy_channel_respond.sort(function(){return 0.5 - Math.random()});
                 while (oy_channel_respond.length>window.OY_CHANNEL_RESPOND_MAX) oy_channel_respond.pop();
+
                 oy_data_route("OY_LOGIC_FOLLOW", "OY_CHANNEL_RESPOND", [[], oy_data_payload[0], oy_data_payload[2], oy_channel_respond]);
             }
         }
