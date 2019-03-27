@@ -1248,13 +1248,17 @@ function oy_node_assign() {
 function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
     let oy_time_local = Date.now()/1000;
     if (oy_data_flag==="OY_PEER_TERMINATE") {
-        oy_log("Received termination notice: "+oy_data_payload+" from non-peer");
+        delete window.OY_ORIGINS[oy_node_id];
+        delete window.OY_CLONES[oy_node_id];
         oy_node_reset(oy_node_id);
+        oy_log("Received termination notice: "+oy_data_payload+" from non-peer");
         return false;
     }
     else if (oy_data_flag==="OY_PEER_BLACKLIST") {
-        oy_log("Node "+oy_short(oy_node_id)+" blacklisted us, will return the favour");
+        delete window.OY_ORIGINS[oy_node_id];
+        delete window.OY_CLONES[oy_node_id];
         oy_node_punish(oy_node_id, "OY_PUNISH_BLACKLIST_RETURN");
+        oy_log("Node "+oy_short(oy_node_id)+" blacklisted us, will return the favour");
         return false;
     }
     else if (oy_data_flag==="OY_PEER_AFFIRM") {
