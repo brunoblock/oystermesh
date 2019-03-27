@@ -2322,7 +2322,7 @@
             oy_top_restart(true);
             for (let oy_node_short in window.OY_MAP_NODES) {
                 if (oy_node_short===window.OY_SELF_SHORT) continue;
-                window.OY_TOP_NODES.push({id:oy_node_short, x: (window.OY_TOP_WIDTH/4)+(Math.random()*(window.OY_TOP_WIDTH/2))|0, y: (window.OY_TOP_HEIGHT/4)+(Math.random()*(window.OY_TOP_HEIGHT/2))|0});
+                window.OY_TOP_NODES.push({id:oy_node_short, x: (window.OY_TOP_WIDTH/3)+(Math.random()*(window.OY_TOP_WIDTH/3))|0, y: (window.OY_TOP_HEIGHT/3)+(Math.random()*(window.OY_TOP_HEIGHT/3))|0});
             }
             for (let oy_link_lead in window.OY_MAP_LINKS) {
                 for (let i in window.OY_MAP_LINKS[oy_link_lead]) {
