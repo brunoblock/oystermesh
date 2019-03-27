@@ -891,14 +891,14 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
                 let oy_channel_respond = [];
                 for (let oy_broadcast_hash in window.OY_CHANNEL_KEEP[oy_data_payload[2]]) {
-                    if (oy_data_payload[3].indexOf(oy_broadcast_hash)===-1) oy_channel_respond.push([oy_broadcast_hash, window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash]]);
+                    if (oy_data_payload[3].indexOf(oy_broadcast_hash)===-1) oy_channel_respond.push(window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash]);
                 }
                 if (oy_channel_respond.length===0) {
                     oy_log("No unknown broadcast payloads found for channel "+oy_short(oy_data_payload[2]));
                     return false;
                 }
                 oy_channel_respond.sort(function(a, b) {
-                    return b[1][6] - a[1][6];
+                    return b[6] - a[6];
                 });
                 while (oy_channel_respond.length>window.OY_CHANNEL_RESPOND_MAX) oy_channel_respond.pop();
                 oy_data_route("OY_LOGIC_FOLLOW", "OY_CHANNEL_RESPOND", [[], oy_data_payload[0], oy_data_payload[2], oy_channel_respond]);
@@ -930,36 +930,37 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                 if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]])==="undefined") window.OY_CHANNEL_KEEP[oy_data_payload[2]] = {};
 
                 for (let i in oy_data_payload[3]) {
-                    if (oy_channel_approved(oy_data_payload[2], oy_data_payload[3][i][1][5])&&oy_time_local-oy_data_payload[3][i][1][6]<=window.OY_CHANNEL_EXPIRETIME) {
-                        oy_key_verify(oy_data_payload[3][i][1][5], oy_data_payload[3][i][1][4], oy_data_payload[3][i][1][6]+oy_data_payload[3][i][1][7]+oy_data_payload[3][i][1][3], function(oy_key_valid) {
+                    if (oy_channel_approved(oy_data_payload[2], oy_data_payload[3][i][5])&&oy_time_local-oy_data_payload[3][i][6]<=window.OY_CHANNEL_EXPIRETIME) {
+                        oy_key_verify(oy_data_payload[3][i][5], oy_data_payload[3][i][4], oy_data_payload[3][i][6]+oy_data_payload[3][i][7]+oy_data_payload[3][i][3], function(oy_key_valid) {
                             if (oy_key_valid===true) {
-                                oy_log("Valid primary signature for broadcast hash "+oy_short(oy_data_payload[3][i][0])+" from channel "+oy_short(oy_data_payload[2]));
-                                let oy_broadcast_hash = oy_hash_gen(oy_data_payload[3][i][1][4]);
-                                for (let x in oy_data_payload[3][i][1][8]) {
-                                    if (oy_data_payload[3][i][1][8][x][1]!==oy_data_payload[3][i][1][5]&&oy_channel_approved(oy_data_payload[2], oy_data_payload[3][i][1][8][x][1])) {
-                                        oy_key_verify(oy_data_payload[3][i][1][8][x][1], oy_data_payload[3][i][1][8][x][0], oy_broadcast_hash, function(oy_key_valid) {
+                                let oy_broadcast_hash = oy_hash_gen(oy_data_payload[3][i][4]);
+                                oy_log("Valid primary signature for broadcast hash "+oy_short(oy_broadcast_hash)+" from channel "+oy_short(oy_data_payload[2]));
+
+                                for (let x in oy_data_payload[3][i][8]) {
+                                    if (oy_data_payload[3][i][8][x][1]!==oy_data_payload[3][i][5]&&oy_channel_approved(oy_data_payload[2], oy_data_payload[3][i][8][x][1])) {
+                                        oy_key_verify(oy_data_payload[3][i][8][x][1], oy_data_payload[3][i][8][x][0], oy_broadcast_hash, function(oy_key_valid) {
                                             if (oy_key_valid===true) {
-                                                oy_log("Valid secondary signature for broadcast hash "+oy_short(oy_data_payload[3][i][0])+" from channel "+oy_short(oy_data_payload[2]));
-                                                if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_data_payload[3][i][0]])==="undefined") window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_data_payload[3][i][0]] = [oy_data_payload[3][i][1][0], oy_data_payload[3][i][1][1], oy_data_payload[3][i][1][2], oy_data_payload[3][i][1][3], oy_data_payload[3][i][1][4], oy_data_payload[3][i][1][5], oy_data_payload[3][i][1][6], oy_data_payload[3][i][1][7], [[oy_data_payload[3][i][1][8][x][0], oy_data_payload[3][i][1][8][x][1]]]];
-                                                else if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_data_payload[3][i][0]][8])!=="undefined") {
+                                                oy_log("Valid secondary signature for broadcast hash "+oy_short(oy_broadcast_hash)+" from channel "+oy_short(oy_data_payload[2]));
+                                                if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash])==="undefined") window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash] = [oy_data_payload[3][i][0], oy_data_payload[3][i][1], oy_data_payload[3][i][2], oy_data_payload[3][i][3], oy_data_payload[3][i][4], oy_data_payload[3][i][5], oy_data_payload[3][i][6], oy_data_payload[3][i][7], [[oy_data_payload[3][i][8][x][0], oy_data_payload[3][i][8][x][1]]]];
+                                                else if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash][8])!=="undefined") {
                                                     let oy_push = true;
-                                                    for (let y in window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_data_payload[3][i][0]][8]) {
-                                                        if (window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_data_payload[3][i][0]][8][y][1]===oy_data_payload[3][i][1][8][x][1]) {
+                                                    for (let y in window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash][8]) {
+                                                        if (window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash][8][y][1]===oy_data_payload[3][i][8][x][1]) {
                                                             oy_push = false;
                                                             break;
                                                         }
                                                     }
-                                                    if (oy_push===true) window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_data_payload[3][i][0]][8].push([oy_data_payload[3][i][1][8][x][0], oy_data_payload[3][i][1][8][x][1]]);
+                                                    if (oy_push===true) window.OY_CHANNEL_KEEP[oy_data_payload[2]][oy_broadcast_hash][8].push([oy_data_payload[3][i][8][x][0], oy_data_payload[3][i][8][x][1]]);
                                                 }
-                                                else oy_log("Could not record channel respond sequence for broadcast hash "+oy_short(oy_data_payload[3][i][0])+" from channel "+oy_short(oy_data_payload[2])+", go tell Bruno", 1);
+                                                else oy_log("Could not record channel respond sequence for broadcast hash "+oy_short(oy_broadcast_hash)+" from channel "+oy_short(oy_data_payload[2])+", go tell Bruno", 1);
                                             }
-                                            else oy_log("Invalid secondary signature for broadcast hash "+oy_short(oy_data_payload[3][i][0])+" from channel "+oy_short(oy_data_payload[2]));
+                                            else oy_log("Invalid secondary signature for broadcast hash "+oy_short(oy_broadcast_hash)+" from channel "+oy_short(oy_data_payload[2]));
                                         });
                                     }
-                                    else oy_log("Unapproved secondary signature for broadcast hash "+oy_short(oy_data_payload[3][i][0])+" from channel "+oy_short(oy_data_payload[2]));
+                                    else oy_log("Unapproved secondary signature for broadcast hash "+oy_short(oy_broadcast_hash)+" from channel "+oy_short(oy_data_payload[2]));
                                 }
                             }
-                            else oy_log("Invalid primary signature for broadcast hash "+oy_short(oy_data_payload[3][i][0])+" from channel "+oy_short(oy_data_payload[2]));
+                            else oy_log("Invalid primary signature for broadcast hash null from channel "+oy_short(oy_data_payload[2]));
                         });
                     }
                     else oy_log("Primary and/or secondary signatures were not found in the approval list of the current block for channel "+oy_short(oy_data_payload[2]));
