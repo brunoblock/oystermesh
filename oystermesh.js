@@ -41,7 +41,7 @@ window.OY_AKOYA_FEE = 0.000001*window.OY_AKOYA_DECIMALS;//akoya fee per block
 window.OY_NODE_TOLERANCE = 3;//max amount of protocol communication violations until node is blacklisted
 window.OY_NODE_BLACKTIME = 300;//seconds to blacklist a punished node for
 window.OY_NODE_PROPOSETIME = 12;//seconds for peer proposal session duration
-window.OY_NODE_ASSIGNTTIME = 20;//minimum interval between node_assign instances to/from top
+window.OY_NODE_ASSIGNTTIME = 10;//minimum interval between node_assign instances to/from top
 window.OY_NODE_ASSIGN_DELAY = 200;//ms delay per node_initiate from node_assign
 window.OY_NODE_DELAYTIME = 6;//minimum expected time to connect or transmit data to a node
 window.OY_NODE_EXPIRETIME = 600;//seconds of non-interaction until a node's connection session is deleted
@@ -578,6 +578,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                                 else {
                                     window.OY_BLOCK_SYNC[oy_data_payload[5]] = [true, null, oy_data_payload, oy_command_pool];
                                     oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_SYNC", oy_data_payload);
+                                    if (window.OY_PEER_COUNT<window.OY_BLOCK_PEERS_MIN||Math.random()<window.OY_PEER_SYNC_CHANCE) oy_node_initiate(oy_data_payload[2]);
                                     if (typeof(window.OY_BLOCK_MAP)==="function") window.OY_BLOCK_MAP(1, false);
                                 }
                             }
