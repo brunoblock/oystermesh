@@ -551,6 +551,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_time_local-oy_data_payload[2]<window.OY_MESH_HOP*oy_data_payload[0].length&&//check that the broadcast timestamp complies with MESH_HOP restrictions
             oy_data_payload[2]-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]&&//check that the broadcast timestamp is in the sync processing zone
             oy_data_payload[2]-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]+(window.OY_BLOCK_SECTORS[1][0]*window.OY_BLOCK_DENSITY)+window.OY_MESH_FUTURE&&//check that the broadcast timestamp is in the sync processing zone
+            oy_time_local-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]&&//check that the broadcast is being processed in the correct sector of the current block
             oy_time_local-window.OY_BLOCK_TIME>=0&&//check that the broadcast is being processed in the current block
             oy_time_local<window.OY_BLOCK_NEXT) {//check that the broadcast is being processed before the next block (current block)
 
@@ -596,12 +597,13 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_node_punish(oy_peer_id, "OY_PUNISH_SYNC_INVALID");
             return false;
         }
+
+        if (!(oy_time_local-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]&&oy_time_local-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0])) return false;
+
         if (oy_data_payload[3]===window.OY_SELF_SHORT) {
-            if (oy_time_local-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]&&oy_time_local-window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]) {
-                oy_key_sign(window.OY_SELF_PRIVATE, oy_data_payload[4]+window.OY_BLOCK_SYNC_HASH, function(oy_challenge_crypt) {
-                    oy_data_route("OY_LOGIC_FOLLOW", "OY_BLOCK_SYNC_CHALLENGE_RESPONSE", [[], oy_data_payload[0], window.OY_SELF_PUBLIC, oy_challenge_crypt]);
-                });
-            }
+            oy_key_sign(window.OY_SELF_PRIVATE, oy_data_payload[4]+window.OY_BLOCK_SYNC_HASH, function(oy_challenge_crypt) {
+                oy_data_route("OY_LOGIC_FOLLOW", "OY_BLOCK_SYNC_CHALLENGE_RESPONSE", [[], oy_data_payload[0], window.OY_SELF_PUBLIC, oy_challenge_crypt]);
+            });
         }
         else oy_data_route("OY_LOGIC_CHALLENGE", "OY_BLOCK_SYNC_CHALLENGE", oy_data_payload);
         if (typeof(window.OY_MESH_MAP)==="function") window.OY_MESH_MAP(oy_data_payload[0]);
@@ -615,6 +617,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             return false;
         }
 
+        if (!(oy_time_local-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]&&oy_time_local-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0])) return false;
+
         if (oy_data_payload[1][0]===window.OY_SELF_SHORT) {
             if (typeof(window.OY_BLOCK_SYNC[oy_data_payload[2]])!=="undefined") {
                 oy_key_verify(oy_data_payload[2], oy_data_payload[3], window.OY_BLOCK_SYNC[oy_data_payload[2]][1], function(oy_key_valid) {
@@ -627,10 +631,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                 });
             }
         }
-        else {//carry on reversing the passport until the data reaches the intended destination
-            //oy_log("Continuing block sync challenge response for public key "+oy_short(oy_data_payload[2]));
-            oy_data_route("OY_LOGIC_FOLLOW", "OY_BLOCK_SYNC_CHALLENGE_RESPONSE", oy_data_payload);
-        }
+        else oy_data_route("OY_LOGIC_FOLLOW", "OY_BLOCK_SYNC_CHALLENGE_RESPONSE", oy_data_payload);
         return true;
     }
     else if (oy_data_flag==="OY_BLOCK_DIVE") {
