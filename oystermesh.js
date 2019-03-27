@@ -50,7 +50,8 @@ window.OY_BOOST_DELAY = 250;//ms delay per boost node initiation
 window.OY_BOOST_EXPIRETIME = 600;//seconds until boost localstorage retention is discarded
 window.OY_CLONE_AFFINITY = 0.3;//higher means more likely to ask a node to become a clone than a peer and vice-versa
 window.OY_CLONE_UPTIME_MIN = 60;//seconds since able to keep up with the meshblock required to become a clone origin
-window.OY_CLONE_LIVETIME = 60;//seconds to keep a node as a clone
+window.OY_CLONE_LIVETIME = 90;//seconds to keep a node as a clone
+window.OY_CLONE_BUFFERTIME = 10;//seconds deducted from clone side of the expiration time
 window.OY_CLONE_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per clone transmission
 window.OY_CLONE_CLONE_MAX = 6;//maximum simultaneous clone count
 window.OY_CLONE_ORIGIN_MAX = 3;//maximum simultaneous origin count
@@ -1302,7 +1303,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
         let oy_callback_local;
         if ((window.OY_BLOCK_SEEDTIME===null||oy_time_local>window.OY_BLOCK_SEEDTIME)&&window.OY_BLOCK_HASH!==null&&window.OY_CLONE_UPTIME!==null&&window.OY_CLONE_UPTIME>=window.OY_CLONE_UPTIME_MIN&&window.OY_PEER_COUNT>=window.OY_BLOCK_PEERS_MIN&&Object.keys(window.OY_CLONES).length<window.OY_CLONE_CLONE_MAX) {
             oy_callback_local = function() {
-                window.OY_CLONES[oy_node_id] = [oy_time_local+window.OY_CLONE_LIVETIME, 0];
+                window.OY_CLONES[oy_node_id] = [oy_time_local+(window.OY_CLONE_LIVETIME-window.OY_CLONE_BUFFERTIME), 0];
                 oy_data_beam(oy_node_id, "OY_CLONE_ACCEPT", null);
             };
         }
@@ -2196,8 +2197,8 @@ function oy_block_loop() {
 
         setTimeout(function() {
             window.OY_CLONE_BUILD = [];
-            for (let oy_clone_select in window.OY_CLONES) {
-                if (window.OY_CLONES[oy_clone_select][1]===0||window.OY_CLONES[oy_clone_select][1]===2||Date.now()/1000>=window.OY_CLONES[oy_clone_select][0]) delete window.OY_CLONES[oy_clone_select];
+            for (let oy_node_select in window.OY_CLONES) {
+                if (window.OY_CLONES[oy_node_select][1]===0||window.OY_CLONES[oy_node_select][1]===2||Date.now()/1000>=window.OY_CLONES[oy_node_select][0]) delete window.OY_CLONES[oy_node_select];
             }
             if (window.OY_BLOCK_DIVE_REWARD==="OY_NULL") window.OY_BLOCK_DIVE_TRACK = 0;
             if (window.OY_BLOCK_HASH===null) {
@@ -2477,8 +2478,8 @@ function oy_block_loop() {
                         if (window.OY_BLOCK_HASH!==null&&window.OY_CLONE_UPTIME!==null&&window.OY_CLONE_UPTIME>=window.OY_CLONE_UPTIME_MIN&&window.OY_PEER_COUNT>=window.OY_BLOCK_PEERS_MIN&&Object.keys(window.OY_CLONES).length>0) {
                             let oy_block_split = null;
                             let oy_block_nonce_max = -1;
-                            for (let oy_clone_select in window.OY_CLONES) {
-                                if (Date.now()/1000>window.OY_CLONES[oy_clone_select][0]||window.OY_CLONES[oy_clone_select][1]!==1) continue;
+                            for (let oy_node_select in window.OY_CLONES) {
+                                if (Date.now()/1000>window.OY_CLONES[oy_node_select][0]||window.OY_CLONES[oy_node_select][1]!==1) continue;
                                 if (oy_block_split===null) {
                                     oy_block_split = [];
                                     for (let i = 0; i < oy_block_flat.length; i += window.OY_CLONE_CHUNK) {
@@ -2487,9 +2488,9 @@ function oy_block_loop() {
                                     }
                                 }
                                 for (let oy_clone_nonce in oy_block_split) {
-                                    oy_data_beam(oy_clone_select, "OY_CLONE_PUSH", [oy_block_nonce_max, oy_clone_nonce, oy_block_split[oy_clone_nonce]]);
+                                    oy_data_beam(oy_node_select, "OY_CLONE_PUSH", [oy_block_nonce_max, oy_clone_nonce, oy_block_split[oy_clone_nonce]]);
                                 }
-                                window.OY_CLONES[oy_clone_select][1] = 2;
+                                window.OY_CLONES[oy_node_select][1] = 2;
                             }
                         }
                     }, window.OY_BLOCK_CLONETIME);
@@ -2557,10 +2558,17 @@ function oy_engine(oy_thread_track) {
         }
     }
 
-    for (let oy_origin_select in window.OY_ORIGINS) {
-        if (oy_time_local>window.OY_ORIGINS[oy_origin_select]) {
-            delete window.OY_ORIGINS[oy_origin_select];
-            oy_log("Cleaned up expired origin session for node: "+oy_short(oy_origin_select));
+    for (let oy_node_select in window.OY_ORIGINS) {
+        if (oy_time_local>window.OY_ORIGINS[oy_node_select]) {
+            delete window.OY_ORIGINS[oy_node_select];
+            oy_log("Cleaned up expired origin session for node: "+oy_short(oy_node_select));
+        }
+    }
+
+    for (let oy_node_select in window.OY_CLONES) {
+        if (oy_time_local>window.OY_CLONES[oy_node_select]) {
+            delete window.OY_CLONES[oy_node_select];
+            oy_log("Cleaned up expired clone session for node: "+oy_short(oy_node_select));
         }
     }
 
