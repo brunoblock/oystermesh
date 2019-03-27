@@ -32,9 +32,9 @@ window.OY_BLOCK_DIVE_PACKET_MAX = 8000;//maximum size for a packet that is route
 window.OY_BLOCK_STABILITY_KEEP = 30;//mesh range history to keep to calculate meshblock stability, time is effectively value x 20 seconds
 window.OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a seeding event
 window.OY_BLOCK_RANGE_MIN = 10;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-window.OY_CHALLENGE_EDGE = 4;//maximum seconds that it should take for a challenged transaction to reach the furthest edge-to-edge distance of the mesh
+window.OY_CHALLENGE_EDGE = 6;//maximum seconds that it should take for a challenged transaction to reach the furthest edge-to-edge distance of the mesh
 window.OY_CHALLENGE_TRIGGER = 0.8;//higher means more challenge congestion (more secure, less scalable), lower means less challenge congestion (less secure, more scalable)
-window.OY_CHALLENGE_BUFFER = 2;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing
+window.OY_CHALLENGE_BUFFER = 2;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (either 2 or 3)
 window.OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
 window.OY_AKOYA_MAX_SUPPY = 10000000*window.OY_AKOYA_DECIMALS;//akoya max supply
 window.OY_AKOYA_FEE = 0.000001*window.OY_AKOYA_DECIMALS;//akoya fee per block
@@ -86,9 +86,9 @@ window.OY_LOGIC_ALL_MAX = 1100;//maximum size for a packet that is routed via OY
 window.OY_CHANNEL_BROADCAST_PACKET_MAX = 5000;//maximum size for a packet that is routed via OY_CHANNEL_BROADCAST (OY_LOGIC_ALL)
 window.OY_CHANNEL_KEEPTIME = 10;//channel bearing nodes are expected to broadcast a logic_all packet within this interval
 window.OY_CHANNEL_FORGETIME = 25;//seconds since last signed message from channel bearing node
-window.OY_CHANNEL_RECOVERTIME = 3;//second interval between channel recovery requests per node, should be at least MESH_EDGE*2
+window.OY_CHANNEL_RECOVERTIME = 4;//second interval between channel recovery requests per node, should be at least MESH_EDGE*2
 window.OY_CHANNEL_EXPIRETIME = 2592000;//seconds until a broadcast expires and is dropped from nodes listening on the channel
-window.OY_CHANNEL_RESPOND_MAX = 10;//max amount of broadcast payloads to send in response to a channel recover request
+window.OY_CHANNEL_RESPOND_MAX = 8;//max amount of broadcast payloads to send in response to a channel recover request
 window.OY_CHANNEL_ALLOWANCE = 28;//broadcast allowance in seconds per public key, an anti-spam mechanism to prevent abuse of OY_LOGIC_ALL
 window.OY_CHANNEL_CONSENSUS = 0.8;//node signature requirement for a broadcast to be retained in channel_keep
 window.OY_CHANNEL_TOP_TOLERANCE = 2;//node count difference allowed between broadcast claim and perceived claim
@@ -1797,7 +1797,7 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_push_def
         //oy_data_payload[1] is oy_route_dynamic
         //oy_data_payload[2] is oy_route_skip
         //oy_data_payload[3] is oy_route_target
-        if (oy_data_payload[0].length>=oy_data_payload[2].length+window.OY_CHALLENGE_BUFFER) return false;
+        if (oy_data_payload[0].length>oy_data_payload[2].length+window.OY_CHALLENGE_BUFFER) return false;
         oy_data_payload[0].push(window.OY_SELF_SHORT);
         let oy_peer_final = oy_peer_find(oy_data_payload[3]);
         if (!!oy_peer_final) oy_data_beam(oy_peer_final, oy_data_flag, oy_data_payload);
