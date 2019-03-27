@@ -1142,17 +1142,18 @@ function oy_node_blocked(oy_node_id) {
 
 //increments a node's status in the blacklist subsystem
 function oy_node_punish(oy_node_id, oy_punish_reason) {
-    oy_node_reset(oy_node_id);
     if (typeof(oy_punish_reason)==="undefined") oy_punish_reason = null;
     if (typeof(window.OY_BLACKLIST[oy_node_id])==="undefined") {
         //[0] is inform count, [1] is blacklist expiration time, [2] is inform boolean (if node was informed of blacklist), [3] is punish reason tracking (for diagnostics, reported to top)
         window.OY_BLACKLIST[oy_node_id] = [(oy_punish_reason==="OY_PUNISH_BLACKLIST_RETURN")?window.OY_NODE_TOLERANCE:1, (Date.now()/1000)+window.OY_NODE_BLACKTIME, false, [oy_punish_reason]];//ban expiration time is defined here since we do not know if OY_NODE_TOLERANCE will change in the future
     }
     else {
+        if (window.OY_BLACKLIST[oy_node_id][0]>=window.OY_NODE_TOLERANCE) return false;
         window.OY_BLACKLIST[oy_node_id][0]++;
         window.OY_BLACKLIST[oy_node_id][1] = (Date.now()/1000)+window.OY_NODE_BLACKTIME;
         window.OY_BLACKLIST[oy_node_id][3].push(oy_punish_reason);
     }
+    oy_node_reset(oy_node_id);
     if (window.OY_BLACKLIST[oy_node_id][0]>=window.OY_NODE_TOLERANCE) {
         if (window.OY_BLACKLIST[oy_node_id][2]===false) {
             window.OY_BLACKLIST[oy_node_id][2] = true;
@@ -1346,7 +1347,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
     else if (oy_node_proposed(oy_node_id, false)) {//check if this node was previously proposed to for peering by self
         if (oy_data_flag==="OY_PEER_ACCEPT") oy_latency_test(oy_node_id, "OY_PEER_ACCEPT", true);
         else {
-            oy_log("Node "+oy_short(oy_node_id)+" rejected peer request ["+oy_data_flag+"] with reason: "+oy_data_payload);
+            oy_log("Node "+oy_short(oy_node_id)+" rejected peer request ["+oy_data_flag+"]: "+oy_data_payload);
             if (oy_data_flag!=="OY_PEER_UNREADY") oy_node_punish(oy_node_id, "OY_PUNISH_PEER_REJECT");//we need to prevent nodes with far distances/long latencies from repeatedly communicating
         }
         return true;
@@ -1783,11 +1784,8 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_push_def
         }
         if (oy_data_flag==="OY_BLOCK_SYNC"||oy_data_flag==="OY_BLOCK_DIVE") {
             let oy_time_local = Date.now()/1000;
-            for (let oy_clone_select in window.OY_CLONES) {
-                if (window.OY_CLONES[oy_clone_select][1]===3&&oy_time_local<window.OY_CLONES[oy_clone_select][0]) {
-                    //oy_log("Routing data via clone "+oy_short(oy_clone_select)+" with flag "+oy_data_flag);
-                    oy_data_beam(oy_clone_select, oy_data_flag, oy_data_payload);
-                }
+            for (let oy_node_select in window.OY_CLONES) {
+                if (window.OY_CLONES[oy_node_select][1]===3&&oy_time_local<window.OY_CLONES[oy_node_select][0]) oy_data_beam(oy_node_select, oy_data_flag, oy_data_payload);
             }
         }
     }
@@ -2747,7 +2745,10 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
     window.OY_CONN.on('connection', function(oy_conn) {
         // Receive messages
         oy_conn.on('data', function(oy_data_raw) {
-            //oy_log("Data with size "+oy_data_raw.length+" received from node "+oy_short(oy_conn.peer));
+            if (oy_node_blocked(oy_conn.peer)) {
+                oy_node_punish(oy_conn.peer, "OY_PUNISH_PEER_BLACKLIST");
+                return false;
+            }
             let oy_data = oy_data_soak(oy_conn.peer, oy_data_raw);
             if (oy_data===true) return true;
             else if (oy_data===false) {
@@ -2762,10 +2763,7 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
                 }
                 oy_peer_process(oy_conn.peer, oy_data[0], oy_data[1]);
             }
-            else if ((oy_data[0]==="OY_BLOCK_SYNC"||oy_data[0]==="OY_BLOCK_DIVE")&&(typeof(window.OY_ORIGINS[oy_conn.peer])!=="undefined"&&Date.now()/1000<window.OY_ORIGINS[oy_conn.peer])) {
-                oy_peer_process(oy_conn.peer, oy_data[0], oy_data[1]);
-            }
-            else if (oy_node_blocked(oy_conn.peer)) oy_node_punish(oy_conn.peer, "OY_PUNISH_PEER_BLACKLIST");
+            else if ((oy_data[0]==="OY_BLOCK_SYNC"||oy_data[0]==="OY_BLOCK_DIVE")&&(typeof(window.OY_ORIGINS[oy_conn.peer])!=="undefined"&&Date.now()/1000<window.OY_ORIGINS[oy_conn.peer])) oy_peer_process(oy_conn.peer, oy_data[0], oy_data[1]);
             else {
                 if (oy_data_measure(false, "oy_aggregate_node", oy_data_raw.length)===false) oy_log("Node "+oy_short(oy_conn.peer)+" pushed aggregate mesh flow compliance beyond limit");
                 else oy_node_negotiate(oy_conn.peer, oy_data[0], oy_data[1]);
