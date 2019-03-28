@@ -2181,6 +2181,22 @@ function oy_block_reset() {
     oy_boost();
 }
 
+function oy_sybil_attack() {
+    if (window.OY_PEER_COUNT<=2) return false;
+    let oy_sync_time = Date.now()/1000;
+    let oy_dive_reward = "OY_NULL";
+    oy_key_gen(function(oy_key_private, oy_key_public) {
+        oy_key_sign(oy_key_private, oy_sync_time + oy_hash_gen(JSON.stringify([])) + oy_dive_reward, function (oy_sync_crypt) {
+            console.log("SYBIL ATTACK: "+oy_short(oy_key_public));
+            oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_SYNC", [[oy_short(oy_key_public)], oy_rand_gen(), oy_sync_time, oy_sync_crypt, [], oy_key_public, oy_dive_reward]);
+            if (typeof (window.OY_BLOCK_MAP) === "function") window.OY_BLOCK_MAP(1, true);
+        });
+    });
+    if (window.OY_BLOCK_DYNAMIC[1]!==null) {
+        setTimeout(oy_sybil_attack, 50);
+    }
+}
+
 function oy_block_loop() {
     let oy_block_time_local = oy_block_time(false);
     setTimeout("oy_block_loop()", window.OY_BLOCK_LOOP);
@@ -2296,7 +2312,7 @@ function oy_block_loop() {
             window.OY_BLOCK_SYNC_HASH = oy_hash_gen(JSON.stringify(oy_sync_command));
 
             let oy_dive_reward = (" "+window.OY_BLOCK_DIVE_REWARD).slice(1);
-            if (window.OY_PEER_COUNT>=window.OY_BLOCK_PEERS_MIN) {
+            if (false&&window.OY_PEER_COUNT>=window.OY_BLOCK_PEERS_MIN) {
                 setTimeout(function() {
                     let oy_sync_time = Date.now()/1000;
                     oy_key_sign(window.OY_SELF_PRIVATE, oy_sync_time+window.OY_BLOCK_SYNC_HASH+oy_dive_reward, function(oy_sync_crypt) {
@@ -2306,6 +2322,7 @@ function oy_block_loop() {
                     });
                 }, Math.floor(Math.random()*window.OY_BLOCK_SECTORS[1][1]*window.OY_BLOCK_DENSITY));
             }
+            //oy_sybil_attack();
             setTimeout(function() {
                 window.OY_BLOCK_DYNAMIC[1] = null;
                 window.OY_BLOCK_DYNAMIC[2] = null;
