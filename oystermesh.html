@@ -1268,11 +1268,10 @@
         <div id="oy_stats" class="oy_border oy_graph" style="position:absolute;top:0;left:0;width:23%;height:43%;background-color: #404040;overflow:hidden;">
             <div class="oy_center_both oy_stats" style="top:40%;height:72%;width:100%;">
                 <div align="right" style="position:absolute;left:-2.5%;top:0;width:50%;height:100%;">
-                    SELF&nbsp;SHORT&nbsp;ID<br>
-                    AVG&nbsp;LATENCY<br>
-                    AVG&nbsp;PEERSHIP<br>
                     PEER&nbsp;COUNT<br>
                     MESH&nbsp;RANGE<br>
+                    ROSTER&nbsp;AVG<br>
+                    LATENCY&nbsp;AVG<br>
                     BEAM&nbsp;FLOW<br>
                     SOAK&nbsp;FLOW<br>
                     MB&nbsp;UPTIME<br>
@@ -1283,11 +1282,10 @@
                 <div class="oy_center_hor" style="top:0;width:0.7%;height:108%;background-color: #2a2a2a;">
                 </div>
                 <div style="position:absolute;right:-2.5%;top:0;width:50%;height:100%;font-weight:bold;">
-                    <span id="oy_self_short">null</span><br>
-                    <span id="oy_avg_latency">null</span>&nbsp;sec<br>
-                    <span id="oy_avg_peership">null</span>&nbsp;min<br>
                     <span id="oy_peer_count_cont"><span id="oy_peer_count">null</span>&nbsp;peer(s)</span><br>
                     <span id="oy_mesh_range">null</span>&nbsp;node(s)<br>
+                    <span id="oy_roster_avg">null</span>&nbsp;sig<br>
+                    <span id="oy_latency_avg">null</span>&nbsp;min<br>
                     <span id="oy_beam_flow">null</span>&nbsp;kbps<br>
                     <span id="oy_soak_flow">null</span>&nbsp;kbps<br>
                     <span id="oy_block_uptime">null</span>&nbsp;min<br>
@@ -1586,16 +1584,17 @@
         }
 
         let oy_blank = "---";
-        if (oy_avg_latency.length>0) document.getElementById("oy_avg_latency").innerHTML = (oy_avg_latency.reduce(oy_reduce_sum)/oy_avg_latency.length).toFixed(3);
-        if (oy_avg_peership.length>0) document.getElementById("oy_avg_peership").innerHTML = ((oy_time_local - Math.round(oy_avg_peership.reduce(oy_reduce_sum)/oy_avg_peership.length))/60).toFixed(2);
         document.getElementById("oy_mesh_range").innerHTML = window.OY_MESH_RANGE;
+        document.getElementById("oy_roster_avg").innerHTML = (window.OY_BLOCK_ROSTER_AVG===null)?oy_blank:window.OY_BLOCK_ROSTER_AVG.toFixed(3);
+        if (oy_avg_latency.length>0) document.getElementById("oy_latency_avg").innerHTML = (oy_avg_latency.reduce(oy_reduce_sum)/oy_avg_latency.length).toFixed(3);
+        else document.getElementById("oy_latency_avg").innerHTML = 0;
         if (oy_avg_beam.length>0) document.getElementById("oy_beam_flow").innerHTML = (oy_avg_beam.reduce(oy_reduce_sum)/1000).toFixed(2);
         else document.getElementById("oy_beam_flow").innerHTML = "0";
         if (oy_avg_soak.length>0) document.getElementById("oy_soak_flow").innerHTML = (oy_avg_soak.reduce(oy_reduce_sum)/1000).toFixed(2);
         else document.getElementById("oy_soak_flow").innerHTML = "0";
         document.getElementById("oy_block_uptime").innerHTML = (window.OY_BLOCK_UPTIME===null)?oy_blank:((oy_time_local - window.OY_BLOCK_UPTIME)/60).toFixed(2);
         document.getElementById("oy_block_weight").innerHTML = (window.OY_BLOCK_WEIGHT===null)?oy_blank:(window.OY_BLOCK_WEIGHT/1024).toFixed(2);
-        document.getElementById("oy_block_stability").innerHTML = (window.OY_BLOCK_STABILITY.length<2)?oy_blank:oy_stability_calc(window.OY_BLOCK_STABILITY).toFixed(4);
+        document.getElementById("oy_block_stability").innerHTML = (window.OY_BLOCK_STABILITY_KEEP.length<window.OY_BLOCK_STABILITY_TRIGGER)?oy_blank:window.OY_BLOCK_STABILITY.toFixed(4);
         document.getElementById("oy_akoya_dive_track").innerHTML = (window.OY_BLOCK_DIVE_TRACK===0)?oy_blank:window.OY_BLOCK_DIVE_TRACK/window.OY_AKOYA_DECIMALS;
 
         oy_peer_keep.sort(function(a, b) {
@@ -1642,7 +1641,6 @@
             document.getElementById("oy_pull_stats_elapsed").innerHTML = oy_local_elapsed.toFixed(1)+oy_suffix;
         }
 
-        document.getElementById("oy_self_short").innerHTML = ""+window.OY_SELF_SHORT;
         document.getElementById("oy_peer_count").innerHTML = ""+window.OY_PEER_COUNT;
         if (window.OY_PEER_COUNT===0) {
             document.getElementById("oy_peer_count_cont").style.color = "#000000";
@@ -1657,23 +1655,6 @@
             document.getElementById("oy_peer_count_cont").style.backgroundColor = null;
         }
         setTimeout("oy_maintain()", window.OY_MAINTAIN_DELAY);
-    }
-
-    function oy_stability_calc(oy_list) {
-        let oy_stability_avg = function(oy_data){
-            let oy_sum = oy_data.reduce(function(oy_sum, oy_value){
-                return oy_sum + oy_value;
-            }, 0);
-            return oy_sum/oy_data.length;
-        };
-        let oy_avg = oy_stability_avg(oy_list);
-
-        let oy_square_diffs = oy_list.map(function(oy_value){
-            let oy_diff = oy_value - oy_avg;
-            return oy_diff * oy_diff;
-        });
-
-        return Math.sqrt(oy_stability_avg(oy_square_diffs));
     }
 
     function oy_superhandle_check(oy_value) {
