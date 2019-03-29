@@ -2159,6 +2159,9 @@ function oy_block_sync_verify(oy_command_inherit, oy_callback) {
 function oy_block_sync_hop(oy_passport_crypt, oy_crypt_short, oy_callback) {
     if (oy_passport_crypt.length===0||Object.keys(window.OY_BLOCK_ROSTER).length<window.OY_BLOCK_RANGE_MIN) return oy_callback();
     let oy_hop_select = oy_passport_crypt.pop();
+    if (typeof(window.OY_BLOCK_ROSTER[oy_hop_select])!=="undefined") {
+        window.OY_BLOCK_ROSTER[oy_hop_select][1]++;
+    }
 }
 
 function oy_block_time(oy_next) {
@@ -2360,7 +2363,13 @@ function oy_block_loop() {
                 //oy_log_debug("SYNC: "+Object.keys(window.OY_BLOCK_SYNC).length);
                 for (let oy_key_public in window.OY_BLOCK_SYNC) {
                     if (window.OY_BLOCK_SYNC[oy_key_public][0]===true) {
-                        window.OY_BLOCK_ROSTERTIME[oy_key_public] = (Date.now()/1000|0)+window.OY_BLOCK_ROSTERTIME;
+                        let oy_key_public_short = oy_short(oy_key_public);
+                        if (typeof(window.OY_BLOCK_ROSTER[oy_key_public_short])==="undefined") window.OY_BLOCK_ROSTER[oy_key_public_short] = [oy_key_public, 0, 0, -1];
+                        else {
+                            window.OY_BLOCK_ROSTER[oy_key_public_short][2] = window.OY_BLOCK_ROSTER[oy_key_public_short][1];
+                            window.OY_BLOCK_ROSTER[oy_key_public_short][1] = 0;
+                        }
+                        window.OY_BLOCK_ROSTER[oy_key_public_short][3] = (Date.now()/1000|0)+window.OY_BLOCK_ROSTERTIME;
                         oy_node_consensus++;
                         for (let oy_command_hash in window.OY_BLOCK_SYNC[oy_key_public][3]) {
                             if (typeof(oy_command_pool[oy_command_hash])==="undefined") oy_command_pool[oy_command_hash] = [1, window.OY_BLOCK_SYNC[oy_key_public][3][oy_command_hash]];
@@ -2538,7 +2547,7 @@ function oy_block_loop() {
                             oy_log("MESHBLOCK CANCEL: "+oy_block_time_local);
                             return false;
                         }
-                        if (window.OY_BLOCK_HASH!==null&&window.OY_CLONE_UPTIME!==null&&window.OY_CLONE_UPTIME>=window.OY_CLONE_UPTIME_MIN&&window.OY_PEER_COUNT>=window.OY_BLOCK_PEERS_MIN&&Object.keys(window.OY_CLONES).length>0) {
+                        if (window.OY_CLONE_UPTIME!==null&&window.OY_CLONE_UPTIME>=window.OY_CLONE_UPTIME_MIN&&window.OY_PEER_COUNT>=window.OY_BLOCK_PEERS_MIN&&Object.keys(window.OY_CLONES).length>0) {
                             let oy_block_split = null;
                             let oy_block_nonce_max = -1;
                             for (let oy_node_select in window.OY_CLONES) {
