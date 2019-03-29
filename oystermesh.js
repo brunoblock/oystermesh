@@ -33,11 +33,11 @@ window.OY_BLOCK_KEY_LIMIT = 100;//permitted transactions per wallet per block (2
 window.OY_BLOCK_HASH_KEEP = 20;//how many hashes of previous blocks to keep in the current meshblock, value is for 6 months worth//1577
 window.OY_BLOCK_DENSITY = 0.85;//higher means block OY_LOGIC_ALL packets are more spread out
 window.OY_BLOCK_PEERS_MIN = 3;//minimum peer count to be able to act as origin for clones and broadcast SYNC/DIVE
-window.OY_BLOCK_DIVE_PACKET_MAX = 8000;//maximum size for a packet that is routed via OY_BLOCK_DIVE_PACKET_MAX (OY_LOGIC_ALL)
+window.OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via OY_BLOCK_SYNC and OY_BLOCK_DIVE (OY_LOGIC_ALL)
 window.OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a seeding event
 window.OY_BLOCK_RANGE_MIN = 3;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 window.OY_CHALLENGE_EDGE = 6;//maximum seconds that it should take for a challenged transaction to reach the furthest edge-to-edge distance of the mesh
-window.OY_CHALLENGE_TRIGGER = 4;//higher means more challenge congestion (more secure, less scalable), lower means less challenge congestion (less secure, more scalable)
+window.OY_CHALLENGE_TRIGGER = 3;//higher means more challenge congestion (more secure, less scalable), lower means less challenge congestion (less secure, more scalable)
 window.OY_CHALLENGE_BUFFER = 2;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (either 2 or 3)
 window.OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
 window.OY_AKOYA_MAX_SUPPY = 10000000*window.OY_AKOYA_DECIMALS;//akoya max supply
@@ -1877,8 +1877,8 @@ function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
         if (oy_data_raw.length>window.OY_DATA_MAX||
             (oy_logic_all_bool===true&&(
                 (oy_data_flag==="OY_CHANNEL_BROADCAST"&&oy_data_raw.length>window.OY_CHANNEL_BROADCAST_PACKET_MAX)||
-                (oy_data_flag==="OY_BLOCK_DIVE"&&oy_data_raw.length>window.OY_BLOCK_DIVE_PACKET_MAX)||
-                (oy_data_flag!=="OY_CHANNEL_BROADCAST"&&oy_data_flag!=="OY_BLOCK_DIVE"&&oy_data_raw.length>window.OY_LOGIC_ALL_MAX)))) {
+                ((oy_data_flag==="OY_BLOCK_SYNC"||oy_data_flag==="OY_BLOCK_DIVE")&&oy_data_raw.length>window.OY_BLOCK_PACKET_MAX)||
+                (oy_data_flag!=="OY_CHANNEL_BROADCAST"&&oy_data_flag!=="OY_BLOCK_SYNC"&&oy_data_flag!=="OY_BLOCK_DIVE"&&oy_data_raw.length>window.OY_LOGIC_ALL_MAX)))) {
             oy_log("Almost sent an excessively sized data sequence for flag "+oy_data_flag+", go tell Bruno", 1);
             return false;
         }
@@ -1924,8 +1924,8 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
                    if (!oy_peer_check(oy_node_id)&&typeof(window.OY_ORIGINS[oy_node_id])==="undefined") return false;
 
                    if ((oy_data[0]==="OY_CHANNEL_BROADCAST"&&oy_data_raw.length>window.OY_CHANNEL_BROADCAST_PACKET_MAX)||
-                       (oy_data[0]==="OY_BLOCK_DIVE"&&oy_data_raw.length>window.OY_BLOCK_DIVE_PACKET_MAX)||
-                       (oy_data[0]!=="OY_CHANNEL_BROADCAST"&&oy_data[0]!=="OY_BLOCK_DIVE"&&oy_data_raw.length>window.OY_LOGIC_ALL_MAX)) {
+                       ((oy_data[0]==="OY_BLOCK_SYNC"||oy_data[0]==="OY_BLOCK_DIVE")&&oy_data_raw.length>window.OY_BLOCK_PACKET_MAX)||
+                       (oy_data[0]!=="OY_CHANNEL_BROADCAST"&&oy_data[0]!=="OY_BLOCK_SYNC"&&oy_data[0]!=="OY_BLOCK_DIVE"&&oy_data_raw.length>window.OY_LOGIC_ALL_MAX)) {
                        oy_log("Peer "+oy_short(oy_node_id)+" sent a data sequence that is too large for "+oy_data[0]+", will remove and punish");
                        oy_peer_remove(oy_node_id, "OY_PUNISH_LOGIC_LARGE");
                        return false;
