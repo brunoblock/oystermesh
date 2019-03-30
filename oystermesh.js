@@ -30,9 +30,9 @@ window.OY_BLOCK_MISS_MULTI_MIN = 2;//minimum miss_limit value for roster calcula
 window.OY_BLOCK_STABILITY_START = 8;//starting stability value for making roster calculations
 window.OY_BLOCK_STABILITY_TRIGGER = 3;//mesh ranger history minimum to trigger reliance on real stability value for roster calculations
 window.OY_BLOCK_STABILITY_LIMIT = 12;//mesh range history to keep to calculate meshblock stability, time is effectively value x 20 seconds
-window.OY_BLOCK_STABILITY_MIN = 1.8;//minimum value for stability_roster, lower means more sybil-attack secure yet more honest block_syncs dropped
-window.OY_BLOCK_KEY_LIMIT = 100;//permitted transactions per wallet per block (20 seconds)
-window.OY_BLOCK_HASH_KEEP = 20;//how many hashes of previous blocks to keep in the current meshblock, value is for 6 months worth//1577
+window.OY_BLOCK_STABILITY_MIN = 2.2;//lower means more sybil-attack secure yet more honest block_syncs dropped, lower value forces a more even mesh, relates to GEO_SENS
+window.OY_BLOCK_KEY_LIMIT = 200;//permitted transactions per wallet per block (20 seconds)
+window.OY_BLOCK_HASH_KEEP = 1555;//how many hashes of previous blocks to keep in the current meshblock, value is for 6 months worth
 window.OY_BLOCK_DENSITY = 0.85;//higher means block OY_LOGIC_ALL packets are more spread out
 window.OY_BLOCK_PEERS_MIN = 3;//minimum peer count to be able to act as origin for clones and broadcast SYNC/DIVE
 window.OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via OY_BLOCK_SYNC and OY_BLOCK_DIVE (OY_LOGIC_ALL)
@@ -2835,7 +2835,7 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
         return true;
     }
 
-    window.OY_BLOCK_SEEDTIME = 1553909400;
+    window.OY_BLOCK_SEEDTIME = 1553943800;
 
     window.OY_PURGE = oy_local_get("oy_purge");
     let oy_boost_expire = oy_local_get("oy_boost_expire");
