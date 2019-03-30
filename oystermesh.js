@@ -2178,7 +2178,7 @@ function oy_block_sync_hop(oy_passport_passive, oy_passport_crypt, oy_crypt_shor
     if (oy_passport_passive.length===0||window.OY_BLOCK_ROSTER_AVG===null) return oy_callback();
     let oy_node_select = oy_passport_passive.pop();
     let oy_crypt_select = oy_passport_crypt.pop();
-    if (typeof(window.OY_BLOCK_ROSTER[oy_node_select])==="undefined"||window.OY_BLOCK_ROSTER[oy_node_select][2]===0||window.OY_BLOCK_ROSTER[oy_node_select][1]>window.OY_BLOCK_ROSTER_AVG*window.OY_BLOCK_STABILITY_ROSTER) oy_roster_miss++;
+    if (typeof(window.OY_BLOCK_ROSTER[oy_node_select])==="undefined"||window.OY_BLOCK_ROSTER[oy_node_select][1]>window.OY_BLOCK_ROSTER_AVG*window.OY_BLOCK_STABILITY_ROSTER) oy_roster_miss++;
     if (oy_roster_miss>oy_miss_limit&&window.OY_BLOCK_STABILITY_KEEP.length>=window.OY_BLOCK_STABILITY_TRIGGER) return false;
     if (typeof(window.OY_BLOCK_ROSTER[oy_node_select])==="undefined") {
         oy_block_sync_hop(oy_passport_passive, oy_passport_crypt, oy_crypt_short, oy_miss_limit, oy_roster_miss, oy_callback);
@@ -2424,13 +2424,12 @@ function oy_block_loop() {
                         if (typeof(window.OY_BLOCK_ROSTER[oy_key_public_short])==="undefined") {
                             oy_roster_sum++;
                             oy_roster_count++;
-                            window.OY_BLOCK_ROSTER[oy_key_public_short] = [oy_key_public, 0, 0];
+                            window.OY_BLOCK_ROSTER[oy_key_public_short] = [oy_key_public, 0];
                         }
                         else {
-                            let oy_roster_local = window.OY_BLOCK_ROSTER[oy_key_public_short].slice();
-                            oy_roster_sum += oy_roster_local[1];
+                            oy_roster_sum += window.OY_BLOCK_ROSTER[oy_key_public_short][1];
                             oy_roster_count++;
-                            window.OY_BLOCK_ROSTER[oy_key_public_short] = [oy_roster_local[0], 0, oy_roster_local[1]];
+                            window.OY_BLOCK_ROSTER[oy_key_public_short][1] = 0;
                         }
                         oy_node_consensus++;
                         for (let oy_command_hash in window.OY_BLOCK_SYNC[oy_key_public][3]) {
