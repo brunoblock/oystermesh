@@ -8,10 +8,11 @@ window.OY_MESH_DYNASTY = "BRUNO_GENESIS_V4";//mesh dynasty definition, changing 
 window.OY_MESH_EDGE = 2;//maximum seconds that it should take for a transaction to reach the furthest edge-to-edge distance of the mesh, do not change this unless you know what you are doing
 window.OY_MESH_FUTURE = 0.5;//seconds buffer a block command's timestamp is allowed to be in the future, this variable exists to deal with slight mis-calibrations between node clocks
 window.OY_MESH_HOP = 0.8;//maximum time allocation per hop for specific broadcasts, in seconds
-window.OY_MESH_FLOW = 2200000;//characters per second allowed per peer, and for all aggregate non-peer nodes
+window.OY_MESH_FLOW = 128000;//characters per second allowed per peer, and for all aggregate non-peer nodes
 window.OY_MESH_MEASURE = 10;//seconds by which to measure mesh flow, larger means more tracking of nearby node and peer activity
 window.OY_MESH_BEAM_SAMPLE = 3;//time/data measurements to determine mesh beam flow required to state a result, too low can lead to volatile and inaccurate readings
 window.OY_MESH_BEAM_BUFFER = 1;//multiplication factor for mesh outflow/beam buffer, to give some leeway to compliant peers
+window.OY_MESH_BEAM_MIN = 0.5;//minimum beam ratio to start returning false
 window.OY_MESH_SOAK_SAMPLE = 5;//time/data measurements to determine mesh soak flow required to state a result, too low can lead to volatile and inaccurate readings
 window.OY_MESH_SOAK_BUFFER = 1.2;//multiplication factor for mesh inflow/soak buffer, to give some leeway to compliant peers
 window.OY_MESH_PUSH_CHANCE = 0.6;//probability that self will forward a data_push when the nonce was not previously stored on self
@@ -25,19 +26,20 @@ window.OY_BLOCK_LAUNCHTIME = 200;//ms delay from block_trigger to launch a comma
 window.OY_BLOCK_CHALLENGETIME = 800;//ms delay until meshblock challenge to peers is enforced
 window.OY_BLOCK_CLONETIME = 800;//ms delay until meshblock clone
 window.OY_BLOCK_MISS_MULTI = 0.3;//multiplication factor for passport length, lower means more sybil-attack secure yet more honest block_syncs dropped
-window.OY_BLOCK_MISS_MULTI_MAX = 0.6;//maximum multiplication factor for passport length
 window.OY_BLOCK_MISS_MULTI_MIN = 2;//minimum miss_limit value for roster calculations
-window.OY_BLOCK_STABILITY_START = 8;//starting stability value for making roster calculations
+window.OY_BLOCK_STABILITY_START = 50;//starting stability value for making roster calculations
 window.OY_BLOCK_STABILITY_TRIGGER = 3;//mesh ranger history minimum to trigger reliance on real stability value for roster calculations
 window.OY_BLOCK_STABILITY_LIMIT = 12;//mesh range history to keep to calculate meshblock stability, time is effectively value x 20 seconds
-window.OY_BLOCK_STABILITY_MIN = 2.2;//lower means more sybil-attack secure yet more honest block_syncs dropped, lower value forces a more even mesh, relates to GEO_SENS
+window.OY_BLOCK_STABILITY_MIN = 2.8;//lower means more sybil-attack secure yet more honest block_syncs dropped, lower value forces a more even mesh, relates to GEO_SENS
+window.OY_BLOCK_ROSTER_PERSIST = 0.8;//node roster persistence against getting deleted due to an absent sync, higher means more stable connection but weaker security implications
+window.OY_BLOCK_HOP_VERIFY = 0.3;//chance of verifying a node hop from a block_sync's passport_crypt, higher is more secure but more CPU usage
 window.OY_BLOCK_KEY_LIMIT = 200;//permitted transactions per wallet per block (20 seconds)
 window.OY_BLOCK_HASH_KEEP = 1555;//how many hashes of previous blocks to keep in the current meshblock, value is for 6 months worth
-window.OY_BLOCK_DENSITY = 0.85;//higher means block OY_LOGIC_ALL packets are more spread out
+window.OY_BLOCK_DENSITY = 0.82;//higher means block OY_LOGIC_ALL packets are more spread out
 window.OY_BLOCK_PEERS_MIN = 3;//minimum peer count to be able to act as origin for clones and broadcast SYNC/DIVE
 window.OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via OY_BLOCK_SYNC and OY_BLOCK_DIVE (OY_LOGIC_ALL)
 window.OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a seeding event
-window.OY_BLOCK_RANGE_MIN = 20;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
+window.OY_BLOCK_RANGE_MIN = 10;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 window.OY_CHALLENGE_EDGE = 6;//maximum seconds that it should take for a challenged transaction to reach the furthest edge-to-edge distance of the mesh
 window.OY_CHALLENGE_TRIGGER = 3;//higher means more challenge congestion (more secure, less scalable), lower means less challenge congestion (less secure, more scalable)
 window.OY_CHALLENGE_BUFFER = 2;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (either 1 or 2)
@@ -561,8 +563,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_data_payload[3]-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]&&//check that the broadcast timestamp is in the sync processing zone
             oy_data_payload[3]-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]+(window.OY_BLOCK_SECTORS[1][0]*window.OY_BLOCK_DENSITY)+window.OY_MESH_FUTURE) {//check that the broadcast timestamp is in the sync processing zone
 
-            let oy_miss_limit = Math.max((window.OY_CHALLENGE_TRIGGER+1)*window.OY_BLOCK_STABILITY_ROSTER*window.OY_BLOCK_MISS_MULTI, oy_data_payload[0].length*window.OY_BLOCK_STABILITY_ROSTER*window.OY_BLOCK_MISS_MULTI);
-            if (oy_miss_limit>oy_data_payload[0].length*window.OY_BLOCK_MISS_MULTI_MAX) oy_miss_limit = oy_data_payload[0].length*window.OY_BLOCK_MISS_MULTI_MAX;
+            let oy_miss_limit = Math.max((window.OY_CHALLENGE_TRIGGER+1)*window.OY_BLOCK_MISS_MULTI, oy_data_payload[0].length*window.OY_BLOCK_MISS_MULTI);
             if (oy_miss_limit<window.OY_BLOCK_MISS_MULTI_MIN) oy_miss_limit = window.OY_BLOCK_MISS_MULTI_MIN;
             let oy_crypt_short = oy_short(oy_data_payload[4]);
             oy_block_sync_hop(oy_data_payload[0].slice(), oy_data_payload[2].slice(), oy_crypt_short, oy_miss_limit, 0, function() {
@@ -1567,7 +1568,9 @@ function oy_data_measure(oy_data_beam, oy_node_id, oy_data_length) {
         return (window.OY_PEERS[oy_node_id][oy_array_select-1]<=(window.OY_MESH_FLOW*window.OY_MESH_SOAK_BUFFER));
     }
     else {
-        let oy_return = (Math.random()>window.OY_PEERS[oy_node_id][oy_array_select-1]/(window.OY_MESH_FLOW*window.OY_MESH_BEAM_BUFFER));
+        let oy_beam_calc = window.OY_PEERS[oy_node_id][oy_array_select-1]/(window.OY_MESH_FLOW*window.OY_MESH_BEAM_BUFFER);
+        let oy_return = true;
+        if (oy_beam_calc>window.OY_MESH_BEAM_MIN) oy_return = (Math.random()>oy_beam_calc);
         if (oy_return===true) window.OY_PEERS[oy_node_id][oy_array_select].push([oy_time_local, oy_data_length]);
         return oy_return;
     }
@@ -2176,17 +2179,21 @@ function oy_block_sync_hop(oy_passport_passive, oy_passport_crypt, oy_crypt_shor
     let oy_node_select = oy_passport_passive.pop();
     let oy_crypt_select = oy_passport_crypt.pop();
     if (typeof(window.OY_BLOCK_ROSTER[oy_node_select])==="undefined"||window.OY_BLOCK_ROSTER[oy_node_select][2]===0||window.OY_BLOCK_ROSTER[oy_node_select][1]>window.OY_BLOCK_ROSTER_AVG*window.OY_BLOCK_STABILITY_ROSTER) oy_roster_miss++;
-    if (oy_roster_miss>oy_miss_limit) return false;
+    if (oy_roster_miss>oy_miss_limit&&window.OY_BLOCK_STABILITY_KEEP.length>=window.OY_BLOCK_STABILITY_TRIGGER) return false;
     if (typeof(window.OY_BLOCK_ROSTER[oy_node_select])==="undefined") {
         oy_block_sync_hop(oy_passport_passive, oy_passport_crypt, oy_crypt_short, oy_miss_limit, oy_roster_miss, oy_callback);
         return false;
     }
-    oy_key_verify(window.OY_BLOCK_ROSTER[oy_node_select][0], oy_crypt_select, oy_crypt_short, function(oy_key_valid) {
-        if (oy_key_valid===true) {
-            window.OY_BLOCK_ROSTER[oy_node_select][1]++;
-            oy_block_sync_hop(oy_passport_passive, oy_passport_crypt, oy_crypt_short, oy_miss_limit, oy_roster_miss, oy_callback);
-        }
-    });
+    let oy_hop_pass = function() {
+        window.OY_BLOCK_ROSTER[oy_node_select][1]++;
+        oy_block_sync_hop(oy_passport_passive, oy_passport_crypt, oy_crypt_short, oy_miss_limit, oy_roster_miss, oy_callback);
+    };
+    if (Math.random>window.OY_BLOCK_HOP_VERIFY) oy_hop_pass();
+    else {
+        oy_key_verify(window.OY_BLOCK_ROSTER[oy_node_select][0], oy_crypt_select, oy_crypt_short, function(oy_key_valid) {
+            if (oy_key_valid===true) oy_hop_pass();
+        });
+    }
 }
 
 function oy_block_stability(oy_list) {
@@ -2404,7 +2411,7 @@ function oy_block_loop() {
                 oy_block_challenge(window.OY_BLOCK_SIGN);
 
                 for (let oy_key_public_short in window.OY_BLOCK_ROSTER) {
-                    if (typeof(window.OY_BLOCK_SYNC[window.OY_BLOCK_ROSTER[oy_key_public_short][0]])==="undefined"||window.OY_BLOCK_SYNC[window.OY_BLOCK_ROSTER[oy_key_public_short][0]][0]!==true) delete window.OY_BLOCK_ROSTER[oy_key_public_short];
+                    if ((typeof(window.OY_BLOCK_SYNC[window.OY_BLOCK_ROSTER[oy_key_public_short][0]])==="undefined"||window.OY_BLOCK_SYNC[window.OY_BLOCK_ROSTER[oy_key_public_short][0]][0]!==true)&&Math.random()>window.OY_BLOCK_ROSTER_PERSIST) delete window.OY_BLOCK_ROSTER[oy_key_public_short];
                 }
 
                 let oy_command_pool = {};
