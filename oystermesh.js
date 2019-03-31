@@ -1264,7 +1264,7 @@ function oy_node_assign() {
             }
         }
     };
-    oy_xhttp.open("POST", "https://top.oyster.org/oy_node_assign_alpha.php", true);
+    oy_xhttp.open("POST", "https://top.oyster.org/oy_node_assign.php", true);
     oy_xhttp.send("oy_node_id="+window.OY_SELF_PUBLIC);
 }
 
