@@ -90,121 +90,66 @@
     <div id="oy_top_inner" style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);overflow:hidden;"></div>
 </div>
 <script type="text/javascript">
+    window.OY_BLOCK_TIME = null;
+    function oy_block_time(oy_next) {
+        if (oy_next===true) return (Math.ceil(Date.now()/10000)*10)+10;
+        return (Math.floor(Date.now()/10000)*10);
+    }
+
     function oy_top_data() {
-        let oy_xhttp = new XMLHttpRequest();
-        oy_xhttp.onreadystatechange = function() {
-            if (this.readyState===4&&this.status===200) {
-                let oy_mesh_top = JSON.parse(this.responseText);
+        let oy_block_time_local = oy_block_time(false);
+        if (window.OY_BLOCK_TIME===null||(oy_block_time_local!==window.OY_BLOCK_TIME&&(oy_block_time_local/10)%2===0)) {
+            window.OY_BLOCK_TIME = oy_block_time_local;
+            let oy_xhttp = new XMLHttpRequest();
+            oy_xhttp.onreadystatechange = function () {
+                if (this.readyState === 4 && this.status === 200) {
+                    let oy_mesh_top = JSON.parse(this.responseText);
+                    oy_top_init();
 
-                document.getElementById("oy_stat_avg_latency").innerHTML = oy_mesh_top[2][0]["oy_stat_avg_latency"];
-                document.getElementById("oy_stat_avg_peership").innerHTML = oy_mesh_top[2][0]["oy_stat_avg_peership"];
-                document.getElementById("oy_stat_mesh_size").innerHTML = oy_mesh_top[2][0]["oy_stat_mesh_size"];
-                document.getElementById("oy_stat_mesh_flow").innerHTML = oy_mesh_top[2][0]["oy_stat_mesh_flow"];
-                //document.getElementById("oy_stat_sector_count").innerHTML = oy_mesh_top[2][0]["oy_stat_sector_count"];
+                    document.getElementById("oy_stat_avg_latency").innerHTML = oy_mesh_top[2][0]["oy_stat_avg_latency"];
+                    document.getElementById("oy_stat_avg_peership").innerHTML = oy_mesh_top[2][0]["oy_stat_avg_peership"];
+                    document.getElementById("oy_stat_mesh_size").innerHTML = oy_mesh_top[2][0]["oy_stat_mesh_size"];
+                    document.getElementById("oy_stat_mesh_flow").innerHTML = oy_mesh_top[2][0]["oy_stat_mesh_flow"];
+                    //document.getElementById("oy_stat_sector_count").innerHTML = oy_mesh_top[2][0]["oy_stat_sector_count"];
 
-                let oy_punish_build = "";
-                if (oy_mesh_top[2][1].length>0) {
-                    for (let i in oy_mesh_top[2][1]) {
-                        oy_punish_build += oy_mesh_top[2][1][i][2]+"% ["+oy_mesh_top[2][1][i][1]+"] - "+oy_mesh_top[2][1][i][0]+"<br>";
+                    let oy_punish_build = "";
+                    if (oy_mesh_top[2][1].length > 0) {
+                        for (let i in oy_mesh_top[2][1]) {
+                            oy_punish_build += oy_mesh_top[2][1][i][2] + "% [" + oy_mesh_top[2][1][i][1] + "] - " + oy_mesh_top[2][1][i][0] + "<br>";
+                        }
                     }
-                }
-                document.getElementById("oy_stats_beta").innerHTML = oy_punish_build;
+                    document.getElementById("oy_stats_beta").innerHTML = oy_punish_build;
 
-                let oy_mesh_change = false;
-                for (let i in oy_mesh_top[0]) {
-                    let oy_node_prev = window.OY_MESH_TOP_PREV[0].indexOf(oy_mesh_top[0][i]);
-                    if (oy_node_prev===-1) {
-                        let node = {id:oy_mesh_top[0][i], x: Math.random()*window.OY_TOP_WIDTH|0, y: Math.random()*window.OY_TOP_HEIGHT|0,};
+                    for (let i in oy_mesh_top[0]) {
+                        let node = {
+                            id: oy_mesh_top[0][i],
+                            x: Math.random() * window.OY_TOP_WIDTH | 0,
+                            y: Math.random() * window.OY_TOP_HEIGHT | 0,
+                        };
                         //console.log("NODE PUSH: "+node.id);
                         window.OY_TOP_NODES.push(node);
-                        oy_mesh_change = true;
                     }
-                    else window.OY_MESH_TOP_PREV[0].splice(oy_node_prev, 1);
-                }
-                //deletes nodes and links
-                if (window.OY_MESH_TOP_PREV[0].length>0) {
-                    //console.log("DELETING "+window.OY_MESH_TOP_PREV[0].length+" NODE(S)");
-                    for (let i in window.OY_MESH_TOP_PREV[0]) {
-                        for (let x in window.OY_TOP_NODES) {
-                            if (window.OY_TOP_NODES[x].id===window.OY_MESH_TOP_PREV[0][i]) {
-                                /*
-                                This removes the links connected to the node that is about to be removed, became redundant with the improved link remover down a few lines
-                                window.OY_TOP_LINKS = window.OY_TOP_LINKS.filter(function(l) {
-                                    return l.source.id !== window.OY_TOP_NODES[x].id && l.target.id !== window.OY_TOP_NODES[x].id;
-                                });
-                                */
-                                window.OY_TOP_NODES.splice(x, 1);
-                                oy_mesh_change = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-                for (let i in oy_mesh_top[1]) {
-                    let oy_link_push = true;
-                    for (let x in window.OY_MESH_TOP_PREV[1]) {
-                        if ((window.OY_MESH_TOP_PREV[1][x][0]===oy_mesh_top[1][i][0]&&window.OY_MESH_TOP_PREV[1][x][1]===oy_mesh_top[1][i][1])||
-                            window.OY_MESH_TOP_PREV[1][x][0]===oy_mesh_top[1][i][1]&&window.OY_MESH_TOP_PREV[1][x][1]===oy_mesh_top[1][i][0]) {
-                            oy_link_push = false;
-                            break;
-                        }
-                    }
-                    if (oy_link_push===true) {
+                    for (let i in oy_mesh_top[1]) {
                         let oy_node_collect = [];
-                        window.OY_TOP_NODES.forEach(function(target) {
-                            if (target.id===oy_mesh_top[1][i][0]||target.id===oy_mesh_top[1][i][1]) oy_node_collect.push(target);
+                        window.OY_TOP_NODES.forEach(function (target) {
+                            if (target.id === oy_mesh_top[1][i][0] || target.id === oy_mesh_top[1][i][1]) oy_node_collect.push(target);
                         });
-                        if (oy_node_collect.length===2) {
+                        if (oy_node_collect.length === 2) {
                             //console.log("LINK PUSH: "+oy_node_collect[0].id+" <-> "+oy_node_collect[1].id);
                             window.OY_TOP_LINKS.push({source: oy_node_collect[0], target: oy_node_collect[1]});
-                            oy_mesh_change = true;
                         }
                     }
+                    oy_top_restart();
                 }
-                let oy_link_keep = [];
-                for (let i in window.OY_MESH_TOP_PREV[1]) {
-                    for (let x in oy_mesh_top[1]) {
-                        if ((window.OY_MESH_TOP_PREV[1][i][0]===oy_mesh_top[1][x][0]&&window.OY_MESH_TOP_PREV[1][i][1]===oy_mesh_top[1][x][1])||
-                            window.OY_MESH_TOP_PREV[1][i][0]===oy_mesh_top[1][x][1]&&window.OY_MESH_TOP_PREV[1][i][1]===oy_mesh_top[1][x][0]) {
-                            oy_link_keep.push(i);
-                            break;
-                        }
-                    }
-                }
-                if (window.OY_MESH_TOP_PREV[1].length>oy_link_keep.length) {
-                    for (let i in window.OY_MESH_TOP_PREV[1]) {
-                        if (oy_link_keep.indexOf(i)===-1) {
-                            //console.log("LINK DELETE: "+window.OY_MESH_TOP_PREV[1][i][0]+" <-> "+window.OY_MESH_TOP_PREV[1][i][1]);
-                            /*
-                            //The for loop works, in case filter() causes issues later
-                            let oy_links_temp = window.OY_TOP_LINKS;
-                            for (let x in window.OY_TOP_LINKS) {
-                                if ((window.OY_TOP_LINKS[x].source.id===window.OY_MESH_TOP_PREV[1][i][0]&&window.OY_TOP_LINKS[x].target.id===window.OY_MESH_TOP_PREV[1][i][1])||
-                                    (window.OY_TOP_LINKS[x].source.id===window.OY_MESH_TOP_PREV[1][i][1]&&window.OY_TOP_LINKS[x].target.id===window.OY_MESH_TOP_PREV[1][i][0])) {
-                                    oy_links_temp.splice(x, 1);
-                                }
-                            }
-                            window.OY_TOP_LINKS = oy_links_temp;
-                            */
-                            window.OY_TOP_LINKS = window.OY_TOP_LINKS.filter(function(l) {
-                                return !((l.source.id===window.OY_MESH_TOP_PREV[1][i][0]&&l.target.id===window.OY_MESH_TOP_PREV[1][i][1])||
-                                    (l.source.id===window.OY_MESH_TOP_PREV[1][i][1]&&l.target.id===window.OY_MESH_TOP_PREV[1][i][0]));
-                            });
-                            oy_mesh_change = true;
-                        }
-                    }
-                }
-                if (oy_mesh_change===true) oy_top_restart();
-                window.OY_MESH_TOP_PREV = oy_mesh_top;
-            }
-        };
-        oy_xhttp.open("GET", "https://top.oyster.org/oy_mesh_top.json?"+Math.round(Math.random()*10000), true);
-        oy_xhttp.send();
-        setTimeout("oy_top_data()", 5000);
+            };
+            oy_xhttp.open("GET", "https://top.oyster.org/oy_mesh_top.json?" + Math.round(Math.random() * 10000), true);
+            oy_xhttp.send();
+        }
+        setTimeout("oy_top_data()", 200);
     }
 
     function oy_top_init() {
-        window.OY_MESH_TOP_PREV = [[], []];
+        document.getElementById("oy_top_inner").innerHTML = "";
         window.OY_TOP_WIDTH = screen.width;
         window.OY_TOP_HEIGHT = screen.height;
 
@@ -231,7 +176,6 @@
         window.OY_TOP_LINK = oy_svg.selectAll(".link");
 
         oy_top_restart();
-        oy_top_data();
     }
 
     function oy_top_tick() {
@@ -263,7 +207,7 @@
 
         window.OY_TOP_FORCE.start();
     }
-    oy_top_init();
+    window.onload = oy_top_data;
 </script>
 </body>
 </html>
