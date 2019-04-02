@@ -12,6 +12,7 @@ Oyster Example
     function render(superhandle, data) {
         alert(data);//alert the data pulled from the mesh
     }
+
     function example() {
         let glue_count = 0;//track how many times the data has been stored on the mesh
         let callback = function() {//this callback is called when a data nonce (part) is confirmed as deposited on the mesh
@@ -25,6 +26,7 @@ Oyster Example
         let superhandle = oy_data_push("EXAMPLE-DATA-HERE", callback);//call protocol function to push data to mesh
         let handle = superhandle.split("@")[0].substr(0, 46);//superhandle is the key to identify and unlock the data, handle skips the decryption part and is used to manage threads
     }
+
     oy_init(example);//run example after oyster initializes via callback
 </script>
 </body>
