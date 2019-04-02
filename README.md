@@ -58,11 +58,15 @@ Firefox is the best browser to run Oyster. Connections are stable and CPU usage 
 
 ### Chrome
 
-Chrome runs Oyster fine for 1 hour or less. There is a known bug in chrome that affects all webrtc projects: https://bugs.chromium.org/p/chromium/issues/detail?id=825576. This bug will cause new webrtc connections to fail after ~1.5hrs of continuous use without a refresh. Otherwise Chrome works fine albiet with slightly heavier CPU usage than Firefox.
+Chrome runs Oyster fine for 1 hour or less. Chrome has a known bug that affects all webRTC projects: https://bugs.chromium.org/p/chromium/issues/detail?id=825576. This bug will cause new webRTC connections to fail after ~1.5hrs of continuous use without a refresh. Otherwise Chrome works fine albeit with slightly heavier CPU usage than Firefox.
 
 ### Safari
 
-Oyster runs fine in Safari on both macOS and iOS devices. However, I have noticed a bug where after some heavy usage your node will become unable to make new connections, and only restarting the browser solves the problem. The front-end interface has not been optimized for mobile devices so it may render somewhat inelegantly. Files downloads, including those of private keys, have not been tested extensively.
+Oyster runs fine in Safari on both macOS and iOS devices. However, I have noticed a bug where after some heavy usage your node will become unable to make new connections, and restarting the browser is the only solution. The front-end interface has not been optimized for mobile devices so it may render somewhat inelegantly. File downloads, including those of private keys, have not been tested extensively.
+
+## Questions/Contact
+
+Join us at the mesh chat room: https://oyster.org/#oystertalk.mesh
 
 ## License
 This project is licensed under GNU GPLv3 - see the [LICENSE.md](LICENSE.md) file for details.
