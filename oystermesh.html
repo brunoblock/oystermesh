@@ -2706,7 +2706,7 @@
             document.getElementById("oy_push_stats_avg_hop").innerHTML = (window.OY_PUSH_AVG_HOP.reduce(oy_reduce_sum)/window.OY_PUSH_AVG_HOP.length).toFixed(2);
         };
         if (window.OY_HANDLE_PUSH===null) {
-            let oy_superhandle = oy_data_push(window.OY_FILE_DATA, null, oy_callback_tally);
+            let oy_superhandle = oy_data_push(window.OY_FILE_DATA, oy_callback_tally, null);
             window.OY_FILE_DATA = "oy_null";
             document.getElementById("oy_push_superhandle").value = oy_superhandle;
             location.hash = "";
@@ -2725,7 +2725,7 @@
         else {
             if (window.OY_EXECUTE_LAST!=="OY_PUSH") document.getElementById("oy_graph_nonce").innerHTML = window.OY_GRAPH_NONCE_STORE["OY_PUSH"];
             window.OY_DATA_PUSH[window.OY_HANDLE_PUSH] = oy_callback_tally;
-            oy_data_push(null, window.OY_HANDLE_PUSH, oy_callback_tally);
+            oy_data_push(null, oy_callback_tally, window.OY_HANDLE_PUSH);
         }
         document.getElementById("oy_push_halt").classList.remove("oy_button_all_dull");
         document.getElementById("oy_push_halt").classList.add("oy_button_halt_active");
@@ -2912,43 +2912,45 @@
         else window.OY_PULL_ELAPSED += Date.now()/1000 - window.OY_PULL_PAUSE;
 
         delete window.OY_DATA_PULL[window.OY_HANDLE_PULL];
-        oy_data_pull(function(oy_superhandle, oy_data_value, oy_data_crypt) {
-            oy_tab("oy_tab_download");
-            oy_pull_halt(true);
-            oy_graph_nonce_fill(true, oy_graph_nonce_colour(100));
-            if (oy_data_value===null) window.OY_FILE_KEEP = [null, null, null, true];
-            else {
-                window.OY_FILE_KEEP = JSON.parse(oy_data_value);
-                oy_data_value = null;
-                window.OY_FILE_KEEP[2] = window.btoa(window.OY_FILE_KEEP[2]);
-            }
-            window.OY_FILE_KEEP[3] = oy_data_crypt;
-            oy_data_crypt = null;
+        oy_data_pull(document.getElementById('oy_pull_superhandle').value,
+            function(oy_superhandle, oy_data_value, oy_data_crypt) {
+                oy_tab("oy_tab_download");
+                oy_pull_halt(true);
+                oy_graph_nonce_fill(true, oy_graph_nonce_colour(100));
+                if (oy_data_value===null) window.OY_FILE_KEEP = [null, null, null, true];
+                else {
+                    window.OY_FILE_KEEP = JSON.parse(oy_data_value);
+                    oy_data_value = null;
+                    window.OY_FILE_KEEP[2] = window.btoa(window.OY_FILE_KEEP[2]);
+                }
+                window.OY_FILE_KEEP[3] = oy_data_crypt;
+                oy_data_crypt = null;
 
-            if (window.OY_DEST_RADIO!=="oy_dest_recommit") {
-                document.getElementById("oy_dest_go").classList.remove("oy_button_all_dull");
-                document.getElementById("oy_dest_go").classList.add("oy_button_go_active");
-            }
+                if (window.OY_DEST_RADIO!=="oy_dest_recommit") {
+                    document.getElementById("oy_dest_go").classList.remove("oy_button_all_dull");
+                    document.getElementById("oy_dest_go").classList.add("oy_button_go_active");
+                }
 
-            if (!oy_file_view_check(true)||window.OY_FILE_KEEP[0]===null) {
-                oy_dest_radio_view_disable();
-                if (window.OY_DEST_RADIO!=="oy_dest_recommit") oy_dest_radio("oy_dest_download");
+                if (!oy_file_view_check(true)||window.OY_FILE_KEEP[0]===null) {
+                    oy_dest_radio_view_disable();
+                    if (window.OY_DEST_RADIO!=="oy_dest_recommit") oy_dest_radio("oy_dest_download");
+                }
+                if (window.OY_DEST_RADIO==="oy_dest_recommit") setTimeout("oy_recommit_execute()", 500);
+                else if (window.OY_DEST_RADIO==="oy_dest_download"||(window.OY_DEST_RADIO==="oy_dest_view"&&!oy_file_view())) oy_file_download();
+            },
+            function(oy_data_nonce, oy_collect_count, oy_data_count) {
+                if (oy_collect_count>0&&window.OY_PULL_COVERAGE.indexOf(oy_data_nonce)===-1) {
+                    window.OY_PULL_COVERAGE.push(oy_data_nonce);
+                    document.getElementById("oy_pull_stats_coverage").innerHTML = Math.floor((window.OY_PULL_COVERAGE.length/window.OY_NONCE_MAX_PULL)*100)+"%";
+                }
+                if (window.OY_EXECUTE_PULL===true&&oy_data_count>0) {
+                    if (oy_data_count===1) delete window.OY_PULL_CONFLICTS[oy_data_nonce];
+                    else window.OY_PULL_CONFLICTS[oy_data_nonce] = true;
+                    document.getElementById("oy_pull_stats_conflicts").innerHTML = ""+Object.keys(window.OY_PULL_CONFLICTS).length;
+                }
+                oy_graph_nonce_fill(oy_data_nonce, oy_graph_nonce_colour(oy_collect_count));
             }
-            if (window.OY_DEST_RADIO==="oy_dest_recommit") setTimeout("oy_recommit_execute()", 500);
-            else if (window.OY_DEST_RADIO==="oy_dest_download"||(window.OY_DEST_RADIO==="oy_dest_view"&&!oy_file_view())) oy_file_download();
-        }, document.getElementById('oy_pull_superhandle').value,
-        function(oy_data_nonce, oy_collect_count, oy_data_count) {
-            if (oy_collect_count>0&&window.OY_PULL_COVERAGE.indexOf(oy_data_nonce)===-1) {
-                window.OY_PULL_COVERAGE.push(oy_data_nonce);
-                document.getElementById("oy_pull_stats_coverage").innerHTML = Math.floor((window.OY_PULL_COVERAGE.length/window.OY_NONCE_MAX_PULL)*100)+"%";
-            }
-            if (window.OY_EXECUTE_PULL===true&&oy_data_count>0) {
-                if (oy_data_count===1) delete window.OY_PULL_CONFLICTS[oy_data_nonce];
-                else window.OY_PULL_CONFLICTS[oy_data_nonce] = true;
-                document.getElementById("oy_pull_stats_conflicts").innerHTML = ""+Object.keys(window.OY_PULL_CONFLICTS).length;
-            }
-            oy_graph_nonce_fill(oy_data_nonce, oy_graph_nonce_colour(oy_collect_count));
-        });
+        );
         window.OY_EXECUTE_LAST = "OY_PULL";
     }
 
@@ -3125,7 +3127,7 @@
         }
         if (window.OY_EXECUTE_LAST!=="OY_RECOMMIT") delete window.OY_PUSH_HOLD[window.OY_HANDLE_PULL];
         window.OY_DATA_PUSH[window.OY_HANDLE_PULL] = oy_callback_tally;
-        oy_data_push(window.OY_FILE_KEEP[3], window.OY_HANDLE_PULL);
+        oy_data_push(window.OY_FILE_KEEP[3], oy_callback_tally, window.OY_HANDLE_PULL);
         window.OY_EXECUTE_LAST = "OY_RECOMMIT";
     }
 

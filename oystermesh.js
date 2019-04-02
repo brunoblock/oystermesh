@@ -49,7 +49,7 @@ window.OY_AKOYA_FEE = 0.000001*window.OY_AKOYA_DECIMALS;//akoya fee per block
 window.OY_NODE_TOLERANCE = 3;//max amount of protocol communication violations until node is blacklisted
 window.OY_NODE_BLACKTIME = 300;//seconds to blacklist a punished node for
 window.OY_NODE_PROPOSETIME = 12;//seconds for peer proposal session duration
-window.OY_NODE_ASSIGNTTIME = 10;//minimum interval between node_assign instances to/from top
+window.OY_NODE_ASSIGNTTIME = 4;//minimum interval between node_assign instances to/from top
 window.OY_NODE_ASSIGN_DELAY = 200;//ms delay per node_initiate from node_assign
 window.OY_NODE_DELAYTIME = 6;//minimum expected time to connect or transmit data to a node
 window.OY_NODE_EXPIRETIME = 600;//seconds of non-interaction until a node's connection session is deleted
@@ -1577,7 +1577,7 @@ function oy_data_measure(oy_data_beam, oy_node_id, oy_data_length) {
 }
 
 //pushes data onto the mesh, data_logic indicates strategy for data pushing
-function oy_data_push(oy_data_value, oy_data_handle, oy_callback_tally) {
+function oy_data_push(oy_data_value, oy_callback_tally, oy_data_handle) {
     let oy_data_superhandle = false;
     if (typeof(oy_data_handle)==="undefined"||oy_data_handle===null) {
         let oy_key_pass = oy_rand_gen(8);
@@ -1635,7 +1635,7 @@ function oy_data_push(oy_data_value, oy_data_handle, oy_callback_tally) {
         }
     }
     setTimeout(function() {
-        oy_data_push(oy_data_value, oy_data_handle, null);
+        oy_data_push(oy_data_value, null, oy_data_handle);
     }, oy_push_delay);
     if (oy_data_superhandle!==false) return oy_data_superhandle;
 }
@@ -1665,7 +1665,7 @@ function oy_data_tally(oy_data_source, oy_data_handle, oy_data_nonce, oy_data_sh
 }
 
 //pulls data from the mesh
-function oy_data_pull(oy_callback, oy_data_handle, oy_callback_collect, oy_data_nonce_max, oy_crypt_pass) {
+function oy_data_pull(oy_data_handle, oy_callback, oy_callback_collect, oy_data_nonce_max, oy_crypt_pass) {
     if (typeof(oy_data_nonce_max)==="undefined"||typeof(oy_crypt_pass)==="undefined") {
         if (oy_data_handle.indexOf("@")===-1) {
             oy_data_nonce_max = parseInt(oy_data_handle.substr(46));
@@ -1700,7 +1700,7 @@ function oy_data_pull(oy_callback, oy_data_handle, oy_callback_collect, oy_data_
     oy_log("Pulling handle "+oy_short(oy_data_handle)+" with nonce max: "+oy_data_nonce_max+" and nonce set: "+JSON.stringify(oy_data_nonce_set));
     oy_data_route("OY_LOGIC_ALL", "OY_DATA_PULL", [[], oy_rand_gen(), oy_data_handle, oy_data_nonce_set]);
     setTimeout(function() {
-        oy_data_pull(oy_callback, oy_data_handle, oy_callback_collect, oy_data_nonce_max, oy_crypt_pass);
+        oy_data_pull(oy_data_handle, oy_callback, oy_callback_collect, oy_data_nonce_max, oy_crypt_pass);
     }, window.OY_DATA_PULL_INTERVAL);
 }
 
