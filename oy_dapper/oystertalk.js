@@ -173,6 +173,7 @@ function ot_broadcast() {
 
     ot_reply_reset();
     document.getElementById("ot_broadcast_input").value = "";
+    document.getElementById("ot_broadcast_limit").innerHTML = "";
     document.getElementById("ot_broadcast_button").classList.remove("oy_button_broadcast_active");
     document.getElementById("ot_broadcast_button").classList.add("oy_button_all_dull");
 
