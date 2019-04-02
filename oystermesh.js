@@ -153,8 +153,8 @@ window.OY_BLOCK_TEMP_HASH = null;//hash of the most current block
 window.OY_BLOCK = [[null, []], {}, {}, {}, {}];//the current meshblock - [oy_meta_sector, oy_history_sector, oy_akoya_sector, oy_dns_sector, oy_channel_sector]
 window.OY_BLOCK_HASH = null;//hash of the most current block
 window.OY_BLOCK_SIGN = null;
-window.OY_BLOCK_TIME = oy_block_time(false);//the most recent block timestamp
-window.OY_BLOCK_NEXT = oy_block_time(true);//the next block timestamp
+window.OY_BLOCK_TIME = oy_block_time_first(false);//the most recent block timestamp
+window.OY_BLOCK_NEXT = oy_block_time_first(true);//the next block timestamp
 window.OY_BLOCK_UPTIME = null;
 window.OY_BLOCK_WEIGHT = null;
 window.OY_BLOCK_STABILITY = 0;
@@ -2213,9 +2213,16 @@ function oy_block_stability(oy_list) {
     return Math.sqrt(oy_stability_avg(oy_square_diffs));
 }
 
-function oy_block_time(oy_next) {
-    if (oy_next===true) return (Math.ceil(Date.now()/10000)*10)+10;
-    return (Math.floor(Date.now()/10000)*10);
+function oy_block_time() {
+    return Math.floor(Date.now()/10000)*10;
+}
+
+function oy_block_time_first(oy_next) {
+    let oy_block_time_local = oy_block_time();
+    let oy_offset = 10;
+    if ((oy_block_time_local/10)%2===0) oy_offset = 0;
+    if (oy_next===true) return (oy_block_time_local+20)-oy_offset;
+    return oy_block_time_local-oy_offset;
 }
 
 function oy_block_reset() {
@@ -2251,11 +2258,11 @@ function oy_block_reset() {
 }
 
 function oy_block_loop() {
-    let oy_block_time_local = oy_block_time(false);
+    let oy_block_time_local = oy_block_time();
     setTimeout("oy_block_loop()", window.OY_BLOCK_LOOP);
     if (oy_block_time_local!==window.OY_BLOCK_TIME&&(oy_block_time_local/10)%2===0) {
         window.OY_BLOCK_TIME = oy_block_time_local;
-        window.OY_BLOCK_NEXT = oy_block_time(true);
+        window.OY_BLOCK_NEXT = oy_block_time_local+20;
         window.OY_BLOCK_DYNAMIC = [[], [], [], []];
         window.OY_BLOCK_COMMAND = {};
 

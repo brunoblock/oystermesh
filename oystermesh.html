@@ -1386,7 +1386,7 @@
         window.OY_MESH_MAP_FUNC = null;
         window.OY_LOW_POWER = false;
         window.OY_LOW_POWER_THREAD = {};
-        window.OY_BLOCK_GRAPH = "<div id='oy_graph_block_inner' style='position:absolute;bottom:0.5%;left:2%;width:96%;height:0;background-color: #565656;transition:height 19.7s linear;overflow:hidden;z-index: 10;'></div><div class='oy_center_both' style='width:120%;height:60%;border:0.2vh dashed #000000;z-index: 60;'></div>";
+        window.OY_BLOCK_GRAPH = "<div id='oy_graph_block_inner' style='position:absolute;bottom:0.5%;left:2%;width:96%;height:0;background-color: #565656;transition:height 19.8s linear;overflow:hidden;z-index: 10;'></div><div class='oy_center_both' style='width:120%;height:60%;border:0.2vh dashed #000000;z-index: 60;'></div>";
 
         document.getElementById("oy_graph_block").innerHTML = window.OY_BLOCK_GRAPH;
 
@@ -1454,6 +1454,7 @@
                 oy_element.style.left = "2%";
                 oy_element.style.width = "96%";
                 oy_element.style.height = "0.1vh";
+                oy_element.style.opacity = "0.7";
                 if (oy_self===true) {
                     oy_element.style.backgroundColor = "#24ab26";
                     oy_element.style.zIndex = "40";
@@ -1490,6 +1491,7 @@
             window.OY_MESH_MAP = window.OY_MESH_MAP_FUNC;
 
             oy_maintain();
+            oy_block_render_resume();
             oy_top_render();
 
             if (location.hash==="#akoya") oy_tab("oy_tab_wallet");
@@ -1552,6 +1554,7 @@
             window.OY_MAINTAIN_DELAY = 500;
 
             document.getElementById("oy_graph_block").innerHTML = window.OY_BLOCK_GRAPH;
+            oy_block_render_resume();
             document.getElementById("oy_top_inner").innerHTML = "";
             document.getElementById("oy_top_inner").style.overflow = "hidden";
 
@@ -1749,6 +1752,21 @@
         }, 100);
     }
 
+    function oy_block_render_resume() {
+        if (window.OY_LOW_POWER===true) return false;
+
+        window.OY_BLOCK_RENDER_ACTIVE = true;
+
+        document.getElementById("oy_graph_block").innerHTML = window.OY_BLOCK_GRAPH;
+        let oy_block_remain = window.OY_BLOCK_NEXT - (Date.now()/1000);
+        document.getElementById("oy_graph_block_inner").style.height = (99*((20-oy_block_remain)/20))+"%";
+        document.getElementById("oy_graph_block_inner").style.transition = "height "+(oy_block_remain*0.99).toFixed(3)+"s linear";
+
+        setTimeout(function() {
+            document.getElementById("oy_graph_block_inner").style.height = "99%";
+        }, 100);
+    }
+
     function oy_block_render_reset() {
         if (window.OY_LOW_POWER===true) return false;
 
@@ -1760,6 +1778,7 @@
         document.getElementById("oy_graph_block_inner").style.height = "99%";
         setTimeout(function() {
             document.getElementById("oy_graph_block").innerHTML = window.OY_BLOCK_GRAPH;
+            oy_block_render_resume();
         }, 300);
     }
 

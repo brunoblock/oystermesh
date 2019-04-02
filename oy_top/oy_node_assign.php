@@ -10,7 +10,7 @@ function oy_node_valid($oy_node_id) {
 
 if (!is_dir("/dev/shm/oy_nodes")) mkdir("/dev/shm/oy_nodes");
 
-if (is_file("/dev/shm/oy_nodes/".$_SERVER['REMOTE_ADDR'].".node")&&(time()-filemtime("/dev/shm/oy_nodes/".$_SERVER['REMOTE_ADDR'].".node")) < 5) die("ERROR: Asked too early");
+if (is_file("/dev/shm/oy_nodes/".$_SERVER['REMOTE_ADDR'].".node")&&(time()-filemtime("/dev/shm/oy_nodes/".$_SERVER['REMOTE_ADDR'].".node")) < 2) die("ERROR: Asked too early");
 
 //chance of DB failing > chance of filesystem failing, data persistence is not needed here anyways
 $fh = fopen("/dev/shm/oy_nodes/".$_SERVER['REMOTE_ADDR'].".node", "w");
@@ -19,13 +19,13 @@ fclose($fh);
 
 if ($fh = opendir("/dev/shm/oy_nodes")) {
     while (($oy_file = readdir($fh))!==false) {
-        if (preg_match('/\.node$/i', $oy_file)&&(time()-filemtime("/dev/shm/oy_nodes/".$oy_file)) >= 240) unlink("/dev/shm/oy_nodes/".$oy_file);
+        if (preg_match('/\.node$/i', $oy_file)&&(time()-filemtime("/dev/shm/oy_nodes/".$oy_file)) >= 20) unlink("/dev/shm/oy_nodes/".$oy_file);
     }
 }
 closedir($fh);
 
 $oy_node_array = glob("/dev/shm/oy_nodes/*.node");
-$oy_node_key_array = array_rand($oy_node_array, 8);
+$oy_node_key_array = array_rand($oy_node_array, 10);
 $oy_node_send = array();
 foreach ($oy_node_key_array as $oy_node_key_unique) {
     if ($oy_node_array[$oy_node_key_unique]=="/dev/shm/oy_nodes/".$_SERVER['REMOTE_ADDR'].".node") continue;

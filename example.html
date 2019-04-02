@@ -21,6 +21,7 @@ Oyster Example
                 oy_data_pull(superhandle, render);//pull the data from the mesh by referencing the superhandle (data ID + decryption key)
             }
         };
+
         let superhandle = oy_data_push("EXAMPLE-DATA-HERE", callback);//call protocol function to push data to mesh
         let handle = superhandle.split("@")[0].substr(0, 46);//superhandle is the key to identify and unlock the data, handle skips the decryption part and is used to manage threads
     }
