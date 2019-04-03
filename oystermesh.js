@@ -50,7 +50,7 @@ window.OY_NODE_TOLERANCE = 3;//max amount of protocol communication violations u
 window.OY_NODE_BLACKTIME = 300;//seconds to blacklist a punished node for
 window.OY_NODE_PROPOSETIME = 12;//seconds for peer proposal session duration
 window.OY_NODE_ASSIGNTTIME = 4;//minimum interval between node_assign instances to/from top
-window.OY_NODE_ASSIGN_DELAY = 200;//ms delay per node_initiate from node_assign
+window.OY_NODE_ASSIGN_DELAY = 500;//ms delay per node_initiate from node_assign
 window.OY_NODE_DELAYTIME = 6;//minimum expected time to connect or transmit data to a node
 window.OY_NODE_EXPIRETIME = 600;//seconds of non-interaction until a node's connection session is deleted
 window.OY_BOOST_KEEP = 50;//node IDs to retain in boost memory, higher means more nodes retained but less average node quality
@@ -98,7 +98,7 @@ window.OY_CHANNEL_FORGETIME = 25;//seconds since last signed message from channe
 window.OY_CHANNEL_RECOVERTIME = 6;//second interval between channel recovery requests per node, should be at least MESH_EDGE*2
 window.OY_CHANNEL_EXPIRETIME = 2592000;//seconds until a broadcast expires and is dropped from nodes listening on the channel
 window.OY_CHANNEL_RESPOND_MAX = 6;//max amount of broadcast payloads to send in response to a channel recover request
-window.OY_CHANNEL_ALLOWANCE = 28;//broadcast allowance in seconds per public key, an anti-spam mechanism to prevent abuse of OY_LOGIC_ALL
+window.OY_CHANNEL_ALLOWANCE = 58;//broadcast allowance in seconds per public key, an anti-spam mechanism to prevent abuse of OY_LOGIC_ALL
 window.OY_CHANNEL_CONSENSUS = 0.5;//node signature requirement for a broadcast to be retained in channel_keep
 window.OY_CHANNEL_TOP_TOLERANCE = 2;//node count difference allowed between broadcast claim and perceived claim
 window.OY_KEY_BRUNO = "XLp6_wVPBF3Zg-QNRkEj6U8bOYEZddQITs1n2pyeRqwOG5k9w_1A-RMIESIrVv_5HbvzoLhq-xPLE7z2na0C6M";//prevent impersonation
@@ -1974,8 +1974,8 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
 
                    if (oy_data[0]==="OY_CHANNEL_BROADCAST"&&oy_data[1][3]!=="OY_CHANNEL_PING"&&oy_data[1][5]!==window.OY_KEY_BRUNO) {
                        if (typeof(window.OY_CHANNEL_DYNAMIC[oy_data[1][5]])!=="undefined"&&oy_time_local-window.OY_CHANNEL_DYNAMIC[oy_data[1][5]]<window.OY_CHANNEL_ALLOWANCE) {
-                           oy_log("Peer "+oy_short(oy_node_id)+" sent a channel broadcast from an abusive key, will remove and punish");
-                           oy_peer_remove(oy_node_id, "OY_PUNISH_BROADCAST_ABUSE");
+                           oy_log("Peer "+oy_short(oy_node_id)+" sent a channel broadcast that breached allowance, will punish");
+                           oy_node_punish(oy_node_id, "OY_PUNISH_BROADCAST_BREACH");
                            return false;
                        }
                        window.OY_CHANNEL_DYNAMIC[oy_data[1][5]] = oy_time_local;
