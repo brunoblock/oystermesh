@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <title>Oyster | Bandwidth Bound Consensus</title>
     <meta name="description" content="Oyster provides decentralized access to immutable data and currency.">
-    <script src="oystermesh.js?125"></script>
+    <script src="oystermesh.js?126"></script>
     <script src="oysterdepend.js?3"></script>
-    <script src="oy_dapper/oystertalk.js?22"></script>
+    <script src="oy_dapper/oystertalk.js?23"></script>
     <script src="oy_resources/d3.v3.min.js"></script>
     <script src="oy_resources/blockies.js"></script>
     <script src="oy_resources/linkify.min.js"></script>
@@ -1758,11 +1758,11 @@
         let oy_block_diff = Date.now()/1000 - window.OY_BLOCK_TIME;
         let oy_element = document.createElement("div");
         oy_element.style.position = "absolute";
-        oy_element.style.bottom = "0.5%";
+        oy_element.style.bottom = (1+((oy_block_diff/20)*98))+"%";
         oy_element.style.left = "2%";
         oy_element.style.width = "96%";
-        oy_element.style.height = ((oy_block_diff/20)*98)+"%";
-        oy_element.style.backgroundColor = "#646464";
+        oy_element.style.height = "0.2vh";
+        oy_element.style.backgroundColor = "#aba531";
         oy_element.style.zIndex = "45";
         document.getElementById("oy_graph_block").appendChild(oy_element);
         let oy_block_remain = window.OY_BLOCK_NEXT - (Date.now()/1000);

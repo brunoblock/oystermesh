@@ -24,7 +24,7 @@ function ot_render(oy_broadcast_hash, oy_render_payload) {
 
     let ot_badge = "";
     if (oy_render_payload[5]===window.OY_KEY_BRUNO) ot_badge = "<div style='position:absolute;top:1.1vh;left:-3.1vh;opacity:0.8;border-radius:0.2vh;font-size:1vh;padding:0.12vh;transform:translate(-50%, -50%);background-color: #2f7dab;color:#dadada'>&nbsp;FOUNDER&nbsp;</div><div style='position:absolute;top:2.9vh;left:-3.1vh;opacity:0.8;border-radius:0.2vh;font-size:1vh;padding:0.12vh;transform:translate(-50%, -50%);background-color: #8b59ab;color:#dadada'>&nbsp;LEAD&nbsp;DEV&nbsp;</div>";
-    else if (window.OY_BLOCK_TEMP[2][window.OT_CHANNEL_ID][2].indexOf(oy_render_payload[5])!==-1) ot_badge = "<div style='position:absolute;top:2vh;left:-2.3vh;opacity:0.8;border-radius:0.2vh;font-size:1.1vh;padding:0.12vh;transform:translate(-50%, -50%);background-color: #aba920;color:#dadada'>&nbsp;MOD&nbsp;</div>";
+    else if (typeof(window.OY_BLOCK_TEMP[2][window.OT_CHANNEL_ID])!=="undefined"&&window.OY_BLOCK_TEMP[2][window.OT_CHANNEL_ID][2].indexOf(oy_render_payload[5])!==-1) ot_badge = "<div style='position:absolute;top:2vh;left:-2.3vh;opacity:0.8;border-radius:0.2vh;font-size:1.1vh;padding:0.12vh;transform:translate(-50%, -50%);background-color: #aba920;color:#dadada'>&nbsp;MOD&nbsp;</div>";
 
     let ot_append = "";
     let ot_reply = "";

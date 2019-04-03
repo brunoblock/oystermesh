@@ -209,6 +209,7 @@ window.OY_CHANNEL_KEEP = {};//stored broadcasts that are re-shared
 window.OY_CHANNEL_ECHO = {};//track channels to listen for
 window.OY_CHANNEL_TOP = {};//track current channel topology
 window.OY_CHANNEL_RENDER = {};//track channel broadcasts that have been rendered
+window.OY_CHANNEL_TRACK = {};
 window.OY_ERROR_BROWSER = null;
 
 function oy_log(oy_log_msg, oy_log_flag) {
@@ -427,7 +428,10 @@ function oy_local_set(oy_local_name, oy_local_data) {
 
 function oy_local_get(oy_local_name) {
     let oy_local_raw = localStorage.getItem(oy_local_name);
-    if (oy_local_raw===null||oy_local_raw.length===0) return [];
+    if (oy_local_raw===null||oy_local_raw.length===0) {
+        if (oy_local_name==="oy_purge"||oy_local_name==="oy_boost") return [];
+        return {};
+    }
     let oy_local_data = JSON.parse(oy_local_raw);
     if (oy_local_data===null) return false;
     oy_log("Retrieved localStorage retention of "+oy_local_name);
@@ -555,9 +559,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             return false;
         }
 
-        if (typeof(window.OY_BLOCK_SYNC[oy_data_payload[6]])!=="undefined") return false;
-
-        if (oy_data_payload[3]<oy_time_local+window.OY_MESH_FUTURE&&//check that the broadcast timestamp is not in the future, with buffer leniency
+        if (typeof(window.OY_BLOCK_SYNC[oy_data_payload[6]])==="undefined"&&//check that this is the only sync processed from this node for this block
+            oy_data_payload[3]<oy_time_local+window.OY_MESH_FUTURE&&//check that the broadcast timestamp is not in the future, with buffer leniency
             oy_time_local-oy_data_payload[3]<window.OY_CHALLENGE_EDGE+window.OY_MESH_FUTURE&&//check that the broadcast timestamp complies with MESH_EDGE restrictions
             oy_time_local-oy_data_payload[3]<window.OY_MESH_HOP*oy_data_payload[0].length&&//check that the broadcast timestamp complies with MESH_HOP restrictions
             oy_data_payload[3]-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]&&//check that the broadcast timestamp is in the sync processing zone
@@ -1880,7 +1883,6 @@ function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
     let oy_callback_local = function() {
         let oy_data_raw = JSON.stringify([oy_data_flag, oy_data_payload]);//convert data array to JSON
         oy_data_payload = null;
-        //if (oy_data_direct(oy_data_flag)) console.log("BEAM["+oy_data_flag+"]["+oy_short(oy_node_id)+"]");
         let oy_data_direct_bool = oy_data_direct(oy_data_flag);
         let oy_logic_all_bool = window.OY_LOGIC_ALL_TYPE.indexOf(oy_data_flag)!==-1;
         if (oy_data_raw.length>window.OY_DATA_MAX||
@@ -2109,7 +2111,10 @@ function oy_channel_listen(oy_channel_id, oy_callback, oy_key_private, oy_key_pu
         oy_key_private = null;
         oy_key_public = null;
     }
+
     window.OY_CHANNEL_LISTEN[oy_channel_id] = [oy_key_private, oy_key_public, oy_callback, -1];
+
+    if (typeof(window.OY_CHANNEL_TRACK[oy_channel_id])!=="undefined") window.OY_CHANNEL_KEEP[oy_channel_id] = oy_local_get("oy_channel_"+oy_channel_id);
 }
 
 // noinspection JSUnusedGlobalSymbols
@@ -2429,7 +2434,6 @@ function oy_block_loop() {
                 }
                 if (oy_roster_count===0) window.OY_BLOCK_ROSTER_AVG = null;
                 else window.OY_BLOCK_ROSTER_AVG = oy_roster_sum/oy_roster_count;
-                //console.log(window.OY_BLOCK_ROSTER_AVG);
 
                 for (let oy_command_hash in oy_sync_keep) {
                     if (typeof(oy_command_pool[oy_command_hash])==="undefined") oy_command_pool[oy_command_hash] = [1, oy_sync_keep[oy_command_hash]];
@@ -2714,7 +2718,7 @@ function oy_engine(oy_thread_track) {
     let oy_hash_keep = [];
     for (let oy_channel_id in window.OY_CHANNEL_KEEP) {
         for (let oy_broadcast_hash in window.OY_CHANNEL_KEEP[oy_channel_id]) {
-            if (!oy_channel_approved(oy_channel_id, window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash][5])||oy_time_local-window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash][6]>window.OY_CHANNEL_EXPIRETIME) {
+            if (window.OY_BLOCK_TEMP_HASH!==null&&(!oy_channel_approved(oy_channel_id, window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash][5])||oy_time_local-window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash][6]>window.OY_CHANNEL_EXPIRETIME)) {
                 delete window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash];
                 if (typeof(window.OY_CHANNEL_RENDER[oy_channel_id])!=="undefined") delete window.OY_CHANNEL_RENDER[oy_channel_id][oy_broadcast_hash];
                 if (typeof(window.OY_CHANNEL_LISTEN[oy_channel_id])!=="undefined") window.OY_CHANNEL_LISTEN[oy_channel_id][2](oy_broadcast_hash, null);
@@ -2731,6 +2735,9 @@ function oy_engine(oy_thread_track) {
                 }
             }
         }
+        window.OY_CHANNEL_TRACK[oy_channel_id] = Date.now()/1000|0;
+        oy_local_set("oy_channel_"+oy_channel_id, window.OY_CHANNEL_KEEP[oy_channel_id]);
+        oy_local_set("oy_channel_track", window.OY_CHANNEL_TRACK);
     }
 
     for (let oy_channel_id in window.OY_CHANNEL_TOP) {
@@ -2763,10 +2770,21 @@ function oy_engine(oy_thread_track) {
 
     for (let oy_key_public in window.OY_CHANNEL_DYNAMIC) {
         if (oy_time_local-window.OY_CHANNEL_DYNAMIC[oy_key_public]>window.OY_CHANNEL_ALLOWANCE) {
-            delete window.OY_CHANNEL_ALLOWANCE[oy_key_public];
+            delete window.OY_CHANNEL_DYNAMIC[oy_key_public];
             oy_log("Cleaned up expired channel allowance for public key: "+oy_short(oy_key_public));
         }
     }
+
+    let oy_channel_track_change = false;
+    for (let oy_channel_id in window.OY_CHANNEL_TRACK) {
+        if (oy_time_local-window.OY_CHANNEL_TRACK[oy_channel_id]>window.OY_CHANNEL_EXPIRETIME) {
+            delete window.OY_CHANNEL_TRACK[oy_channel_id];
+            localStorage.removeItem("oy_channel_"+oy_channel_id);
+            oy_channel_track_change = true;
+            oy_log("Cleaned up expired channel track for channel: "+oy_short(oy_channel_id));
+        }
+    }
+    if (oy_channel_track_change===true) oy_local_set("oy_channel_track", window.OY_CHANNEL_TRACK);
 
     for (let oy_node_select in window.OY_LATENCY) {
         if (oy_time_local-window.OY_LATENCY[oy_node_select][3]>window.OY_LATENCY_MAX) {
@@ -2835,10 +2853,8 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
     window.OY_PURGE = oy_local_get("oy_purge");
     let oy_boost_expire = oy_local_get("oy_boost_expire");
     if (typeof(oy_boost_expire)!=="object"&&Date.now()/1000<oy_boost_expire) window.OY_BOOST = oy_local_get("oy_boost");
-    else oy_local_set("oy_boost", {});
-
-    //TODO remove this line after purging browsers
-    oy_local_set("oy_channel_keep", {});
+    else oy_local_set("oy_boost", []);
+    window.OY_CHANNEL_TRACK = oy_local_get("oy_channel_track");
 
     window.OY_CONN = new Peer(window.OY_SELF_PUBLIC, {host: 'top.oyster.org', port: 8200, path: '/', secure:true});
 
