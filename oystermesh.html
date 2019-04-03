@@ -1270,7 +1270,6 @@
                 <div align="right" style="position:absolute;left:-2.5%;top:0;width:50%;height:100%;">
                     PEER&nbsp;COUNT<br>
                     MESH&nbsp;RANGE<br>
-                    ROSTER&nbsp;SIZE<br>
                     ROSTER&nbsp;AVG<br>
                     LATENCY&nbsp;AVG<br>
                     BEAM&nbsp;FLOW<br>
@@ -1285,7 +1284,6 @@
                 <div style="position:absolute;right:-2.5%;top:0;width:50%;height:100%;font-weight:bold;">
                     <span id="oy_peer_count_cont"><span id="oy_peer_count">null</span>&nbsp;peer(s)</span><br>
                     <span id="oy_mesh_range">null</span>&nbsp;node(s)<br>
-                    <span id="oy_roster_size">null</span>&nbsp;node(s)<br>
                     <span id="oy_roster_avg">null</span>&nbsp;sig<br>
                     <span id="oy_latency_avg">null</span>&nbsp;sec<br>
                     <span id="oy_beam_flow">null</span>&nbsp;kbps<br>
@@ -1590,7 +1588,6 @@
 
         let oy_blank = "---";
         document.getElementById("oy_mesh_range").innerHTML = window.OY_MESH_RANGE;
-        document.getElementById("oy_roster_size").innerHTML = ""+Object.keys(window.OY_BLOCK_ROSTER).length;
         document.getElementById("oy_roster_avg").innerHTML = (window.OY_BLOCK_ROSTER_AVG===null)?oy_blank:window.OY_BLOCK_ROSTER_AVG.toFixed(3);
         if (oy_avg_latency.length>0) document.getElementById("oy_latency_avg").innerHTML = (oy_avg_latency.reduce(oy_reduce_sum)/oy_avg_latency.length).toFixed(3);
         else document.getElementById("oy_latency_avg").innerHTML = 0;

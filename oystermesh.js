@@ -32,7 +32,7 @@ window.OY_BLOCK_STABILITY_TRIGGER = 3;//mesh ranger history minimum to trigger r
 window.OY_BLOCK_STABILITY_LIMIT = 12;//mesh range history to keep to calculate meshblock stability, time is effectively value x 20 seconds
 window.OY_BLOCK_STABILITY_MIN = 3.5;//lower means more sybil-attack secure yet more honest block_syncs dropped, lower value forces a more even mesh, relates to GEO_SENS
 window.OY_BLOCK_ROSTER_PERSIST = 0.8;//node roster persistence against getting deleted due to an absent sync, higher means more stable connection but weaker security implications
-window.OY_BLOCK_HOP_VERIFY = 0.3;//chance of verifying a node hop from a block_sync's passport_crypt, higher is more secure but more CPU usage
+window.OY_BLOCK_HOP_VERIFY = 0.6;//chance of verifying a node hop from a block_sync's passport_crypt, higher is more secure but more CPU usage
 window.OY_BLOCK_KEY_LIMIT = 200;//permitted transactions per wallet per block (20 seconds)
 window.OY_BLOCK_HASH_KEEP = 1555;//how many hashes of previous blocks to keep in the current meshblock, value is for 6 months worth
 window.OY_BLOCK_DENSITY = 0.82;//higher means block OY_LOGIC_ALL packets are more spread out
@@ -42,7 +42,7 @@ window.OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloni
 window.OY_BLOCK_RANGE_MIN = 10;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 window.OY_CHALLENGE_EDGE = 6;//maximum seconds that it should take for a challenged transaction to reach the furthest edge-to-edge distance of the mesh
 window.OY_CHALLENGE_TRIGGER = 3;//higher means more challenge congestion (more secure, less scalable), lower means less challenge congestion (less secure, more scalable)
-window.OY_CHALLENGE_BUFFER = 2;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (either 1 or 2)
+window.OY_CHALLENGE_BUFFER = 3;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (either 2 or 3)
 window.OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
 window.OY_AKOYA_MAX_SUPPY = 10000000*window.OY_AKOYA_DECIMALS;//akoya max supply
 window.OY_AKOYA_FEE = 0.000001*window.OY_AKOYA_DECIMALS;//akoya fee per block
@@ -660,6 +660,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
         if (window.OY_BLOCK_DIVE_SET.indexOf(oy_data_payload[5])===-1&&//check that dive_set did not already process this dive broadcast
             typeof(window.OY_BLOCK_SYNC[oy_data_payload[5]])!=="undefined"&&//check that the public key of the node was validated during block_sync
+            window.OY_BLOCK_SYNC[oy_data_payload[5]][0]===true&&//check that the public key of the node was validated during block_sync
             oy_data_payload[2]-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]&&//check that the broadcast timestamp is in the dive processing zone
             oy_data_payload[2]-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]+(window.OY_BLOCK_SECTORS[0][0]*window.OY_BLOCK_DENSITY)+window.OY_MESH_FUTURE&&//check that the broadcast timestamp is in the dive processing zone
             oy_time_local-window.OY_BLOCK_TIME>=0&&//check that the broadcast is being processed in the current block
