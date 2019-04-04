@@ -191,6 +191,7 @@ function ot_broadcast() {
     });
 
     document.getElementById("ot_broadcast_input").focus();
+    ot_scroll_jump();
 }
 
 function ot_broadcast_freeze(ot_count) {
