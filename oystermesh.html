@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <title>Oyster | Bandwidth Bound Consensus</title>
     <meta name="description" content="Oyster provides decentralized access to immutable data and currency.">
-    <script src="oystermesh.js?126"></script>
-    <script src="oysterdepend.js?3"></script>
-    <script src="oy_dapper/oystertalk.js?23"></script>
+    <script src="oystermesh.js?130"></script>
+    <script src="oysterdepend.js?4"></script>
+    <script src="oy_dapper/oystertalk.js?25"></script>
     <script src="oy_resources/d3.v3.min.js"></script>
     <script src="oy_resources/blockies.js"></script>
     <script src="oy_resources/linkify.min.js"></script>
@@ -1384,7 +1384,7 @@
         window.OY_MESH_MAP_FUNC = null;
         window.OY_LOW_POWER = false;
         window.OY_LOW_POWER_THREAD = {};
-        window.OY_BLOCK_GRAPH = "<div id='oy_graph_block_inner' style='position:absolute;bottom:0.5%;left:2%;width:96%;height:0;background-color: #565656;transition:height 19.8s linear;overflow:hidden;z-index: 10;'></div><div class='oy_center_both' style='width:120%;height:60%;border:0.2vh dashed #000000;z-index: 60;'></div>";
+        window.OY_BLOCK_GRAPH = "<div id='oy_graph_block_inner' style='position:absolute;bottom:0.5%;left:2%;width:96%;height:0;background-color: #565656;transition:height 20s linear;overflow:hidden;z-index: 10;'></div><div class='oy_center_both' style='width:120%;height:60%;border:0.2vh dashed #000000;z-index: 60;'></div>";
 
         document.getElementById("oy_graph_block").innerHTML = window.OY_BLOCK_GRAPH;
 
@@ -1448,27 +1448,20 @@
                 let oy_block_diff = Date.now()/1000 - window.OY_BLOCK_TIME;
                 let oy_element = document.createElement("div");
                 oy_element.style.position = "absolute";
-                oy_element.style.bottom = (1+((oy_block_diff/20)*98))+"%";
+                oy_element.style.bottom = "calc("+(1+((oy_block_diff/20)*98))+"% - 0.28vh)";
                 oy_element.style.left = "2%";
                 oy_element.style.width = "96%";
-                oy_element.style.height = "0.1vh";
-                oy_element.style.opacity = "0.7";
+                oy_element.style.height = "0.22vh";
+                oy_element.style.opacity = "0.3";
+                oy_element.style.zIndex = "30";
                 if (oy_self===true) {
                     oy_element.style.backgroundColor = "#24ab26";
+                    oy_element.style.opacity = "0.9";
                     oy_element.style.zIndex = "40";
                 }
-                else if (oy_sector===0) {
-                    oy_element.style.backgroundColor = "#964bab";
-                    oy_element.style.zIndex = "30";
-                }
-                else if (oy_sector===1) {
-                    oy_element.style.backgroundColor = "#348fab";
-                    oy_element.style.zIndex = "30";
-                }
-                else if (oy_sector===2) {
-                    oy_element.style.backgroundColor = "#1d5aab";
-                    oy_element.style.zIndex = "30";
-                }
+                else if (oy_sector===0) oy_element.style.backgroundColor = "#964bab";
+                else if (oy_sector===1) oy_element.style.backgroundColor = "#348fab";
+                else if (oy_sector===2) oy_element.style.backgroundColor = "#2063bd";
                 document.getElementById("oy_graph_block").appendChild(oy_element);
             };
             window.OY_MESH_MAP_FUNC = function(oy_passport_passive) {
@@ -1758,10 +1751,10 @@
         let oy_block_diff = Date.now()/1000 - window.OY_BLOCK_TIME;
         let oy_element = document.createElement("div");
         oy_element.style.position = "absolute";
-        oy_element.style.bottom = (1+((oy_block_diff/20)*98))+"%";
+        oy_element.style.bottom = "calc("+(1+((oy_block_diff/20)*98))+"% - 0.3vh)";
         oy_element.style.left = "2%";
         oy_element.style.width = "96%";
-        oy_element.style.height = "0.2vh";
+        oy_element.style.height = "0.3vh";
         oy_element.style.backgroundColor = "#aba531";
         oy_element.style.zIndex = "45";
         document.getElementById("oy_graph_block").appendChild(oy_element);

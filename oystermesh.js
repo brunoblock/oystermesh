@@ -20,8 +20,8 @@ window.OY_MESH_PUSH_CHANCE_STORED = 0.8;//probability that self will forward a d
 window.OY_MESH_DEPOSIT_CHANCE = 0.4;//probability that self will deposit pushed data
 window.OY_MESH_FULLFILL_CHANCE = 0.2;//probability that data is stored whilst fulfilling a pull request, this makes data intelligently migrate and recommit overtime
 window.OY_MESH_SOURCE = 3;//node in route passport (from destination) that is assigned with defining the source variable
+window.OY_BLOCK_LOOP = 200;//a lower value means increased accuracy for detecting the start of the next meshblock
 window.OY_BLOCK_CONSENSUS = 0.6;//mesh topology corroboration to agree on confirming a meshblock transaction
-window.OY_BLOCK_SECTORS = [[4, 4000], [12, 12000]];//timing definitions for the meshblock
 window.OY_BLOCK_LAUNCHTIME = 200;//ms delay from block_trigger to launch a command broadcast
 window.OY_BLOCK_CHALLENGETIME = 800;//ms delay until meshblock challenge to peers is enforced
 window.OY_BLOCK_CLONETIME = 800;//ms delay until meshblock clone
@@ -32,19 +32,16 @@ window.OY_BLOCK_STABILITY_TRIGGER = 3;//mesh ranger history minimum to trigger r
 window.OY_BLOCK_STABILITY_LIMIT = 12;//mesh range history to keep to calculate meshblock stability, time is effectively value x 20 seconds
 window.OY_BLOCK_STABILITY_MIN = 3.5;//lower means more sybil-attack secure yet more honest block_syncs dropped, lower value forces a more even mesh, relates to GEO_SENS
 window.OY_BLOCK_ROSTER_PERSIST = 0.8;//node roster persistence against getting deleted due to an absent sync, higher means more stable connection but weaker security implications
-window.OY_BLOCK_HOP_VERIFY = 0.6;//chance of verifying a node hop from a block_sync's passport_crypt, higher is more secure but more CPU usage
+window.OY_BLOCK_HOP_VERIFY = 0.5;//chance of verifying a node hop from a block_sync's passport_crypt, higher is more secure but more CPU usage
 window.OY_BLOCK_KEY_LIMIT = 200;//permitted transactions per wallet per block (20 seconds)
 window.OY_BLOCK_HASH_KEEP = 1555;//how many hashes of previous blocks to keep in the current meshblock, value is for 6 months worth
-window.OY_BLOCK_DENSITY = [0.5, 0.7];//higher means block syncs [0] and dives [1] are more spread out within their respective meshblock sectors
+window.OY_BLOCK_DENSITY = [0.25, 0.75];//higher means block syncs [0] and dives [1] are more spread out within their respective meshblock sectors
 window.OY_BLOCK_PEERS_MIN = 3;//minimum peer count to be able to act as origin for clones and broadcast SYNC/DIVE
 window.OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via OY_BLOCK_SYNC and OY_BLOCK_DIVE (OY_LOGIC_ALL)
-window.OY_BLOCK_SYNC_BUFFER = [0.9, 900];
-window.OY_BLOCK_DIVE_BUFFER = [0.8, 800];
 window.OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a seeding event
-window.OY_BLOCK_RANGE_MIN = 20;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-window.OY_CHALLENGE_EDGE = 6;//maximum seconds that it should take for a challenged transaction to reach the furthest edge-to-edge distance of the mesh
+window.OY_BLOCK_RANGE_MIN = 30;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 window.OY_CHALLENGE_TRIGGER = 3;//higher means more challenge congestion (more secure, less scalable), lower means less challenge congestion (less secure, more scalable)
-window.OY_CHALLENGE_BUFFER = 4;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (either 2 or 3)
+window.OY_CHALLENGE_BUFFER = 3;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (either 2 or 3)
 window.OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
 window.OY_AKOYA_MAX_SUPPY = 10000000*window.OY_AKOYA_DECIMALS;//akoya max supply
 window.OY_AKOYA_FEE = 0.000001*window.OY_AKOYA_DECIMALS;//akoya fee per block
@@ -78,7 +75,7 @@ window.OY_LATENCY_REPEAT = 2;//how many ping round trips should be performed to 
 window.OY_LATENCY_TOLERANCE = 2;//tolerance buffer factor for receiving ping requested from a proposed-to node
 window.OY_LATENCY_MAX = 20;//max amount of seconds for latency test before peership is refused or starts breaking down
 window.OY_LATENCY_TRACK = 200;//how many latency measurements to keep at a time per peer
-window.OY_LATENCY_GEO_SENS = 16;//percentage buffer for comparing latency with peers, higher means less likely weakest peer will get dropped and mesh is less geo-sensitive
+window.OY_LATENCY_GEO_SENS = 15;//percentage buffer for comparing latency with peers, higher means less likely weakest peer will get dropped and mesh is less geo-sensitive
 window.OY_DATA_MAX = 64000;//max size of data that can be sent to another node
 window.OY_DATA_CHUNK = 48000;//chunk size by which data is split up and sent per transmission
 window.OY_DATA_PURGE = 10;//how many handles to delete if localstorage limit is reached
@@ -92,7 +89,6 @@ window.OY_DEPOSIT_CHAR = 100000;//character rate for data deposit sizing, helps 
 window.OY_DEPOSIT_MAX_BUFFER = 0.9;//max character length capacity factor of data deposit (0.9 means 10% buffer until hard limit is reached)
 window.OY_ENGINE_INTERVAL = 2000;//ms interval for core mesh engine to run, the time must clear a reasonable latency round-about
 window.OY_READY_RETRY = 2000;//ms interval to retry connection if READY is still false
-window.OY_BLOCK_LOOP = 200;//a lower value means more opportunity within the 10 second window to propagate transactions
 window.OY_LOGIC_ALL_MAX = 1100;//maximum size for a packet that is routed via OY_LOGIC_ALL, except OY_CHANNEL_BROADCAST
 window.OY_CHANNEL_BROADCAST_PACKET_MAX = 5000;//maximum size for a packet that is routed via OY_CHANNEL_BROADCAST (OY_LOGIC_ALL)
 window.OY_CHANNEL_KEEPTIME = 10;//channel bearing nodes are expected to broadcast a logic_all packet within this interval
@@ -147,6 +143,7 @@ window.OY_CLONE_BUILD = [];
 window.OY_LOGIC_ALL_TYPE = ["OY_BLOCK_COMMAND", "OY_BLOCK_SYNC", "OY_BLOCK_SYNC_CHALLENGE", "OY_BLOCK_DIVE", "OY_DATA_PULL", "OY_CHANNEL_BROADCAST"];//OY_LOGIC_ALL definitions
 window.OY_LOGIC_EXCEPT_TYPE = ["OY_BLOCK_SYNC", "OY_BLOCK_SYNC_CHALLENGE_RESPONSE", "OY_BLOCK_DIVE", "OY_CHANNEL_BROADCAST"];
 window.OY_MESH_RANGE = 0;
+window.OY_BLOCK_SECTORS = [[4, 4000], [12, 12000], [20, 20000]];//timing definitions for the meshblock
 window.OY_BLOCK_DYNAMIC = [null, null, null, null];
 window.OY_BLOCK_ROSTER = {};
 window.OY_BLOCK_ROSTER_AVG = null;
@@ -563,10 +560,10 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
         if (typeof(window.OY_BLOCK_SYNC[oy_data_payload[6]])==="undefined"&&//check that this is the only sync processed from this node for this block
             oy_data_payload[3]<oy_time_local+window.OY_MESH_BUFFER[0]&&//check that the broadcast timestamp is not in the future, with buffer leniency
-            oy_time_local-oy_data_payload[3]<window.OY_CHALLENGE_EDGE+window.OY_MESH_BUFFER[0]) {//check that the broadcast timestamp complies with MESH_EDGE restrictions
-            //oy_time_local-oy_data_payload[3]<window.OY_MESH_HOP*oy_data_payload[0].length&&//check that the broadcast timestamp complies with MESH_HOP restrictions
-            //oy_data_payload[3]-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]&&//check that the broadcast timestamp is in the sync processing zone
-            //oy_data_payload[3]-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]+(window.OY_BLOCK_SECTORS[1][0]*window.OY_BLOCK_DENSITY[0])+window.OY_MESH_BUFFER[0]) {//check that the broadcast timestamp is in the sync processing zone
+            oy_data_payload[3]-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]&&//check that the broadcast timestamp is in the sync processing zone
+            oy_data_payload[3]-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]+window.OY_MESH_BUFFER[0]+((window.OY_BLOCK_SECTORS[1][0]*window.OY_BLOCK_DENSITY[0])-window.OY_MESH_BUFFER[0])+(window.OY_MESH_BUFFER[0]*2)&&//check that the broadcast timestamp is in the sync processing zone
+            oy_time_local-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]&&//check that the current timestamp is in the sync processing zone
+            oy_time_local-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]) {//check that the current timestamp is in the sync processing zone
 
             let oy_miss_limit = Math.max((window.OY_CHALLENGE_TRIGGER+1)*window.OY_BLOCK_MISS_MULTI, oy_data_payload[0].length*window.OY_BLOCK_MISS_MULTI);
             if (oy_miss_limit<window.OY_BLOCK_MISS_MULTI_MIN) oy_miss_limit = window.OY_BLOCK_MISS_MULTI_MIN;
@@ -665,11 +662,11 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
         if (window.OY_BLOCK_DIVE_SET.indexOf(oy_data_payload[5])===-1&&//check that dive_set did not already process this dive broadcast
             typeof(window.OY_BLOCK_SYNC[oy_data_payload[5]])!=="undefined"&&//check that the public key of the node was validated during block_sync
-            window.OY_BLOCK_SYNC[oy_data_payload[5]][0]===true) {//check that the public key of the node was validated during block_sync
-            //oy_data_payload[2]-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]&&//check that the broadcast timestamp is in the dive processing zone
-            //oy_data_payload[2]-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]+(window.OY_BLOCK_SECTORS[0][0]*window.OY_BLOCK_DENSITY[1])+window.OY_MESH_BUFFER[0]&&//check that the broadcast timestamp is in the dive processing zone
-            //oy_time_local-window.OY_BLOCK_TIME>=0&&//check that the broadcast is being processed in the current block
-            //oy_time_local<window.OY_BLOCK_NEXT) {//check that the broadcast is being processed before the next block (current block)
+            window.OY_BLOCK_SYNC[oy_data_payload[5]][0]===true&&//check that the public key of the node was validated during block_sync
+            oy_data_payload[2]-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]&&//check that the broadcast timestamp is in the dive processing zone
+            oy_data_payload[2]-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]+window.OY_MESH_BUFFER[0]+((window.OY_BLOCK_SECTORS[0][0]*window.OY_BLOCK_DENSITY[1])-window.OY_MESH_BUFFER[0])+(window.OY_MESH_BUFFER[0]*2)&&//check that the broadcast timestamp is in the dive processing zone
+            oy_time_local-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]&&//check that the current timestamp is in the dive processing zone
+            oy_time_local-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[2][0]) {//check that the current timestamp is in the dive processing zone
 
             oy_key_verify(oy_data_payload[5], oy_data_payload[3], oy_data_payload[2]+oy_hash_gen(JSON.stringify(oy_data_payload[4])), function(oy_key_valid) {
                 if (oy_key_valid===true) {
@@ -682,7 +679,6 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                     }
                     if (typeof(window.OY_MESH_MAP)==="function") window.OY_MESH_MAP(oy_data_payload[0]);
                     if (typeof(window.OY_BLOCK_MAP)==="function") window.OY_BLOCK_MAP(2, false);
-                    console.log("DIVE:"+((Date.now()/1000)-oy_data_payload[2]));
                     if (window.OY_BOOST_MODE===false&&window.OY_BOOST.indexOf(oy_data_payload[5])===-1) window.OY_BOOST.push(oy_data_payload[5]);
                 }
             });
@@ -1956,6 +1952,11 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
                        if (window.OY_BLOCK_DYNAMIC[0].indexOf(oy_data[1][1])!==-1) return true;
                        window.OY_BLOCK_DYNAMIC[0].push(oy_data[1][1]);
                    }
+                   else if (oy_data[0]==="OY_BLOCK_SYNC") {
+                       if (window.OY_BLOCK_DYNAMIC[1]===null) return true;
+                       if (window.OY_BLOCK_DYNAMIC[1].indexOf(oy_data[1][1])!==-1) return true;
+                       window.OY_BLOCK_DYNAMIC[1].push(oy_data[1][1]);
+                   }
                    else if (oy_data[0]==="OY_BLOCK_SYNC_CHALLENGE") {
                        if (window.OY_BLOCK_DYNAMIC[2]===null) return true;
                        if (window.OY_BLOCK_DYNAMIC[2].indexOf(oy_data[1][1])!==-1) return true;
@@ -1966,7 +1967,7 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
                        if (window.OY_BLOCK_DYNAMIC[3].indexOf(oy_data[1][1])!==-1) return true;
                        window.OY_BLOCK_DYNAMIC[3].push(oy_data[1][1]);
                    }
-                   else if (oy_data[0]!=="OY_BLOCK_SYNC") {
+                   else {
                        if (window.OY_ROUTE_DYNAMIC.indexOf(oy_data[1][1])!==-1) return true;
                        window.OY_ROUTE_DYNAMIC.push(oy_data[1][1]);
                        while (window.OY_ROUTE_DYNAMIC.length>window.OY_ROUTE_DYNAMIC_KEEP) window.OY_ROUTE_DYNAMIC.shift();
@@ -2179,7 +2180,7 @@ function oy_block_sync_verify(oy_command_inherit, oy_callback) {
 }
 
 function oy_block_sync_hop(oy_passport_passive, oy_passport_crypt, oy_crypt_short, oy_miss_limit, oy_roster_miss, oy_callback) {
-    if (true||oy_passport_passive.length===0||window.OY_BLOCK_ROSTER_AVG===null) return oy_callback();
+    if (oy_passport_passive.length===0||window.OY_BLOCK_ROSTER_AVG===null) return oy_callback();
     let oy_node_select = oy_passport_passive.pop();
     let oy_crypt_select = oy_passport_crypt.pop();
     if (typeof(window.OY_BLOCK_ROSTER[oy_node_select])==="undefined"||window.OY_BLOCK_ROSTER[oy_node_select][1]>window.OY_BLOCK_ROSTER_AVG*window.OY_BLOCK_STABILITY_ROSTER) oy_roster_miss++;
@@ -2192,7 +2193,7 @@ function oy_block_sync_hop(oy_passport_passive, oy_passport_crypt, oy_crypt_shor
         window.OY_BLOCK_ROSTER[oy_node_select][1]++;
         oy_block_sync_hop(oy_passport_passive, oy_passport_crypt, oy_crypt_short, oy_miss_limit, oy_roster_miss, oy_callback);
     };
-    if (Math.random>window.OY_BLOCK_HOP_VERIFY) oy_hop_pass();
+    if (Math.random()>window.OY_BLOCK_HOP_VERIFY) oy_hop_pass();
     else {
         oy_key_verify(window.OY_BLOCK_ROSTER[oy_node_select][0], oy_crypt_select, oy_crypt_short, function(oy_key_valid) {
             if (oy_key_valid===true) oy_hop_pass();
@@ -2263,17 +2264,18 @@ function oy_block_reset() {
 
 function oy_block_loop() {
     let oy_block_time_local = oy_block_time();
-    setTimeout("oy_block_loop()", window.OY_BLOCK_LOOP);
+    let oy_timer_loop = new Tock({
+        countdown: true,
+        complete: oy_block_loop
+    });
+    oy_timer_loop.start(window.OY_BLOCK_LOOP);
     if (oy_block_time_local!==window.OY_BLOCK_TIME&&(oy_block_time_local/10)%2===0) {
         window.OY_BLOCK_TIME = oy_block_time_local;
         window.OY_BLOCK_NEXT = oy_block_time_local+20;
-        window.OY_BLOCK_DYNAMIC = [[], [], [], []];
+        window.OY_BLOCK_DYNAMIC = [[], null, null, null];
         window.OY_BLOCK_COMMAND = {};
 
         document.dispatchEvent(window.OY_BLOCK_INIT);
-
-        let oy_stages = [];
-        oy_stages.push(Date.now()/1000);
 
         //BLOCK SEED--------------------------------------------------
         if (window.OY_BLOCK_TIME===window.OY_BLOCK_SEEDTIME) {
@@ -2308,12 +2310,12 @@ function oy_block_loop() {
 
         let oy_timer_a = new Tock({
             countdown: true,
-            interval: 10,
             complete: function() {
-                oy_stages.push(["A", Date.now()/1000]);
                 let oy_time_local = Date.now()/1000;
 
                 window.OY_BLOCK_DYNAMIC[0] = null;
+                window.OY_BLOCK_DYNAMIC[1] = [];
+                window.OY_BLOCK_DYNAMIC[2] = [];
                 window.OY_CLONE_BUILD = [];
                 if (window.OY_BLOCK_DIVE_REWARD==="OY_NULL") window.OY_BLOCK_DIVE_TRACK = 0;
 
@@ -2401,14 +2403,9 @@ function oy_block_loop() {
         if (oy_block_continue===true&&window.OY_PEER_COUNT>=window.OY_BLOCK_PEERS_MIN) {
             let oy_timer_sync = new Tock({
                 countdown: true,
-                interval: 10,
                 complete: function() {
-                    oy_stages.push(["SYNC", Date.now()/1000]);
                     let oy_sync_time = Date.now()/1000;
-                    if (oy_sync_time-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]||oy_sync_time-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]+(window.OY_BLOCK_SECTORS[1][0]*window.OY_BLOCK_DENSITY[0])+window.OY_BLOCK_SYNC_BUFFER[0]+window.OY_MESH_BUFFER[0]) {
-                        oy_log_debug("SKIP SYNC6: "+(oy_sync_time-window.OY_BLOCK_TIME)+" <-> "+JSON.stringify(oy_stages)+" <-> "+(window.OY_BLOCK_SECTORS[0][0]+(window.OY_BLOCK_SECTORS[1][0]*window.OY_BLOCK_DENSITY[0])+window.OY_BLOCK_SYNC_BUFFER[0]));
-                        return false;
-                    }
+                    if (oy_sync_time-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]||oy_sync_time-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]+window.OY_MESH_BUFFER[0]+((window.OY_BLOCK_SECTORS[1][0]*window.OY_BLOCK_DENSITY[0])-window.OY_MESH_BUFFER[0])+(window.OY_MESH_BUFFER[0]*2)) return false;
                     oy_key_sign(window.OY_SELF_PRIVATE, oy_sync_time+window.OY_BLOCK_SYNC_HASH+oy_dive_reward, function(oy_sync_crypt) {
                         oy_key_sign(window.OY_SELF_PRIVATE, oy_short(oy_sync_crypt), function(oy_hop_crypt) {
                             oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_SYNC", [[], oy_rand_gen(), [oy_hop_crypt], oy_sync_time, oy_sync_crypt, oy_sync_command, window.OY_SELF_PUBLIC, oy_dive_reward]);
@@ -2418,17 +2415,16 @@ function oy_block_loop() {
                     });
                 }
             });
-            oy_timer_sync.start(window.OY_BLOCK_SECTORS[0][1]+window.OY_BLOCK_SYNC_BUFFER[1]+Math.floor(Math.random()*((window.OY_BLOCK_SECTORS[1][1]*window.OY_BLOCK_DENSITY[0])-window.OY_BLOCK_SYNC_BUFFER[1])));
+            oy_timer_sync.start(window.OY_BLOCK_SECTORS[0][1]+window.OY_MESH_BUFFER[1]+Math.floor(Math.random()*((window.OY_BLOCK_SECTORS[1][1]*window.OY_BLOCK_DENSITY[0])-window.OY_MESH_BUFFER[1])));
         }
 
         let oy_timer_b = new Tock({
             countdown: true,
-            interval: 10,
             complete: function() {
                 if (oy_block_continue===false) return false;
-                oy_stages.push(["B", Date.now()/1000]);
                 window.OY_BLOCK_DYNAMIC[1] = null;
                 window.OY_BLOCK_DYNAMIC[2] = null;
+                window.OY_BLOCK_DYNAMIC[3] = [];
                 if (window.OY_BLOCK_HASH===null) {
                     oy_block_reset();
                     oy_log("MESHBLOCK CANCEL: "+oy_block_time_local);
@@ -2505,14 +2501,9 @@ function oy_block_loop() {
         if (oy_block_continue===true&&window.OY_PEER_COUNT>=window.OY_BLOCK_PEERS_MIN) {
             let oy_timer_dive = new Tock({
                 countdown: true,
-                interval: 10,
                 complete: function() {
-                    oy_stages.push(["DIVE", Date.now()/1000]);
                     let oy_dive_time = Date.now()/1000;
-                    if (oy_dive_time-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]||oy_dive_time-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]+(window.OY_BLOCK_SECTORS[0][0]*window.OY_BLOCK_DENSITY[1])+window.OY_BLOCK_DIVE_BUFFER[0]+window.OY_MESH_BUFFER[0]) {
-                        oy_log_debug("SKIP DIVE6: "+(oy_dive_time-window.OY_BLOCK_TIME)+" <-> "+JSON.stringify(oy_stages)+" <-> "+(window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]+(window.OY_BLOCK_SECTORS[0][0]*window.OY_BLOCK_DENSITY[1])+window.OY_BLOCK_DIVE_BUFFER[0]+window.OY_MESH_BUFFER[0]));
-                        return false;
-                    }
+                    if (oy_dive_time-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]||oy_dive_time-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]+window.OY_MESH_BUFFER[0]+((window.OY_BLOCK_SECTORS[0][0]*window.OY_BLOCK_DENSITY[1])-window.OY_MESH_BUFFER[0])+(window.OY_MESH_BUFFER[0]*2)) return false;
                     oy_key_sign(window.OY_SELF_PRIVATE, oy_dive_time+oy_hash_gen(JSON.stringify(oy_dive_pool)), function(oy_dive_crypt) {
                         oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_DIVE", [[], oy_rand_gen(), oy_dive_time, oy_dive_crypt, oy_dive_pool, window.OY_SELF_PUBLIC]);
                         oy_dive_pool = null;
@@ -2520,15 +2511,14 @@ function oy_block_loop() {
                     });
                 }
             });
-            oy_timer_dive.start(window.OY_BLOCK_SECTORS[0][1]+window.OY_BLOCK_SECTORS[1][1]+window.OY_BLOCK_DIVE_BUFFER[1]+Math.floor(Math.random()*((window.OY_BLOCK_SECTORS[0][1]*window.OY_BLOCK_DENSITY[1])-window.OY_BLOCK_DIVE_BUFFER[1])));
+            oy_timer_dive.start(window.OY_BLOCK_SECTORS[0][1]+window.OY_BLOCK_SECTORS[1][1]+window.OY_MESH_BUFFER[1]+Math.floor(Math.random()*((window.OY_BLOCK_SECTORS[0][1]*window.OY_BLOCK_DENSITY[1])-window.OY_MESH_BUFFER[1])));
         }
 
         let oy_timer_c = new Tock({
             countdown: true,
-            interval: 10,
             complete: function() {
                 if (oy_block_continue===false) return false;
-                oy_stages.push(["C", Date.now()/1000]);
+                window.OY_BLOCK_DYNAMIC[3] = null;
                 if (window.OY_BLOCK_HASH===null) {
                     oy_block_reset();
                     oy_log("MESHBLOCK CANCEL: "+oy_block_time_local);
@@ -2691,7 +2681,7 @@ function oy_block_loop() {
                 oy_local_set("oy_boost_expire", (Date.now()/1000|0)+window.OY_BOOST_EXPIRETIME);
             }
         });
-        oy_timer_c.start(window.OY_BLOCK_SECTORS[0][1]+window.OY_BLOCK_SECTORS[1][1]+window.OY_BLOCK_SECTORS[0][1]);//seconds 16-20 out of 20
+        oy_timer_c.start(window.OY_BLOCK_SECTORS[2][1]);//seconds 16-20 out of 20
 
         //----------transitory centralized solution
         let oy_xhttp = new XMLHttpRequest();
