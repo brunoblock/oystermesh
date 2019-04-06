@@ -2012,7 +2012,7 @@ function oy_data_deposit(oy_data_handle, oy_data_nonce, oy_data_value) {
     let oy_deposit_object = {};
     if (window.OY_PURGE.indexOf(oy_data_handle)!==-1) {
         try {
-            oy_deposit_object = JSON.parse(LZString.decompressFromUTF16(localStorage.getItem("oy_deposit_"+oy_data_handle)));
+            oy_deposit_object = JSON.parse(localStorage.getItem("oy_deposit_"+oy_data_handle));
         }
         catch(e) {
             window.OY_PURGE = window.OY_PURGE.filter(oy_handle => oy_handle!==oy_data_handle);
@@ -2023,7 +2023,7 @@ function oy_data_deposit(oy_data_handle, oy_data_nonce, oy_data_value) {
     oy_deposit_object[oy_data_nonce] = oy_data_value;
     let oy_deposit_full = false;
     try {
-        localStorage.setItem("oy_deposit_"+oy_data_handle, LZString.compressToUTF16(JSON.stringify(oy_deposit_object)));
+        localStorage.setItem("oy_deposit_"+oy_data_handle, JSON.stringify(oy_deposit_object));
     }
     catch(e) {
         oy_deposit_full = true;
@@ -2048,7 +2048,7 @@ function oy_data_deposit_get(oy_data_handle, oy_data_nonce) {
     if (window.OY_PURGE.indexOf(oy_data_handle)===-1) return false;
     let oy_deposit_object = {};
     try {
-        oy_deposit_object = JSON.parse(LZString.decompressFromUTF16(localStorage.getItem("oy_deposit_"+oy_data_handle)));
+        oy_deposit_object = JSON.parse(localStorage.getItem("oy_deposit_"+oy_data_handle));
     }
     catch(e) {
         window.OY_PURGE = window.OY_PURGE.filter(oy_handle => oy_handle!==oy_data_handle);
