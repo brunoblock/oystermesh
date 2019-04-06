@@ -41,7 +41,7 @@ window.OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via
 window.OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a seeding event
 window.OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims dive rewards
 window.OY_BLOCK_RANGE_MIN = 20;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-window.OY_BLOCK_SEEDTIME = 1554584600;//timestamp to boot the mesh
+window.OY_BLOCK_SEEDTIME = 1554589200;//timestamp to boot the mesh
 window.OY_CHALLENGE_TRIGGER = 3;//higher means more challenge congestion (more secure, less scalable), lower means less challenge congestion (less secure, more scalable)
 window.OY_CHALLENGE_BUFFER = 3;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (either 2 or 3)
 window.OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
@@ -597,16 +597,17 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             if (oy_miss_limit<window.OY_BLOCK_MISS_MULTI_MIN) oy_miss_limit = window.OY_BLOCK_MISS_MULTI_MIN;
             let oy_crypt_short = oy_short(oy_data_payload[4]);
             oy_block_sync_hop(oy_data_payload[0].slice(), oy_data_payload[2].slice(), oy_crypt_short, oy_miss_limit, 0, function() {
-                let oy_sync_hash = oy_hash_gen(JSON.stringify(oy_data_payload[5]));
+                let oy_sync_hash = oy_hash_gen(oy_data_payload[5]);
                 oy_key_verify(oy_data_payload[6], oy_data_payload[4], oy_data_payload[3]+oy_sync_hash+oy_data_payload[7], function(oy_key_valid) {
                     if (oy_key_valid===true) {
                         let oy_command_pool = {};
                         let oy_command_inherit = [];
-                        for (let i in oy_data_payload[5]) {
-                            let oy_command_hash = oy_hash_gen(JSON.stringify(oy_data_payload[5][i][0]));
+                        let oy_sync_command = JSON.parse(LZString.decompress(oy_data_payload[5]));
+                        for (let i in oy_sync_command) {
+                            let oy_command_hash = oy_hash_gen(JSON.stringify(oy_sync_command[i][0]));
                             if (typeof(oy_command_pool[oy_command_hash])!=="undefined") return false;//node sent same command twice, so discard their entire sync broadcast
-                            oy_command_pool[oy_command_hash] = oy_data_payload[5][i][0];
-                            if (typeof(window.OY_BLOCK_COMMAND[oy_command_hash])==="undefined") oy_command_inherit.push(oy_data_payload[5][i]);
+                            oy_command_pool[oy_command_hash] = oy_sync_command[i][0];
+                            if (typeof(window.OY_BLOCK_COMMAND[oy_command_hash])==="undefined") oy_command_inherit.push(oy_sync_command[i]);
                         }
                         oy_block_sync_verify(oy_command_inherit, function(oy_sync_verify) {
                             if (oy_sync_verify===true) {
@@ -2432,8 +2433,10 @@ function oy_block_loop() {
 
                 //oy_log_debug("COMMAND: "+JSON.stringify(window.OY_BLOCK_COMMAND)+"\nSYNC COMMAND: "+JSON.stringify(oy_sync_command));
 
+                oy_sync_command = LZString.compress(JSON.stringify(oy_sync_command));
+
                 window.OY_BLOCK_SYNC = {};
-                window.OY_BLOCK_SYNC_HASH = oy_hash_gen(JSON.stringify(oy_sync_command));
+                window.OY_BLOCK_SYNC_HASH = oy_hash_gen(oy_sync_command);
             }
         });
         oy_timer_a.start(window.OY_BLOCK_SECTORS[0][1]);//seconds 0-4 out of 20
