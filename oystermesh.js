@@ -41,7 +41,7 @@ window.OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via
 window.OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a seeding event
 window.OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims dive rewards
 window.OY_BLOCK_RANGE_MIN = 20;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-window.OY_BLOCK_SEEDTIME = 1554590600;//timestamp to boot the mesh
+window.OY_BLOCK_SEEDTIME = 1554593300;//timestamp to boot the mesh
 window.OY_CHALLENGE_TRIGGER = 3;//higher means more challenge congestion (more secure, less scalable), lower means less challenge congestion (less secure, more scalable)
 window.OY_CHALLENGE_BUFFER = 3;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (either 2 or 3)
 window.OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
@@ -602,7 +602,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                     if (oy_key_valid===true) {
                         let oy_command_pool = {};
                         let oy_command_inherit = [];
-                        let oy_sync_command = JSON.parse(LZString.decompressFromBase64(oy_data_payload[5]));
+                        let oy_sync_command = JSON.parse(LZString.decompressFromUTF16(oy_data_payload[5]));
                         for (let i in oy_sync_command) {
                             let oy_command_hash = oy_hash_gen(JSON.stringify(oy_sync_command[i][0]));
                             if (typeof(oy_command_pool[oy_command_hash])!=="undefined") return false;//node sent same command twice, so discard their entire sync broadcast
@@ -701,7 +701,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                 if (oy_key_valid===true) {
                     window.OY_BLOCK_DIVE_SET.push(oy_data_payload[5]);
                     oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_DIVE", oy_data_payload);
-                    oy_data_payload[4] = JSON.parse(LZString.decompressFromBase64(oy_data_payload[4]));
+                    oy_data_payload[4] = JSON.parse(LZString.decompressFromUTF16(oy_data_payload[4]));
                     for (let i in oy_data_payload[4]) {
                         if (typeof(window.OY_BLOCK_DIVE[oy_data_payload[4][i][0]])==="undefined") window.OY_BLOCK_DIVE[oy_data_payload[4][i][0]] = {};
                         if (typeof(window.OY_BLOCK_DIVE[oy_data_payload[4][i][0]][oy_data_payload[4][i][1]])==="undefined") window.OY_BLOCK_DIVE[oy_data_payload[4][i][0]][oy_data_payload[4][i][1]] = 0;
@@ -2432,7 +2432,7 @@ function oy_block_loop() {
                 });
 
                 //oy_log_debug("COMMAND: "+JSON.stringify(window.OY_BLOCK_COMMAND)+"\nSYNC COMMAND: "+JSON.stringify(oy_sync_command));
-                oy_sync_command = LZString.compressToBase64(JSON.stringify(oy_sync_command));
+                oy_sync_command = LZString.compressToUTF16(JSON.stringify(oy_sync_command));
                 window.OY_BLOCK_SYNC = {};
                 window.OY_BLOCK_SYNC_HASH = oy_hash_gen(oy_sync_command);
             }
@@ -2538,7 +2538,7 @@ function oy_block_loop() {
             complete: function() {
                 let oy_dive_time = Date.now()/1000;
                 if (oy_block_continue===false||window.OY_PEER_COUNT<window.OY_BLOCK_PEERS_MIN||window.OY_BLOCK_TIME-window.OY_BLOCK_UPTIME<window.OY_BLOCK_DIVE_BUFFER||oy_dive_time-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]||oy_dive_time-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]+window.OY_MESH_BUFFER[0]+((window.OY_BLOCK_SECTORS[0][0]*window.OY_BLOCK_DENSITY[1])-window.OY_MESH_BUFFER[0])+(window.OY_MESH_BUFFER[0]*2)) return false;
-                oy_dive_pool = LZString.compressToBase64(JSON.stringify(oy_dive_pool));
+                oy_dive_pool = LZString.compressToUTF16(JSON.stringify(oy_dive_pool));
                 oy_key_sign(window.OY_SELF_PRIVATE, oy_dive_time+oy_hash_gen(oy_dive_pool), function(oy_dive_crypt) {
                     oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_DIVE", [[], oy_rand_gen(), oy_dive_time, oy_dive_crypt, oy_dive_pool, window.OY_SELF_PUBLIC]);
                     oy_dive_pool = null;
