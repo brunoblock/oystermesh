@@ -430,7 +430,7 @@ function oy_local_get(oy_local_name) {
     let oy_return = null;
     let oy_return_null = function() {
         if (oy_local_name==="oy_purge"||oy_local_name==="oy_boost") oy_return = [];
-        oy_return = {};
+        else oy_return = {};
     };
     try {
         let oy_local_raw = localStorage.getItem(oy_local_name);
@@ -2010,12 +2010,20 @@ function oy_data_deposit(oy_data_handle, oy_data_nonce, oy_data_value) {
     if (Math.random()>window.OY_MESH_DEPOSIT_CHANCE) return false;
 
     let oy_deposit_object = {};
-    if (window.OY_PURGE.indexOf(oy_data_handle)!==-1) oy_deposit_object = JSON.parse(localStorage.getItem("oy_deposit_"+oy_data_handle));
+    if (window.OY_PURGE.indexOf(oy_data_handle)!==-1) {
+        try {
+            oy_deposit_object = JSON.parse(LZString.decompressFromUTF16(localStorage.getItem("oy_deposit_"+oy_data_handle)));
+        }
+        catch(e) {
+            window.OY_PURGE = window.OY_PURGE.filter(oy_handle => oy_handle!==oy_data_handle);
+            localStorage.removeItem("oy_deposit_"+oy_data_handle);
+        }
+    }
     if (typeof(oy_deposit_object[oy_data_nonce])!=="undefined") return false;
     oy_deposit_object[oy_data_nonce] = oy_data_value;
     let oy_deposit_full = false;
     try {
-        localStorage.setItem("oy_deposit_"+oy_data_handle, JSON.stringify(oy_deposit_object));
+        localStorage.setItem("oy_deposit_"+oy_data_handle, LZString.compressToUTF16(JSON.stringify(oy_deposit_object)));
     }
     catch(e) {
         oy_deposit_full = true;
@@ -2038,7 +2046,14 @@ function oy_data_deposit_purge() {
 
 function oy_data_deposit_get(oy_data_handle, oy_data_nonce) {
     if (window.OY_PURGE.indexOf(oy_data_handle)===-1) return false;
-    let oy_deposit_object = JSON.parse(localStorage.getItem("oy_deposit_"+oy_data_handle));
+    let oy_deposit_object = {};
+    try {
+        oy_deposit_object = JSON.parse(LZString.decompressFromUTF16(localStorage.getItem("oy_deposit_"+oy_data_handle)));
+    }
+    catch(e) {
+        window.OY_PURGE = window.OY_PURGE.filter(oy_handle => oy_handle!==oy_data_handle);
+        localStorage.removeItem("oy_deposit_"+oy_data_handle);
+    }
     if (typeof(oy_deposit_object[oy_data_nonce])==="undefined") return false;
     return oy_deposit_object[oy_data_nonce];
 }
@@ -2415,23 +2430,21 @@ function oy_block_loop() {
         });
         oy_timer_a.start(window.OY_BLOCK_SECTORS[0][1]);//seconds 0-4 out of 20
 
-        if (oy_block_continue===true&&window.OY_PEER_COUNT>=window.OY_BLOCK_PEERS_MIN) {
-            let oy_timer_sync = new Tock({
-                countdown: true,
-                complete: function() {
-                    let oy_sync_time = Date.now()/1000;
-                    if (oy_sync_time-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]||oy_sync_time-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]+window.OY_MESH_BUFFER[0]+((window.OY_BLOCK_SECTORS[1][0]*window.OY_BLOCK_DENSITY[0])-window.OY_MESH_BUFFER[0])+(window.OY_MESH_BUFFER[0]*2)) return false;
-                    oy_key_sign(window.OY_SELF_PRIVATE, oy_sync_time+window.OY_BLOCK_SYNC_HASH+oy_dive_reward, function(oy_sync_crypt) {
-                        oy_key_sign(window.OY_SELF_PRIVATE, oy_short(oy_sync_crypt), function(oy_hop_crypt) {
-                            oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_SYNC", [[], oy_rand_gen(), [oy_hop_crypt], oy_sync_time, oy_sync_crypt, oy_sync_command, window.OY_SELF_PUBLIC, oy_dive_reward]);
-                            oy_sync_command = null;
-                            if (typeof(window.OY_BLOCK_MAP)==="function") window.OY_BLOCK_MAP(1, true);
-                        });
+        let oy_timer_sync = new Tock({
+            countdown: true,
+            complete: function() {
+                let oy_sync_time = Date.now()/1000;
+                if (oy_block_continue===false||window.OY_PEER_COUNT<window.OY_BLOCK_PEERS_MIN||oy_sync_time-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]||oy_sync_time-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]+window.OY_MESH_BUFFER[0]+((window.OY_BLOCK_SECTORS[1][0]*window.OY_BLOCK_DENSITY[0])-window.OY_MESH_BUFFER[0])+(window.OY_MESH_BUFFER[0]*2)) return false;
+                oy_key_sign(window.OY_SELF_PRIVATE, oy_sync_time+window.OY_BLOCK_SYNC_HASH+oy_dive_reward, function(oy_sync_crypt) {
+                    oy_key_sign(window.OY_SELF_PRIVATE, oy_short(oy_sync_crypt), function(oy_hop_crypt) {
+                        oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_SYNC", [[], oy_rand_gen(), [oy_hop_crypt], oy_sync_time, oy_sync_crypt, oy_sync_command, window.OY_SELF_PUBLIC, oy_dive_reward]);
+                        oy_sync_command = null;
+                        if (typeof(window.OY_BLOCK_MAP)==="function") window.OY_BLOCK_MAP(1, true);
                     });
-                }
-            });
-            oy_timer_sync.start(window.OY_BLOCK_SECTORS[0][1]+window.OY_MESH_BUFFER[1]+Math.floor(Math.random()*((window.OY_BLOCK_SECTORS[1][1]*window.OY_BLOCK_DENSITY[0])-window.OY_MESH_BUFFER[1])));
-        }
+                });
+            }
+        });
+        oy_timer_sync.start(window.OY_BLOCK_SECTORS[0][1]+window.OY_MESH_BUFFER[1]+Math.floor(Math.random()*((window.OY_BLOCK_SECTORS[1][1]*window.OY_BLOCK_DENSITY[0])-window.OY_MESH_BUFFER[1])));
 
         let oy_timer_b = new Tock({
             countdown: true,
@@ -2513,21 +2526,19 @@ function oy_block_loop() {
         });
         oy_timer_b.start(window.OY_BLOCK_SECTORS[0][1]+window.OY_BLOCK_SECTORS[1][1]);//seconds 4-16 out of 20
 
-        if (oy_block_continue===true&&window.OY_PEER_COUNT>=window.OY_BLOCK_PEERS_MIN) {
-            let oy_timer_dive = new Tock({
-                countdown: true,
-                complete: function() {
-                    let oy_dive_time = Date.now()/1000;
-                    if (oy_dive_time-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]||oy_dive_time-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]+window.OY_MESH_BUFFER[0]+((window.OY_BLOCK_SECTORS[0][0]*window.OY_BLOCK_DENSITY[1])-window.OY_MESH_BUFFER[0])+(window.OY_MESH_BUFFER[0]*2)) return false;
-                    oy_key_sign(window.OY_SELF_PRIVATE, oy_dive_time+oy_hash_gen(JSON.stringify(oy_dive_pool)), function(oy_dive_crypt) {
-                        oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_DIVE", [[], oy_rand_gen(), oy_dive_time, oy_dive_crypt, oy_dive_pool, window.OY_SELF_PUBLIC]);
-                        oy_dive_pool = null;
-                        if (typeof(window.OY_BLOCK_MAP)==="function") window.OY_BLOCK_MAP(2, true);
-                    });
-                }
-            });
-            oy_timer_dive.start(window.OY_BLOCK_SECTORS[0][1]+window.OY_BLOCK_SECTORS[1][1]+window.OY_MESH_BUFFER[1]+Math.floor(Math.random()*((window.OY_BLOCK_SECTORS[0][1]*window.OY_BLOCK_DENSITY[1])-window.OY_MESH_BUFFER[1])));
-        }
+        let oy_timer_dive = new Tock({
+            countdown: true,
+            complete: function() {
+                let oy_dive_time = Date.now()/1000;
+                if (oy_block_continue===false||window.OY_PEER_COUNT<window.OY_BLOCK_PEERS_MIN||oy_dive_time-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]||oy_dive_time-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]+window.OY_MESH_BUFFER[0]+((window.OY_BLOCK_SECTORS[0][0]*window.OY_BLOCK_DENSITY[1])-window.OY_MESH_BUFFER[0])+(window.OY_MESH_BUFFER[0]*2)) return false;
+                oy_key_sign(window.OY_SELF_PRIVATE, oy_dive_time+oy_hash_gen(JSON.stringify(oy_dive_pool)), function(oy_dive_crypt) {
+                    oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_DIVE", [[], oy_rand_gen(), oy_dive_time, oy_dive_crypt, oy_dive_pool, window.OY_SELF_PUBLIC]);
+                    oy_dive_pool = null;
+                    if (typeof(window.OY_BLOCK_MAP)==="function") window.OY_BLOCK_MAP(2, true);
+                });
+            }
+        });
+        oy_timer_dive.start(window.OY_BLOCK_SECTORS[0][1]+window.OY_BLOCK_SECTORS[1][1]+window.OY_MESH_BUFFER[1]+Math.floor(Math.random()*((window.OY_BLOCK_SECTORS[0][1]*window.OY_BLOCK_DENSITY[1])-window.OY_MESH_BUFFER[1])));
 
         let oy_timer_c = new Tock({
             countdown: true,
