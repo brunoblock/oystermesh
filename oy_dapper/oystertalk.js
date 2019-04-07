@@ -118,6 +118,7 @@ function ot_superhandle_process(ot_superhandle) {
 }
 
 function ot_reply(oy_broadcast_hash) {
+    if (window.OY_WALLET_PUBLIC===null||!oy_channel_approved(window.OT_CHANNEL_ID, window.OY_WALLET_PUBLIC)) return false;
     let ot_render_content_object = document.getElementById("ot_render_content_"+oy_broadcast_hash);
     if (!ot_render_content_object) return false;
     window.OT_REPLY = "OT_REPLY_"+oy_broadcast_hash;
@@ -266,6 +267,7 @@ function ot_load() {
         document.getElementById("ot_broadcast_avatar_cont").innerHTML = "";
         document.getElementById("ot_wallet_load_cont").style.display = "block";
         document.getElementById("ot_approval_cont").style.display = "none";
+        ot_reply_reset();
     }
 
     document.getElementById("ot_message").style.display = "none";
