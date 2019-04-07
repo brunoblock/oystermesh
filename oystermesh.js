@@ -40,7 +40,7 @@ window.OY_BLOCK_PEERS_MIN = 3;//minimum peer count to be able to act as origin f
 window.OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via OY_BLOCK_SYNC and OY_BLOCK_DIVE (OY_LOGIC_ALL)
 window.OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a seeding event
 window.OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims dive rewards
-window.OY_BLOCK_RANGE_MIN = 20;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
+window.OY_BLOCK_RANGE_MIN = 30;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 window.OY_BLOCK_SEEDTIME = 1554593300;//timestamp to boot the mesh
 window.OY_CHALLENGE_TRIGGER = 3;//higher means more challenge congestion (more secure, less scalable), lower means less challenge congestion (less secure, more scalable)
 window.OY_CHALLENGE_BUFFER = 3;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (either 2 or 3)
@@ -196,20 +196,6 @@ window.OY_BLOCK_SYNC = {};
 window.OY_BLOCK_DIVE = {};
 window.OY_BLOCK_DIVE_SET = [];
 window.OY_BLOCK_DIVE_REWARD = "OY_NULL";
-//TEMP
-/*
-let oy_test_wallets = [
-    "MyhRERkwLsYeo7Mp1CUpII5XAcxUY7CfFt2BEQUknj82xyl0_LOLWpVc3kAGEyKHl8ntVGQiv8_ANgM2UIIdbs",
-    "miodsUMQu4bC2CrXZkUzCZP70pVo5kWkE4g3GtobPGI0pWhayrLvEkfuHNA_XkAxJFawR9g768BbTTuLPUoYPs",
-    "Uzr4ica5L2ubo_EZ61yTE47al_S9rUQFEhNdgl7AD98mEavas9MUG2KrvG7HjS8EoomxqAi_4dPyq_YeA5gbac",
-    "yg8s2bpiH48jn7m0sLmoAYRP0yLWKXmxyktJ2rvp7msag5qhcV4yBI3zbkn2JoD42R36rLkmgwHePFynxxPqlw",
-    "YpW6DdiOL1nFyF2gfQMC2p5s3thDq0OrTXspV3yZMA4GFjNjnrCE86So0iYzW4RHagtSC72yMYfDNwh6KTbH_Y",
-    "uYeydx7wCWenaLNZOOzU8bVRV3xRa7hWB_cqvMMmjxoCnrT4Nor_UdUS5xKTSPrK63VXBqZ4yAxlqYCjHBcZC4",
-    "bnsxHC6OV1AEDb18Z7HHX5X86yAowLngbEvn7ExIUMskb6DA9pBBN1gArCYm5Y6_0D4YdDwPl5JmZqGbCwl19E"
-];
-if (Math.random()<0.4) window.OY_BLOCK_DIVE_REWARD = oy_test_wallets[Math.floor(Math.random()*oy_test_wallets.length)];
-*/
-//TEMP
 window.OY_BLOCK_DIVE_TRACK = 0;
 window.OY_BLOCK_NEW = {};
 window.OY_BLOCK_CONFIRM = {};
