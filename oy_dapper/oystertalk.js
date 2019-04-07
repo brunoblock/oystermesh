@@ -81,7 +81,7 @@ function ot_input() {
         document.getElementById("ot_broadcast_button").classList.remove("oy_button_all_dull");
         document.getElementById("ot_broadcast_button").classList.add("oy_button_broadcast_active");
     }
-    let ot_broadcast_limit = Math.floor(((oy_base_encode(document.getElementById("ot_broadcast_input").value).length/window.OY_CHANNEL_BROADCAST_PACKET_MAX)*100)/0.7);
+    let ot_broadcast_limit = Math.floor(((LZString.compressToUTF16(document.getElementById("ot_broadcast_input").value).length/window.OY_CHANNEL_BROADCAST_PACKET_MAX)*100)/0.7);
     if (ot_broadcast_limit>=100) {
         document.getElementById("ot_broadcast_input").value = window.OT_INPUT_SNAPSHOT;
         ot_input();

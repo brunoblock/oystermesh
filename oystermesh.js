@@ -43,7 +43,7 @@ window.OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims 
 window.OY_BLOCK_RANGE_MIN = 30;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 window.OY_BLOCK_SEEDTIME = 1554593300;//timestamp to boot the mesh
 window.OY_CHALLENGE_TRIGGER = 3;//higher means more challenge congestion (more secure, less scalable), lower means less challenge congestion (less secure, more scalable)
-window.OY_CHALLENGE_BUFFER = 3;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (either 2 or 3)
+window.OY_CHALLENGE_BUFFER = 4;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing
 window.OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
 window.OY_AKOYA_MAX_SUPPY = 10000000*window.OY_AKOYA_DECIMALS;//akoya max supply
 window.OY_AKOYA_FEE = 0.000001*window.OY_AKOYA_DECIMALS;//akoya fee per block
@@ -93,7 +93,7 @@ window.OY_ENGINE_INTERVAL = 2000;//ms interval for core mesh engine to run, the 
 window.OY_CHRONO_ACCURACY = 10;//ms accuracy for chrono function, lower means more accurate meshblock timing yet more CPU usage
 window.OY_READY_RETRY = 2000;//ms interval to retry connection if READY is still false
 window.OY_LOGIC_ALL_MAX = 1100;//maximum size for a packet that is routed via OY_LOGIC_ALL, except OY_CHANNEL_BROADCAST
-window.OY_CHANNEL_BROADCAST_PACKET_MAX = 5000;//maximum size for a packet that is routed via OY_CHANNEL_BROADCAST (OY_LOGIC_ALL)
+window.OY_CHANNEL_BROADCAST_PACKET_MAX = 2000;//maximum size for a packet that is routed via OY_CHANNEL_BROADCAST (OY_LOGIC_ALL)
 window.OY_CHANNEL_KEEPTIME = 10;//channel bearing nodes are expected to broadcast a logic_all packet within this interval
 window.OY_CHANNEL_FORGETIME = 25;//seconds since last signed message from channel bearing node
 window.OY_CHANNEL_RECOVERTIME = 6;//second interval between channel recovery requests per node, should be at least MESH_EDGE*2
@@ -846,7 +846,12 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
                     window.OY_CHANNEL_RENDER[oy_data_payload[2]][oy_broadcast_hash] = true;
                     let oy_render_payload = oy_data_payload.slice();
-                    oy_render_payload[3] = oy_base_decode(oy_render_payload[3]);
+                    if (oy_render_payload[6]>1554662400) {
+                        oy_render_payload[3] = LZString.decompressFromUTF16(oy_render_payload[3]);
+                    }
+                    else {
+                        oy_render_payload[3] = oy_base_decode(oy_render_payload[3]);//TODO remove temporary fallback for legacy encoding
+                    }
                     window.OY_CHANNEL_LISTEN[oy_data_payload[2]][2](oy_broadcast_hash, oy_render_payload);
                     oy_render_payload = null;
 
@@ -2131,7 +2136,7 @@ function oy_channel_broadcast(oy_channel_id, oy_channel_payload, oy_key_private,
     let oy_time_local = Date.now()/1000;
     let oy_channel_base;
     if (oy_channel_payload==="OY_CHANNEL_PING") oy_channel_base = oy_channel_payload;
-    else oy_channel_base = oy_base_encode(oy_channel_payload);
+    else oy_channel_base = LZString.compressToUTF16(oy_channel_payload);
     let oy_top_count = oy_channel_top_count(oy_channel_id);
     oy_key_sign(oy_key_private, oy_time_local+oy_top_count[0]+oy_channel_base, function(oy_payload_crypt) {
         let oy_data_payload = [[], oy_rand_gen(), oy_channel_id, oy_channel_base, oy_payload_crypt, oy_key_public, oy_time_local, oy_top_count[0]];
@@ -2778,7 +2783,12 @@ function oy_engine(oy_thread_track) {
                 if (typeof(window.OY_CHANNEL_RENDER[oy_channel_id][oy_broadcast_hash])==="undefined") {
                     window.OY_CHANNEL_RENDER[oy_channel_id][oy_broadcast_hash] = true;
                     let oy_render_payload = window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash].slice();
-                    oy_render_payload[3] = oy_base_decode(oy_render_payload[3]);
+                    if (oy_render_payload[6]>1554662400) {
+                        oy_render_payload[3] = LZString.decompressFromUTF16(oy_render_payload[3]);
+                    }
+                    else {
+                        oy_render_payload[3] = oy_base_decode(oy_render_payload[3]);//TODO remove temporary fallback for legacy encoding
+                    }
                     window.OY_CHANNEL_LISTEN[oy_channel_id][2](oy_broadcast_hash, oy_render_payload);
                 }
             }
