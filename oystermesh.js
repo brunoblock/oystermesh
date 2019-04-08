@@ -8,6 +8,7 @@ window.OY_MESH_DYNASTY = "BRUNO_GENESIS_V4";//mesh dynasty definition, changing 
 window.OY_MESH_EDGE = 2;//maximum seconds that it should take for a transaction to reach the furthest edge-to-edge distance of the mesh, do not change this unless you know what you are doing
 window.OY_MESH_BUFFER = [0.4, 400];//seconds and ms buffer a block command's timestamp is allowed to be in the future, this variable exists to deal with slight mis-calibrations between node clocks
 window.OY_MESH_FLOW = 256000;//characters per second allowed per peer, and for all aggregate non-peer nodes
+window.OY_MESH_HOP_MAX = 200;//maximum hops allowed on a transmission passport
 window.OY_MESH_MEASURE = 10;//seconds by which to measure mesh flow, larger means more tracking of nearby node and peer activity
 window.OY_MESH_BEAM_SAMPLE = 3;//time/data measurements to determine mesh beam flow required to state a result, too low can lead to volatile and inaccurate readings
 window.OY_MESH_BEAM_BUFFER = 1;//multiplication factor for mesh outflow/beam buffer, to give some leeway to compliant peers
@@ -104,7 +105,7 @@ window.OY_CHANNEL_CONSENSUS = 0.5;//node signature requirement for a broadcast t
 window.OY_CHANNEL_TOP_TOLERANCE = 2;//node count difference allowed between broadcast claim and perceived claim
 window.OY_CHANNEL_DIFF_TRIGGER = 30;//diff count to trigger storing channel_keep to localstorage, practically related to cadence of engine_interval
 window.OY_KEY_BRUNO = "XLp6_wVPBF3Zg-QNRkEj6U8bOYEZddQITs1n2pyeRqwOG5k9w_1A-RMIESIrVv_5HbvzoLhq-xPLE7z2na0C6M";//prevent impersonation
-window.OY_SHORT_LENGTH = 6;//various data value such as nonce IDs, data handles, data values are shortened for efficiency
+window.OY_SHORT_LENGTH = 4;//various data value such as nonce IDs, data handles, data values are shortened for efficiency
 window.OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inputs are expected
 
 // INIT
@@ -248,6 +249,22 @@ function oy_chrono(oy_chrono_callback, oy_chrono_duration) {
         oy_chrono_last = performance.now();
     };
     oy_chrono_instance();
+}
+
+function oy_shuffle_double(oy_obj_alpha, oy_obj_beta) {
+    let index = oy_obj_alpha.length;
+    let rnd, tmp1, tmp2;
+
+    while (index) {
+        rnd = Math.floor(Math.random()*index);
+        index -= 1;
+        tmp1 = oy_obj_alpha[index];
+        tmp2 = oy_obj_beta[index];
+        oy_obj_alpha[index] = oy_obj_alpha[rnd];
+        oy_obj_beta[index] = oy_obj_beta[rnd];
+        oy_obj_alpha[rnd] = tmp1;
+        oy_obj_beta[rnd] = tmp2;
+    }
 }
 
 function oy_rand_gen(oy_gen_custom) {
@@ -1916,8 +1933,12 @@ function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
     }
     let oy_callback_local = function() {
         let oy_data_raw = JSON.stringify([oy_data_flag, oy_data_payload]);//convert data array to JSON
-        oy_data_payload = null;
         let oy_data_direct_bool = oy_data_direct(oy_data_flag);
+        if (oy_data_direct_bool===false&&oy_data_payload[0].length>window.OY_MESH_HOP_MAX) {
+            oy_log("Almost sent a data sequence with too many hops for flag "+oy_data_flag+", go tell Bruno", 1);
+            return false;
+        }
+        oy_data_payload = null;
         let oy_logic_all_bool = window.OY_LOGIC_ALL_TYPE.indexOf(oy_data_flag)!==-1;
         if (oy_data_raw.length>window.OY_DATA_MAX||
             (oy_logic_all_bool===true&&(
@@ -1952,13 +1973,18 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
        if (oy_data&&typeof(oy_data)==="object") {
            if (oy_data[0]!=="OY_BLOCK_SYNC"&&oy_data[0]!=="OY_BLOCK_SYNC_CHALLENGE"&&oy_data[0]!=="OY_BLOCK_SYNC_CHALLENGE_RESPONSE"&&oy_data[0]!=="OY_BLOCK_DIVE") oy_log("SOAK["+oy_data[0]+"]["+oy_short(oy_node_id)+"]");
            if (!oy_data_direct(oy_data[0])) {
+               if (oy_data[1][0].length>window.OY_MESH_HOP_MAX) {
+                   oy_log("Peer "+oy_short(oy_node_id)+" sent a data sequence with too many hops, will remove and punish");
+                   oy_peer_remove(oy_node_id, "OY_PUNISH_PASSPORT_HOP");
+                   return false;
+               }
                let oy_peer_last = oy_data[1][0][oy_data[1][0].length-1];
                if (oy_peer_last!==oy_short(oy_node_id)) {
                    oy_log("Peer "+oy_short(oy_node_id)+" lied on the passport, will remove and punish");
                    oy_peer_remove(oy_peer_last, "OY_PUNISH_PASSPORT_MISMATCH");
                    return false;
                }
-               else if (oy_data[1][0].indexOf(window.OY_SELF_SHORT)!==-1) {
+               if (oy_data[1][0].indexOf(window.OY_SELF_SHORT)!==-1) {
                    oy_log("Peer "+oy_short(oy_node_id)+" sent a data sequence we already processed, will remove and punish");
                    oy_peer_remove(oy_node_id, "OY_PUNISH_PASSPORT_ALREADY");
                    return false;
@@ -2240,6 +2266,7 @@ function oy_block_sync_hop(oy_passport_passive, oy_passport_crypt, oy_crypt_shor
         }
         return oy_callback();
     }
+    else if (typeof(oy_force)!=="undefined") oy_shuffle_double(oy_passport_passive, oy_passport_crypt);
     let oy_node_select = oy_passport_passive.pop();
     let oy_crypt_select = oy_passport_crypt.pop();
     if (typeof(window.OY_BLOCK_ROSTER[oy_node_select])==="undefined"||window.OY_BLOCK_ROSTER[oy_node_select][1]>window.OY_BLOCK_ROSTER_AVG*window.OY_BLOCK_STABILITY_ROSTER) oy_roster_miss++;
