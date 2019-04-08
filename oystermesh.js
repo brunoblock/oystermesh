@@ -7,7 +7,7 @@
 window.OY_MESH_DYNASTY = "BRUNO_GENESIS_V4";//mesh dynasty definition, changing this will cause a hard-fork
 window.OY_MESH_EDGE = 2;//maximum seconds that it should take for a transaction to reach the furthest edge-to-edge distance of the mesh, do not change this unless you know what you are doing
 window.OY_MESH_BUFFER = [0.4, 400];//seconds and ms buffer a block command's timestamp is allowed to be in the future, this variable exists to deal with slight mis-calibrations between node clocks
-window.OY_MESH_FLOW = 256000;//characters per second allowed per peer, and for all aggregate non-peer nodes
+window.OY_MESH_FLOW = 512000;//characters per second allowed per peer, and for all aggregate non-peer nodes
 window.OY_MESH_HOP_MAX = 200;//maximum hops allowed on a transmission passport
 window.OY_MESH_MEASURE = 10;//seconds by which to measure mesh flow, larger means more tracking of nearby node and peer activity
 window.OY_MESH_BEAM_SAMPLE = 3;//time/data measurements to determine mesh beam flow required to state a result, too low can lead to volatile and inaccurate readings
@@ -42,8 +42,8 @@ window.OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via
 window.OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a seeding event
 window.OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims dive rewards
 window.OY_BLOCK_RANGE_MIN = 30;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-window.OY_BLOCK_SEEDTIME = 1554747900;//timestamp to boot the mesh
-window.OY_CHALLENGE_TRIGGER = 3;//higher means more challenge congestion (more secure, less scalable), lower means less challenge congestion (less secure, more scalable)
+window.OY_BLOCK_SEEDTIME = 1554762500;//timestamp to boot the mesh
+window.OY_CHALLENGE_TRIGGER = 6;//higher means more challenge congestion (more secure, less scalable), lower means less challenge congestion (less secure, more scalable)
 window.OY_CHALLENGE_BUFFER = 3;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing
 window.OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
 window.OY_AKOYA_MAX_SUPPY = 10000000*window.OY_AKOYA_DECIMALS;//akoya max supply
@@ -630,7 +630,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                             if (oy_sync_verify===true) {
                                 if (typeof(window.OY_ORIGINS[oy_peer_id])!=="undefined"&&oy_time_local<window.OY_ORIGINS[oy_peer_id]) window.OY_BLOCK_SYNC[oy_data_payload[6]] = [true, null, oy_data_payload, oy_command_pool];
                                 else if (typeof(window.OY_BLOCK_SYNC[oy_data_payload[6]])==="undefined") {//prevent concurrent thread overlap
-                                    if (oy_data_payload[0].length!==1&&oy_data_payload[0].length<=window.OY_CHALLENGE_TRIGGER) {
+                                    if (oy_data_payload[0].length===window.OY_CHALLENGE_TRIGGER) {
                                         let oy_sync_challenge = oy_rand_gen();
                                         window.OY_BLOCK_SYNC[oy_data_payload[6]] = [false, oy_sync_challenge+oy_sync_hash, oy_data_payload, oy_command_pool];
                                         let oy_route_skip = oy_data_payload[0].slice();
@@ -650,7 +650,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                         });
                     }
                 });
-            }, oy_data_payload[0].length<=window.OY_CHALLENGE_TRIGGER);
+            }, true);
         }
         return true;
     }
@@ -1623,7 +1623,7 @@ function oy_data_measure(oy_data_beam, oy_node_id, oy_data_length) {
         return (window.OY_PEERS[oy_node_id][oy_array_select-1]<=(window.OY_MESH_FLOW*window.OY_MESH_SOAK_BUFFER));
     }
     else {
-        let oy_beam_calc = window.OY_PEERS[oy_node_id][oy_array_select-1]/(window.OY_MESH_FLOW*window.OY_MESH_BEAM_BUFFER);
+        let oy_beam_calc = ((window.OY_PEERS[oy_node_id][oy_array_select-1]/(window.OY_MESH_FLOW*window.OY_MESH_BEAM_BUFFER))+(oy_data_length/window.OY_DATA_CHUNK))/2;
         let oy_return = true;
         if (oy_beam_calc>window.OY_MESH_BEAM_MIN) oy_return = (Math.random()>oy_beam_calc);
         if (oy_return===true) window.OY_PEERS[oy_node_id][oy_array_select].push([oy_time_local, oy_data_length]);
@@ -2258,15 +2258,15 @@ function oy_block_sync_verify(oy_command_inherit, oy_callback) {
     });
 }
 
-function oy_block_sync_hop(oy_passport_passive, oy_passport_crypt, oy_crypt_short, oy_miss_limit, oy_roster_miss, oy_clock_start, oy_callback, oy_force) {
+function oy_block_sync_hop(oy_passport_passive, oy_passport_crypt, oy_crypt_short, oy_miss_limit, oy_roster_miss, oy_clock_start, oy_callback, oy_first) {
     if (oy_passport_passive.length===0||window.OY_BLOCK_ROSTER_AVG===null) return oy_callback();
-    if ((typeof(oy_force)!=="undefined"&&oy_force===true)||performance.now()-oy_clock_start>window.OY_BLOCK_HOP_CALCTIME) {
+    if (performance.now()-oy_clock_start>window.OY_BLOCK_HOP_CALCTIME) {
         for (let i in oy_passport_passive) {
             if (typeof(window.OY_BLOCK_ROSTER[oy_passport_passive[i]])!=="undefined") window.OY_BLOCK_ROSTER[oy_passport_passive[i]][1]++;
         }
         return oy_callback();
     }
-    else if (typeof(oy_force)!=="undefined") oy_shuffle_double(oy_passport_passive, oy_passport_crypt);
+    if (typeof(oy_first)!=="undefined") oy_shuffle_double(oy_passport_passive, oy_passport_crypt);
     let oy_node_select = oy_passport_passive.pop();
     let oy_crypt_select = oy_passport_crypt.pop();
     if (typeof(window.OY_BLOCK_ROSTER[oy_node_select])==="undefined"||window.OY_BLOCK_ROSTER[oy_node_select][1]>window.OY_BLOCK_ROSTER_AVG*window.OY_BLOCK_STABILITY_ROSTER) oy_roster_miss++;
