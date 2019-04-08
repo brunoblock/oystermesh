@@ -32,7 +32,7 @@ window.OY_BLOCK_STABILITY_TRIGGER = 3;//mesh ranger history minimum to trigger r
 window.OY_BLOCK_STABILITY_LIMIT = 12;//mesh range history to keep to calculate meshblock stability, time is effectively value x 20 seconds
 window.OY_BLOCK_STABILITY_MIN = 5.8;//lower means more sybil-attack secure yet more honest block_syncs dropped, lower value forces a more even mesh, relates to GEO_SENS
 window.OY_BLOCK_ROSTER_PERSIST = 0.7;//node roster persistence against getting deleted due to an absent sync, higher means more stable connection but weaker security implications
-window.OY_BLOCK_HOP_CALCTIME = 40;//ms time limit for verifying passports on a block_sync transmission, lower is more scalable yet less secure
+window.OY_BLOCK_HOP_CALCTIME = 20;//ms time limit for verifying passports on a block_sync transmission, lower is more scalable yet less secure
 window.OY_BLOCK_KEY_LIMIT = 200;//permitted transactions per wallet per block (20 seconds)
 window.OY_BLOCK_HASH_KEEP = 1555;//how many hashes of previous blocks to keep in the current meshblock, value is for 6 months worth
 window.OY_BLOCK_DENSITY = [0.2, 0.8];//higher means block syncs [0] and dives [1] are more spread out within their respective meshblock sectors
@@ -633,7 +633,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                         });
                     }
                 });
-            }, true);
+            }, oy_data_payload[0].length<=window.OY_CHALLENGE_TRIGGER);
         }
         return true;
     }
@@ -2232,8 +2232,14 @@ function oy_block_sync_verify(oy_command_inherit, oy_callback) {
     });
 }
 
-function oy_block_sync_hop(oy_passport_passive, oy_passport_crypt, oy_crypt_short, oy_miss_limit, oy_roster_miss, oy_clock_start, oy_callback) {
-    if (oy_passport_passive.length===0||performance.now()-oy_clock_start>window.OY_BLOCK_HOP_CALCTIME||window.OY_BLOCK_ROSTER_AVG===null) return oy_callback();
+function oy_block_sync_hop(oy_passport_passive, oy_passport_crypt, oy_crypt_short, oy_miss_limit, oy_roster_miss, oy_clock_start, oy_callback, oy_force) {
+    if (oy_passport_passive.length===0||window.OY_BLOCK_ROSTER_AVG===null) return oy_callback();
+    if ((typeof(oy_force)!=="undefined"&&oy_force===true)||performance.now()-oy_clock_start>window.OY_BLOCK_HOP_CALCTIME) {
+        for (let i in oy_passport_passive) {
+            if (typeof(window.OY_BLOCK_ROSTER[oy_passport_passive[i]])!=="undefined") window.OY_BLOCK_ROSTER[oy_passport_passive[i]][1]++;
+        }
+        return oy_callback();
+    }
     let oy_node_select = oy_passport_passive.pop();
     let oy_crypt_select = oy_passport_crypt.pop();
     if (typeof(window.OY_BLOCK_ROSTER[oy_node_select])==="undefined"||window.OY_BLOCK_ROSTER[oy_node_select][1]>window.OY_BLOCK_ROSTER_AVG*window.OY_BLOCK_STABILITY_ROSTER) oy_roster_miss++;
