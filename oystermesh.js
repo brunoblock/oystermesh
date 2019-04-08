@@ -35,7 +35,7 @@ window.OY_BLOCK_ROSTER_PERSIST = 0.7;//node roster persistence against getting d
 window.OY_BLOCK_HOP_VERIFY = 0.5;//chance of verifying a node hop from a block_sync's passport_crypt, higher is more secure but more CPU usage
 window.OY_BLOCK_KEY_LIMIT = 200;//permitted transactions per wallet per block (20 seconds)
 window.OY_BLOCK_HASH_KEEP = 1555;//how many hashes of previous blocks to keep in the current meshblock, value is for 6 months worth
-window.OY_BLOCK_DENSITY = [0.25, 0.75];//higher means block syncs [0] and dives [1] are more spread out within their respective meshblock sectors
+window.OY_BLOCK_DENSITY = [0.2, 0.8];//higher means block syncs [0] and dives [1] are more spread out within their respective meshblock sectors
 window.OY_BLOCK_PEERS_MIN = 3;//minimum peer count to be able to act as origin for clones and broadcast SYNC/DIVE
 window.OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via OY_BLOCK_SYNC and OY_BLOCK_DIVE (OY_LOGIC_ALL)
 window.OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a seeding event
@@ -43,7 +43,7 @@ window.OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims 
 window.OY_BLOCK_RANGE_MIN = 30;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 window.OY_BLOCK_SEEDTIME = 1554593300;//timestamp to boot the mesh
 window.OY_CHALLENGE_TRIGGER = 3;//higher means more challenge congestion (more secure, less scalable), lower means less challenge congestion (less secure, more scalable)
-window.OY_CHALLENGE_BUFFER = 4;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing
+window.OY_CHALLENGE_BUFFER = 3;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing
 window.OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
 window.OY_AKOYA_MAX_SUPPY = 10000000*window.OY_AKOYA_DECIMALS;//akoya max supply
 window.OY_AKOYA_FEE = 0.000001*window.OY_AKOYA_DECIMALS;//akoya fee per block
@@ -633,7 +633,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                         });
                     }
                 });
-            });
+            }, true);
         }
         return true;
     }
@@ -2232,8 +2232,8 @@ function oy_block_sync_verify(oy_command_inherit, oy_callback) {
     });
 }
 
-function oy_block_sync_hop(oy_passport_passive, oy_passport_crypt, oy_crypt_short, oy_miss_limit, oy_roster_miss, oy_callback) {
-    if (oy_passport_passive.length===0||window.OY_BLOCK_ROSTER_AVG===null) return oy_callback();
+function oy_block_sync_hop(oy_passport_passive, oy_passport_crypt, oy_crypt_short, oy_miss_limit, oy_roster_miss, oy_callback, oy_first) {
+    if (oy_passport_passive.length===0||window.OY_BLOCK_ROSTER_AVG===null||(typeof(oy_first)!=="undefined"&&Math.random()>window.OY_BLOCK_HOP_VERIFY)) return oy_callback();
     let oy_node_select = oy_passport_passive.pop();
     let oy_crypt_select = oy_passport_crypt.pop();
     if (typeof(window.OY_BLOCK_ROSTER[oy_node_select])==="undefined"||window.OY_BLOCK_ROSTER[oy_node_select][1]>window.OY_BLOCK_ROSTER_AVG*window.OY_BLOCK_STABILITY_ROSTER) oy_roster_miss++;
@@ -2242,16 +2242,12 @@ function oy_block_sync_hop(oy_passport_passive, oy_passport_crypt, oy_crypt_shor
         oy_block_sync_hop(oy_passport_passive, oy_passport_crypt, oy_crypt_short, oy_miss_limit, oy_roster_miss, oy_callback);
         return false;
     }
-    let oy_hop_pass = function() {
-        window.OY_BLOCK_ROSTER[oy_node_select][1]++;
-        oy_block_sync_hop(oy_passport_passive, oy_passport_crypt, oy_crypt_short, oy_miss_limit, oy_roster_miss, oy_callback);
-    };
-    if (Math.random()>window.OY_BLOCK_HOP_VERIFY) oy_hop_pass();
-    else {
-        oy_key_verify(window.OY_BLOCK_ROSTER[oy_node_select][0], oy_crypt_select, oy_crypt_short, function(oy_key_valid) {
-            if (oy_key_valid===true) oy_hop_pass();
-        });
-    }
+    oy_key_verify(window.OY_BLOCK_ROSTER[oy_node_select][0], oy_crypt_select, oy_crypt_short, function(oy_key_valid) {
+        if (oy_key_valid===true) {
+            window.OY_BLOCK_ROSTER[oy_node_select][1]++;
+            oy_block_sync_hop(oy_passport_passive, oy_passport_crypt, oy_crypt_short, oy_miss_limit, oy_roster_miss, oy_callback);
+        }
+    });
 }
 
 function oy_block_stability(oy_list) {
