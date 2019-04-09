@@ -31,7 +31,7 @@ window.OY_BLOCK_MISS_MULTI_MIN = 1;//minimum miss_limit value for roster calcula
 window.OY_BLOCK_STABILITY_START = 50;//starting stability value for making roster calculations
 window.OY_BLOCK_STABILITY_TRIGGER = 3;//mesh ranger history minimum to trigger reliance on real stability value for roster calculations
 window.OY_BLOCK_STABILITY_LIMIT = 12;//mesh range history to keep to calculate meshblock stability, time is effectively value x 20 seconds
-window.OY_BLOCK_STABILITY_MIN = 2.2;//lower means more sybil-attack secure yet more honest block_syncs dropped, lower value forces a more even mesh, relates to GEO_SENS
+window.OY_BLOCK_STABILITY_MIN = 4.5;//lower means more sybil-attack secure yet more honest block_syncs dropped, lower value forces a more even mesh, relates to GEO_SENS
 window.OY_BLOCK_ROSTER_PERSIST = 0.8;//node roster persistence against getting deleted due to an absent sync, higher means more stable connection but weaker security implications
 window.OY_BLOCK_HOP_CALCTIME = 80;//ms time limit for verifying passports on a block_sync transmission, lower is more scalable yet less secure
 window.OY_BLOCK_KEY_LIMIT = 200;//permitted transactions per wallet per block (20 seconds)
@@ -680,7 +680,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         }
 
         if (oy_data_payload[1][0]===window.OY_SELF_SHORT) {
-            if (typeof(window.OY_BLOCK_SYNC[oy_data_payload[2]])!=="undefined") {
+            if (typeof(window.OY_BLOCK_SYNC[oy_data_payload[2]])!=="undefined"&&window.OY_BLOCK_SYNC[oy_data_payload[2]][0]===false) {
                 oy_key_verify(oy_data_payload[2], oy_data_payload[3], window.OY_BLOCK_SYNC[oy_data_payload[2]][1], function(oy_key_valid) {
                     if (oy_key_valid===true) {
                         window.OY_BLOCK_SYNC[oy_data_payload[2]][0] = true;
@@ -2020,8 +2020,10 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
                    }
                    else if (oy_data[0]==="OY_BLOCK_SYNC_CHALLENGE") {
                        if (window.OY_BLOCK_DYNAMIC[2]===null) return true;
-                       if (window.OY_BLOCK_DYNAMIC[2].indexOf(oy_data[1][1])!==-1) return true;
-                       window.OY_BLOCK_DYNAMIC[2].push(oy_data[1][1]);
+                       if (oy_data[1][3]!==window.OY_SELF_SHORT) {
+                           if (window.OY_BLOCK_DYNAMIC[2].indexOf(oy_data[1][1])!==-1) return true;
+                           window.OY_BLOCK_DYNAMIC[2].push(oy_data[1][1]);
+                       }
                    }
                    else if (oy_data[0]==="OY_BLOCK_DIVE") {
                        if (window.OY_BLOCK_DYNAMIC[3]===null) return true;
