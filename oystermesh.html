@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <title>Oyster | Bandwidth Bound Consensus</title>
     <meta name="description" content="Oyster provides decentralized access to immutable data and currency.">
-    <script src="oystermesh.js?132"></script>
-    <script src="oysterdepend.js?5"></script>
-    <script src="oy_dapper/oystertalk.js?25"></script>
+    <script src="oystermesh.js?270"></script>
+    <script src="oysterdepend.js?10"></script>
+    <script src="oy_dapper/oystertalk.js?28"></script>
     <script src="oy_resources/d3.v3.min.js"></script>
     <script src="oy_resources/blockies.js"></script>
     <script src="oy_resources/linkify.min.js"></script>
@@ -1519,6 +1519,8 @@
             window.OY_LOW_POWER = true;
             window.OY_BLOCK_MAP = null;
             window.OY_MESH_MAP = null;
+            window.OY_MAP_NODES = {};
+            window.OY_MAP_LINKS = {};
             window.OY_MAINTAIN_DELAY = 2000;
             window.OY_BLOCK_RENDER_ACTIVE = false;
 
@@ -1540,6 +1542,8 @@
         delete window.OY_LOW_POWER_THREAD[oy_thread];
         if (Object.keys(window.OY_LOW_POWER_THREAD).length===0&&window.OY_LOW_POWER===true) {
             window.OY_LOW_POWER = false;
+            window.OY_MAP_NODES = {};
+            window.OY_MAP_LINKS = {};
             window.OY_BLOCK_MAP = window.OY_BLOCK_MAP_FUNC;
             window.OY_MESH_MAP = window.OY_MESH_MAP_FUNC;
             window.OY_MAINTAIN_DELAY = 500;
