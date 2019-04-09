@@ -33,10 +33,10 @@ window.OY_BLOCK_STABILITY_TRIGGER = 3;//mesh ranger history minimum to trigger r
 window.OY_BLOCK_STABILITY_LIMIT = 12;//mesh range history to keep to calculate meshblock stability, time is effectively value x 20 seconds
 window.OY_BLOCK_STABILITY_MIN = 5.8;//lower means more sybil-attack secure yet more honest block_syncs dropped, lower value forces a more even mesh, relates to GEO_SENS
 window.OY_BLOCK_ROSTER_PERSIST = 0.7;//node roster persistence against getting deleted due to an absent sync, higher means more stable connection but weaker security implications
-window.OY_BLOCK_HOP_CALCTIME = 20;//ms time limit for verifying passports on a block_sync transmission, lower is more scalable yet less secure
+window.OY_BLOCK_HOP_CALCTIME = 80;//ms time limit for verifying passports on a block_sync transmission, lower is more scalable yet less secure
 window.OY_BLOCK_KEY_LIMIT = 200;//permitted transactions per wallet per block (20 seconds)
 window.OY_BLOCK_HASH_KEEP = 1555;//how many hashes of previous blocks to keep in the current meshblock, value is for 6 months worth
-window.OY_BLOCK_DENSITY = [0.4, 0.6];//higher means block syncs [0] and dives [1] are more spread out within their respective meshblock sectors
+window.OY_BLOCK_DENSITY = [0.6, 0.6];//higher means block syncs [0] and dives [1] are more spread out within their respective meshblock sectors
 window.OY_BLOCK_PEERS_MIN = 3;//minimum peer count to be able to act as origin for clones and broadcast SYNC/DIVE
 window.OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via OY_BLOCK_SYNC and OY_BLOCK_DIVE (OY_LOGIC_ALL)
 window.OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a seeding event
@@ -44,7 +44,7 @@ window.OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims 
 window.OY_BLOCK_RANGE_MIN = 30;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 window.OY_BLOCK_SEEDTIME = 1554762500;//timestamp to boot the mesh
 window.OY_CHALLENGE_SAFETY = 0.8;//safety margin for rogue packets reaching block_consensus. 1 means no changes, lower means further from block_consensus, higher means closer.
-window.OY_CHALLENGE_BUFFER = 1.4;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (min of 1)
+window.OY_CHALLENGE_BUFFER = 1.6;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (min of 1)
 window.OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
 window.OY_AKOYA_MAX_SUPPY = 10000000*window.OY_AKOYA_DECIMALS;//akoya max supply
 window.OY_AKOYA_FEE = 0.000001*window.OY_AKOYA_DECIMALS;//akoya fee per block
@@ -2585,7 +2585,8 @@ function oy_block_loop() {
                 return false;
             }
 
-            window.OY_CHALLENGE_TRIGGER = Math.max(2, Math.floor(Math.sqrt(window.OY_MESH_RANGE)*(1-window.OY_BLOCK_CONSENSUS)*window.OY_CHALLENGE_SAFETY));
+            if (Date.now()/1000-window.OY_BLOCK_SEEDTIME<=window.OY_BLOCK_SEED_BUFFER) window.OY_CHALLENGE_TRIGGER = null;
+            else window.OY_CHALLENGE_TRIGGER = Math.max(2, Math.floor(Math.sqrt(window.OY_MESH_RANGE*(1-window.OY_BLOCK_CONSENSUS))*window.OY_CHALLENGE_SAFETY));
             console.log(window.OY_CHALLENGE_TRIGGER);
 
             let oy_node_consensus = Math.ceil(window.OY_MESH_RANGE*window.OY_BLOCK_CONSENSUS);
