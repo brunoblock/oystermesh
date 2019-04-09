@@ -21,7 +21,7 @@ window.OY_MESH_DEPOSIT_CHANCE = 0.4;//probability that self will deposit pushed 
 window.OY_MESH_FULLFILL_CHANCE = 0.2;//probability that data is stored whilst fulfilling a pull request, this makes data intelligently migrate and recommit overtime
 window.OY_MESH_SOURCE = 3;//node in route passport (from destination) that is assigned with defining the source variable
 window.OY_BLOCK_LOOP = 100;//a lower value means increased accuracy for detecting the start of the next meshblock
-window.OY_BLOCK_CONSENSUS = 0.7;//mesh topology corroboration to agree on confirming a meshblock transaction
+window.OY_BLOCK_CONSENSUS = 0.6;//mesh topology corroboration to agree on confirming a meshblock transaction
 window.OY_BLOCK_LAUNCHTIME = 200;//ms delay from block_trigger to launch a command broadcast
 window.OY_BLOCK_PROTECTTIME = 600;//ms delay until meshblock challenge protection is enacted
 window.OY_BLOCK_CHALLENGETIME = 1600;//ms delay until meshblock challenge to peers is enforced
@@ -36,7 +36,7 @@ window.OY_BLOCK_ROSTER_PERSIST = 0.8;//node roster persistence against getting d
 window.OY_BLOCK_HOP_CALCTIME = 80;//ms time limit for verifying passports on a block_sync transmission, lower is more scalable yet less secure
 window.OY_BLOCK_KEY_LIMIT = 200;//permitted transactions per wallet per block (20 seconds)
 window.OY_BLOCK_HASH_KEEP = 1555;//how many hashes of previous blocks to keep in the current meshblock, value is for 6 months worth
-window.OY_BLOCK_DENSITY = 0.55;//higher means block syncs [0] and dives [1] are more spread out within their respective meshblock sectors
+window.OY_BLOCK_DENSITY = 0.7;//higher means block syncs [0] and dives [1] are more spread out within their respective meshblock sectors
 window.OY_BLOCK_PEERS_MIN = 3;//minimum peer count to be able to act as origin for clones and broadcast SYNC/DIVE
 window.OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via OY_BLOCK_SYNC and OY_BLOCK_DIVE (OY_LOGIC_ALL)
 window.OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a seeding event
@@ -2526,8 +2526,6 @@ function oy_block_loop() {
                 else oy_command_pool[oy_command_hash][0]++;
             }
             oy_node_consensus = Math.ceil(oy_node_consensus*window.OY_BLOCK_CONSENSUS);
-            //oy_log_debug("SYNC: "+JSON.stringify(window.OY_BLOCK_SYNC)+"\nCOMMAND POOL: "+JSON.stringify(oy_command_pool)+"\nCONSENSUS: "+oy_node_consensus);
-            //oy_log_debug("COMMAND POOL: "+JSON.stringify(oy_command_pool)+"\nCONSENSUS: "+oy_node_consensus);
             for (let oy_command_hash in oy_command_pool) {
                 if (oy_command_pool[oy_command_hash][0]>=oy_node_consensus) {
                     oy_command_execute.push([oy_command_hash, oy_command_pool[oy_command_hash][1]]);
@@ -2543,7 +2541,7 @@ function oy_block_loop() {
                 }
                 return a[1][1] - b[1][1];
             });
-            //if (oy_dive_reward!=="OY_NULL") oy_dive_pool.push([oy_dive_reward, window.OY_SELF_PUBLIC]);
+            if (oy_dive_reward!=="OY_NULL") oy_dive_pool.push([oy_dive_reward, window.OY_SELF_PUBLIC]);
             for (let oy_key_public in window.OY_BLOCK_SYNC) {
                 if (window.OY_BLOCK_SYNC[oy_key_public][0]===true&&window.OY_BLOCK_SYNC[oy_key_public][2][7]!=="OY_NULL") oy_dive_pool.push([window.OY_BLOCK_SYNC[oy_key_public][2][7], oy_key_public]);//TODO review security
             }
