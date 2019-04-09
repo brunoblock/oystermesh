@@ -21,7 +21,7 @@ window.OY_MESH_DEPOSIT_CHANCE = 0.4;//probability that self will deposit pushed 
 window.OY_MESH_FULLFILL_CHANCE = 0.2;//probability that data is stored whilst fulfilling a pull request, this makes data intelligently migrate and recommit overtime
 window.OY_MESH_SOURCE = 3;//node in route passport (from destination) that is assigned with defining the source variable
 window.OY_BLOCK_LOOP = 100;//a lower value means increased accuracy for detecting the start of the next meshblock
-window.OY_BLOCK_CONSENSUS = 0.5;//mesh topology corroboration to agree on confirming a meshblock transaction
+window.OY_BLOCK_CONSENSUS = 0.65;//mesh topology corroboration to agree on confirming a meshblock transaction
 window.OY_BLOCK_LAUNCHTIME = 200;//ms delay from block_trigger to launch a command broadcast
 window.OY_BLOCK_PROTECTTIME = 600;//ms delay until meshblock challenge protection is enacted
 window.OY_BLOCK_CHALLENGETIME = 1600;//ms delay until meshblock challenge to peers is enforced
@@ -31,12 +31,12 @@ window.OY_BLOCK_MISS_MULTI_MIN = 2;//minimum miss_limit value for roster calcula
 window.OY_BLOCK_STABILITY_START = 50;//starting stability value for making roster calculations
 window.OY_BLOCK_STABILITY_TRIGGER = 3;//mesh ranger history minimum to trigger reliance on real stability value for roster calculations
 window.OY_BLOCK_STABILITY_LIMIT = 12;//mesh range history to keep to calculate meshblock stability, time is effectively value x 20 seconds
-window.OY_BLOCK_STABILITY_MIN = 5.8;//lower means more sybil-attack secure yet more honest block_syncs dropped, lower value forces a more even mesh, relates to GEO_SENS
+window.OY_BLOCK_STABILITY_MIN = 2.5;//lower means more sybil-attack secure yet more honest block_syncs dropped, lower value forces a more even mesh, relates to GEO_SENS
 window.OY_BLOCK_ROSTER_PERSIST = 0.7;//node roster persistence against getting deleted due to an absent sync, higher means more stable connection but weaker security implications
 window.OY_BLOCK_HOP_CALCTIME = 80;//ms time limit for verifying passports on a block_sync transmission, lower is more scalable yet less secure
 window.OY_BLOCK_KEY_LIMIT = 200;//permitted transactions per wallet per block (20 seconds)
 window.OY_BLOCK_HASH_KEEP = 1555;//how many hashes of previous blocks to keep in the current meshblock, value is for 6 months worth
-window.OY_BLOCK_DENSITY = [0.6, 0.6];//higher means block syncs [0] and dives [1] are more spread out within their respective meshblock sectors
+window.OY_BLOCK_DENSITY = 0.55;//higher means block syncs [0] and dives [1] are more spread out within their respective meshblock sectors
 window.OY_BLOCK_PEERS_MIN = 3;//minimum peer count to be able to act as origin for clones and broadcast SYNC/DIVE
 window.OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via OY_BLOCK_SYNC and OY_BLOCK_DIVE (OY_LOGIC_ALL)
 window.OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a seeding event
@@ -607,7 +607,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         if (typeof(window.OY_BLOCK_SYNC[oy_data_payload[6]])==="undefined"&&//check that this is the only sync processed from this node for this block
             oy_data_payload[3]<oy_time_local+window.OY_MESH_BUFFER[0]&&//check that the broadcast timestamp is not in the future, with buffer leniency
             oy_data_payload[3]-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]&&//check that the broadcast timestamp is in the sync processing zone
-            oy_data_payload[3]-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]+window.OY_MESH_BUFFER[0]+((window.OY_BLOCK_SECTORS[1][0]*window.OY_BLOCK_DENSITY[0])-window.OY_MESH_BUFFER[0])+(window.OY_MESH_BUFFER[0]*2)&&//check that the broadcast timestamp is in the sync processing zone
+            oy_data_payload[3]-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]+window.OY_MESH_BUFFER[0]+((window.OY_BLOCK_SECTORS[1][0]*window.OY_BLOCK_DENSITY)-window.OY_MESH_BUFFER[0])+(window.OY_MESH_BUFFER[0]*2)&&//check that the broadcast timestamp is in the sync processing zone
             oy_time_local-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]&&//check that the current timestamp is in the sync processing zone
             oy_time_local-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]) {//check that the current timestamp is in the sync processing zone
 
@@ -710,7 +710,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             typeof(window.OY_BLOCK_SYNC[oy_data_payload[5]])!=="undefined"&&//check that the public key of the node was validated during block_sync
             window.OY_BLOCK_SYNC[oy_data_payload[5]][0]===true&&//check that the public key of the node was validated during block_sync
             oy_data_payload[2]-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]&&//check that the broadcast timestamp is in the dive processing zone
-            oy_data_payload[2]-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]+window.OY_MESH_BUFFER[0]+((window.OY_BLOCK_SECTORS[0][0]*window.OY_BLOCK_DENSITY[1])-window.OY_MESH_BUFFER[0])+(window.OY_MESH_BUFFER[0]*2)&&//check that the broadcast timestamp is in the dive processing zone
+            oy_data_payload[2]-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]+window.OY_MESH_BUFFER[0]+((window.OY_BLOCK_SECTORS[0][0]*window.OY_BLOCK_DENSITY)-window.OY_MESH_BUFFER[0])+(window.OY_MESH_BUFFER[0]*2)&&//check that the broadcast timestamp is in the dive processing zone
             oy_time_local-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]&&//check that the current timestamp is in the dive processing zone
             oy_time_local-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[2][0]) {//check that the current timestamp is in the dive processing zone
 
@@ -2467,7 +2467,7 @@ function oy_block_loop() {
             window.OY_BLOCK_SYNC_HASH = oy_hash_gen(oy_sync_command);
             oy_chrono(function() {
                 let oy_sync_time = Date.now()/1000;
-                if (window.OY_PEER_COUNT<window.OY_BLOCK_PEERS_MIN||oy_sync_time-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]||oy_sync_time-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]+window.OY_MESH_BUFFER[0]+((window.OY_BLOCK_SECTORS[1][0]*window.OY_BLOCK_DENSITY[0])-window.OY_MESH_BUFFER[0])+(window.OY_MESH_BUFFER[0]*2)) return false;
+                if (window.OY_PEER_COUNT<window.OY_BLOCK_PEERS_MIN||oy_sync_time-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]||oy_sync_time-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]+window.OY_MESH_BUFFER[0]+((window.OY_BLOCK_SECTORS[1][0]*window.OY_BLOCK_DENSITY)-window.OY_MESH_BUFFER[0])+(window.OY_MESH_BUFFER[0]*2)) return false;
                 oy_key_sign(window.OY_SELF_PRIVATE, oy_sync_time+window.OY_BLOCK_SYNC_HASH+oy_dive_reward, function(oy_sync_crypt) {
                     oy_key_sign(window.OY_SELF_PRIVATE, oy_short(oy_sync_crypt), function(oy_hop_crypt) {
                         oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_SYNC", [[], oy_rand_gen(), [oy_hop_crypt], oy_sync_time, oy_sync_crypt, oy_sync_command, window.OY_SELF_PUBLIC, oy_dive_reward]);
@@ -2475,7 +2475,7 @@ function oy_block_loop() {
                         if (typeof(window.OY_BLOCK_MAP)==="function") window.OY_BLOCK_MAP(1, true);
                     });
                 });
-            }, window.OY_MESH_BUFFER[1]+Math.floor(Math.random()*((window.OY_BLOCK_SECTORS[1][1]*window.OY_BLOCK_DENSITY[0])-window.OY_MESH_BUFFER[1])));
+            }, window.OY_MESH_BUFFER[1]+Math.floor(Math.random()*((window.OY_BLOCK_SECTORS[1][1]*window.OY_BLOCK_DENSITY)-window.OY_MESH_BUFFER[1])));
         }, window.OY_BLOCK_SECTORS[0][1]);//seconds 0-4 out of 20
 
         oy_chrono(function() {
@@ -2552,14 +2552,14 @@ function oy_block_loop() {
             window.OY_BLOCK_DIVE_SET = [];
             oy_chrono(function() {
                 let oy_dive_time = Date.now()/1000;
-                if (window.OY_PEER_COUNT<window.OY_BLOCK_PEERS_MIN||window.OY_BLOCK_TIME-window.OY_BLOCK_UPTIME<window.OY_BLOCK_DIVE_BUFFER||oy_dive_time-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]||oy_dive_time-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]+window.OY_MESH_BUFFER[0]+((window.OY_BLOCK_SECTORS[0][0]*window.OY_BLOCK_DENSITY[1])-window.OY_MESH_BUFFER[0])+(window.OY_MESH_BUFFER[0]*2)) return false;
+                if (window.OY_PEER_COUNT<window.OY_BLOCK_PEERS_MIN||window.OY_BLOCK_TIME-window.OY_BLOCK_UPTIME<window.OY_BLOCK_DIVE_BUFFER||oy_dive_time-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]||oy_dive_time-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]+window.OY_MESH_BUFFER[0]+((window.OY_BLOCK_SECTORS[0][0]*window.OY_BLOCK_DENSITY)-window.OY_MESH_BUFFER[0])+(window.OY_MESH_BUFFER[0]*2)) return false;
                 oy_dive_pool = LZString.compressToUTF16(JSON.stringify(oy_dive_pool));
                 oy_key_sign(window.OY_SELF_PRIVATE, oy_dive_time+oy_hash_gen(oy_dive_pool), function(oy_dive_crypt) {
                     oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_DIVE", [[], oy_rand_gen(), oy_dive_time, oy_dive_crypt, oy_dive_pool, window.OY_SELF_PUBLIC]);
                     oy_dive_pool = null;
                     if (typeof(window.OY_BLOCK_MAP)==="function") window.OY_BLOCK_MAP(2, true);
                 });
-            }, window.OY_MESH_BUFFER[1]+Math.floor(Math.random()*((window.OY_BLOCK_SECTORS[0][1]*window.OY_BLOCK_DENSITY[1])-window.OY_MESH_BUFFER[1])))
+            }, window.OY_MESH_BUFFER[1]+Math.floor(Math.random()*((window.OY_BLOCK_SECTORS[0][1]*window.OY_BLOCK_DENSITY)-window.OY_MESH_BUFFER[1])))
         }, window.OY_BLOCK_SECTORS[0][1]+window.OY_BLOCK_SECTORS[1][1]);//seconds 4-16 out of 20
 
         oy_chrono(function() {
@@ -2587,7 +2587,6 @@ function oy_block_loop() {
 
             if (Date.now()/1000-window.OY_BLOCK_SEEDTIME<=window.OY_BLOCK_SEED_BUFFER) window.OY_CHALLENGE_TRIGGER = null;
             else window.OY_CHALLENGE_TRIGGER = Math.max(2, Math.floor(Math.sqrt(window.OY_MESH_RANGE*(1-window.OY_BLOCK_CONSENSUS))*window.OY_CHALLENGE_SAFETY));
-            console.log(window.OY_CHALLENGE_TRIGGER);
 
             let oy_node_consensus = Math.ceil(window.OY_MESH_RANGE*window.OY_BLOCK_CONSENSUS);
             let oy_dive_reward_pool = [];
