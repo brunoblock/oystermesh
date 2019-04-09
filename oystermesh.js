@@ -7,11 +7,11 @@
 window.OY_MESH_DYNASTY = "BRUNO_GENESIS_V4";//mesh dynasty definition, changing this will cause a hard-fork
 window.OY_MESH_EDGE = 2;//maximum seconds that it should take for a transaction to reach the furthest edge-to-edge distance of the mesh, do not change this unless you know what you are doing
 window.OY_MESH_BUFFER = [0.4, 400];//seconds and ms buffer a block command's timestamp is allowed to be in the future, this variable exists to deal with slight mis-calibrations between node clocks
-window.OY_MESH_FLOW = 512000;//characters per second allowed per peer, and for all aggregate non-peer nodes
+window.OY_MESH_FLOW = 256000;//characters per second allowed per peer, and for all aggregate non-peer nodes
 window.OY_MESH_HOP_MAX = 200;//maximum hops allowed on a transmission passport
 window.OY_MESH_MEASURE = 10;//seconds by which to measure mesh flow, larger means more tracking of nearby node and peer activity
 window.OY_MESH_BEAM_SAMPLE = 3;//time/data measurements to determine mesh beam flow required to state a result, too low can lead to volatile and inaccurate readings
-window.OY_MESH_BEAM_BUFFER = 1;//multiplication factor for mesh outflow/beam buffer, to give some leeway to compliant peers
+window.OY_MESH_BEAM_COOL = 3.5;//cool factor for beaming, higher is less beam intensity
 window.OY_MESH_BEAM_MIN = 0.5;//minimum beam ratio to start returning false
 window.OY_MESH_SOAK_SAMPLE = 5;//time/data measurements to determine mesh soak flow required to state a result, too low can lead to volatile and inaccurate readings
 window.OY_MESH_SOAK_BUFFER = 1.2;//multiplication factor for mesh inflow/soak buffer, to give some leeway to compliant peers
@@ -82,8 +82,8 @@ window.OY_LATENCY_GEO_SENS = 9;//percentage buffer for comparing latency with pe
 window.OY_DATA_MAX = 64000;//max size of data that can be sent to another node
 window.OY_DATA_CHUNK = 48000;//chunk size by which data is split up and sent per transmission
 window.OY_DATA_PURGE = 10;//how many handles to delete if localstorage limit is reached
-window.OY_DATA_PUSH_INTERVAL = 400;//ms per chunk per push loop iteration
-window.OY_DATA_PUSH_NONCE_MAX = 12;//maximum amount of nonces to push per push loop iteration
+window.OY_DATA_PUSH_INTERVAL = 100;//ms per chunk per push loop iteration
+window.OY_DATA_PUSH_NONCE_MAX = 32;//maximum amount of nonces to push per push loop iteration
 window.OY_DATA_PULL_INTERVAL = 800;//ms per pull loop iteration
 window.OY_DATA_PULL_NONCE_MAX = 3;//maximum amount of nonces to request per pull beam, if too high fulfill will overrun soak limits and cause time/resource waste
 window.OY_DATA_FULFILL_INTERVAL = 4000;//ms per chunk per fulfill loop iteration
@@ -1623,7 +1623,7 @@ function oy_data_measure(oy_data_beam, oy_node_id, oy_data_length) {
         return (window.OY_PEERS[oy_node_id][oy_array_select-1]<=(window.OY_MESH_FLOW*window.OY_MESH_SOAK_BUFFER));
     }
     else {
-        let oy_beam_calc = ((window.OY_PEERS[oy_node_id][oy_array_select-1]/(window.OY_MESH_FLOW*window.OY_MESH_BEAM_BUFFER))+(oy_data_length/window.OY_DATA_CHUNK))/2;
+        let oy_beam_calc = (window.OY_PEERS[oy_node_id][oy_array_select-1]/(window.OY_MESH_FLOW))*(oy_data_length/(window.OY_DATA_CHUNK/window.OY_MESH_BEAM_COOL));
         let oy_return = true;
         if (oy_beam_calc>window.OY_MESH_BEAM_MIN) oy_return = (Math.random()>oy_beam_calc);
         if (oy_return===true) window.OY_PEERS[oy_node_id][oy_array_select].push([oy_time_local, oy_data_length]);
