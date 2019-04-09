@@ -43,8 +43,8 @@ window.OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloni
 window.OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims dive rewards
 window.OY_BLOCK_RANGE_MIN = 30;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 window.OY_BLOCK_SEEDTIME = 1554762500;//timestamp to boot the mesh
-window.OY_CHALLENGE_TRIGGER = 6;//higher means more challenge congestion (more secure, less scalable), lower means less challenge congestion (less secure, more scalable)
-window.OY_CHALLENGE_BUFFER = 3;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing
+window.OY_CHALLENGE_SAFETY = 0.8;//safety margin for rogue packets reaching block_consensus. 1 means no changes, lower means further from block_consensus, higher means closer.
+window.OY_CHALLENGE_BUFFER = 1.4;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (min of 1)
 window.OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
 window.OY_AKOYA_MAX_SUPPY = 10000000*window.OY_AKOYA_DECIMALS;//akoya max supply
 window.OY_AKOYA_FEE = 0.000001*window.OY_AKOYA_DECIMALS;//akoya fee per block
@@ -205,6 +205,7 @@ window.OY_BLOCK_INIT = new Event('oy_block_init');//trigger-able event for when 
 window.OY_BLOCK_TRIGGER = new Event('oy_block_trigger');//trigger-able event for when a new block is issued
 window.OY_BLOCK_RESET = new Event('oy_block_reset');//trigger-able event for when a new block is issued
 window.OY_BLOCK_TRIGGER_TEMP = new Event('oy_block_trigger_temp');//trigger-able event for when a new block is issued
+window.OY_CHALLENGE_TRIGGER = null;//passive_passport length to trigger challenge
 window.OY_CHALLENGE = {};//objects for tracking peers that are challenged for the new meshblock hash
 window.OY_CHANNEL_DYNAMIC = {};//track channel broadcasts to ensure allowance compliance
 window.OY_CHANNEL_LISTEN = {};//track channels to listen for
@@ -610,8 +611,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_time_local-window.OY_BLOCK_TIME>=window.OY_BLOCK_SECTORS[0][0]&&//check that the current timestamp is in the sync processing zone
             oy_time_local-window.OY_BLOCK_TIME<window.OY_BLOCK_SECTORS[0][0]+window.OY_BLOCK_SECTORS[1][0]) {//check that the current timestamp is in the sync processing zone
 
-            let oy_miss_limit = Math.max((window.OY_CHALLENGE_TRIGGER+1)*window.OY_BLOCK_MISS_MULTI, oy_data_payload[0].length*window.OY_BLOCK_MISS_MULTI);
-            if (oy_miss_limit<window.OY_BLOCK_MISS_MULTI_MIN) oy_miss_limit = window.OY_BLOCK_MISS_MULTI_MIN;
+            let oy_miss_limit = Math.max(window.OY_BLOCK_MISS_MULTI_MIN, oy_data_payload[0].length*window.OY_BLOCK_MISS_MULTI);
             let oy_crypt_short = oy_short(oy_data_payload[4]);
             oy_block_sync_hop(oy_data_payload[0].slice(), oy_data_payload[2].slice(), oy_crypt_short, oy_miss_limit, 0, performance.now(), function() {
                 let oy_sync_hash = oy_hash_gen(oy_data_payload[5]);
@@ -630,7 +630,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                             if (oy_sync_verify===true) {
                                 if (typeof(window.OY_ORIGINS[oy_peer_id])!=="undefined"&&oy_time_local<window.OY_ORIGINS[oy_peer_id]) window.OY_BLOCK_SYNC[oy_data_payload[6]] = [true, null, oy_data_payload, oy_command_pool];
                                 else if (typeof(window.OY_BLOCK_SYNC[oy_data_payload[6]])==="undefined") {//prevent concurrent thread overlap
-                                    if (oy_data_payload[0].length===window.OY_CHALLENGE_TRIGGER) {
+                                    if (window.OY_CHALLENGE_TRIGGER!==null&&oy_data_payload[0].length===window.OY_CHALLENGE_TRIGGER) {
                                         let oy_sync_challenge = oy_rand_gen();
                                         window.OY_BLOCK_SYNC[oy_data_payload[6]] = [false, oy_sync_challenge+oy_sync_hash, oy_data_payload, oy_command_pool];
                                         let oy_route_skip = oy_data_payload[0].slice();
@@ -1879,7 +1879,7 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_push_def
         //oy_data_payload[1] is oy_route_dynamic
         //oy_data_payload[2] is oy_route_skip
         //oy_data_payload[3] is oy_route_target
-        if (oy_data_payload[0].length>oy_data_payload[2].length+window.OY_CHALLENGE_BUFFER) return false;
+        if (oy_data_payload[0].length>oy_data_payload[2].length*window.OY_CHALLENGE_BUFFER) return false;
         oy_data_payload[0].push(window.OY_SELF_SHORT);
         let oy_peer_final = oy_peer_find(oy_data_payload[3]);
         if (!!oy_peer_final) oy_data_beam(oy_peer_final, oy_data_flag, oy_data_payload);
@@ -2329,6 +2329,7 @@ function oy_block_reset() {
     window.OY_CLONE_UPTIME = null;
     window.OY_CLONE_BUILD = [];
     window.OY_MESH_RANGE = 0;
+    window.OY_CHALLENGE_TRIGGER = null;
     window.OY_CHALLENGE = {};
     window.OY_BLACKLIST = {};
 
@@ -2394,6 +2395,7 @@ function oy_block_loop() {
 
             if (window.OY_BLOCK_HASH===null) {
                 window.OY_MESH_RANGE = 0;
+                window.OY_CHALLENGE_TRIGGER = null;
                 window.OY_CHALLENGE = {};
                 oy_log("MESHBLOCK SKIP: "+oy_block_time_local);
                 oy_block_continue = false;
@@ -2582,6 +2584,9 @@ function oy_block_loop() {
                 oy_block_continue = false;
                 return false;
             }
+
+            window.OY_CHALLENGE_TRIGGER = Math.max(2, Math.floor(Math.sqrt(window.OY_MESH_RANGE)*(1-window.OY_BLOCK_CONSENSUS)*window.OY_CHALLENGE_SAFETY));
+            console.log(window.OY_CHALLENGE_TRIGGER);
 
             let oy_node_consensus = Math.ceil(window.OY_MESH_RANGE*window.OY_BLOCK_CONSENSUS);
             let oy_dive_reward_pool = [];
