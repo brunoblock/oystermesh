@@ -44,7 +44,7 @@ window.OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims 
 window.OY_BLOCK_RANGE_MIN = 30;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 window.OY_BLOCK_SEEDTIME = 1554783600;//timestamp to boot the mesh
 window.OY_CHALLENGE_SAFETY = 0.8;//safety margin for rogue packets reaching block_consensus. 1 means no changes, lower means further from block_consensus, higher means closer.
-window.OY_CHALLENGE_BUFFER = 1.7;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (min of 1)
+window.OY_CHALLENGE_BUFFER = 1.6;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (min of 1)
 window.OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
 window.OY_AKOYA_MAX_SUPPY = 10000000*window.OY_AKOYA_DECIMALS;//akoya max supply
 window.OY_AKOYA_FEE = 0.000001*window.OY_AKOYA_DECIMALS;//akoya fee per block
@@ -2020,10 +2020,8 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
                    }
                    else if (oy_data[0]==="OY_BLOCK_SYNC_CHALLENGE") {
                        if (window.OY_BLOCK_DYNAMIC[2]===null) return true;
-                       if (oy_data[1][3]!==window.OY_SELF_SHORT) {
-                           if (window.OY_BLOCK_DYNAMIC[2].indexOf(oy_data[1][1])!==-1) return true;
-                           window.OY_BLOCK_DYNAMIC[2].push(oy_data[1][1]);
-                       }
+                       if (window.OY_BLOCK_DYNAMIC[2].indexOf(oy_data[1][1])!==-1) return true;
+                       window.OY_BLOCK_DYNAMIC[2].push(oy_data[1][1]);
                    }
                    else if (oy_data[0]==="OY_BLOCK_DIVE") {
                        if (window.OY_BLOCK_DYNAMIC[3]===null) return true;
@@ -2757,7 +2755,7 @@ function oy_engine(oy_thread_track) {
     let oy_time_local = Date.now()/1000;
     if (typeof(oy_thread_track)==="undefined") oy_thread_track = [0, oy_time_local];
 
-    if (window.OY_PEER_COUNT<window.OY_PEER_MAX&&(oy_time_local-oy_thread_track[0])>window.OY_NODE_ASSIGNTTIME) {
+    if (window.OY_PEER_COUNT<window.OY_PEER_MAX&&(oy_time_local-oy_thread_track[0])>window.OY_NODE_ASSIGNTTIME+Math.round(Math.random())) {
         oy_thread_track[0] = oy_time_local;
         oy_log("Engine initiating node_assign, peer count is "+window.OY_PEER_COUNT+"/"+window.OY_PEER_MAX);
         oy_node_assign();
