@@ -767,7 +767,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             let oy_deposit_get = oy_data_deposit_get(oy_data_payload[2], oy_data_payload[3][i]);
             if (!!oy_deposit_get) {
                 oy_log("Found nonce "+oy_data_payload[3][i]+" for handle "+oy_data_payload[2]);
-                setTimeout(function() {
+                oy_chrono(function() {
                     oy_data_route("OY_LOGIC_FOLLOW", "OY_DATA_FULFILL", [[], oy_data_payload[0], "oy_source_void", oy_data_payload[2], oy_nonce_array[i], oy_deposit_get]);
                 }, oy_fulfill_delay);
                 oy_fulfill_delay += window.OY_DATA_FULFILL_INTERVAL;
@@ -808,7 +808,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         }
         if (oy_data_payload[1][0]===window.OY_SELF_SHORT) {
             oy_log("Data fulfillment sequence with handle "+oy_short(oy_data_payload[3])+" at nonce "+oy_data_payload[4]+" found self as the final destination");
-            oy_data_collect(oy_data_payload[2], oy_data_payload[3], oy_data_payload[4], oy_data_payload[5]);
+            oy_data_collect(oy_data_payload[2], oy_data_payload[3], oy_data_payload[4], oy_data_payload[5], oy_data_payload[0].length);
         }
         else {//carry on reversing the passport until the data reaches the intended destination
             oy_log("Continuing fulfillment of handle "+oy_short(oy_data_payload[3]));
@@ -1123,7 +1123,7 @@ function oy_boost() {
     }
     window.OY_BOOST_MODE = true;
     oy_node_initiate(window.OY_BOOST.pop());
-    setTimeout(function() {
+    oy_chrono(function() {
         oy_boost();
     }, window.OY_BOOST_DELAY);
 }
@@ -1177,7 +1177,7 @@ function oy_node_disconnect(oy_node_id) {
     if (typeof(window.OY_COLD[oy_node_id])==="undefined"&&typeof(window.OY_NODES[oy_node_id])!=="undefined") {
         if (window.OY_NODES[oy_node_id][0].open===true) {
             window.OY_COLD[oy_node_id] = true;
-            setTimeout(function() {
+            oy_chrono(function() {
                 window.OY_NODES[oy_node_id][0].close();
                 delete window.OY_COLD[oy_node_id];
                 delete window.OY_NODES[oy_node_id];
@@ -1312,7 +1312,7 @@ function oy_node_assign() {
             let oy_node_array = JSON.parse(this.responseText);
             let oy_delay = 0;
             for (let i in oy_node_array) {
-                setTimeout(function() {
+                oy_chrono(function() {
                     oy_node_initiate(oy_node_array[i]);
                 }, oy_delay);
                 oy_delay += window.OY_NODE_ASSIGN_DELAY;
@@ -1681,7 +1681,7 @@ function oy_data_push(oy_data_value, oy_callback_tally, oy_data_handle) {
         oy_data_nonce_set.sort(function(){return 0.5 - Math.random()});
         while (oy_data_nonce_set.length>window.OY_DATA_PUSH_NONCE_MAX) oy_data_nonce_set.pop();
         for (let i in oy_data_nonce_set) {
-            setTimeout(function() {
+            oy_chrono(function() {
                 if (typeof(window.OY_PUSH_TALLY[oy_data_handle])==="undefined") return false;
                 oy_log("Pushing handle "+oy_short(oy_data_handle)+" at nonce: "+oy_data_nonce_set[i]);
                 oy_data_route("OY_LOGIC_CHAOS", "OY_DATA_PUSH", [[], oy_data_handle, oy_data_nonce_set[i], null], [window.OY_PUSH_TALLY[oy_data_handle][oy_data_nonce_set[i]][0], window.OY_PUSH_TALLY[oy_data_handle][oy_data_nonce_set[i]][1]]);
@@ -1689,7 +1689,7 @@ function oy_data_push(oy_data_value, oy_callback_tally, oy_data_handle) {
             oy_push_delay += window.OY_DATA_PUSH_INTERVAL;
         }
     }
-    setTimeout(function() {
+    oy_chrono(function() {
         oy_data_push(oy_data_value, null, oy_data_handle);
     }, oy_push_delay);
     if (oy_data_superhandle!==false) return oy_data_superhandle;
@@ -1754,7 +1754,7 @@ function oy_data_pull(oy_data_handle, oy_callback, oy_callback_collect, oy_data_
     while (oy_data_nonce_set.length>window.OY_DATA_PULL_NONCE_MAX) oy_data_nonce_set.pop();
     oy_log("Pulling handle "+oy_short(oy_data_handle)+" with nonce max: "+oy_data_nonce_max+" and nonce set: "+JSON.stringify(oy_data_nonce_set));
     oy_data_route("OY_LOGIC_ALL", "OY_DATA_PULL", [[], oy_rand_gen(), oy_data_handle, oy_data_nonce_set]);
-    setTimeout(function() {
+    oy_chrono(function() {
         oy_data_pull(oy_data_handle, oy_callback, oy_callback_collect, oy_data_nonce_max, oy_crypt_pass);
     }, window.OY_DATA_PULL_INTERVAL);
 }
@@ -1768,7 +1768,7 @@ function oy_data_pull_reset(oy_data_handle) {
 }
 
 //collects data from fulfill
-function oy_data_collect(oy_data_source, oy_data_handle, oy_data_nonce, oy_data_value) {
+function oy_data_collect(oy_data_source, oy_data_handle, oy_data_nonce, oy_data_value, oy_passport_passive_length) {
     if (!oy_handle_check(oy_data_handle)) {
         oy_log("Collect received an invalid handle: "+oy_data_handle+", will not process");
         return false;
@@ -1797,7 +1797,7 @@ function oy_data_collect(oy_data_source, oy_data_handle, oy_data_nonce, oy_data_
         for (let oy_data_value_sub in window.OY_COLLECT[oy_data_handle][oy_data_nonce]) {
             if (window.OY_COLLECT[oy_data_handle][oy_data_nonce][oy_data_value_sub].length>oy_source_count_highest||oy_source_count_highest===-1) oy_source_count_highest = window.OY_COLLECT[oy_data_handle][oy_data_nonce][oy_data_value_sub].length;
         }
-        window.OY_DATA_PULL[oy_data_handle][1](oy_data_nonce, oy_source_count_highest, Object.keys(window.OY_COLLECT[oy_data_handle][oy_data_nonce]).length);
+        window.OY_DATA_PULL[oy_data_handle][1](oy_data_nonce, oy_source_count_highest, Object.keys(window.OY_COLLECT[oy_data_handle][oy_data_nonce]).length, oy_passport_passive_length);
     }
 
     if (typeof(window.OY_DATA_PULL[oy_data_handle])!=="undefined"&&window.OY_DATA_PULL[oy_data_handle]!==false&&Object.keys(window.OY_COLLECT[oy_data_handle]).length===window.OY_DATA_PULL[oy_data_handle][2]) {
@@ -2211,7 +2211,7 @@ function oy_akoya_transfer(oy_key_private, oy_key_public, oy_transfer_amount, oy
 function oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm) {
     let oy_block_command_execute = function() {
         document.removeEventListener("oy_block_trigger", oy_block_command_execute, false);
-        setTimeout(function() {
+        oy_chrono(function() {
             oy_command_array[1] = Date.now()/1000;
             let oy_command_flat = JSON.stringify(oy_command_array);
             if (typeof(oy_callback_confirm)!=="undefined") window.OY_BLOCK_CONFIRM[oy_hash_gen(oy_command_flat)] = oy_callback_confirm;
@@ -2419,7 +2419,7 @@ function oy_block_loop() {
             }
 
             //latency routine test
-            setTimeout(function() {
+            oy_chrono(function() {
                 let oy_peer_local;
                 for (oy_peer_local in window.OY_PEERS) {
                     if (oy_peer_local==="oy_aggregate_node") continue;
@@ -2909,7 +2909,7 @@ function oy_engine(oy_thread_track) {
         }
     }
 
-    setTimeout(function() {
+    oy_chrono(function() {
         oy_engine(oy_thread_track);
     }, window.OY_ENGINE_INTERVAL);
 }
@@ -2993,11 +2993,11 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
         if (oy_error.type==="browser-incompatible"&&typeof(window.OY_ERROR_BROWSER)==="function") window.OY_ERROR_BROWSER();
     }, null);
 
-    setTimeout(function() {
+    oy_chrono(function() {
         if (window.OY_READY===true) {
             oy_log("Connection is now ready, sparking engine");
-            setTimeout("oy_engine()", 200);
-            setTimeout("oy_block_loop()", 1);
+            oy_chrono(oy_engine, 50);
+            setTimeout(oy_block_loop, 1);
         }
         else {
             oy_log("Connection was not established before cutoff, re-sparking INIT");

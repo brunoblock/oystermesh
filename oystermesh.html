@@ -2961,7 +2961,7 @@
                 if (window.OY_DEST_RADIO==="oy_dest_recommit") setTimeout("oy_recommit_execute()", 500);
                 else if (window.OY_DEST_RADIO==="oy_dest_download"||(window.OY_DEST_RADIO==="oy_dest_view"&&!oy_file_view())) oy_file_download();
             },
-            function(oy_data_nonce, oy_collect_count, oy_data_count) {
+            function(oy_data_nonce, oy_collect_count, oy_data_count, oy_passport_passive_length) {
                 if (oy_collect_count>0&&window.OY_PULL_COVERAGE.indexOf(oy_data_nonce)===-1) {
                     window.OY_PULL_COVERAGE.push(oy_data_nonce);
                     document.getElementById("oy_pull_stats_coverage").innerHTML = Math.floor((window.OY_PULL_COVERAGE.length/window.OY_NONCE_MAX_PULL)*100)+"%";
@@ -2971,6 +2971,9 @@
                     else window.OY_PULL_CONFLICTS[oy_data_nonce] = true;
                     document.getElementById("oy_pull_stats_conflicts").innerHTML = ""+Object.keys(window.OY_PULL_CONFLICTS).length;
                 }
+                window.OY_PULL_AVG_HOP.push(oy_passport_passive_length);
+                while (window.OY_PULL_AVG_HOP.length>window.OY_HOP_KEEP) window.OY_PULL_AVG_HOP.shift();
+                document.getElementById("oy_pull_stats_avg_hop").innerHTML = (window.OY_PULL_AVG_HOP.reduce(oy_reduce_sum)/window.OY_PULL_AVG_HOP.length).toFixed(2);
                 oy_graph_nonce_fill(oy_data_nonce, oy_graph_nonce_colour(oy_collect_count));
             }
         );
@@ -3116,6 +3119,7 @@
         if (window.OY_EXECUTE_LAST!=="OY_RECOMMIT") oy_pull_reset_stats();
         if (window.OY_RECOMMIT_PAUSE===null) window.OY_PULL_ELAPSED = Date.now()/1000;
         else window.OY_PULL_ELAPSED += Date.now()/1000 - window.OY_RECOMMIT_PAUSE;
+        window.OY_PULL_AVG_HOP = [];
 
         let oy_callback_tally = function(oy_data_nonce, oy_tally_count, oy_passport_passive_length) {
             oy_graph_nonce_fill(oy_data_nonce, oy_graph_nonce_colour(oy_tally_count));
@@ -3194,6 +3198,7 @@
 
             if (window.OY_EXECUTE_PUSH===true) document.getElementById('oy_tab_upload').style.backgroundColor = "#c37b2c";
             if (window.OY_EXECUTE_PULL===true) document.getElementById('oy_tab_download').style.backgroundColor = "#c37b2c";
+            if (window.OY_EXECUTE_RECOMMIT===true) document.getElementById('oy_tab_download').style.backgroundColor = "#c37b2c";
 
             document.getElementById('oy_interface_dapper').style.display = "block";
             document.getElementById('oy_interface_wallet').style.display = "none";
@@ -3213,6 +3218,7 @@
 
             if (window.OY_EXECUTE_PUSH===true) document.getElementById('oy_tab_upload').style.backgroundColor = "#c37b2c";
             if (window.OY_EXECUTE_PULL===true) document.getElementById('oy_tab_download').style.backgroundColor = "#c37b2c";
+            if (window.OY_EXECUTE_RECOMMIT===true) document.getElementById('oy_tab_download').style.backgroundColor = "#c37b2c";
 
             document.getElementById('oy_interface_dapper').style.display = "none";
             document.getElementById('oy_interface_wallet').style.display = "block";
@@ -3231,6 +3237,7 @@
             document.getElementById('oy_tab_download').style.color = "#232323";
 
             if (window.OY_EXECUTE_PULL===true) document.getElementById('oy_tab_download').style.backgroundColor = "#c37b2c";
+            if (window.OY_EXECUTE_RECOMMIT===true) document.getElementById('oy_tab_download').style.backgroundColor = "#c37b2c";
 
             document.getElementById('oy_interface_dapper').style.display = "none";
             document.getElementById('oy_interface_wallet').style.display = "none";
