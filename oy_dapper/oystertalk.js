@@ -73,6 +73,9 @@ function ot_render(oy_broadcast_hash, oy_render_payload) {
 }
 
 function ot_input() {
+    if (document.getElementById("ot_broadcast_input").value.length===0) document.getElementById("ot_broadcast_input").style.height = "3.7vh";
+    else document.getElementById("ot_broadcast_input").style.height = "6.7vh";
+    document.getElementById("ot_broadcast_input").style.width = "75%";
     if (document.getElementById("ot_broadcast_input").value.length===0||window.OT_BROADCAST_FREEZE===true||window.OY_PEER_COUNT===0) {
         document.getElementById("ot_broadcast_button").classList.remove("oy_button_broadcast_active");
         document.getElementById("ot_broadcast_button").classList.add("oy_button_all_dull");
@@ -192,6 +195,7 @@ function ot_broadcast() {
     });
 
     document.getElementById("ot_broadcast_input").focus();
+    ot_input();
     ot_scroll_jump();
 }
 
