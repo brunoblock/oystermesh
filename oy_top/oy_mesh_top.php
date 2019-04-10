@@ -75,7 +75,6 @@ if (count($oy_mesh_file_array)<=2) {
 }
 foreach ($oy_mesh_file_array as $oy_mesh_file_unique) {
     $oy_mesh_data = json_decode(file_get_contents($oy_mesh_file_unique), true);
-    var_dump($oy_mesh_data);
     $oy_mesh_data[0] = sha1($oy_mesh_data[0]);
     $oy_mesh_top[0][] = $oy_mesh_data[0];
     $oy_mesh_keep[] = $oy_mesh_data;
