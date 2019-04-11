@@ -121,7 +121,6 @@ window.OY_BLOCK_MAP = null;//custom function for tracking meshblock map
 window.OY_INIT = 0;//prevents multiple instances of oy_init() from running simultaneously
 window.OY_PEER_COUNT = 0;//how many active connections with mutual peers
 window.OY_ENGINE = [{}, {}];//tracking object for core engine variables, [0] is latency tracking
-window.OY_PURGE = [];//track order of DEPOSIT to determine what data gets deleted ('purged') first
 window.OY_COLLECT = {};//object for tracking pull fulfillments
 window.OY_CONSTRUCT = {};//data considered valid from OY_COLLECT is stored here, awaiting for final data reconstruction
 window.OY_DATA_PUSH = {};//object for tracking data push threads
@@ -215,6 +214,7 @@ window.OY_CHANNEL_TOP = {};//track current channel topology
 window.OY_CHANNEL_RENDER = {};//track channel broadcasts that have been rendered
 window.OY_CHANNEL_TRACK = {};
 window.OY_CHANNEL_DIFF = {};
+window.OY_DB = null;
 window.OY_ERROR_BROWSER = null;
 
 function oy_log(oy_log_msg, oy_log_flag) {
@@ -301,13 +301,6 @@ function oy_buffer_decode(oy_buffer_buffer, oy_buffer_base64) {
     }
     if (oy_buffer_base64===true) return window.btoa(binary);
     return binary;
-}
-
-function oy_base_encode(str) {
-    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
-        function toSolidBytes(match, p1) {
-            return String.fromCharCode('0x' + p1);
-        }));
 }
 
 function oy_base_decode(str) {
@@ -2058,17 +2051,21 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
 function oy_data_deposit(oy_data_handle, oy_data_nonce, oy_data_value) {
     if (Math.random()>window.OY_MESH_DEPOSIT_CHANCE) return false;
 
-    let oy_deposit_object = {};
-    if (window.OY_PURGE.indexOf(oy_data_handle)!==-1) {
-        try {
-            oy_deposit_object = JSON.parse(localStorage.getItem("oy_deposit_"+oy_data_handle));
-        }
-        catch(e) {
-            window.OY_PURGE = window.OY_PURGE.filter(oy_handle => oy_handle!==oy_data_handle);
-            localStorage.removeItem("oy_deposit_"+oy_data_handle);
-        }
-    }
-    if (typeof(oy_deposit_object[oy_data_nonce])!=="undefined") return false;
+    let oy_check = null;
+    window.OY_DB.oy_data.get(oy_data_handle+oy_data_nonce).then(function() {oy_check = true});
+    if (typeof(oy_check)!=="undefined") return false;
+    let oy_deposit_full = false;
+    window.OY_DB.oy_data.put({oy_key:oy_data_handle+oy_data_nonce, oy_time:Date.now/1000|0, oy_data:LZString.compressToUTF16(oy_data_value)})
+        .then(function() {oy_log("Stored handle "+oy_data_handle+" at nonce "+oy_data_nonce)})
+        .catch(e => {
+            if ((e.name==="QuotaExceededError")||(e.inner&&e.inner.name==="QuotaExceededError")) {
+                oy_deposit_full = true;
+                oy_data_deposit_purge();
+            }
+            else oy_log("OY_DB ERROR: "+e.name);
+        });
+    if (oy_deposit_full===true) return false;
+    /*
     oy_deposit_object[oy_data_nonce] = oy_data_value;
     let oy_deposit_full = false;
     try {
@@ -2083,28 +2080,26 @@ function oy_data_deposit(oy_data_handle, oy_data_nonce, oy_data_value) {
     window.OY_PURGE = window.OY_PURGE.filter(oy_handle => oy_handle!==oy_data_handle);
     window.OY_PURGE.push(oy_data_handle);
     oy_local_set("oy_purge", window.OY_PURGE);
-
-    oy_log("Stored handle "+oy_data_handle+" at nonce "+oy_data_nonce);
+    */
     return true;
 }
 
 function oy_data_deposit_purge() {
-    for (let i = 0; i<window.OY_DATA_PURGE;i++) localStorage.removeItem("oy_deposit_"+window.OY_PURGE.shift());
+    window.OY_DB.oy_data.orderBy("oy_time")
+        .limit(window.OY_DATA_PURGE)
+        .toArray()
+        .then(function(oy_result) {
+            for (let i in oy_result) {
+                db.test.delete(oy_result[i]["oy_key"]);
+            }
+        });
     oy_log("Purged "+window.OY_DATA_PURGE+" handles from deposit");
 }
 
 function oy_data_deposit_get(oy_data_handle, oy_data_nonce) {
-    if (window.OY_PURGE.indexOf(oy_data_handle)===-1) return false;
-    let oy_deposit_object = {};
-    try {
-        oy_deposit_object = JSON.parse(localStorage.getItem("oy_deposit_"+oy_data_handle));
-    }
-    catch(e) {
-        window.OY_PURGE = window.OY_PURGE.filter(oy_handle => oy_handle!==oy_data_handle);
-        localStorage.removeItem("oy_deposit_"+oy_data_handle);
-    }
-    if (typeof(oy_deposit_object[oy_data_nonce])==="undefined") return false;
-    return oy_deposit_object[oy_data_nonce];
+    let oy_return = false;
+    window.OY_DB.oy_data.get(oy_data_handle+oy_data_nonce).then(oy_obj => {oy_return = LZString.decompressFromUTF16(oy_obj.oy_data)});
+    return oy_return;
 }
 
 function oy_channel_check(oy_channel_id) {
@@ -2944,11 +2939,18 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
         return true;
     }
 
-    window.OY_PURGE = oy_local_get("oy_purge");
+    //Dexie.delete("oy_db");
+    window.OY_DB = new Dexie("oy_db");
+    window.OY_DB.version(1).stores({
+        oy_main:"oy_key",
+        oy_data:"oy_key,oy_time",
+        oy_channel:"oy_key,oy_time"
+    });
+
     let oy_boost_expire = oy_local_get("oy_boost_expire");
     if (typeof(oy_boost_expire)!=="object"&&Date.now()/1000<oy_boost_expire) window.OY_BOOST = oy_local_get("oy_boost");
     else oy_local_set("oy_boost", []);
-    window.OY_CHANNEL_TRACK = oy_local_get("oy_channel_track");
+    //window.OY_CHANNEL_TRACK = oy_local_get("oy_channel_track");
 
     window.OY_CONN = new Peer(window.OY_SELF_PUBLIC, {host: 'top.oyster.org', port: 8200, path: '/', secure:true});
 
