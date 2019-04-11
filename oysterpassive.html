@@ -9,16 +9,17 @@
 <body>
 OYSTER MESH PASSIVE
 <script type="text/javascript">
+    //Dexie.delete("oy_db");
     //localStorage.clear();
 
     window.OY_PASSIVE_MODE = true;
-    oy_init();
+    oy_init(function() {
+        window.OY_CHANNEL_ID = null;
+        window.OY_WALLET_PRIVATE = null;
+        window.OY_WALLET_PUBLIC = null;
 
-    window.OY_CHANNEL_ID = null;
-    window.OY_WALLET_PRIVATE = null;
-    window.OY_WALLET_PUBLIC = null;
-
-    if (window.OT_CHANNEL_ID!==null) oy_channel_listen(window.OY_CHANNEL_ID, function(oy_broadcast_hash, oy_render_payload) {}, window.OY_WALLET_PRIVATE, window.OY_WALLET_PUBLIC);
+        if (window.OT_CHANNEL_ID!==null) oy_channel_listen(window.OY_CHANNEL_ID, function(oy_broadcast_hash, oy_render_payload) {}, window.OY_WALLET_PRIVATE, window.OY_WALLET_PUBLIC);
+    });
 </script>
 </body>
 </html>
