@@ -2154,12 +2154,12 @@ function oy_channel_listen(oy_channel_id, oy_callback, oy_key_private, oy_key_pu
         oy_key_public = null;
     }
 
+    window.OY_CHANNEL_LISTEN[oy_channel_id] = [oy_key_private, oy_key_public, oy_callback, -1];
+
     if (typeof(window.OY_CHANNEL_KEEP[oy_channel_id])==="undefined") window.OY_CHANNEL_KEEP[oy_channel_id] = {};
     window.OY_DB.oy_channel.where("oy_channel_id").equals(oy_channel_id).each(function(oy_obj) {
         window.OY_CHANNEL_KEEP[oy_channel_id][oy_obj.oy_broadcast_hash] = oy_obj.oy_broadcast_payload;
     });
-
-    window.OY_CHANNEL_LISTEN[oy_channel_id] = [oy_key_private, oy_key_public, oy_callback, -1];
 }
 
 // noinspection JSUnusedGlobalSymbols
