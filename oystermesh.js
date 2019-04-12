@@ -358,7 +358,6 @@ function oy_key_verify(oy_key_public, oy_key_signature, oy_key_data, oy_callback
             oy_callback(oy_key_valid);
         }).catch(function(oy_error) {
             oy_log("Cryptographic error [VERIFY_B] "+oy_error, 1);
-            console.log(oy_callback);
         });
     }).catch(function(oy_error) {
         oy_log("Cryptographic error [VERIFY_A]: "+oy_error, 1);
@@ -398,7 +397,6 @@ function oy_key_sign(oy_key_private, oy_key_data, oy_callback) {
         });
     }).catch(function(oy_error) {
         oy_log("Cryptographic error [SIGN_A]: "+oy_error, 1);
-        console.log(oy_callback);
     });
 }
 
@@ -1110,9 +1108,10 @@ function oy_node_connect(oy_node_id, oy_callback) {
     else if (typeof(window.OY_COLD[oy_node_id])!=="undefined") return false;
     else if (typeof(window.OY_NODES[oy_node_id])==="undefined"||window.OY_NODES[oy_node_id][0].open===false) {
         if (typeof(window.OY_NODES[oy_node_id])!=="undefined") window.OY_NODES[oy_node_id][0].close();
-        window.OY_WARM[oy_node_id] = oy_time_local;
-        //oy_log("Connection warming up with node "+oy_short(oy_node_id));
+
         let oy_local_conn = window.OY_CONN.connect(oy_node_id);
+        if (oy_local_conn===undefined) return false;
+        window.OY_WARM[oy_node_id] = oy_time_local;
 
         oy_local_conn.on('open', function() {
             delete window.OY_WARM[oy_node_id];
@@ -1142,7 +1141,7 @@ function oy_node_disconnect(oy_node_id) {
         if (window.OY_NODES[oy_node_id][0].open===true) {
             window.OY_COLD[oy_node_id] = true;
             oy_chrono(function() {
-                window.OY_NODES[oy_node_id][0].close();
+                if (typeof(window.OY_NODES[oy_node_id])!=="undefined") window.OY_NODES[oy_node_id][0].close();
                 delete window.OY_COLD[oy_node_id];
                 delete window.OY_NODES[oy_node_id];
                 oy_log("Disconnected from node "+oy_short(oy_node_id));
@@ -1888,8 +1887,8 @@ function oy_data_direct(oy_data_flag) {
 
 //send data
 function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
-    if (window.OY_CONN===null||window.OY_CONN.disconnected!==false) {
-        oy_log("Connection handler crashed, skipping "+oy_data_flag+" to "+oy_short(oy_node_id));
+    if (window.OY_CONN===null) {
+        oy_log("Connection handler is null, skipping "+oy_data_flag+" to "+oy_short(oy_node_id));
         return false;
     }
     let oy_callback_local = function() {
@@ -2710,6 +2709,7 @@ function oy_engine(oy_thread_track) {
     if (window.OY_READY===true&&(window.OY_CONN===null||window.OY_CONN.disconnected!==false)) {
         oy_log("Engine found connection handler dead, will reboot INIT and kill engine chain");
         window.OY_INIT = 0;
+        window.OY_READY = false;
         oy_init();
         return true;
     }
@@ -2899,6 +2899,7 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
     window.OY_CONN = new Peer(window.OY_SELF_PUBLIC, {host: 'top.oyster.org', port: 8200, path: '/', secure:true});
 
     window.OY_CONN.on('open', function(oy_self_id) {
+        if (oy_self_id===null) return false;
         window.OY_READY = true;
         oy_log("P2P connection ready with self ID "+oy_short(oy_self_id));
         if (typeof(oy_callback)==="function") oy_callback();
