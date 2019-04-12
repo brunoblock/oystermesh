@@ -719,7 +719,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             return false;
         }
         oy_data_deposit(oy_data_payload[1], oy_data_payload[2], oy_data_payload[3], function(oy_stored) {
-            if (oy_stored===true) oy_data_route("OY_LOGIC_FOLLOW", "OY_DATA_DEPOSIT", [[], oy_data_payload[0], window.OY_SELF_SHORT, oy_data_payload[1], oy_data_payload[2], oy_short(oy_data_payload[3])]);
+            if (oy_stored===true) oy_data_route("OY_LOGIC_FOLLOW", "OY_DATA_DEPOSIT", [[], oy_data_payload[0], window.OY_SELF_SHORT, oy_data_payload[1], oy_data_payload[2]]);
         });
         if (Math.random()<=window.OY_MESH_PUSH_CHANCE) {
             oy_log("Randomness led to beaming handle "+oy_short(oy_data_payload[1])+" forward along the mesh");
@@ -754,15 +754,15 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         return true;
     }
     else if (oy_data_flag==="OY_DATA_DEPOSIT") {
-        //oy_data_payload = [oy_route_passport_passive, oy_route_passport_active, oy_data_source, oy_data_handle, oy_data_nonce, oy_data_short]
-        if (oy_data_payload.length!==6||typeof(oy_data_payload[0])!=="object"||typeof(oy_data_payload[1])!=="object"||oy_data_payload[1].length===0||!oy_handle_check(oy_data_payload[3])) {
+        //oy_data_payload = [oy_route_passport_passive, oy_route_passport_active, oy_data_source, oy_data_handle, oy_data_nonce]
+        if (oy_data_payload.length!==5||typeof(oy_data_payload[0])!=="object"||typeof(oy_data_payload[1])!=="object"||oy_data_payload[1].length===0||!oy_handle_check(oy_data_payload[3])) {
             oy_log("Peer "+oy_short(oy_peer_id)+" sent invalid deposit data sequence, will punish");
             oy_node_punish(oy_peer_id, "OY_PUNISH_DEPOSIT_INVALID");
             return false;
         }
         if (oy_data_payload[1][0]===window.OY_SELF_SHORT) {
             oy_log("Data deposit sequence with handle "+oy_short(oy_data_payload[3])+" at nonce "+oy_data_payload[4]+" found self as the final destination");
-            oy_data_tally(oy_data_payload[2], oy_data_payload[3], oy_data_payload[4], oy_data_payload[5], oy_data_payload[0].length);
+            oy_data_tally(oy_data_payload[2], oy_data_payload[3], oy_data_payload[4], oy_data_payload[0].length);
         }
         else {//carry on reversing the passport until the data reaches the intended destination
             oy_log("Continuing deposit confirmation of handle "+oy_short(oy_data_payload[3]));
@@ -1681,13 +1681,9 @@ function oy_data_push_reset(oy_data_handle) {
 }
 
 //receives deposit confirmations
-function oy_data_tally(oy_data_source, oy_data_handle, oy_data_nonce, oy_data_short, oy_passport_passive_length) {
+function oy_data_tally(oy_data_source, oy_data_handle, oy_data_nonce, oy_passport_passive_length) {
     if (typeof(window.OY_PUSH_TALLY[oy_data_handle])==="undefined"||typeof(window.OY_PUSH_TALLY[oy_data_handle][oy_data_nonce])==="undefined") {
         oy_log("Received invalid deposit tally for unknown handle "+oy_short(oy_data_handle));
-        return false;
-    }
-    if (window.OY_PUSH_TALLY[oy_data_handle][oy_data_nonce][2]!==oy_data_short) {
-        oy_log("Received invalid deposit tally for handle "+oy_short(oy_data_handle));
         return false;
     }
     oy_log("Received matching deposit tally for handle "+oy_short(oy_data_handle));
