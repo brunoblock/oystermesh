@@ -74,7 +74,6 @@ window.OY_ROUTE_DYNAMIC_KEEP = 200;//how many dynamic identifiers for a routed d
 window.OY_LATENCY_SIZE = 80;//size of latency ping payload, larger is more accurate yet more taxing, vice-versa applies
 window.OY_LATENCY_LENGTH = 8;//length of rand sequence which is repeated for payload and signed for ID verification
 window.OY_LATENCY_REPEAT = 2;//how many ping round trips should be performed to conclude the latency test
-window.OY_LATENCY_TOLERANCE = 2;//tolerance buffer factor for receiving ping requested from a proposed-to node
 window.OY_LATENCY_MAX = 20;//max amount of seconds for latency test before peership is refused or starts breaking down
 window.OY_LATENCY_TRACK = 200;//how many latency measurements to keep at a time per peer
 window.OY_LATENCY_GEO_SENS = 9;//percentage buffer for comparing latency with peers, higher means less likely weakest peer will get dropped and mesh is less geo-sensitive
@@ -85,9 +84,6 @@ window.OY_DATA_PUSH_INTERVAL = 200;//ms per chunk per push loop iteration
 window.OY_DATA_PUSH_NONCE_MAX = 16;//maximum amount of nonces to push per push loop iteration
 window.OY_DATA_PULL_INTERVAL = 800;//ms per pull loop iteration
 window.OY_DATA_PULL_NONCE_MAX = 3;//maximum amount of nonces to request per pull beam, if too high fulfill will overrun soak limits and cause time/resource waste
-window.OY_DATA_FULFILL_EXPIRE = 25;//seconds before self will resent a pull fulfillment to the same node for the same handle
-window.OY_DEPOSIT_CHAR = 100000;//character rate for data deposit sizing, helps establish storage limits
-window.OY_DEPOSIT_MAX_BUFFER = 0.9;//max character length capacity factor of data deposit (0.9 means 10% buffer until hard limit is reached)
 window.OY_ENGINE_INTERVAL = 2000;//ms interval for core mesh engine to run, the time must clear a reasonable latency round-about
 window.OY_CHRONO_ACCURACY = 10;//ms accuracy for chrono function, lower means more accurate meshblock timing yet more CPU usage
 window.OY_READY_RETRY = 2000;//ms interval to retry connection if READY is still false
@@ -116,12 +112,12 @@ window.OY_CONSOLE = null;//custom function for handling console
 window.OY_MESH_MAP = null;//custom function for tracking mesh map
 window.OY_BLOCK_MAP = null;//custom function for tracking meshblock map
 window.OY_INIT = 0;//prevents multiple instances of oy_init() from running simultaneously
-window.OY_PEER_COUNT = 0;//how many active connections with mutual peers
 window.OY_ENGINE = [{}, {}];//tracking object for core engine variables, [0] is latency tracking
 window.OY_COLLECT = {};//object for tracking pull fulfillments
 window.OY_CONSTRUCT = {};//data considered valid from OY_COLLECT is stored here, awaiting for final data reconstruction
 window.OY_DATA_PUSH = {};//object for tracking data push threads
 window.OY_DATA_PULL = {};//object for tracking data pull threads
+window.OY_PEER_COUNT = 0;//how many active connections with mutual peers
 window.OY_PEERS = {"oy_aggregate_node":[-1, -1, -1, 0, [], 0, [], 0, []]};//peer tracking
 window.OY_PEERS_PRE = {};//tracks nodes that are almost peers, will become peers once PEER_AFFIRM is received from other node
 window.OY_PEERS_NULL = new Event('oy_peers_null');//trigger-able event for when peer_count == 0
@@ -192,9 +188,10 @@ window.OY_BLOCK_COMMAND = {};
 window.OY_BLOCK_COMMAND_KEY = {};
 window.OY_BLOCK_SYNC = {};
 window.OY_BLOCK_DIVE = {};
+window.OY_BLOCK_CHALLENGE = {};
 window.OY_BLOCK_DIVE_SET = [];
-window.OY_BLOCK_DIVE_REWARD = "OY_NULL";
 window.OY_BLOCK_DIVE_TRACK = 0;
+window.OY_BLOCK_DIVE_REWARD = "OY_NULL";
 window.OY_BLOCK_NEW = {};
 window.OY_BLOCK_CONFIRM = {};
 window.OY_BLOCK_INIT = new Event('oy_block_init');//trigger-able event for when a new block is issued
@@ -202,14 +199,12 @@ window.OY_BLOCK_TRIGGER = new Event('oy_block_trigger');//trigger-able event for
 window.OY_BLOCK_RESET = new Event('oy_block_reset');//trigger-able event for when a new block is issued
 window.OY_BLOCK_TRIGGER_TEMP = new Event('oy_block_trigger_temp');//trigger-able event for when a new block is issued
 window.OY_CHALLENGE_TRIGGER = null;//passive_passport length to trigger challenge
-window.OY_CHALLENGE = {};//objects for tracking peers that are challenged for the new meshblock hash
 window.OY_CHANNEL_DYNAMIC = {};//track channel broadcasts to ensure allowance compliance
 window.OY_CHANNEL_LISTEN = {};//track channels to listen for
 window.OY_CHANNEL_KEEP = {};//stored broadcasts that are re-shared
 window.OY_CHANNEL_ECHO = {};//track channels to listen for
 window.OY_CHANNEL_TOP = {};//track current channel topology
 window.OY_CHANNEL_RENDER = {};//track channel broadcasts that have been rendered
-window.OY_CHANNEL_TRACK = {};
 window.OY_DB = null;
 window.OY_ERROR_BROWSER = null;
 
@@ -1021,9 +1016,9 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_PEER_CHALLENGE") {
         if (window.OY_BLOCK_HASH===null) return false;
-        if (typeof(window.OY_CHALLENGE[oy_peer_id])!=="undefined") {
+        if (typeof(window.OY_BLOCK_CHALLENGE[oy_peer_id])!=="undefined") {
             oy_key_verify(oy_peer_id, oy_data_payload, window.OY_MESH_DYNASTY+window.OY_BLOCK_HASH, function(oy_key_valid) {
-                if (oy_key_valid===true) delete window.OY_CHALLENGE[oy_peer_id];
+                if (oy_key_valid===true) delete window.OY_BLOCK_CHALLENGE[oy_peer_id];
             });
         }
         return true;
@@ -1098,7 +1093,7 @@ function oy_boost() {
 }
 
 function oy_node_reset(oy_node_id) {
-    delete window.OY_CHALLENGE[oy_node_id];
+    delete window.OY_BLOCK_CHALLENGE[oy_node_id];
     delete window.OY_LATENCY[oy_node_id];
     delete window.OY_PROPOSED[oy_node_id];
     delete window.OY_PEERS_PRE[oy_node_id];
@@ -2282,6 +2277,13 @@ function oy_block_reset() {
     window.OY_BLOCK_STABILITY_ROSTER = parseInt(window.OY_BLOCK_STABILITY_START+"");
     window.OY_BLOCK_STABILITY_KEEP = [window.OY_BLOCK_RANGE_MIN];
     window.OY_BLOCK_DYNAMIC = [null, null, null, null];
+    window.OY_BLOCK_COMMAND = {};
+    window.OY_BLOCK_COMMAND_KEY = {};
+    window.OY_BLOCK_SYNC = {};
+    window.OY_BLOCK_DIVE = {};
+    window.OY_BLOCK_CHALLENGE = {};
+    window.OY_BLOCK_DIVE_SET = [];
+    window.OY_BLOCK_DIVE_TRACK = 0;
     window.OY_BLOCK_ROSTER = {};
     window.OY_BLOCK_ROSTER_AVG = null;
     window.OY_BLOCK = [[null, []], {}, {}, {}, {}];
@@ -2291,7 +2293,6 @@ function oy_block_reset() {
     window.OY_CLONE_BUILD = [];
     window.OY_MESH_RANGE = 0;
     window.OY_CHALLENGE_TRIGGER = null;
-    window.OY_CHALLENGE = {};
     window.OY_BLACKLIST = {};
 
     for (let oy_peer_select in window.OY_PEERS) {
@@ -2357,7 +2358,7 @@ function oy_block_loop() {
             if (window.OY_BLOCK_HASH===null) {
                 window.OY_MESH_RANGE = 0;
                 window.OY_CHALLENGE_TRIGGER = null;
-                window.OY_CHALLENGE = {};
+                window.OY_BLOCK_CHALLENGE = {};
                 oy_log("MESHBLOCK SKIP: "+oy_block_time_local);
                 oy_block_continue = false;
                 return false;
@@ -2611,11 +2612,11 @@ function oy_block_loop() {
 
             if (oy_supply_post>oy_supply_pre||oy_supply_post>window.OY_AKOYA_MAX_SUPPY) return false;
 
-            window.OY_CHALLENGE = {};
+            window.OY_BLOCK_CHALLENGE = {};
 
             for (let oy_peer_select in window.OY_PEERS) {
                 if (oy_peer_select==="oy_aggregate_node") continue;
-                window.OY_CHALLENGE[oy_peer_select] = true;
+                window.OY_BLOCK_CHALLENGE[oy_peer_select] = true;
             }
 
             let oy_block_flat = JSON.stringify(window.OY_BLOCK);
@@ -2644,9 +2645,9 @@ function oy_block_loop() {
 
             oy_chrono(function() {
                 if (window.OY_BLOCK_HASH===null) return false;
-                for (let oy_peer_select in window.OY_CHALLENGE) {
+                for (let oy_peer_select in window.OY_BLOCK_CHALLENGE) {
                     oy_peer_remove(oy_peer_select, "OY_PUNISH_BLOCK_HASH");
-                    delete window.OY_CHALLENGE[oy_peer_select];
+                    delete window.OY_BLOCK_CHALLENGE[oy_peer_select];
                     oy_log("Removed and punished peer "+oy_short(oy_peer_select)+" who failed meshblock challenge");
                     //oy_log_debug("PUNISH HASH["+window.OY_SELF_SHORT+"]["+oy_short(oy_peer_select)+"]: "+window.OY_BLOCK_HASH);
                 }
@@ -2766,6 +2767,7 @@ function oy_engine(oy_thread_track) {
         for (let oy_broadcast_hash in window.OY_CHANNEL_KEEP[oy_channel_id]) {
             if (window.OY_BLOCK_TEMP_HASH!==null&&(!oy_channel_approved(oy_channel_id, window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash][5])||oy_time_local-window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash][6]>window.OY_CHANNEL_EXPIRETIME)) {
                 delete window.OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash];
+                window.OY_DB.oy_channel.delete(oy_broadcast_hash);
                 if (typeof(window.OY_CHANNEL_RENDER[oy_channel_id])!=="undefined") delete window.OY_CHANNEL_RENDER[oy_channel_id][oy_broadcast_hash];
                 if (typeof(window.OY_CHANNEL_LISTEN[oy_channel_id])!=="undefined") window.OY_CHANNEL_LISTEN[oy_channel_id][2](oy_broadcast_hash, null);
                 continue;
