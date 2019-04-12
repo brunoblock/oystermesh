@@ -1627,7 +1627,7 @@ function oy_data_push(oy_data_value, oy_callback_tally, oy_data_handle) {
         oy_data_value = null;
         window.OY_PUSH_TALLY[oy_data_handle] = [];
         for (let i = 0; i < window.OY_PUSH_HOLD[oy_data_handle].length; i += window.OY_DATA_CHUNK) {
-            window.OY_PUSH_TALLY[oy_data_handle].push([i, i+window.OY_DATA_CHUNK, window.OY_PUSH_HOLD[oy_data_handle].slice(i, i+window.OY_SHORT_LENGTH), []]);
+            window.OY_PUSH_TALLY[oy_data_handle].push([i, i+window.OY_DATA_CHUNK, []]);
         }
     }
     if (typeof(window.OY_DATA_PUSH[oy_data_handle])==="undefined") {
@@ -1648,11 +1648,11 @@ function oy_data_push(oy_data_value, oy_callback_tally, oy_data_handle) {
         let oy_source_lowest = -1;
         let oy_data_nonce_set = [];
         for (let oy_data_nonce in window.OY_PUSH_TALLY[oy_data_handle]) {
-            if (window.OY_PUSH_TALLY[oy_data_handle][oy_data_nonce][3].length<oy_source_lowest||oy_source_lowest===-1) {
-                oy_source_lowest = window.OY_PUSH_TALLY[oy_data_handle][oy_data_nonce][3].length;
+            if (window.OY_PUSH_TALLY[oy_data_handle][oy_data_nonce][2].length<oy_source_lowest||oy_source_lowest===-1) {
+                oy_source_lowest = window.OY_PUSH_TALLY[oy_data_handle][oy_data_nonce][2].length;
                 oy_data_nonce_set = [];
             }
-            if (window.OY_PUSH_TALLY[oy_data_handle][oy_data_nonce][3].length>oy_source_lowest) continue;
+            if (window.OY_PUSH_TALLY[oy_data_handle][oy_data_nonce][2].length>oy_source_lowest) continue;
             oy_data_nonce_set.push(parseInt(oy_data_nonce));
         }
         oy_data_nonce_set.sort(function(){return 0.5 - Math.random()});
@@ -1687,8 +1687,8 @@ function oy_data_tally(oy_data_source, oy_data_handle, oy_data_nonce, oy_passpor
         return false;
     }
     oy_log("Received matching deposit tally for handle "+oy_short(oy_data_handle));
-    if (window.OY_PUSH_TALLY[oy_data_handle][oy_data_nonce][3].indexOf(oy_data_source)===-1) window.OY_PUSH_TALLY[oy_data_handle][oy_data_nonce][3].push(oy_data_source);
-    if (typeof(window.OY_DATA_PUSH[oy_data_handle])==="function") window.OY_DATA_PUSH[oy_data_handle](oy_data_nonce, window.OY_PUSH_TALLY[oy_data_handle][oy_data_nonce][3].length, oy_passport_passive_length);
+    if (window.OY_PUSH_TALLY[oy_data_handle][oy_data_nonce][2].indexOf(oy_data_source)===-1) window.OY_PUSH_TALLY[oy_data_handle][oy_data_nonce][2].push(oy_data_source);
+    if (typeof(window.OY_DATA_PUSH[oy_data_handle])==="function") window.OY_DATA_PUSH[oy_data_handle](oy_data_nonce, window.OY_PUSH_TALLY[oy_data_handle][oy_data_nonce][2].length, oy_passport_passive_length);
     return true;
 }
 
