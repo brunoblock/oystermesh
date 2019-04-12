@@ -243,12 +243,14 @@ function ot_join() {
 function ot_approve() {
     if (typeof(window.OY_BLOCK_TEMP[2][window.OT_CHANNEL_ID])==="undefined") return false;
     if (window.OY_WALLET_PUBLIC!==null&&oy_channel_approved(window.OT_CHANNEL_ID, window.OY_WALLET_PUBLIC)) {
-        oy_channel_listen(window.OT_CHANNEL_ID, function(oy_broadcast_hash, oy_render_payload) {
-            ot_render(oy_broadcast_hash, oy_render_payload);
-        }, window.OY_WALLET_PRIVATE, window.OY_WALLET_PUBLIC);
-        document.getElementById("ot_bar_cover").style.display = "none";
+        if (typeof(window.OY_CHANNEL_LISTEN[window.OT_CHANNEL_ID])==="undefined"||window.OY_CHANNEL_LISTEN[window.OT_CHANNEL_ID][0]!==window.OY_WALLET_PRIVATE) {
+            oy_channel_listen(window.OT_CHANNEL_ID, function(oy_broadcast_hash, oy_render_payload) {
+                ot_render(oy_broadcast_hash, oy_render_payload);
+            }, window.OY_WALLET_PRIVATE, window.OY_WALLET_PUBLIC);
+            document.getElementById("ot_bar_cover").style.display = "none";
+        }
     }
-    else {
+    else if (typeof(window.OY_CHANNEL_LISTEN[window.OT_CHANNEL_ID])==="undefined"||window.OY_CHANNEL_LISTEN[window.OT_CHANNEL_ID][0]!==null) {
         oy_channel_listen(window.OT_CHANNEL_ID, function(oy_broadcast_hash, oy_render_payload) {
             ot_render(oy_broadcast_hash, oy_render_payload);
         });
