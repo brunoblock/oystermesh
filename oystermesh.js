@@ -734,20 +734,13 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_node_punish(oy_peer_id, "OY_PUNISH_PULL_INVALID");
             return false;
         }
-        let oy_nonce_purge = [];
-        let oy_counter = 0;
+        oy_log("Beaming handle "+oy_short(oy_data_payload[2])+" forward along the mesh");
+        oy_data_route("OY_LOGIC_ALL", "OY_DATA_PULL", oy_data_payload);
         for (let i in oy_data_payload[3]) {
             oy_data_deposit_get(oy_data_payload[2], oy_data_payload[3][i], function(oy_deposit_get) {
                 if (!!oy_deposit_get) {
                     oy_log("Found nonce "+oy_data_payload[3][i]+" for handle "+oy_data_payload[2]);
                     oy_data_route("OY_LOGIC_FOLLOW", "OY_DATA_FULFILL", [[], oy_data_payload[0], "oy_source_void", oy_data_payload[2], oy_data_payload[3][i], oy_deposit_get]);
-                }
-                else oy_nonce_purge.push(oy_data_payload[3][i]);
-                oy_counter++;
-                if (oy_counter===oy_data_payload[3].length&&oy_nonce_purge.length>0) {
-                    oy_data_payload[3] = oy_nonce_purge.slice();
-                    oy_log("Beaming handle "+oy_short(oy_data_payload[2])+" forward along the mesh");
-                    oy_data_route("OY_LOGIC_ALL", "OY_DATA_PULL", oy_data_payload);
                 }
             });
         }
