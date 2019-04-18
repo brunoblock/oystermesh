@@ -54,7 +54,7 @@ window.OY_NODE_ASSIGNTTIME = 4;//minimum interval between node_assign instances 
 window.OY_NODE_ASSIGN_DELAY = 500;//ms delay per node_initiate from node_assign
 window.OY_NODE_DELAYTIME = 6;//minimum expected time to connect or transmit data to a node
 window.OY_NODE_EXPIRETIME = 600;//seconds of non-interaction until a node's connection session is deleted
-window.OY_BOOST_KEEP = 50;//node IDs to retain in boost memory, higher means more nodes retained but less average node quality
+window.OY_BOOST_KEEP = 12;//node IDs to retain in boost memory, higher means more nodes retained but less average node quality
 window.OY_BOOST_DELAY = 250;//ms delay per boost node initiation
 window.OY_BOOST_EXPIRETIME = 600;//seconds until boost localstorage retention is discarded
 window.OY_CLONE_AFFINITY = 0.3;//higher means more likely to ask a node to become a clone than a peer and vice-versa
@@ -791,7 +791,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                 oy_log("Beaming channel "+oy_short(oy_data_payload[2])+" forward along the mesh");
                 oy_data_route("OY_LOGIC_ALL", "OY_CHANNEL_BROADCAST", oy_data_payload);
                 if (typeof(window.OY_CHANNEL_LISTEN[oy_data_payload[2]])!=="undefined") {
-                    oy_channel_top(oy_data_payload[2], oy_data_payload[0], true);
+                    oy_channel_top(oy_data_payload[2], oy_data_payload[0], oy_data_payload[5]);
 
                     let oy_broadcast_hash = oy_hash_gen(oy_data_payload[4]);
 
@@ -886,10 +886,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
             oy_key_verify(oy_data_payload[5], oy_data_payload[4], window.OY_CHANNEL_ECHO[oy_echo_key][1], function(oy_key_valid) {
                 if (oy_key_valid===true) {
-                    oy_log("Valid echo received for channel "+oy_short(oy_data_payload[3]));
-                    //TODO verify that passive passports from echo are similar to broadcast, prevent engine recovery from only working partially
-                    oy_channel_top(oy_data_payload[3], oy_data_payload[0], true);
-
+                    oy_channel_top(oy_data_payload[3], oy_data_payload[0], oy_data_payload[5]);
                     window.OY_CHANNEL_ECHO[oy_echo_key][2](window.OY_CHANNEL_ECHO[oy_echo_key][1]);
                 }
                 else oy_log("Invalid echo received for channel "+oy_short(oy_data_payload[3]));
@@ -914,10 +911,10 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                 return false;
             }
             else {
-                if (oy_data_payload[4]===null||oy_data_payload[5]===null||oy_time_local-oy_data_payload[6]>window.OY_MESH_EDGE) oy_channel_top(oy_data_payload[2], oy_data_payload[0], false);
+                if (oy_data_payload[4]===null||oy_data_payload[5]===null||oy_time_local-oy_data_payload[6]>window.OY_MESH_EDGE+window.OY_MESH_BUFFER[0]) oy_channel_top(oy_data_payload[2], oy_data_payload[0], false);
                 else {
                     oy_key_verify(oy_data_payload[5], oy_data_payload[4], oy_data_payload[6]+oy_data_payload[2], function(oy_key_valid) {
-                        oy_channel_top(oy_data_payload[2], oy_data_payload[0], oy_key_valid);
+                        if (oy_key_valid===true) oy_channel_top(oy_data_payload[2], oy_data_payload[0], oy_data_payload[5]);
                     });
                 }
 
@@ -956,13 +953,21 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         }
         if (oy_data_payload[1][0]===window.OY_SELF_SHORT) {
             oy_log("Channel respond sequence for channel "+oy_short(oy_data_payload[2])+" found self as the final destination");
-            if (typeof(window.OY_CHANNEL_TOP[oy_data_payload[2]])==="undefined"||typeof(window.OY_CHANNEL_TOP[oy_data_payload[2]][oy_data_payload[0][0]])==="undefined"||oy_time_local-window.OY_CHANNEL_TOP[oy_data_payload[2]][oy_data_payload[0][0]][1]>window.OY_CHANNEL_RECOVERTIME) {
+            let oy_top_pass = null;
+            if (typeof(window.OY_CHANNEL_TOP[oy_data_payload[2]])!=="undefined") {
+                for (let oy_top_key in window.OY_CHANNEL_TOP[oy_data_payload[2]]) {
+                    if (window.OY_CHANNEL_TOP[oy_data_payload[2]][oy_top_key][2][0]===oy_data_payload[0][0]) {
+                        oy_top_pass = oy_top_key;
+                        break;
+                    }
+                }
+            }
+            if (oy_top_pass===null||oy_time_local-window.OY_CHANNEL_TOP[oy_data_payload[2]][oy_top_pass][1]>window.OY_CHANNEL_RECOVERTIME) {
                 oy_log("A local session was not found for respond sequence for channel "+oy_short(oy_data_payload[2]));
                 return false;
             }
             else {
                 oy_log("Local session found for respond sequence for channel "+oy_short(oy_data_payload[2]));
-                oy_channel_top(oy_data_payload[2], oy_data_payload[0], null);
 
                 if (typeof(window.OY_CHANNEL_KEEP[oy_data_payload[2]])==="undefined") window.OY_CHANNEL_KEEP[oy_data_payload[2]] = {};
 
@@ -2039,21 +2044,24 @@ function oy_data_deposit(oy_data_handle, oy_data_nonce, oy_data_value, oy_callba
 }
 
 function oy_data_deposit_get(oy_data_handle, oy_data_nonce, oy_callback) {
-    window.OY_DB.oy_data.get(oy_data_handle+oy_data_nonce).then(oy_obj => {
-        if (oy_obj.oy_data_value===undefined) oy_callback(false);
-        else oy_callback(oy_obj.oy_data_value);
-    });
+    window.OY_DB.oy_data.get(oy_data_handle+oy_data_nonce)
+        .then(oy_obj => {
+            if (oy_obj.oy_data_value===undefined) oy_callback(false);
+            else oy_callback(oy_obj.oy_data_value);
+        })
+        .catch(oy_db_error);
 }
 
 function oy_data_deposit_purge() {
     window.OY_DB.oy_data.orderBy("oy_data_time")
         .limit(window.OY_DATA_PURGE)
         .toArray()
-        .then(function(oy_result) {
+        .then(oy_result => {
             for (let i in oy_result) {
                 window.OY_DB.oy_data.delete(oy_result[i]["oy_key"]);
             }
-        });
+        })
+        .catch(oy_db_error);
     oy_log("Purged "+window.OY_DATA_PURGE+" handles from deposit");
 }
 
@@ -2064,13 +2072,16 @@ function oy_channel_check(oy_channel_id) {
 //updates map of channel node topology
 function oy_channel_top(oy_channel_id, oy_passport_passive, oy_channel_approved) {
     let oy_time_local = Date.now()/1000|0;
+    let oy_top_key;
+    if (oy_channel_approved===false) oy_top_key = oy_passport_passive[0];
+    else oy_top_key = oy_channel_approved;
 
     if (typeof(window.OY_CHANNEL_TOP[oy_channel_id])==="undefined") window.OY_CHANNEL_TOP[oy_channel_id] = {};
-    if (typeof(window.OY_CHANNEL_TOP[oy_channel_id][oy_passport_passive[0]])==="undefined") window.OY_CHANNEL_TOP[oy_channel_id][oy_passport_passive[0]] = [oy_time_local, -1, oy_passport_passive, (oy_channel_approved===null)?false:oy_channel_approved];
+    if (typeof(window.OY_CHANNEL_TOP[oy_channel_id][oy_top_key])==="undefined") window.OY_CHANNEL_TOP[oy_channel_id][oy_top_key] = [oy_time_local, -1, oy_passport_passive, !!oy_channel_approved];
     else {
-        window.OY_CHANNEL_TOP[oy_channel_id][oy_passport_passive[0]][0] = oy_time_local;
-        window.OY_CHANNEL_TOP[oy_channel_id][oy_passport_passive[0]][2] = oy_passport_passive;
-        if (oy_channel_approved!==null) window.OY_CHANNEL_TOP[oy_channel_id][oy_passport_passive[0]][3] = oy_channel_approved;
+        window.OY_CHANNEL_TOP[oy_channel_id][oy_top_key][0] = oy_time_local;
+        window.OY_CHANNEL_TOP[oy_channel_id][oy_top_key][2] = oy_passport_passive;
+        window.OY_CHANNEL_TOP[oy_channel_id][oy_top_key][3] = !!oy_channel_approved;
     }
 }
 
@@ -2078,8 +2089,8 @@ function oy_channel_top_count(oy_channel_id) {
     let oy_online = 0;
     let oy_watching = 0;
     if (typeof(window.OY_CHANNEL_TOP[oy_channel_id])!=="undefined") {
-        for (let oy_node_short in window.OY_CHANNEL_TOP[oy_channel_id]) {
-            if (window.OY_CHANNEL_TOP[oy_channel_id][oy_node_short][3]===true) oy_online++;
+        for (let oy_top_key in window.OY_CHANNEL_TOP[oy_channel_id]) {
+            if (window.OY_CHANNEL_TOP[oy_channel_id][oy_top_key][3]===true) oy_online++;
             else oy_watching++;
         }
     }
@@ -2793,11 +2804,11 @@ function oy_engine(oy_thread_track) {
     for (let oy_channel_id in window.OY_CHANNEL_TOP) {
         if (typeof(window.OY_CHANNEL_LISTEN[oy_channel_id])==="undefined") continue;
         let oy_recover_beam = function(oy_challenge_crypt, oy_key_public) {
-            for (let oy_node_select in window.OY_CHANNEL_TOP[oy_channel_id]) {
-                if (oy_time_local-window.OY_CHANNEL_TOP[oy_channel_id][oy_node_select][0]>window.OY_CHANNEL_FORGETIME) delete window.OY_CHANNEL_TOP[oy_channel_id][oy_node_select];
-                else if (oy_time_local-window.OY_CHANNEL_TOP[oy_channel_id][oy_node_select][1]>window.OY_CHANNEL_RECOVERTIME) {
-                    window.OY_CHANNEL_TOP[oy_channel_id][oy_node_select][1] = oy_time_local;
-                    oy_data_route("OY_LOGIC_FOLLOW", "OY_CHANNEL_RECOVER", [[], window.OY_CHANNEL_TOP[oy_channel_id][oy_node_select][2], oy_channel_id, oy_hash_keep, oy_challenge_crypt, oy_key_public, oy_time_local])
+            for (let oy_top_key in window.OY_CHANNEL_TOP[oy_channel_id]) {
+                if (oy_time_local-window.OY_CHANNEL_TOP[oy_channel_id][oy_top_key][0]>window.OY_CHANNEL_FORGETIME) delete window.OY_CHANNEL_TOP[oy_channel_id][oy_top_key];
+                else if (oy_time_local-window.OY_CHANNEL_TOP[oy_channel_id][oy_top_key][1]>window.OY_CHANNEL_RECOVERTIME) {
+                    window.OY_CHANNEL_TOP[oy_channel_id][oy_top_key][1] = oy_time_local;
+                    oy_data_route("OY_LOGIC_FOLLOW", "OY_CHANNEL_RECOVER", [[], window.OY_CHANNEL_TOP[oy_channel_id][oy_top_key][2], oy_channel_id, oy_hash_keep, oy_challenge_crypt, oy_key_public, oy_time_local])
                 }
             }
         };
