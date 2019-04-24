@@ -20,7 +20,36 @@ The Oyster Mesh Protocol provides:
 - Decentralized GPS (DGPS) system allows trust-less location triangulation.
 - Decentralized .mesh domain name resolving system.
 
+## Akoya Digital Currency
+
+Akoya wallet + node: https://oyster.org/#akoya
+
+Akoya testnet faucet: https://top.oyster.org/oy_akoya_faucet.html
+
+Akoya characteristics:
+- 20-40 second confirmation time.
+- Capable of extremely high transaction throughput (TPS).
+- Transactions cost nothing, no currency and no PoW.
+- Microfee is deducted per wallet address per 20 seconds, fees are paid out to nodes that are currently online and securing the Akoya ledger.
+- Extremely low energy consumption required to secure the network.
+- Transaction history is retained actively for 2.7 hrs and passively for 6 months.
+
+Akoya for personal/commercial financial transactions:
+- Security is the most audit-able since the code runs live in your browser in an open-source state. Almost every other coin requires you to blindly trust a compiled binary executable. Coins, including Bitcoin, perpetually suffer from this problem - unlike Akoya.
+- Akoya runs entirely in the browser, hence the wallet interface has the practicality of MEW whilst being fully decentralized.
+- Fast and predictable transaction settlement. The system can tell you exactly when your transaction will get approved. No concerns of a low fee creating a stuck transaction. Within 40 seconds you will know for sure if your transaction was confirmed or not, delays are not possible.
+- Akoya is a much better store of value than Bitcoin. Bitcoin cannibalizes its own marketcap by paying for colossal amounts of electricity to be spent. Akoya preserves its own marketcap by not paying million dollar electric bills, Akoya is an asset whilst Bitcoin is a liability.
+
+Akoya for IoT Infrastructure:
+- Nodes consume a negligible amount of electricity, hard disk space, and computer resources in general.
+- The network is tolerant of nodes constantly going offline and online.
+- Nodes that boot from a blank state can synchronize with the Akoya ledger in a matter of seconds (unlike Bitcoin/Ethereum which takes days).
+- Zero transaction fees, including PoW.
+- High transaction throughput capabilities, will report on TPS results after more testing is performed.
+- IoT companies will seek to monetize their infrastructure since connecting to the network earns Akoya.
+
 ## Data Push/Pull Example
+
 Required files are oysterdepend.js (dependencies like PeerJS) and oystermesh.js (protocol logic):
 
 ```
@@ -49,6 +78,8 @@ function example() {
 
 oy_init(example);//run example after oyster initializes via callback
 ```
+
+See https://github.com/brunoblock/oystermesh/blob/master/example.html
 
 ## Browser Support
 
