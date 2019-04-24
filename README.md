@@ -34,10 +34,14 @@ Akoya characteristics:
 - Extremely low energy consumption required to secure the network.
 - Transaction history is retained actively for 2.7 hrs and passively for 6 months.
 
-Akoya mainnet coins will have the symbol AKY
-AKYE is an ERC-20 coin that is redeemable 1:1 with AKY
-AKYE is used mainly to allow compatibility with decentralized exchanges
-AKYE market: https://forkdelta.app/#!/trade/0x4c218ac55d53e9de63214f7dde5b4db2a5d48ed3-ETH
+Coin information:
+
+- Akoya mainnet coins will have the symbol AKY
+- AKYE is an ERC-20 token that is redeemable 1:1 with AKY
+- AKYE is mainly used to allow compatibility with decentralized exchanges
+- AKYE markets: https://etherdelta.com/#0x4c218ac55d53e9de63214f7dde5b4db2a5d48ed3-ETH, https://forkdelta.app/#!/trade/0x4c218ac55d53e9de63214f7dde5b4db2a5d48ed3-ETH
+- AKYE contract address: 0x4C218ac55d53e9De63214f7DDE5B4dB2a5d48ED3
+- AKYE contract decimals: 18
 
 Akoya for personal/commercial financial transactions:
 - Security is the most audit-able since the code runs live in your browser in an open-source state. Almost every other coin requires you to blindly trust a compiled binary executable. Coins, including Bitcoin, perpetually suffer from this problem - unlike Akoya.
