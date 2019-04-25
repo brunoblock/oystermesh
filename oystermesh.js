@@ -20,7 +20,7 @@ window.OY_MESH_DEPOSIT_CHANCE = 0.5;//probability that self will deposit pushed 
 window.OY_MESH_FULLFILL_CHANCE = 0.2;//probability that data is stored whilst fulfilling a pull request, this makes data intelligently migrate and recommit overtime
 window.OY_MESH_SOURCE = 3;//node in route passport (from destination) that is assigned with defining the source variable
 window.OY_BLOCK_LOOP = 100;//a lower value means increased accuracy for detecting the start of the next meshblock
-window.OY_BLOCK_CONSENSUS = 0.7;//mesh topology corroboration to agree on confirming a meshblock transaction
+window.OY_BLOCK_CONSENSUS = 0.5;//mesh topology corroboration to agree on confirming a meshblock transaction
 window.OY_BLOCK_LAUNCHTIME = 200;//ms delay from block_trigger to launch a command broadcast
 window.OY_BLOCK_PROTECTTIME = 600;//ms delay until meshblock challenge protection is enacted
 window.OY_BLOCK_CHALLENGETIME = 1600;//ms delay until meshblock challenge to peers is enforced
@@ -40,10 +40,10 @@ window.OY_BLOCK_PEERS_MIN = 3;//minimum peer count to be able to act as origin f
 window.OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via OY_BLOCK_SYNC and OY_BLOCK_DIVE (OY_LOGIC_ALL)
 window.OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a seeding event
 window.OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims dive rewards
-window.OY_BLOCK_RANGE_MIN = 15;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-window.OY_BLOCK_SEEDTIME = 1556126800;//timestamp to boot the mesh
-window.OY_CHALLENGE_SAFETY = 0.8;//safety margin for rogue packets reaching block_consensus. 1 means no changes, lower means further from block_consensus, higher means closer.
-window.OY_CHALLENGE_BUFFER = 1.7;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (min of 1)
+window.OY_BLOCK_RANGE_MIN = 20;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
+window.OY_BLOCK_SEEDTIME = 1556159500;//timestamp to boot the mesh
+window.OY_CHALLENGE_SAFETY = 0.5;//safety margin for rogue packets reaching block_consensus. 1 means no changes, lower means further from block_consensus, higher means closer.
+window.OY_CHALLENGE_BUFFER = 1.8;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (min of 1)
 window.OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
 window.OY_AKOYA_MAX_SUPPY = 10000000*window.OY_AKOYA_DECIMALS;//akoya max supply
 window.OY_AKOYA_FEE = 0.000001*window.OY_AKOYA_DECIMALS;//akoya fee per block
@@ -1844,7 +1844,7 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_push_def
         //oy_data_payload[1] is oy_route_dynamic
         //oy_data_payload[2] is oy_route_skip
         //oy_data_payload[3] is oy_route_target
-        if (oy_data_payload[0].length>oy_data_payload[2].length*window.OY_CHALLENGE_BUFFER) return false;
+        if (oy_data_payload[0].length>Math.ceil(oy_data_payload[2].length*window.OY_CHALLENGE_BUFFER)) return false;
         oy_data_payload[0].push(window.OY_SELF_SHORT);
         let oy_peer_final = oy_peer_find(oy_data_payload[3]);
         if (!!oy_peer_final) oy_data_beam(oy_peer_final, oy_data_flag, oy_data_payload);
@@ -2557,6 +2557,7 @@ function oy_block_loop() {
 
             if (Date.now()/1000-window.OY_BLOCK_SEEDTIME<=window.OY_BLOCK_SEED_BUFFER) window.OY_CHALLENGE_TRIGGER = null;
             else window.OY_CHALLENGE_TRIGGER = Math.max(2, Math.floor(Math.sqrt(window.OY_MESH_RANGE*(1-window.OY_BLOCK_CONSENSUS))*window.OY_CHALLENGE_SAFETY));
+            console.log(window.OY_CHALLENGE_TRIGGER);
 
             let oy_node_consensus = Math.ceil(window.OY_MESH_RANGE*window.OY_BLOCK_CONSENSUS);
             let oy_dive_reward_pool = [];
