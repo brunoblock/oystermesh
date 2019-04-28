@@ -46,7 +46,7 @@ function ot_render(oy_broadcast_hash, oy_render_payload) {
         }
     }
 
-    let oy_element_html = "<div id='ot_render_append_"+oy_broadcast_hash+"'>"+ot_append+"</div><div id='ot_render_cont_"+oy_broadcast_hash+"' style='position:relative;"+ot_render_opacity+"'>"+ot_badge+ot_reply+"<div id='ot_render_avatar_"+oy_broadcast_hash+"' style='position:absolute;left:0;top:0;width:4vh;height:4vh;background-color: #2a2a2a' onmouseover='this.style.cursor = \"pointer\"' onclick='ot_copy_key(this.id)'></div><div id='ot_render_public_key_"+oy_broadcast_hash+"' style='display:none;'>"+oy_render_payload[5]+"</div><div style='position:relative;top:0;left:calc(4vh + 1.5%);padding:0.5vh 1vh;border-radius:0.15vh;background-color: "+ot_panel_color+";color:#000000;min-height:3vh;display: inline-flex;align-items: center;' onmouseover='this.style.cursor = \"pointer\"' onclick='ot_reply(\""+oy_broadcast_hash+"\")'><div id='ot_render_content_"+oy_broadcast_hash+"' style='display:block;max-width:65vh;word-wrap: break-word;'>"+ot_superhandle_convert(oy_render_payload[3])+"</div><div style='position:absolute;right:0;top:50%;transform: translate(calc(100% + 0.8vh), -50%);font-size:0.9vh;color: #dbdbdb'>[<span id='ot_render_stats_"+oy_broadcast_hash+"'>"+ot_render_stats+"</span>]</div></div></div><br>";
+    let oy_element_html = "<div id='ot_render_append_"+oy_broadcast_hash+"'>"+ot_append+"</div><div id='ot_render_cont_"+oy_broadcast_hash+"' style='position:relative;"+ot_render_opacity+"'>"+ot_badge+ot_reply+"<div id='ot_render_avatar_"+oy_broadcast_hash+"' style='position:absolute;left:0;top:0;width:4vh;height:4vh;background-color: #2a2a2a' onmouseover='this.style.cursor = \"pointer\"' onclick='ot_copy_key(this.id)'></div><div id='ot_render_public_key_"+oy_broadcast_hash+"' style='display:none;'>"+oy_render_payload[5]+"</div><div style='position:relative;top:0;left:calc(4vh + 1.5%);padding:0.5vh 1vh;border-radius:0.15vh;background-color: "+ot_panel_color+";color:#000000;min-height:3vh;display: inline-flex;align-items: center;' onmouseover='this.style.cursor = \"pointer\"' onclick='ot_reply(\""+oy_broadcast_hash+"\")'><div id='ot_render_content_"+oy_broadcast_hash+"' style='display:block;max-width:65vh;word-wrap: break-word;'>"+ot_superhandle_convert(oy_render_payload[3])+"</div><div style='position:absolute;right:0;top:50%;transform: translate(calc(100% + 0.8vh), -50%);font-size:1.2vh;color: #272727'>[<span id='ot_render_stats_"+oy_broadcast_hash+"'>"+ot_render_stats+"</span>]</div></div></div><br>";
 
     let oy_element = document.createElement("div");
     oy_element.setAttribute('id', "ot_render_"+oy_broadcast_hash);
@@ -54,7 +54,7 @@ function ot_render(oy_broadcast_hash, oy_render_payload) {
     if (window.OT_RENDER_KEEP.length===0||oy_render_payload[6]>window.OT_RENDER_KEEP[0][1]) document.getElementById("ot_render").appendChild(oy_element);
     else {
         // noinspection JSUnusedAssignment
-        let oy_hash_last = window.OT_RENDER_KEEP[0][0];
+        let oy_hash_last = window.OT_RENDER_KREEP[0][0];
         for (let i in window.OT_RENDER_KEEP) {
             if (oy_render_payload[6]>window.OT_RENDER_KEEP[i][1]) break;
             oy_hash_last = window.OT_RENDER_KEEP[i][0];
@@ -145,7 +145,7 @@ function ot_reply_render(oy_broadcast_hash, ot_reply_hash) {
     if (ot_reply_key_public===window.OY_KEY_BRUNO) ot_reply_color = window.OT_MSG_COLOR_BRUNO;
     else if (ot_reply_key_public===window.OY_WALLET_PUBLIC) ot_reply_color = window.OT_MSG_COLOR_SELF;
     else ot_reply_color = window.OT_MSG_COLOR_MAIN;
-    return [ot_reply_key_public, "<div style='position:absolute;top:0;left:7vh;transform: translateY(-100%);height:2.1vh;font-size:1.3vh;opacity:0.8;'><div id='ot_reply_avatar_"+oy_broadcast_hash+"' style='position:absolute;top:0;left:0;width:2.1vh;height:2.1vh;transform:translateX(-99%)'></div><div style='background-color:"+ot_reply_color+";color:#000000;white-space: nowrap;overflow:hidden;padding:0.25vh 0.75vh;height:calc(100% - 0.5vh);display: inline-flex;align-items: center;max-width:55vh;' onmouseover='this.style.cursor = \"pointer\"' onclick='ot_reply(\""+ot_reply_hash+"\")'>"+ot_render_content_object.innerHTML.replace(/<br>/g, "")+"</div></div>"];
+    return [ot_reply_key_public, "<div style='position:absolute;top:0;left:7vh;transform: translateY(-100%);height:2.1vh;font-size:1.4vh;opacity:0.8;'><div id='ot_reply_avatar_"+oy_broadcast_hash+"' style='position:absolute;top:0;left:0;width:2.1vh;height:2.1vh;transform:translateX(-99%)'></div><div style='background-color:"+ot_reply_color+";color:#000000;white-space: nowrap;overflow:hidden;padding:0.25vh 0.75vh;height:calc(100% - 0.5vh);display: inline-flex;align-items: center;max-width:55vh;' onmouseover='this.style.cursor = \"pointer\"' onclick='ot_reply(\""+ot_reply_hash+"\")'>"+ot_render_content_object.innerHTML.replace(/<br>/g, "")+"</div></div>"];
 }
 
 function ot_reply_reset(ot_reply_delay) {
