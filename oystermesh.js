@@ -99,9 +99,9 @@ const OY_CHANNEL_CONSENSUS = 0.5;//node signature requirement for a broadcast to
 const OY_CHANNEL_TOP_TOLERANCE = 2;//node count difference allowed between broadcast claim and perceived claim
 const OY_KEY_BRUNO = "XLp6_wVPBF3Zg-QNRkEj6U8bOYEZddQITs1n2pyeRqwOG5k9w_1A-RMIESIrVv_5HbvzoLhq-xPLE7z2na0C6M";//prevent impersonation
 const OY_SHORT_LENGTH = 4;//various data value such as nonce IDs, data handles, data values are shortened for efficiency
-const OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inputs are expected
 
 // INIT
+let OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inputs are expected
 let OY_SELF_PRIVATE;//private key of node identity
 let OY_SELF_PUBLIC;//public key of node identity
 let OY_SELF_SHORT;//short representation of public key of node identity
@@ -2556,7 +2556,7 @@ function oy_block_loop() {
                 return false;
             }
 
-            if (Date.now()/1000-OY_BLOCK_SEEDTIME<=OY_BLOCK_SEED_BUFFER) OY_CHALLENGE_TRIGGER = null;
+            if (true||Date.now()/1000-OY_BLOCK_SEEDTIME<=OY_BLOCK_SEED_BUFFER) OY_CHALLENGE_TRIGGER = null;
             else OY_CHALLENGE_TRIGGER = Math.max(2, Math.floor(Math.sqrt(OY_MESH_RANGE*(1-OY_BLOCK_CONSENSUS))*OY_CHALLENGE_SAFETY));
 
             let oy_node_consensus = Math.ceil(OY_MESH_RANGE*OY_BLOCK_CONSENSUS);
