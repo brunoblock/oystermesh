@@ -2970,3 +2970,15 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
         }
     }, OY_READY_RETRY);
 }
+
+let oy_call_detect = document.getElementById("oy.js");
+if (!!oy_call_detect) {
+    let oy_dive_detect = oy_call_detect.getAttribute("payout");
+    if (oy_public_check(oy_dive_detect)) {
+        OY_PASSIVE_MODE = true;
+        OY_BLOCK_DIVE_REWARD = oy_dive_detect;
+        oy_init(function() {
+            console.log("Oyster is diving for address "+OY_BLOCK_DIVE_REWARD)
+        });
+    }
+}
