@@ -9,12 +9,13 @@
 <body>
 OYSTER MESH FAUCET
 <script type="text/javascript">
-    window.OY_PROCESS_KEY = "KEY1";
-    window.OY_WALLET_PRIVATE = "PRIV_KEY";
-    window.OY_WALLET_PUBLIC = "PUBLIC_KEY";
+    let oy_process_key = "KEY1";
+    OY_WALLET_PRIVATE = "PRIV_KEY";
+    OY_WALLET_PUBLIC = "PUBLIC_KEY";
+    Dexie.delete("oy_db");
     localStorage.clear();
 
-    window.OY_PASSIVE_MODE = true;
+    OY_PASSIVE_MODE = true;
     oy_init();
 
     document.addEventListener("oy_block_trigger", oy_block_process, false);
@@ -26,7 +27,7 @@ OYSTER MESH FAUCET
     }
 
     function oy_faucet_process() {
-        if (window.OY_PEER_COUNT<window.OY_BLOCK_PEERS_MIN) return false;
+        if (OY_PEER_COUNT<OY_BLOCK_PEERS_MIN) return false;
         let oy_xhttp = new XMLHttpRequest();
         oy_xhttp.onreadystatechange = function() {
             if (this.readyState===4&&this.status===200) {
@@ -39,11 +40,11 @@ OYSTER MESH FAUCET
                     return false;
                 }
                 console.log(this.responseText);
-                oy_akoya_transfer(window.OY_WALLET_PRIVATE, window.OY_WALLET_PUBLIC, 100, this.responseText);
+                oy_akoya_transfer(OY_WALLET_PRIVATE, OY_WALLET_PUBLIC, 100, this.responseText);
             }
         };
         oy_xhttp.open("POST", "https://top.oyster.org/oy_faucet_process.php", true);
-        oy_xhttp.send("oy_process_key="+window.OY_PROCESS_KEY);
+        oy_xhttp.send("oy_process_key="+oy_process_key);
     }
 </script>
 </body>
