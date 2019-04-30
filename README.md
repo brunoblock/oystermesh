@@ -7,7 +7,7 @@ Bandwidth Bound Consensus.
 The Oyster Mesh Protocol provides:
 
 - Decentralized and immutable data storage, hosting, retrieval and sharing.
-- Akoya: a peer-to-peer decentralized, deflationary currency with a 20 second confirmation time, sustainable low-energy consumption, no mining, and no transaction fees. 
+- Akoya: a peer-to-peer decentralized, deflationary currency with a 20-40 second confirmation time, sustainable low-energy consumption, no mining, and no transaction fees. 
 - Automated geolocation-aware load balancing of data.
 - Proof of Latency (PoL) anti-spam mechanism has low and sustainable CPU/energy requirements.
 - Implicitly DDOS-proof data hosting; service denial requires physical proximity to the data’s location whilst the location is obfuscated.
@@ -39,7 +39,7 @@ Coin information:
 - Akoya mainnet coins will have the symbol AKY
 - AKYE is an ERC-20 token that is redeemable 1:1 with AKY
 - AKYE is mainly used to allow compatibility with decentralized exchanges
-- AKYE markets: https://etherdelta.com/#0x4c218ac55d53e9de63214f7dde5b4db2a5d48ed3-ETH, https://forkdelta.app/#!/trade/0x4c218ac55d53e9de63214f7dde5b4db2a5d48ed3-ETH
+- AKYE market: https://forkdelta.app/#!/trade/0x4c218ac55d53e9de63214f7dde5b4db2a5d48ed3-ETH
 - AKYE contract address: 0x4C218ac55d53e9De63214f7DDE5B4dB2a5d48ED3
 - AKYE contract decimals: 18
 
