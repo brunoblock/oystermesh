@@ -57,6 +57,26 @@ Akoya for IoT Infrastructure:
 - High transaction throughput capabilities, will report on TPS results after more testing is performed.
 - IoT companies will seek to monetize their infrastructure since connecting to the network earns Akoya.
 
+## Website Monetization
+
+Here is the fully functioning one line of code for website monetization:
+```
+<script id="oy.js" payout=“AKOYA_ADDRESS” src="https://oyster.org/oy.js"></script>
+```
+
+Instructions:
+
+1. Go to https://oyster.org/#akoya and generate/load a wallet.
+2. Copy the public key to your clipboard.
+3. Replace AKOYA_ADDRESS with your public key.
+4. Add the one line code to the `<head>` section of your website.
+
+That’s all it takes. You can check your dive earnings by loading your wallet at https://oyster.org/#akoya.
+
+Oyster only consumes a significant amount of bandwidth, CPU usage is negligible. In future revisions there will be more advanced features like disabling ads only if the script confirms that they are diving on the mesh, scripted consent notices etc.
+
+Don’t forget that fees are paid per wallet, not per transaction, so if you dive once for only a tiny amount your small earnings will eventually get consumed by the reoccurring microfee. Also keep in mind that these are testnet coins, balances will get periodically reset.
+
 ## Data Push/Pull Example
 
 Required files are oysterdepend.js (dependencies like PeerJS) and oystermesh.js (protocol logic):
