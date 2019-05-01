@@ -102,6 +102,7 @@ const OY_SHORT_LENGTH = 6;//various data value such as nonce IDs, data handles, 
 
 // INIT
 let OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inputs are expected
+let OY_SIMULATOR_MODE = false;//run in node.js simulator, requires oystersimulate.js
 let OY_SELF_PRIVATE;//private key of node identity
 let OY_SELF_PUBLIC;//public key of node identity
 let OY_SELF_SHORT;//short representation of public key of node identity
@@ -209,12 +210,17 @@ let OY_CHANNEL_RENDER = {};//track channel broadcasts that have been rendered
 let OY_DB = null;
 let OY_ERROR_BROWSER;
 
+if (OY_SIMULATOR_MODE===true) {
+    // noinspection JSUnresolvedFunction
+    //require("oystersimulate.js");
+}
+
 function oy_log(oy_log_msg, oy_log_flag) {
     //oy_log_debug(oy_log_msg);
     if (OY_PASSIVE_MODE===true) return false;
     if (typeof(oy_log_flag)==="undefined") oy_log_flag = 0;
     if (oy_log_flag===1) oy_log_msg = "FATAL ERROR: "+oy_log_msg;
-    if (OY_CONSOLE===null) console.log(oy_log_msg);
+    if (OY_CONSOLE===undefined) console.log(oy_log_msg);
     else OY_CONSOLE(oy_log_msg);
 }
 
