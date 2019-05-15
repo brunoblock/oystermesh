@@ -1,10 +1,10 @@
 // OYSTER MESH
 // Bruno Block
-// v0.4
+// v0.5
 // License: GNU GPLv3
 
 // GLOBAL VARS
-const OY_MESH_DYNASTY = "BRUNO_GENESIS_V4";//mesh dynasty definition, changing this will cause a hard-fork
+const OY_MESH_DYNASTY = "BRUNO_GENESIS_V5";//mesh dynasty definition, changing this will cause a hard-fork
 const OY_MESH_EDGE = 2;//maximum seconds that it should take for a transaction to reach the furthest edge-to-edge distance of the mesh, do not change this unless you know what you are doing
 const OY_MESH_BUFFER = [0.4, 400];//seconds and ms buffer a block command's timestamp is allowed to be in the future, this variable exists to deal with slight mis-calibrations between node clocks
 const OY_MESH_FLOW = 256000;//characters per second allowed per peer, and for all aggregate non-peer nodes
@@ -165,7 +165,7 @@ let OY_BLOCK_COMMANDS = {
             typeof(OY_BLOCK[2][oy_command_array[2]])!=="undefined"&&//check the sending wallet exists
             oy_command_array[3]<=OY_BLOCK[2][oy_command_array[2]]&&//check the sending wallet has sufficient akoya
             oy_command_array[2]!==oy_command_array[4]&&//check that the sender and the receiver are different
-            oy_public_check(oy_command_array[4])) return true;//check that receiving address is a valid address
+            oy_key_check(oy_command_array[4])) return true;//check that receiving address is a valid address
         return false;
         //TODO - either one wallet transaction per block or need additional checks
     }],
@@ -266,16 +266,24 @@ function oy_shuffle_double(oy_obj_alpha, oy_obj_beta) {
     }
 }
 
-function oy_rand_gen(oy_gen_custom) {
-    function oy_rand_gen_sub() {
+function oy_rand_gen(oy_gen_custom, oy_rand_secure) {
+    if (typeof(oy_gen_custom)==="undefined") oy_gen_custom = 1;
+    if (typeof(oy_rand_secure)!=="undefined"&&oy_rand_secure===true) return oy_uint8_hex(nacl.randomBytes(oy_gen_custom*2));
+    let oy_rand_gen_fast = function() {
         return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
-    }
-    if (typeof(oy_gen_custom)==="undefined") return oy_rand_gen_sub();
-    return "x".repeat(oy_gen_custom).replace(/x/g, oy_rand_gen_sub);
+    };
+    if (oy_gen_custom===1) return oy_rand_gen_fast();
+    return "x".repeat(oy_gen_custom).replace(/x/g, oy_rand_gen_fast);
 }
 
-function oy_hash_gen(oy_data_value) {
-    return CryptoJS.SHA1(oy_data_value).toString()
+function oy_uint8_hex(oy_input) {
+    let oy_return = "";
+    for (let i in oy_input) oy_return += oy_input[i].toString(16).padStart(2, '0');
+    return oy_return;
+}
+
+function oy_hash_gen(oy_input) {
+    return oy_uint8_hex(nacl.hash(nacl.util.decodeUTF8(oy_input))).substr(0, 40);
 }
 
 function oy_buffer_encode(oy_buffer_text, oy_buffer_base64) {
@@ -307,123 +315,44 @@ function oy_base_decode(str) {
     }).join(''));
 }
 
+//encrypt data
+//WARNING, oy_crypt_pass **MUST** be unique each time this function is invoked
 function oy_crypt_encrypt(oy_crypt_data, oy_crypt_pass) {
-    let oy_crypt_salt = CryptoJS.lib.WordArray.random(128/8);
-    let oy_crypt_key = CryptoJS.PBKDF2(oy_crypt_pass, oy_crypt_salt, {
-        keySize: 8,
-        iterations: 100
-    });
-    let oy_crypt_iv = CryptoJS.lib.WordArray.random(128/8);
-    return oy_crypt_salt.toString()+oy_crypt_iv.toString()+CryptoJS.AES.encrypt(oy_crypt_data.toString(), oy_crypt_key, {
-        iv: oy_crypt_iv,
-        padding: CryptoJS.pad.Pkcs7,
-        mode: CryptoJS.mode.CBC
-    }).toString();
+    return nacl.util.encodeBase64(nacl.secretbox(nacl.util.decodeUTF8(oy_crypt_data), new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 29, 20, 21, 22, 23, 24]), nacl.hash(nacl.util.decodeUTF8(oy_crypt_pass)).slice(0, 32)));
 }
 
+//decrypt data
 function oy_crypt_decrypt(oy_crypt_cipher, oy_crypt_pass) {
-    let oy_crypt_salt = CryptoJS.enc.Hex.parse(oy_crypt_cipher.substr(0, 32));
-    let oy_crypt_iv = CryptoJS.enc.Hex.parse(oy_crypt_cipher.substr(32, 32));
-    let oy_crypt_key = CryptoJS.PBKDF2(oy_crypt_pass, oy_crypt_salt, {
-        keySize: 8,
-        iterations: 100
-    });
-    // noinspection JSCheckFunctionSignatures
-    return CryptoJS.AES.decrypt(oy_crypt_cipher.substring(64), oy_crypt_key, {
-        iv: oy_crypt_iv,
-        padding: CryptoJS.pad.Pkcs7,
-        mode: CryptoJS.mode.CBC
-    }).toString(CryptoJS.enc.Utf8);
+    let oy_return = nacl.secretbox.open(nacl.util.decodeBase64(oy_crypt_cipher), new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 29, 20, 21, 22, 23, 24]), nacl.hash(nacl.util.decodeUTF8(oy_crypt_pass)).slice(0, 32));
+    if (oy_return!==null) nacl.util.encodeUTF8(oy_return);
+    return oy_return;
 }
 
-function oy_key_verify(oy_key_public, oy_key_signature, oy_key_data, oy_callback) {
-    window.crypto.subtle.importKey(
-        "jwk",
-        {
-            kty: "EC",
-            crv: "P-256",
-            x: oy_key_public.substr(0, 43),
-            y: oy_key_public.substr(43),
-            ext: true,
-        },
-        {   //these are the algorithm options
-            name: "ECDSA",
-            namedCurve: "P-256", //can be "P-256", "P-384", or "P-521"
-        },
-        false, //whether the key is extractable (i.e. can be used in exportKey)
-        ["verify"] //"verify" for public key import, "sign" for private key imports
-    ).then(function(oy_key_public_raw) {
-        window.crypto.subtle.verify(
-            {
-                name: "ECDSA",
-                hash: {name: "SHA-256"}, //can be "SHA-1", "SHA-256", "SHA-384", or "SHA-512"
-            },
-            oy_key_public_raw, //from generateKey or importKey above
-            oy_buffer_encode(oy_key_signature, true),
-            oy_buffer_encode(oy_key_data, false) //ArrayBuffer of data you want to sign
-        ).then(function(oy_key_valid) {
-            oy_callback(oy_key_valid);
-        }).catch(function(oy_error) {
-            oy_log("Cryptographic error [VERIFY_B] "+oy_error, 1);
-        });
-    }).catch(function(oy_error) {
-        oy_log("Cryptographic error [VERIFY_A]: "+oy_error, 1);
-    });
+function oy_key_sign(oy_key_private, oy_key_data) {
+    return nacl.util.encodeBase64(nacl.sign.detached(nacl.util.decodeUTF8(oy_key_data), nacl.util.decodeBase64(oy_key_private)));
 }
 
-function oy_key_sign(oy_key_private, oy_key_data, oy_callback) {
-    oy_key_private = window.atob(oy_key_private);
-    window.crypto.subtle.importKey(
-        "jwk",
-        {
-            kty: "EC",
-            crv: "P-256",
-            d: oy_key_private.substr(0, 43),
-            x: oy_key_private.substr(43, 43),
-            y: oy_key_private.substr(86),
-            ext: true,
-        },
-        {
-            name: "ECDSA",
-            namedCurve: "P-256", //can be "P-256", "P-384", or "P-521"
-        },
-        false, //whether the key is extractable (i.e. can be used in exportKey)
-        ["sign"] //"verify" for public key import, "sign" for private key imports
-    ).then(function(oy_key_private_raw) {
-        window.crypto.subtle.sign(
-            {
-                name: "ECDSA",
-                hash: {name: "SHA-256"}, //can be "SHA-1", "SHA-256", "SHA-384", or "SHA-512"
-            },
-            oy_key_private_raw, //from generateKey or importKey above
-            oy_buffer_encode(oy_key_data, false) //ArrayBuffer of data you want to sign
-        ).then(function(oy_key_signature_raw) {
-            oy_callback(oy_buffer_decode(oy_key_signature_raw, true));
-        }).catch(function(oy_error) {
-            oy_log("Cryptographic error [SIGN_B]: "+oy_error, 1);
-        });
-    }).catch(function(oy_error) {
-        oy_log("Cryptographic error [SIGN_A]: "+oy_error, 1);
-    });
+function oy_key_verify(oy_key_public, oy_key_signature, oy_key_data) {
+    console.log(nacl.util.decodeBase64(oy_key_signature).length);
+    return nacl.sign.detached.verify(nacl.util.decodeUTF8(oy_key_data), nacl.util.decodeBase64(oy_key_signature), nacl.util.decodeBase64(oy_key_public.substr(1)+"="));
 }
 
-function oy_key_gen(oy_callback) {
-    window.crypto.subtle.generateKey(
-        {
-            name: "ECDSA",
-            namedCurve: "P-256", //can be "P-256", "P-384", or "P-521"
-        },
-        true,
-        ["sign", "verify"]
-    ).then(function(key) {
-        window.crypto.subtle.exportKey("jwk", key.privateKey).then(function(oy_key_pass) {
-            oy_callback(window.btoa((oy_key_pass.d+oy_key_pass.x+oy_key_pass.y)), (oy_key_pass.x+oy_key_pass.y));
-        }).catch(function(oy_error) {
-            oy_log("Cryptographic error [GEN_B]: "+oy_error, 1);
-        });
-    }).catch(function(oy_error) {
-        oy_log("Cryptographic error [GEN_A]: "+oy_error, 1);
-    });
+function oy_key_hash(oy_key_public_raw) {
+    let oy_hash_reference = "1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    let oy_hash_index = 0;
+    for (let oy_char of oy_key_public_raw) oy_hash_index ^= oy_char.charCodeAt(0);
+    while (oy_hash_index>61) oy_hash_index -= 61;
+    return oy_hash_reference[oy_hash_index];
+}
+
+function oy_key_check(oy_key_public) {
+    return oy_key_public.substr(0, 1)===oy_key_hash(oy_key_public.substr(1));
+}
+
+function oy_key_gen() {
+    let oy_key_pair = nacl.sign.keyPair();
+    let oy_key_public_raw = nacl.util.encodeBase64(oy_key_pair.publicKey).substr(0, 43);
+    return [nacl.util.encodeBase64(oy_key_pair.secretKey), oy_key_hash(oy_key_public_raw)+oy_key_public_raw];
 }
 
 function oy_reduce_sum(oy_reduce_total, oy_reduce_num) {
@@ -432,10 +361,6 @@ function oy_reduce_sum(oy_reduce_total, oy_reduce_num) {
 
 function oy_handle_check(oy_data_handle) {
     return typeof(oy_data_handle)==="string"&&oy_data_handle.substr(0, 2)==="OY"&&oy_data_handle.length>20;
-}
-
-function oy_public_check(oy_key_public) {
-    return oy_key_public.length===86;
 }
 
 function oy_db_error(oy_error) {
@@ -2980,7 +2905,7 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
 let oy_call_detect = document.getElementById("oy.js");
 if (!!oy_call_detect) {
     let oy_dive_detect = oy_call_detect.getAttribute("payout");
-    if (oy_public_check(oy_dive_detect)) {
+    if (oy_key_check(oy_dive_detect)) {
         OY_PASSIVE_MODE = true;
         OY_BLOCK_DIVE_REWARD = oy_dive_detect;
         oy_init(function() {
