@@ -41,7 +41,7 @@ const OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via 
 const OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a seeding event
 const OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims dive rewards
 const OY_BLOCK_RANGE_MIN = 15;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_SEEDTIME = 1557941300;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_SEEDTIME = 1557942600;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_CHALLENGE_SAFETY = 0.5;//safety margin for rogue packets reaching block_consensus. 1 means no changes, lower means further from block_consensus, higher means closer.
 const OY_CHALLENGE_BUFFER = 1.8;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (min of 1)
 const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
@@ -1177,7 +1177,7 @@ function oy_node_assign() {
             }
         }
     };
-    oy_xhttp.open("POST", "https://top.oyster.org/oy_node_assign.php", true);
+    oy_xhttp.open("POST", "https://top.oyster.org/oy_node_assign_alpha.php", true);
     oy_xhttp.send("oy_node_id="+OY_SELF_PUBLIC);
 }
 
@@ -2413,7 +2413,7 @@ function oy_block_loop() {
                 return false;
             }
 
-            if (true||Date.now()/1000-OY_BLOCK_SEEDTIME<=OY_BLOCK_SEED_BUFFER) OY_CHALLENGE_TRIGGER = null;
+            if (Date.now()/1000-OY_BLOCK_SEEDTIME<=OY_BLOCK_SEED_BUFFER) OY_CHALLENGE_TRIGGER = null;
             else OY_CHALLENGE_TRIGGER = Math.max(2, Math.floor(Math.sqrt(OY_MESH_RANGE*(1-OY_BLOCK_CONSENSUS))*OY_CHALLENGE_SAFETY));
 
             let oy_node_consensus = Math.ceil(OY_MESH_RANGE*OY_BLOCK_CONSENSUS);
