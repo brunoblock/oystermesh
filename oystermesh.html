@@ -2038,14 +2038,9 @@
     function oy_wallet_gen_calc() {
         if (document.getElementById("oy_wallet_change_button").classList.contains("oy_button_all_dull")) return false;
 
-        oy_key_gen(function(oy_key_private, oy_key_public) {
-            if (oy_key_public.indexOf("-")!==-1) {
-                oy_wallet_gen_calc();
-                return false;
-            }
-            OY_WALLET_CRYPT = oy_crypt_encrypt(oy_key_private, document.getElementById("oy_wallet_gen_pass_0").value);
-            oy_wallet_activate(oy_key_public);
-        });
+        let oy_key_pair = oy_key_gen();
+        OY_WALLET_CRYPT = oy_crypt_encrypt(oy_key_pair[0], document.getElementById("oy_wallet_gen_pass_0").value);
+        oy_wallet_activate(oy_key_pair[1]);
     }
 
     function oy_wallet_activate(oy_key_public) {
@@ -2064,17 +2059,13 @@
         let oy_key_public = atob(oy_key_private).substr(43);
 
         let oy_data = oy_rand_gen();
-        oy_key_sign(oy_key_private, oy_data, function(oy_data_crypt) {
-            oy_key_verify(oy_key_public, oy_data_crypt, oy_data, function(oy_key_valid) {
-                if (oy_key_valid===true) {
-                    OY_WALLET_PRIVATE = oy_key_private;
-                    OY_WALLET_PUBLIC = oy_key_public;
-                    OY_BLOCK_DIVE_REWARD = oy_key_public;
-                    oy_wallet_close();
-                }
-                else oy_wallet_reset(true);
-            });
-        });
+        if (oy_key_verify(oy_key_public, oy_key_sign(oy_key_private, oy_data), oy_data)) {
+            OY_WALLET_PRIVATE = oy_key_private;
+            OY_WALLET_PUBLIC = oy_key_public;
+            OY_BLOCK_DIVE_REWARD = oy_key_public;
+            oy_wallet_close();
+        }
+        else oy_wallet_reset(true);
     }
 
     function oy_wallet_open(oy_callback) {
@@ -2104,23 +2095,17 @@
             let oy_key_private = oy_crypt_decrypt(OY_WALLET_CRYPT, oy_pass);
             let oy_key_public = window.atob(oy_key_private).substr(43);
             let oy_data = oy_rand_gen();
-            if (oy_key_private.length>0) {
-                oy_key_sign(oy_key_private, oy_data, function(oy_data_crypt) {
-                    oy_key_verify(oy_key_public, oy_data_crypt, oy_data, function(oy_key_valid) {
-                        if (oy_key_valid===true) {
-                            document.getElementById("oy_wallet_upload_pass_0").blur();
-                            document.getElementById("oy_wallet_upload_pass_0").disabled = true;
+            if (oy_key_private.length>0&&oy_key_verify(oy_key_public, oy_key_sign(oy_key_private, oy_data), oy_data)) {
+                document.getElementById("oy_wallet_upload_pass_0").blur();
+                document.getElementById("oy_wallet_upload_pass_0").disabled = true;
 
-                            document.getElementById("oy_wallet_upload_pass_0").classList.remove("oy_wallet_upload_pass_before");
-                            document.getElementById("oy_wallet_upload_pass_0").classList.add("oy_wallet_upload_pass_complete");
+                document.getElementById("oy_wallet_upload_pass_0").classList.remove("oy_wallet_upload_pass_before");
+                document.getElementById("oy_wallet_upload_pass_0").classList.add("oy_wallet_upload_pass_complete");
 
-                            document.getElementById("oy_wallet_load").classList.remove("oy_button_all_dull");
-                            document.getElementById("oy_wallet_load").classList.add("oy_button_go_active");
+                document.getElementById("oy_wallet_load").classList.remove("oy_button_all_dull");
+                document.getElementById("oy_wallet_load").classList.add("oy_button_go_active");
 
-                            oy_wallet_activate(oy_key_public);
-                        }
-                    });
-                });
+                oy_wallet_activate(oy_key_public);
             }
         }
         catch(e) {}
