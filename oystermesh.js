@@ -324,7 +324,7 @@ function oy_crypt_encrypt(oy_crypt_data, oy_crypt_pass) {
 //decrypt data
 function oy_crypt_decrypt(oy_crypt_cipher, oy_crypt_pass) {
     let oy_return = nacl.secretbox.open(nacl.util.decodeBase64(oy_crypt_cipher), new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 29, 20, 21, 22, 23, 24]), nacl.hash(nacl.util.decodeUTF8(oy_crypt_pass)).slice(0, 32));
-    if (oy_return!==null) nacl.util.encodeUTF8(oy_return);
+    if (oy_return!==null) oy_return = nacl.util.encodeUTF8(oy_return);
     return oy_return;
 }
 
@@ -348,8 +348,11 @@ function oy_key_check(oy_key_public) {
     return oy_key_public.substr(0, 1)===oy_key_hash(oy_key_public.substr(1));
 }
 
-function oy_key_gen() {
-    let oy_key_pair = nacl.sign.keyPair();
+function oy_key_gen(oy_key_private) {
+    let oy_key_pair;
+    if (typeof(oy_key_private)==="undefined") oy_key_pair = nacl.sign.keyPair();
+    else oy_key_pair = nacl.sign.keyPair.fromSecretKey(nacl.util.decodeBase64(oy_key_private));
+
     let oy_key_public_raw = nacl.util.encodeBase64(oy_key_pair.publicKey).substr(0, 43);
     if (!oy_an_check(oy_key_public_raw)) return oy_key_gen();
     return [nacl.util.encodeBase64(oy_key_pair.secretKey), oy_key_hash(oy_key_public_raw)+oy_key_public_raw];

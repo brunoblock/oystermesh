@@ -2056,7 +2056,7 @@
         let oy_key_private;
         if (document.getElementById("oy_wallet_gen_button").classList.contains("oy_button_all_dull")) oy_key_private = oy_crypt_decrypt(OY_WALLET_CRYPT, document.getElementById("oy_wallet_upload_pass_0").value);
         else oy_key_private = oy_crypt_decrypt(OY_WALLET_CRYPT, document.getElementById("oy_wallet_gen_pass_0").value);
-        let oy_key_public = atob(oy_key_private).substr(43);
+        let oy_key_public = oy_key_gen(oy_key_private)[1];
 
         let oy_data = oy_rand_gen();
         if (oy_key_verify(oy_key_public, oy_key_sign(oy_key_private, oy_data), oy_data)) {
