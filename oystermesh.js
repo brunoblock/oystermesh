@@ -40,8 +40,8 @@ const OY_BLOCK_PEERS_MIN = 3;//minimum peer count to be able to act as origin fo
 const OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via OY_BLOCK_SYNC and OY_BLOCK_DIVE (OY_LOGIC_ALL)
 const OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a seeding event
 const OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims dive rewards
-const OY_BLOCK_RANGE_MIN = 15;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_SEEDTIME = 1557942600;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_RANGE_MIN = 5;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
+const OY_BLOCK_SEEDTIME = 1558012200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_CHALLENGE_SAFETY = 0.5;//safety margin for rogue packets reaching block_consensus. 1 means no changes, lower means further from block_consensus, higher means closer.
 const OY_CHALLENGE_BUFFER = 1.8;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (min of 1)
 const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
@@ -101,6 +101,7 @@ const OY_KEY_BRUNO = "XLp6_wVPBF3Zg-QNRkEj6U8bOYEZddQITs1n2pyeRqwOG5k9w_1A-RMIES
 const OY_SHORT_LENGTH = 6;//various data value such as nonce IDs, data handles, data values are shortened for efficiency
 
 // INIT
+let OY_LIGHT_MODE = true;//connect to the mesh as a light node
 let OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inputs are expected
 let OY_SIMULATOR_MODE = false;//run in node.js simulator, requires oystersimulate.js
 let OY_SELF_PRIVATE;//private key of node identity
@@ -1165,7 +1166,7 @@ function oy_node_initiate(oy_node_id) {
         OY_PROPOSED[oy_node_id] = [(Date.now()/1000)+OY_NODE_PROPOSETIME, true];//set proposal session with expiration timestamp and clone flag
     };
     let oy_callback_select;
-    if (OY_BLOCK_HASH===null&&OY_PEER_COUNT===0) oy_callback_select = oy_callback_clone;
+    if (OY_LIGHT_MODE===true||OY_BLOCK_HASH===null&&OY_PEER_COUNT===0) oy_callback_select = oy_callback_clone;
     else if (OY_BLOCK_HASH!==null&&OY_PEER_COUNT===0) {
         if (Object.keys(OY_ORIGINS).length<OY_CLONE_ORIGIN_MAX&&Math.random()<OY_CLONE_AFFINITY&&Date.now()/1000-OY_BLOCK_SEEDTIME>OY_BLOCK_SEED_BUFFER) oy_callback_select = oy_callback_clone;
         else oy_callback_select = oy_callback_peer;
@@ -2431,7 +2432,7 @@ function oy_block_loop() {
                 return false;
             }
 
-            if (Date.now()/1000-OY_BLOCK_SEEDTIME<=OY_BLOCK_SEED_BUFFER) OY_CHALLENGE_TRIGGER = null;
+            if (true||Date.now()/1000-OY_BLOCK_SEEDTIME<=OY_BLOCK_SEED_BUFFER) OY_CHALLENGE_TRIGGER = null;
             else OY_CHALLENGE_TRIGGER = Math.max(2, Math.floor(Math.sqrt(OY_MESH_RANGE*(1-OY_BLOCK_CONSENSUS))*OY_CHALLENGE_SAFETY));
 
             let oy_node_consensus = Math.ceil(OY_MESH_RANGE*OY_BLOCK_CONSENSUS);
@@ -2478,7 +2479,7 @@ function oy_block_loop() {
                     let oy_balance_receive = OY_BLOCK[2][oy_command_execute[i][1][4]];
                     OY_BLOCK[2][oy_command_execute[i][1][2]] -= oy_command_execute[i][1][3];
                     OY_BLOCK[2][oy_command_execute[i][1][4]] += oy_command_execute[i][1][3];
-                    if (OY_BLOCK[2][oy_command_execute[i][1][2]]+OY_BLOCK[2][oy_command_execute[i][1][4]]!==oy_balance_send+oy_balance_receive) {
+                    if (OY_BLOCK[2][oy_command_execute[i][1][2]]+OY_BLOCK[2][oy_command_execute[i][1][4]]!==oy_balance_send+oy_balance_receive) {//verify balances, revert transaction if necessary
                         OY_BLOCK[2][oy_command_execute[i][1][2]] = oy_balance_send;
                         OY_BLOCK[2][oy_command_execute[i][1][4]] = oy_balance_receive;
                     }
