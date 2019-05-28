@@ -41,7 +41,7 @@ const OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via 
 const OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a seeding event
 const OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims dive rewards
 const OY_BLOCK_RANGE_MIN = 5;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_SEEDTIME = 1558012200;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_SEEDTIME = 1559087300;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_CHALLENGE_SAFETY = 0.5;//safety margin for rogue packets reaching block_consensus. 1 means no changes, lower means further from block_consensus, higher means closer.
 const OY_CHALLENGE_BUFFER = 1.8;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (min of 1)
 const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
@@ -1166,7 +1166,7 @@ function oy_node_initiate(oy_node_id) {
         OY_PROPOSED[oy_node_id] = [(Date.now()/1000)+OY_NODE_PROPOSETIME, true];//set proposal session with expiration timestamp and clone flag
     };
     let oy_callback_select;
-    if (OY_LIGHT_MODE===true||OY_BLOCK_HASH===null&&OY_PEER_COUNT===0) oy_callback_select = oy_callback_clone;
+    if (OY_BLOCK_HASH===null&&OY_PEER_COUNT===0) oy_callback_select = oy_callback_clone;
     else if (OY_BLOCK_HASH!==null&&OY_PEER_COUNT===0) {
         if (Object.keys(OY_ORIGINS).length<OY_CLONE_ORIGIN_MAX&&Math.random()<OY_CLONE_AFFINITY&&Date.now()/1000-OY_BLOCK_SEEDTIME>OY_BLOCK_SEED_BUFFER) oy_callback_select = oy_callback_clone;
         else oy_callback_select = oy_callback_peer;
@@ -2665,12 +2665,7 @@ function oy_engine(oy_thread_track) {
                 if (typeof(OY_CHANNEL_RENDER[oy_channel_id][oy_broadcast_hash])==="undefined") {
                     OY_CHANNEL_RENDER[oy_channel_id][oy_broadcast_hash] = true;
                     let oy_render_payload = OY_CHANNEL_KEEP[oy_channel_id][oy_broadcast_hash].slice();
-                    if (oy_render_payload[6]>1554662400) {
-                        oy_render_payload[3] = LZString.decompressFromUTF16(oy_render_payload[3]);
-                    }
-                    else {
-                        oy_render_payload[3] = oy_base_decode(oy_render_payload[3]);//TODO remove temporary fallback for legacy encoding
-                    }
+                    oy_render_payload[3] = LZString.decompressFromUTF16(oy_render_payload[3]);
                     OY_CHANNEL_LISTEN[oy_channel_id][2](oy_broadcast_hash, oy_render_payload);
                 }
             }
