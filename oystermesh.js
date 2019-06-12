@@ -1330,8 +1330,9 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
         let oy_callback_local;
         if (oy_time_local>OY_BLOCK_SEEDTIME&&OY_BLOCK_HASH!==null&&OY_LATCH_UPTIME!==null&&OY_LATCH_UPTIME>=OY_LATCH_UPTIME_MIN&&OY_PEER_COUNT>=OY_BLOCK_PEERS_MIN&&OY_LATCH_COUNT<OY_LATCH_MAX) {
             oy_callback_local = function() {
-                oy_peer_add(oy_node_id, true);//TODO latches must get latency tested
-                oy_data_beam(oy_node_id, "OY_LIGHT_ACCEPT", null);
+                //oy_peer_add(oy_node_id, true);//TODO latches must get latency tested
+                //oy_data_beam(oy_node_id, "OY_LIGHT_ACCEPT", null);
+                oy_latency_test(oy_node_id, "OY_LIGHT_REQUEST", true);
             };
         }
         else {
@@ -1430,15 +1431,14 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
         if (OY_LATENCY[oy_node_id][2]>=OY_LATENCY_REPEAT) {
             let oy_latency_result = OY_LATENCY[oy_node_id][4]/OY_LATENCY[oy_node_id][2];
             oy_log("Finished latency test ["+OY_LATENCY[oy_node_id][5]+"] with node "+oy_short(oy_node_id)+": "+oy_latency_result.toFixed(2)+" seconds");
-            if (OY_LATENCY[oy_node_id][5]==="OY_PEER_REQUEST"||OY_LATENCY[oy_node_id][5]==="OY_PEER_ACCEPT") {
-                //logic for accepting a peer request begins here
-                if (oy_latency_result>OY_LATENCY_MAX) {
-                    oy_log("Node "+oy_short(oy_node_id)+" has latency that breaches max, will punish");
-                    if (OY_LATENCY[oy_node_id][5]==="OY_PEER_ACCEPT") oy_data_beam(oy_node_id, "OY_PEER_TERMINATE", "OY_PUNISH_LATENCY_BREACH");
-                    else oy_data_beam(oy_node_id, "OY_PEER_REJECT", "OY_PUNISH_LATENCY_BREACH");
-                    oy_node_punish(oy_node_id, "OY_PUNISH_LATENCY_BREACH");
-                }
-                else if (OY_PEER_COUNT<OY_PEER_MAX) {
+            if (oy_latency_result>OY_LATENCY_MAX) {
+                oy_log("Node "+oy_short(oy_node_id)+" has latency that breaches max, will punish");
+                if (OY_LATENCY[oy_node_id][5]==="OY_PEER_ACCEPT") oy_data_beam(oy_node_id, "OY_PEER_TERMINATE", "OY_PUNISH_LATENCY_BREACH");
+                else oy_data_beam(oy_node_id, "OY_PEER_REJECT", "OY_PUNISH_LATENCY_BREACH");
+                oy_node_punish(oy_node_id, "OY_PUNISH_LATENCY_BREACH");
+            }
+            else if (OY_LATENCY[oy_node_id][5]==="OY_PEER_REQUEST"||OY_LATENCY[oy_node_id][5]==="OY_PEER_ACCEPT") {
+                if (OY_PEER_COUNT<OY_PEER_MAX) {
                     if (OY_LATENCY[oy_node_id][5]==="OY_PEER_ACCEPT") {
                         oy_peer_add(oy_node_id);
                         oy_data_beam(oy_node_id, "OY_PEER_AFFIRM", null);
@@ -1488,6 +1488,55 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
             else if (oy_peer_check(oy_node_id)&&OY_LATENCY[oy_node_id][5]==="OY_PEER_ROUTINE") {
                 oy_data_beam(oy_node_id, "OY_PEER_AFFIRM", null);
                 oy_peer_latency(oy_node_id, oy_latency_result);
+            }
+            else if (OY_LATENCY[oy_node_id][5]==="OY_LIGHT_REQUEST") {
+                //TODO fully convert for latches
+                if (OY_LATCH_COUNT<OY_LATCH_MAX) {
+                    if (OY_LATENCY[oy_node_id][5]==="OY_PEER_ACCEPT") {
+                        oy_peer_add(oy_node_id);
+                        oy_data_beam(oy_node_id, "OY_PEER_AFFIRM", null);
+                        oy_log("Added node "+oy_short(oy_node_id)+" as a peer");
+                    }
+                    else {
+                        oy_peer_pre_add(oy_node_id);
+                        oy_data_beam(oy_node_id, "OY_PEER_ACCEPT", null);
+                        oy_log("Added node "+oy_short(oy_node_id)+" to pre peer list");
+                    }
+                    oy_peer_latency(oy_node_id, oy_latency_result);
+                }
+                else if (OY_PEER_COUNT<=OY_PEER_MAX) {
+                    let oy_peer_weak = [false, -1];
+                    let oy_peer_local;
+                    for (oy_peer_local in OY_PEERS) {
+                        if (oy_peer_local==="oy_aggregate_node") continue;
+                        if (OY_PEERS[oy_peer_local][3]>oy_peer_weak[1]) {
+                            oy_peer_weak = [oy_peer_local, OY_PEERS[oy_peer_local][3]];
+                        }
+                    }
+                    oy_log("Current weakest peer is "+oy_short(oy_peer_weak[0])+" with latency of "+oy_peer_weak[1].toFixed(4));
+                    if ((oy_latency_result*(1+OY_LATENCY_GEO_SENS))<oy_peer_weak[1]) {
+                        oy_log("New peer request has better latency than current weakest peer");
+                        oy_peer_remove(oy_peer_weak[0], "OY_PUNISH_LATENCY_DROP");
+                        if (OY_LATENCY[oy_node_id][5]==="OY_PEER_ACCEPT") {
+                            oy_peer_add(oy_node_id);
+                            oy_data_beam(oy_node_id, "OY_PEER_AFFIRM", null);
+                            oy_log("Added node "+oy_short(oy_node_id)+" as a peer");
+                        }
+                        else {
+                            oy_peer_pre_add(oy_node_id);
+                            oy_data_beam(oy_node_id, "OY_PEER_ACCEPT", null);
+                            oy_log("Added node "+oy_short(oy_node_id)+" to pre peer list");
+                        }
+                        oy_peer_latency(oy_node_id, oy_latency_result);
+                        oy_log("Removed peer "+oy_short(oy_peer_weak[0])+" and potentially added peer "+oy_short(oy_node_id));
+                    }
+                    else {
+                        oy_log("New peer request has insufficient latency");
+                        if (OY_LATENCY[oy_node_id][5]==="OY_PEER_ACCEPT") oy_data_beam(oy_node_id, "OY_PEER_TERMINATE", "OY_PUNISH_LATENCY_WEAK");
+                        else oy_data_beam(oy_node_id, "OY_PEER_REJECT", "OY_PUNISH_LATENCY_WEAK");
+                        oy_node_punish(oy_node_id, "OY_PUNISH_LATENCY_WEAK");
+                    }
+                }
             }
             if (oy_peer_check(oy_node_id)) OY_PEERS[oy_node_id][2] = oy_time_local;
             delete OY_LATENCY[oy_node_id];
