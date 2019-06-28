@@ -208,6 +208,7 @@ let OY_BLOCK_INIT = new Event('oy_block_init');//trigger-able event for when a n
 let OY_BLOCK_TRIGGER = new Event('oy_block_trigger');//trigger-able event for when a new block is issued
 let OY_BLOCK_RESET = new Event('oy_block_reset');//trigger-able event for when a new block is issued
 let OY_BLOCK_TRIGGER_TEMP = new Event('oy_block_trigger_temp');//trigger-able event for when a new block is issued
+let OY_DIFF_TRACK = [[], []];
 let OY_CHALLENGE_TRIGGER = null;//passive_passport length to trigger challenge
 let OY_CHANNEL_DYNAMIC = {};//track channel broadcasts to ensure allowance compliance
 let OY_CHANNEL_LISTEN = {};//track channels to listen for
@@ -978,7 +979,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         return true;
     }
     else if (oy_data_flag==="OY_LIGHT_DIFF") {
-
+        //TODO verify meshblock zone, receive diff_flat chunks, check hash, apply diff
     }
     else if (oy_data_flag==="OY_PEER_CHALLENGE") {
         if (OY_BLOCK_HASH===null) return false;
@@ -2291,6 +2292,7 @@ function oy_block_reset() {
     OY_BLOCK_ROSTER = {};
     OY_BLOCK_ROSTER_AVG = null;
     OY_BLOCK = [[null, []], {}, {}, {}, {}];
+    OY_DIFF_TRACK = [[], []];
     OY_ORIGINS = {};
     OY_LIGHT_BUILD = [];
     OY_CLONES = {};
@@ -2560,6 +2562,7 @@ function oy_block_loop() {
             OY_BLOCK_NEW = {};
             OY_BLOCK_DIVE = {};
             OY_BLOCK_DIVE_SET = [];
+            OY_DIFF_TRACK = [[], []];
 
             let oy_supply_pre = 0;
             let oy_dive_bounty = 0;
@@ -2579,6 +2582,7 @@ function oy_block_loop() {
                         if (oy_dive_reward===oy_dive_reward_pool[i]) OY_BLOCK_DIVE_TRACK += oy_dive_share;
                         if (typeof(OY_BLOCK[2][oy_dive_reward_pool[i]])==="undefined") OY_BLOCK[2][oy_dive_reward_pool[i]] = oy_dive_share;
                         else OY_BLOCK[2][oy_dive_reward_pool[i]] += oy_dive_share;
+                        OY_DIFF_TRACK[0].push([oy_dive_reward_pool[i], OY_BLOCK[2][oy_dive_reward_pool[i]]]);
                     }
                 }
             }
@@ -2602,6 +2606,7 @@ function oy_block_loop() {
                         if (OY_BLOCK[2][oy_command_execute[i][1][4]]<=0) delete OY_BLOCK[2][oy_command_execute[i][1][4]];
                         OY_BLOCK[1][oy_command_execute[i][0]] = oy_command_execute[i][1];
                         OY_BLOCK_NEW[oy_command_execute[i][0]] = oy_command_execute[i][1];
+                        OY_DIFF_TRACK[1].push(oy_command_execute[i][1]);
                     }
                 }
             }
@@ -2657,6 +2662,7 @@ function oy_block_loop() {
                 if (OY_BLOCK_HASH===null) return false;
 
                 if (OY_LATCH_UPTIME!==null&&OY_LATCH_UPTIME>=OY_LATCH_UPTIME_MIN&&OY_LATCH_COUNT>0) {
+                    let oy_diff_flat = JSON.stringify(OY_DIFF_TRACK);
                     //TODO diff pushing
                     let oy_diff_split = null;
                     let oy_diff_nonce_max = -1;
@@ -2664,15 +2670,14 @@ function oy_block_loop() {
                         if (Date.now()/1000>OY_CLONES[oy_node_select][0]||OY_CLONES[oy_node_select][1]!==1) continue;
                         if (oy_diff_split===null) {
                             oy_diff_split = [];
-                            for (let i = 0; i < OY_BLOCK_FLAT.length; i += OY_CLONE_CHUNK) {
-                                oy_diff_split.push(OY_BLOCK_FLAT.slice(i, i+OY_CLONE_CHUNK));
+                            for (let i = 0; i < oy_diff_flat.length; i += OY_LATCH_CHUNK) {
+                                oy_diff_split.push(oy_diff_flat.slice(i, i+OY_LATCH_CHUNK));
                                 oy_diff_nonce_max++;
                             }
                         }
-                        for (let oy_clone_nonce in oy_block_split) {
-                            oy_data_beam(oy_node_select, "OY_LIGHT_DIFF", [oy_block_nonce_max, oy_clone_nonce, oy_block_split[oy_clone_nonce]]);
+                        for (let oy_diff_nonce in oy_diff_split) {
+                            oy_data_beam(oy_node_select, "OY_LIGHT_DIFF", [oy_diff_nonce_max, oy_diff_nonce, oy_diff_split[oy_diff_nonce]]);
                         }
-                        OY_CLONES[oy_node_select][1] = 2;
                     }
                 }
 
