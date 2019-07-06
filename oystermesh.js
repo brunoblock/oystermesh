@@ -209,6 +209,8 @@ let OY_BLOCK_TRIGGER = new Event('oy_block_trigger');//trigger-able event for wh
 let OY_BLOCK_RESET = new Event('oy_block_reset');//trigger-able event for when a new block is issued
 let OY_BLOCK_TRIGGER_TEMP = new Event('oy_block_trigger_temp');//trigger-able event for when a new block is issued
 let OY_DIFF_TRACK = [[], []];
+let OY_DIFF_CONSTRUCT = {};
+let OY_DIFF_TALLY = {};
 let OY_CHALLENGE_TRIGGER = null;//passive_passport length to trigger challenge
 let OY_CHANNEL_DYNAMIC = {};//track channel broadcasts to ensure allowance compliance
 let OY_CHANNEL_LISTEN = {};//track channels to listen for
@@ -980,6 +982,18 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_LIGHT_DIFF") {
         //TODO verify meshblock zone, receive diff_flat chunks, check hash, apply diff
+        if (OY_BLOCK_HASH===null||oy_time_local-OY_BLOCK_TIME>=OY_BLOCK_SECTORS[0][0]) return false;
+        if (typeof(OY_DIFF_CONSTRUCT[oy_peer_id])==="undefined") OY_DIFF_CONSTRUCT[oy_peer_id] = [];
+        OY_DIFF_CONSTRUCT[oy_peer_id][oy_data_payload[1]] = oy_data_payload[2];
+        if (oy_data_payload[0]===oy_data_payload[1]) {//check if all the nonces have been fulfilled
+            //construct the diff instructions and compare the hashes
+            let oy_construct = OY_DIFF_CONSTRUCT[oy_peer_id].join("");
+            delete OY_DIFF_CONSTRUCT[oy_peer_id];
+            let oy_hash = oy_hash_gen(oy_construct);
+            if (typeof(OY_DIFF_TALLY[oy_hash])==="undefined") OY_DIFF_TALLY[oy_hash] = [0, oy_construct];
+            OY_DIFF_TALLY[oy_hash][0]++;
+        }
+
     }
     else if (oy_data_flag==="OY_PEER_CHALLENGE") {
         if (OY_BLOCK_HASH===null) return false;
@@ -2322,6 +2336,7 @@ function oy_block_loop() {
         OY_BLOCK_NEXT = oy_block_time_local+20;
         OY_BLOCK_DYNAMIC = [[], null, null, null];
         OY_BLOCK_COMMAND = {};
+        OY_DIFF_CONSTRUCT = {};
 
         document.dispatchEvent(OY_BLOCK_INIT);
 
@@ -2699,7 +2714,7 @@ function oy_block_loop() {
                         OY_CLONES[oy_node_select][1] = 2;
                     }
                 }
-            }, OY_BLOCK_CLONETIME);
+            }, OY_BLOCK_CLONETIME);//TODO might have separate LATCHTIME, it's possible cloning might get removed all together
 
             for (let oy_command_hash in OY_BLOCK_CONFIRM) {
                 OY_BLOCK_CONFIRM[oy_command_hash](typeof(OY_BLOCK[1][oy_command_hash])!=="undefined");
