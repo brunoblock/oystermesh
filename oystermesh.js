@@ -2678,18 +2678,14 @@ function oy_block_loop() {
 
                 if (OY_LATCH_UPTIME!==null&&OY_LATCH_UPTIME>=OY_LATCH_UPTIME_MIN&&OY_LATCH_COUNT>0) {
                     let oy_diff_flat = JSON.stringify(OY_DIFF_TRACK);
-                    //TODO diff pushing
-                    let oy_diff_split = null;
                     let oy_diff_nonce_max = -1;
+                    let oy_diff_split = [];
+                    for (let i = 0; i < oy_diff_flat.length; i += OY_LATCH_CHUNK) {
+                        oy_diff_split.push(oy_diff_flat.slice(i, i+OY_LATCH_CHUNK));
+                        oy_diff_nonce_max++;
+                    }
                     for (let oy_peer_select in OY_PEERS) {
                         if (OY_PEERS[oy_peer_select][9]===false) continue;//check that the peer is a latch
-                        if (oy_diff_split===null) {
-                            oy_diff_split = [];
-                            for (let i = 0; i < oy_diff_flat.length; i += OY_LATCH_CHUNK) {
-                                oy_diff_split.push(oy_diff_flat.slice(i, i+OY_LATCH_CHUNK));
-                                oy_diff_nonce_max++;
-                            }
-                        }
                         for (let oy_diff_nonce in oy_diff_split) {
                             oy_data_beam(oy_peer_select, "OY_LIGHT_DIFF", [oy_diff_nonce_max, oy_diff_nonce, oy_diff_split[oy_diff_nonce]]);
                         }
