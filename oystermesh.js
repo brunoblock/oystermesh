@@ -2681,8 +2681,8 @@ function oy_block_loop() {
                     //TODO diff pushing
                     let oy_diff_split = null;
                     let oy_diff_nonce_max = -1;
-                    for (let oy_node_select in OY_CLONES) {
-                        if (Date.now()/1000>OY_CLONES[oy_node_select][0]||OY_CLONES[oy_node_select][1]!==1) continue;
+                    for (let oy_peer_select in OY_PEERS) {
+                        if (OY_PEERS[oy_peer_select][9]===false) continue;//check that the peer is a latch
                         if (oy_diff_split===null) {
                             oy_diff_split = [];
                             for (let i = 0; i < oy_diff_flat.length; i += OY_LATCH_CHUNK) {
@@ -2691,7 +2691,7 @@ function oy_block_loop() {
                             }
                         }
                         for (let oy_diff_nonce in oy_diff_split) {
-                            oy_data_beam(oy_node_select, "OY_LIGHT_DIFF", [oy_diff_nonce_max, oy_diff_nonce, oy_diff_split[oy_diff_nonce]]);
+                            oy_data_beam(oy_peer_select, "OY_LIGHT_DIFF", [oy_diff_nonce_max, oy_diff_nonce, oy_diff_split[oy_diff_nonce]]);
                         }
                     }
                 }
