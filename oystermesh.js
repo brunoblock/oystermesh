@@ -975,7 +975,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         }
         return true;
     }
-    else if (oy_data_flag==="OY_LIGHT_HASH") {
+    else if (oy_data_flag==="OY_LIGHT_HASH") {//TODO enforce removal of latch if LIGHT_HASH packet is missing
         if (OY_BLOCK_HASH===null) return false;//can only continue if block_hash is assigned a usable value
         if (OY_BLOCK_HASH!==oy_data_payload[0]) {//check if own block_hash mismatches with block_hash of latch
             oy_peer_remove(oy_peer_id, "OY_PUNISH_LIGHT_HASH");//remove and punish the latch
@@ -2307,6 +2307,7 @@ function oy_block_reset() {
     OY_BLOCK_ROSTER_AVG = null;
     OY_BLOCK = [[null, []], {}, {}, {}, {}];
     OY_DIFF_TRACK = [[], []];
+    OY_DIFF_TALLY = {};
     OY_ORIGINS = {};
     OY_LIGHT_BUILD = [];
     OY_CLONES = {};
@@ -2336,6 +2337,7 @@ function oy_block_loop() {
         OY_BLOCK_NEXT = oy_block_time_local+20;
         OY_BLOCK_DYNAMIC = [[], null, null, null];
         OY_BLOCK_COMMAND = {};
+        OY_DIFF_TALLY = {};//TODO verify timing
         OY_DIFF_CONSTRUCT = {};
 
         document.dispatchEvent(OY_BLOCK_INIT);
@@ -2376,6 +2378,37 @@ function oy_block_loop() {
 
             for (let oy_node_select in OY_CLONES) {
                 if (OY_CLONES[oy_node_select][1]===0||OY_CLONES[oy_node_select][1]===2||oy_time_local>=OY_CLONES[oy_node_select][0]) delete OY_CLONES[oy_node_select];
+            }
+
+            //TODO diff_tally gets processed here, legacy clone system might get scrapped
+
+            if (Object.keys(OY_DIFF_TALLY).length>0) {
+                let oy_diff_tally_set = [];
+                for (let oy_diff_hash in OY_DIFF_TALLY) {
+                    oy_diff_tally_set.push([OY_DIFF_TALLY[oy_diff_hash][0], oy_diff_hash]);
+                }
+                oy_diff_tally_set.sort(function(a, b) {
+                    return b[0] - a[0];
+                });
+                let oy_hash_select;
+                if (oy_diff_tally_set.length>=2&&oy_diff_tally_set[0][0]===oy_diff_tally_set[1][0]) oy_hash_select = oy_diff_tally_set[Math.round(Math.random())][1];
+                else oy_hash_select = oy_diff_tally_set[0][1];
+
+                let oy_diff_track_new = JSON.parse(OY_DIFF_TALLY[oy_hash_select][1]);
+
+                if (oy_diff_track_new[0].length>0) {
+                    for (let i in oy_diff_track_new[0]) {
+                        if (typeof(OY_BLOCK[2][oy_diff_track_new[0][i][0]])==="undefined") OY_BLOCK[2][oy_diff_track_new[0][i][0]] = oy_diff_track_new[0][i][1];
+                        else OY_BLOCK[2][oy_diff_track_new[0][i][0]] += oy_diff_track_new[0][i][1];
+                    }
+                }
+                if (oy_diff_track_new[1].length>0) {
+                    for (let i in oy_diff_track_new[1]) {
+                        if (typeof(OY_BLOCK[2][oy_diff_track_new[0][i][0]])==="undefined") OY_BLOCK[2][oy_diff_track_new[0][i][0]] = oy_diff_track_new[0][i][1];
+                        else OY_BLOCK[2][oy_diff_track_new[0][i][0]] += oy_diff_track_new[0][i][1];
+                    }
+                }
+
             }
 
             if (OY_BLOCK_HASH===null) {
