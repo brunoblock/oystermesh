@@ -2383,7 +2383,7 @@ function oy_block_loop() {
 
             //TODO diff_tally gets processed here, legacy clone system might get scrapped
 
-            if (OY_BLOCK_HASH!==null&&Object.keys(OY_DIFF_TALLY).length>0) {
+            if (OY_LIGHT_STATE===true&&OY_BLOCK_HASH!==null&&Object.keys(OY_DIFF_TALLY).length>0) {
                 let oy_diff_tally_set = [];
                 for (let oy_diff_hash in OY_DIFF_TALLY) {
                     oy_diff_tally_set.push([OY_DIFF_TALLY[oy_diff_hash][0], oy_diff_hash]);
@@ -2699,19 +2699,19 @@ function oy_block_loop() {
                 OY_BLOCK_CHALLENGE[oy_peer_select] = true;
             }
 
-            //TODO OY_LIGHT_STATE checks
+            if (OY_LIGHT_STATE===false) {
+                OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK);
 
-            OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK);
+                OY_BLOCK_HASH = oy_hash_gen(OY_BLOCK_FLAT);
 
-            OY_BLOCK_HASH = oy_hash_gen(OY_BLOCK_FLAT);
+                OY_BLOCK_WEIGHT = new Blob([OY_BLOCK_FLAT]).size;
 
-            OY_BLOCK_WEIGHT = new Blob([OY_BLOCK_FLAT]).size;
+                OY_CLONE_UPTIME = Date.now()/1000;
 
-            OY_CLONE_UPTIME = Date.now()/1000;
+                oy_log("NEW MESHBLOCK HASH "+OY_BLOCK_HASH);
 
-            oy_log("NEW MESHBLOCK HASH "+OY_BLOCK_HASH);
-
-            //oy_log_debug("HASH: "+OY_BLOCK_HASH+"\nBLOCK: "+oy_block_flat);
+                //oy_log_debug("HASH: "+OY_BLOCK_HASH+"\nBLOCK: "+oy_block_flat);
+            }
 
             document.dispatchEvent(OY_BLOCK_TRIGGER);
 
