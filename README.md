@@ -4,6 +4,8 @@ Bandwidth Bound Consensus.
 
 ## The Mesh
 
+NOTICE: The mesh is currently offline whilst V5 development is underway
+
 The Oyster Mesh Protocol provides:
 
 - Decentralized and immutable data storage, hosting, retrieval and sharing.

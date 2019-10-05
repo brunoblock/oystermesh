@@ -41,7 +41,7 @@ const OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via 
 const OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a seeding event
 const OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims dive rewards
 const OY_BLOCK_RANGE_MIN = 5;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_SEEDTIME = 1559087300;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_SEEDTIME = 1569823600;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_CHALLENGE_SAFETY = 0.5;//safety margin for rogue packets reaching block_consensus. 1 means no changes, lower means further from block_consensus, higher means closer.
 const OY_CHALLENGE_BUFFER = 1.8;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (min of 1)
 const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
@@ -1364,6 +1364,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_LIGHT_REQUEST") {
         let oy_callback_local;
+        //TODO add condition for PEER_COUNT requirement to enable proper mesh boot up sequence
         if (oy_time_local>OY_BLOCK_SEEDTIME&&OY_BLOCK_HASH!==null&&OY_LATCH_UPTIME!==null&&OY_LATCH_UPTIME>=OY_LATCH_UPTIME_MIN&&OY_PEER_COUNT>=OY_BLOCK_PEERS_MIN&&OY_LATCH_COUNT<OY_LATCH_MAX) {
             oy_callback_local = function() {
                 oy_latency_test(oy_node_id, "OY_LIGHT_REQUEST", true);
@@ -1914,7 +1915,7 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_push_def
 }
 
 function oy_data_direct(oy_data_flag) {
-    return !(oy_data_flag.indexOf("OY_PEER")===-1&&oy_data_flag.indexOf("OY_LATENCY")===-1&&oy_data_flag.indexOf("OY_CLONE")===-1);
+    return !(oy_data_flag.indexOf("OY_PEER")===-1&&oy_data_flag.indexOf("OY_LATENCY")===-1&&oy_data_flag.indexOf("OY_CLONE")===-1&&oy_data_flag.indexOf("OY_LIGHT")===-1);
 }
 
 function oy_data_block(oy_data_flag) {
