@@ -104,8 +104,8 @@ const OY_KEY_BRUNO = "XLp6_wVPBF3Zg-QNRkEj6U8bOYEZddQITs1n2pyeRqwOG5k9w_1A-RMIES
 const OY_SHORT_LENGTH = 6;//various data value such as nonce IDs, data handles, data values are shortened for efficiency
 
 // INIT
-let OY_LIGHT_MODE = true;//seek to stay permanently connected to the mesh as a light node/latch
-let OY_LIGHT_STATE = true;//immediate status of being a light node/latch
+let OY_LIGHT_MODE = true;//seek to stay permanently connected to the mesh as a light node/latch, manipulable by the user
+let OY_LIGHT_STATE = true;//immediate status of being a light node/latch, not manipulable by the user
 let OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inputs are expected
 let OY_SIMULATOR_MODE = false;//run in node.js simulator, requires oystersimulate.js
 let OY_SELF_PRIVATE;//private key of node identity
@@ -995,6 +995,12 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             OY_DIFF_TALLY[oy_hash][0]++;//increment hash count, this way multiple instances of the same hash are considered in the count
         }
 
+    }
+    else if (oy_data_flag==="OY_LIGHT_UNLATCH") {//self as source receives unlatch directive from source
+        if (OY_PEERS[oy_peer_id][9]===true) {
+            OY_PEERS[oy_peer_id][9] = false;//set light/latch flag to false
+            OY_LATCH_COUNT--;
+        }
     }
     else if (oy_data_flag==="OY_PEER_CHALLENGE") {
         if (OY_BLOCK_HASH===null) return false;
@@ -2380,6 +2386,16 @@ function oy_block_loop() {
 
             for (let oy_node_select in OY_CLONES) {
                 if (OY_CLONES[oy_node_select][1]===0||OY_CLONES[oy_node_select][1]===2||oy_time_local>=OY_CLONES[oy_node_select][0]) delete OY_CLONES[oy_node_select];
+            }
+
+            if (oy_time_local-OY_BLOCK_SEEDTIME<OY_BLOCK_SEED_BUFFER) {
+                if (OY_LIGHT_MODE===true) {//if node elects to be a light node they cannot participate in the initial boot-up sequence of the mesh
+                    oy_block_reset();
+                    oy_log("MESHBLOCK VOID SEED BUFFER");
+                    oy_block_continue = false;
+                    return false;
+                }
+                if (OY_LIGHT_STATE===true) OY_LIGHT_STATE = false;//since node has elected to being a full node, switch light state flag to false
             }
 
             //TODO diff_tally gets processed here, legacy clone system might get scrapped
