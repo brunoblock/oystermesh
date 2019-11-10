@@ -66,6 +66,7 @@ const OY_CLONE_CLONE_MAX = 6;//maximum simultaneous clone count
 const OY_CLONE_ORIGIN_MAX = 3;//maximum simultaneous origin count
 const OY_LATCH_UPTIME_MIN = 60;//seconds since able to keep up with the meshblock required to become a light source
 const OY_LATCH_MAX = 3;//maximum simultaneous light node recipients count, should be less than peer_max
+const OY_LATCH_UNLATCH_MIN = 2;//minimum amount of peers that are full nodes to allow self to unlatch and become a full node
 const OY_LATCH_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 const OY_PEER_LATENCYTIME = 60;//peers are expected to establish latency timing with each other within this interval in seconds
 const OY_PEER_KEEPTIME = 20;//peers are expected to communicate with each other within this interval in seconds
@@ -141,6 +142,7 @@ let OY_BLACKLIST = {};//nodes to block for x amount of time
 let OY_PUSH_HOLD = {};//holds data contents ready for pushing to mesh
 let OY_PUSH_TALLY = {};//tracks data push nonces that were deposited on the mesh
 let OY_LATCH_UPTIME = null;
+let OY_UNLATCH_REDEMPTION = {};
 let OY_LIGHT_BUILD = [];
 let OY_ORIGINS = {};
 let OY_CLONES = {};
@@ -425,7 +427,7 @@ function oy_peer_add(oy_peer_id, oy_latch_flag) {
         //[peership timestamp, last msg timestamp, last latency timestamp, latency avg, latency history, data beam, data beam history, data soak, data soak history, latch flag]
         OY_PEERS[oy_peer_id] = [Date.now()/1000|0, -1, -1, 0, [], 0, [], 0, [], oy_latch_flag];
         if (oy_latch_flag===true) OY_LATCH_COUNT++;
-        else OY_PEER_COUNT++;
+        OY_PEER_COUNT++;
         if (OY_PEER_COUNT===1) document.dispatchEvent(OY_PEERS_RECOVER);
         oy_node_reset(oy_peer_id);
     };
@@ -2478,6 +2480,34 @@ function oy_block_loop() {
                 return false;
             }
 
+            //unlatch process
+            if (OY_LIGHT_MODE===false&&OY_LIGHT_STATE===true) {//condition means node is unlatching to transition from light to full node
+                //OY_UNLATCH_REDEMPTION
+                if (OY_PEER_COUNT-OY_LATCH_COUNT<OY_LATCH_UNLATCH_MIN) {//self is not ready to unlatch, find more full node peers first
+                    //send unlatch flag to all full node peers not in redemption list, subsequently add to redemption list
+                    for (let oy_peer_select in OY_PEERS) {
+                        if (OY_PEERS[oy_peer_select][9]===false&&typeof(OY_UNLATCH_REDEMPTION[oy_peer_select])==="undefined") {
+                            oy_data_beam(oy_peer_select, "OY_LIGHT_UNLATCH", null);
+                            OY_UNLATCH_REDEMPTION[oy_peer_select] = true;
+                        }
+                    }
+                }
+                else {//unlatch sequence
+                    OY_LIGHT_STATE = false;
+                    //send unlatch flag to all peers not in redemption list
+                    for (let oy_peer_select in OY_PEERS) {
+                        if (typeof(OY_UNLATCH_REDEMPTION[oy_peer_select])==="undefined") oy_data_beam(oy_peer_select, "OY_LIGHT_UNLATCH", null);
+                    }
+                    OY_UNLATCH_REDEMPTION = {};
+                }
+            }
+            else if (Object.keys(OY_UNLATCH_REDEMPTION).length>0) {
+                for (let oy_peer_select in OY_UNLATCH_REDEMPTION) {
+                    oy_peer_remove(oy_peer_select);
+                }
+            }
+            //unlatch process
+
             //latency routine test
             oy_chrono(function() {
                 let oy_peer_local;
@@ -2521,6 +2551,8 @@ function oy_block_loop() {
                 return a[0] - b[0];
             });
 
+            //TODO do not emit block_sync packets if light_state = true
+
             //oy_log_debug("COMMAND: "+JSON.stringify(OY_BLOCK_COMMAND)+"\nSYNC COMMAND: "+JSON.stringify(oy_sync_command));
             oy_sync_command = LZString.compressToUTF16(JSON.stringify(oy_sync_command));
             OY_BLOCK_SYNC = {};
@@ -2536,7 +2568,7 @@ function oy_block_loop() {
         }, OY_BLOCK_SECTORS[0][1]);//seconds 0-4 out of 20
 
         oy_chrono(function() {
-            if (oy_block_continue===false) return false;
+            if (oy_block_continue===false) return false;//TODO do not process packets if light_state = true
             OY_BLOCK_DYNAMIC[1] = null;
             OY_BLOCK_DYNAMIC[2] = null;
             OY_BLOCK_DYNAMIC[3] = [];
