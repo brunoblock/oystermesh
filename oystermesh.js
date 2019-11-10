@@ -24,7 +24,7 @@ const OY_BLOCK_CONSENSUS = 0.5;//mesh topology corroboration to agree on confirm
 const OY_BLOCK_LAUNCHTIME = 200;//ms delay from block_trigger to launch a command broadcast
 const OY_BLOCK_PROTECTTIME = 600;//ms delay until meshblock challenge protection is enacted
 const OY_BLOCK_CHALLENGETIME = 1600;//ms delay until meshblock challenge to peers is enforced
-const OY_BLOCK_CLONETIME = 800;//ms delay until meshblock clone gets processed
+const OY_BLOCK_LATCHTIME = 800;//ms delay until meshblock latch differential pushes get processed
 const OY_BLOCK_MISS_MULTI = 0.3;//multiplication factor for passport length, lower means more sybil-attack secure yet more honest block_syncs dropped
 const OY_BLOCK_MISS_MULTI_MIN = 1;//minimum miss_limit value for roster calculations
 const OY_BLOCK_STABILITY_START = 50;//starting stability value for making roster calculations
@@ -2391,7 +2391,7 @@ function oy_block_loop() {
             }
 
             if (oy_time_local-OY_BLOCK_SEEDTIME<OY_BLOCK_SEED_BUFFER) {
-                if (OY_LIGHT_MODE===true) {//if node elects to be a light node they cannot participate in the initial boot-up sequence of the mesh
+                if (OY_LIGHT_MODE===true) {//if self elects to be a light node they cannot participate in the initial boot-up sequence of the mesh
                     oy_block_reset();
                     oy_log("MESHBLOCK VOID SEED BUFFER");
                     oy_block_continue = false;
@@ -2453,6 +2453,8 @@ function oy_block_loop() {
                 //OY_CLONE_UPTIME = Date.now()/1000;
 
                 oy_log("DIFF MESHBLOCK HASH "+OY_BLOCK_HASH);
+
+                document.dispatchEvent(OY_BLOCK_TRIGGER);
             }
 
             if (OY_BLOCK_HASH===null) {
@@ -2531,6 +2533,11 @@ function oy_block_loop() {
             }, 100);
             //latency routine test
 
+            if (OY_LIGHT_STATE===true) {//do not process the meshblock anymore if in light state
+                oy_block_continue = true;
+                return false;
+            }
+
             if (Math.floor((Date.now()-30000)/10000000)!==Math.floor((Date.now()-10000)/10000000)) {//10000000
                 //oy_log_debug("SNAPSHOT: "+OY_BLOCK_HASH+"/"+JSON.stringify(OY_BLOCK));
                 OY_BLOCK[1] = {};
@@ -2568,7 +2575,7 @@ function oy_block_loop() {
         }, OY_BLOCK_SECTORS[0][1]);//seconds 0-4 out of 20
 
         oy_chrono(function() {
-            if (oy_block_continue===false) return false;//TODO do not process packets if light_state = true
+            if (oy_block_continue===false) return false;
             OY_BLOCK_DYNAMIC[1] = null;
             OY_BLOCK_DYNAMIC[2] = null;
             OY_BLOCK_DYNAMIC[3] = [];
@@ -2748,19 +2755,17 @@ function oy_block_loop() {
                 OY_BLOCK_CHALLENGE[oy_peer_select] = true;
             }
 
-            if (OY_LIGHT_STATE===false) {
-                OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK);
+            OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK);
 
-                OY_BLOCK_HASH = oy_hash_gen(OY_BLOCK_FLAT);
+            OY_BLOCK_HASH = oy_hash_gen(OY_BLOCK_FLAT);
 
-                OY_BLOCK_WEIGHT = new Blob([OY_BLOCK_FLAT]).size;
+            OY_BLOCK_WEIGHT = new Blob([OY_BLOCK_FLAT]).size;
 
-                OY_CLONE_UPTIME = Date.now()/1000;
+            OY_CLONE_UPTIME = Date.now()/1000;
 
-                oy_log("NEW MESHBLOCK HASH "+OY_BLOCK_HASH);
+            oy_log("NEW MESHBLOCK HASH "+OY_BLOCK_HASH);
 
-                //oy_log_debug("HASH: "+OY_BLOCK_HASH+"\nBLOCK: "+oy_block_flat);
-            }
+            //oy_log_debug("HASH: "+OY_BLOCK_HASH+"\nBLOCK: "+oy_block_flat);
 
             document.dispatchEvent(OY_BLOCK_TRIGGER);
 
@@ -2802,6 +2807,7 @@ function oy_block_loop() {
                     }
                 }
 
+                /*marked for deletion
                 if (OY_CLONE_UPTIME!==null&&OY_CLONE_UPTIME>=OY_CLONE_UPTIME_MIN&&OY_PEER_COUNT>=OY_BLOCK_PEERS_MIN&&Object.keys(OY_CLONES).length>0) {
                     let oy_block_split = null;
                     let oy_block_nonce_max = -1;
@@ -2820,7 +2826,8 @@ function oy_block_loop() {
                         OY_CLONES[oy_node_select][1] = 2;
                     }
                 }
-            }, OY_BLOCK_CLONETIME);//TODO might have separate LATCHTIME, it's possible cloning might get removed all together
+                */
+            }, OY_BLOCK_LATCHTIME);
 
             for (let oy_command_hash in OY_BLOCK_CONFIRM) {
                 OY_BLOCK_CONFIRM[oy_command_hash](typeof(OY_BLOCK[1][oy_command_hash])!=="undefined");
