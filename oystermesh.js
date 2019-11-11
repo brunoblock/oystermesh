@@ -36,7 +36,7 @@ const OY_BLOCK_HOP_CALCTIME = 60;//ms time limit for verifying passports on a bl
 const OY_BLOCK_KEY_LIMIT = 5;//permitted transactions per wallet per block (20 seconds)
 const OY_BLOCK_HASH_KEEP = 1555;//how many hashes of previous blocks to keep in the current meshblock, value is for 6 months worth
 const OY_BLOCK_DENSITY = 0.5;//higher means block syncs [0] and dives [1] are more spread out within their respective meshblock sectors
-const OY_BLOCK_PEERS_MIN = 3;//minimum peer count to be able to act as origin for clones and broadcast SYNC/DIVE
+const OY_BLOCK_PEERS_MIN = 3;//minimum peer count to be become a source for latches and broadcast SYNC/DIVE
 const OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via OY_BLOCK_SYNC and OY_BLOCK_DIVE (OY_LOGIC_ALL)
 const OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a seeding event
 const OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims dive rewards
@@ -57,13 +57,6 @@ const OY_NODE_EXPIRETIME = 600;//seconds of non-interaction until a node's conne
 const OY_BOOST_KEEP = 12;//node IDs to retain in boost memory, higher means more nodes retained but less average node quality
 const OY_BOOST_DELAY = 250;//ms delay per boost node initiation
 const OY_BOOST_EXPIRETIME = 600;//seconds until boost indexedDB retention is discarded
-const OY_CLONE_AFFINITY = 0.3;//higher means more likely to ask a node to become a clone than a peer and vice-versa
-const OY_CLONE_UPTIME_MIN = 60;//seconds since able to keep up with the meshblock required to become a clone origin
-const OY_CLONE_LIVETIME = 90;//seconds to keep a node as a clone
-const OY_CLONE_BUFFERTIME = 10;//seconds deducted from clone side of the expiration time
-const OY_CLONE_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per clone transmission
-const OY_CLONE_CLONE_MAX = 6;//maximum simultaneous clone count
-const OY_CLONE_ORIGIN_MAX = 3;//maximum simultaneous origin count
 const OY_LATCH_UPTIME_MIN = 60;//seconds since able to keep up with the meshblock required to become a light source
 const OY_LATCH_MAX = 3;//maximum simultaneous light node recipients count, should be less than peer_max
 const OY_LATCH_UNLATCH_MIN = 2;//minimum amount of peers that are full nodes to allow self to unlatch and become a full node
@@ -144,10 +137,6 @@ let OY_PUSH_TALLY = {};//tracks data push nonces that were deposited on the mesh
 let OY_LATCH_UPTIME = null;
 let OY_UNLATCH_REDEMPTION = {};
 let OY_LIGHT_BUILD = [];
-let OY_ORIGINS = {};
-let OY_CLONES = {};
-let OY_CLONE_UPTIME = null;
-let OY_CLONE_BUILD = [];
 let OY_LOGIC_ALL_TYPE = ["OY_BLOCK_COMMAND", "OY_BLOCK_SYNC", "OY_BLOCK_SYNC_CHALLENGE", "OY_BLOCK_DIVE", "OY_DATA_PULL", "OY_CHANNEL_BROADCAST"];//OY_LOGIC_ALL definitions
 let OY_LOGIC_EXCEPT_TYPE = ["OY_BLOCK_SYNC", "OY_BLOCK_SYNC_CHALLENGE_RESPONSE", "OY_BLOCK_DIVE", "OY_CHANNEL_BROADCAST"];
 let OY_MESH_RANGE = 0;
@@ -1138,13 +1127,13 @@ function oy_node_disconnect(oy_node_id) {
 }
 
 //checks for peering proposal session
-function oy_node_proposed(oy_node_id, oy_clone_flag) {
+function oy_node_proposed(oy_node_id, oy_latch_flag) {
     if (typeof(OY_PROPOSED[oy_node_id])!=="undefined") {
         if (OY_PROPOSED[oy_node_id][0]<(Date.now()/1000)) {//check if proposal session expired
             delete OY_PROPOSED[oy_node_id];
             return false;
         }
-        if (typeof(oy_clone_flag)!=="undefined") return OY_PROPOSED[oy_node_id][1]===oy_clone_flag;
+        if (typeof(oy_latch_flag)!=="undefined") return OY_PROPOSED[oy_node_id][1]===oy_latch_flag;
         return true;
     }
     return false;
@@ -1182,8 +1171,6 @@ function oy_node_punish(oy_node_id, oy_punish_reason) {
             OY_BLACKLIST[oy_node_id][2] = true;
             oy_data_beam(oy_node_id, "OY_PEER_BLACKLIST", oy_punish_reason);
         }
-        delete OY_ORIGINS[oy_node_id];
-        delete OY_CLONES[oy_node_id];
         if (oy_peer_check(oy_node_id)) oy_peer_remove(oy_node_id, oy_punish_reason);
     }
     oy_log("Punished node "+oy_short(oy_node_id)+" with reason "+oy_punish_reason);
@@ -1223,27 +1210,14 @@ function oy_node_initiate(oy_node_id) {
     }
     let oy_callback_peer = function() {
         oy_data_beam(oy_node_id, "OY_PEER_REQUEST", null);
-        OY_PROPOSED[oy_node_id] = [(Date.now()/1000)+OY_NODE_PROPOSETIME, 0];//set proposal session with expiration timestamp and type flag
-    };
-    let oy_callback_clone = function() {
-        if (Object.keys(OY_ORIGINS).length>=OY_CLONE_ORIGIN_MAX) {
-            if (OY_BOOST.indexOf(oy_node_id)===-1) OY_BOOST.push(oy_node_id);
-            return false;
-        }
-        oy_data_beam(oy_node_id, "OY_CLONE_REQUEST", null);
-        OY_PROPOSED[oy_node_id] = [(Date.now()/1000)+OY_NODE_PROPOSETIME, 1];//set proposal session with expiration timestamp and type flag
+        OY_PROPOSED[oy_node_id] = [(Date.now()/1000)+OY_NODE_PROPOSETIME, false];//set proposal session with expiration timestamp and type flag
     };
     let oy_callback_light = function() {
         oy_data_beam(oy_node_id, "OY_LIGHT_REQUEST", null);
-        OY_PROPOSED[oy_node_id] = [(Date.now()/1000)+OY_NODE_PROPOSETIME, 2];//set proposal session with expiration timestamp and type flag
+        OY_PROPOSED[oy_node_id] = [(Date.now()/1000)+OY_NODE_PROPOSETIME, true];//set proposal session with expiration timestamp and type flag
     };
     let oy_callback_select;
-    if (OY_LIGHT_MODE===true) oy_callback_select = oy_callback_light;
-    else if (OY_BLOCK_HASH===null&&OY_PEER_COUNT===0) oy_callback_select = oy_callback_clone;
-    else if (OY_BLOCK_HASH!==null&&OY_PEER_COUNT===0) {
-        if (Object.keys(OY_ORIGINS).length<OY_CLONE_ORIGIN_MAX&&Math.random()<OY_CLONE_AFFINITY&&Date.now()/1000-OY_BLOCK_SEEDTIME>OY_BLOCK_SEED_BUFFER) oy_callback_select = oy_callback_clone;
-        else oy_callback_select = oy_callback_peer;
-    }
+    if (OY_LIGHT_MODE===true||(OY_BLOCK_HASH===null&&OY_PEER_COUNT===0&&Date.now()/1000-OY_BLOCK_SEEDTIME>OY_BLOCK_SEED_BUFFER)) oy_callback_select = oy_callback_light;
     else oy_callback_select = oy_callback_peer;
     oy_node_connect(oy_node_id, oy_callback_select);
     return true;
@@ -1277,15 +1251,11 @@ function oy_node_assign() {
 function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
     let oy_time_local = Date.now()/1000;
     if (oy_data_flag==="OY_PEER_TERMINATE") {
-        delete OY_ORIGINS[oy_node_id];
-        delete OY_CLONES[oy_node_id];
         oy_node_reset(oy_node_id);
         oy_log("Received termination notice: "+oy_data_payload+" from non-peer");
         return false;
     }
     else if (oy_data_flag==="OY_PEER_BLACKLIST") {
-        delete OY_ORIGINS[oy_node_id];
-        delete OY_CLONES[oy_node_id];
         oy_node_punish(oy_node_id, "OY_PUNISH_BLACKLIST_RETURN");
         oy_log("Node "+oy_short(oy_node_id)+" blacklisted us, will return the favour");
         return false;
@@ -1329,50 +1299,8 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
         oy_node_connect(oy_node_id, oy_callback_local);
         return true;
     }
-    else if (oy_data_flag==="OY_CLONE_REQUEST") {
-        let oy_callback_local;
-        if (oy_time_local>OY_BLOCK_SEEDTIME&&OY_BLOCK_HASH!==null&&OY_CLONE_UPTIME!==null&&OY_CLONE_UPTIME>=OY_CLONE_UPTIME_MIN&&OY_PEER_COUNT>=OY_BLOCK_PEERS_MIN&&Object.keys(OY_CLONES).length<OY_CLONE_CLONE_MAX) {
-            oy_callback_local = function() {
-                OY_CLONES[oy_node_id] = [oy_time_local+(OY_CLONE_LIVETIME-OY_CLONE_BUFFERTIME), 0];
-                oy_data_beam(oy_node_id, "OY_CLONE_ACCEPT", null);
-            };
-        }
-        else {
-            oy_callback_local = function() {
-                oy_data_beam(oy_node_id, "OY_CLONE_UNREADY", null);
-            };
-        }
-        oy_node_connect(oy_node_id, oy_callback_local);
-        return true;
-    }
-    else if (oy_data_flag==="OY_CLONE_AFFIRM") {
-        if (typeof(OY_CLONES[oy_node_id])!=="undefined"&&oy_time_local<OY_CLONES[oy_node_id][0]&&OY_CLONES[oy_node_id][1]===0) OY_CLONES[oy_node_id][1] = 1;
-        return true;
-    }
-    else if (oy_data_flag==="OY_CLONE_PUSH") {
-        if (typeof(OY_ORIGINS[oy_node_id])!=="undefined"&&oy_time_local<OY_ORIGINS[oy_node_id]&&oy_time_local<OY_BLOCK_TIME+OY_BLOCK_SECTORS[0][0]) {
-            OY_CLONE_BUILD[oy_data_payload[1]] = oy_data_payload[2];
-            let oy_nonce_count = -1;
-            // noinspection JSUnusedLocalSymbols
-            for (let oy_clone_nonce in OY_CLONE_BUILD) {
-                oy_nonce_count++;
-            }
-            if (oy_nonce_count===oy_data_payload[0]) {
-                let oy_block_flat = OY_CLONE_BUILD.join("");
-                OY_BLOCK = JSON.parse(oy_block_flat);
-                OY_BLOCK_HASH = oy_hash_gen(oy_block_flat);
-                oy_data_beam(oy_node_id, "OY_CLONE_HASH", OY_BLOCK_HASH);
-            }
-        }
-        return true;
-    }
-    else if (oy_data_flag==="OY_CLONE_HASH") {
-        if (typeof(OY_CLONES[oy_node_id])!=="undefined"&&oy_time_local<OY_CLONES[oy_node_id][0]&&OY_CLONES[oy_node_id][1]===2&&oy_time_local<OY_BLOCK_TIME+OY_BLOCK_SECTORS[0][0]&&oy_data_payload===OY_BLOCK_HASH) OY_CLONES[oy_node_id][1] = 3;
-        return true;
-    }
     else if (oy_data_flag==="OY_LIGHT_REQUEST") {
         let oy_callback_local;
-        //TODO add condition for PEER_COUNT requirement to enable proper mesh boot up sequence
         if (oy_time_local>OY_BLOCK_SEEDTIME&&OY_BLOCK_HASH!==null&&OY_LATCH_UPTIME!==null&&OY_LATCH_UPTIME>=OY_LATCH_UPTIME_MIN&&OY_PEER_COUNT>=OY_BLOCK_PEERS_MIN&&OY_LATCH_COUNT<OY_LATCH_MAX) {
             oy_callback_local = function() {
                 oy_latency_test(oy_node_id, "OY_LIGHT_REQUEST", true);
@@ -1391,7 +1319,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
         oy_node_punish(oy_node_id, "OY_PUNISH_LATENCY_DECLINE");
         return false;
     }
-    else if (oy_node_proposed(oy_node_id, 0)) {//check if this node was previously proposed to for peering by self
+    else if (oy_node_proposed(oy_node_id, false)) {//check if this node had previously proposed to peer with self
         if (oy_data_flag==="OY_PEER_ACCEPT") oy_latency_test(oy_node_id, "OY_PEER_ACCEPT", true);
         else {
             oy_log("Node "+oy_short(oy_node_id)+" rejected peer request ["+oy_data_flag+"]: "+oy_data_payload);
@@ -1399,20 +1327,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
         }
         return true;
     }
-    else if (oy_node_proposed(oy_node_id, 1)) {//check if this node was previously proposed to for cloning by self
-        if (oy_data_flag==="OY_CLONE_ACCEPT") {//node has accepted self's clone request
-            if (Object.keys(OY_ORIGINS).length<OY_CLONE_ORIGIN_MAX) {
-                OY_ORIGINS[oy_node_id] = oy_time_local+OY_CLONE_LIVETIME;
-                oy_data_beam(oy_node_id, "OY_CLONE_AFFIRM", null);
-            }
-        }
-        else {
-            oy_log("Node "+oy_short(oy_node_id)+" rejected clone request ["+oy_data_flag+"]");
-            if (oy_data_flag!=="OY_CLONE_UNREADY") oy_node_punish(oy_node_id, "OY_PUNISH_CLONE_REJECT");
-        }
-        return true;
-    }
-    else if (oy_node_proposed(oy_node_id, 2)) {//check if this node was previously proposed to for cloning by self
+    else if (oy_node_proposed(oy_node_id, true)) {//check if this node had previously proposed to become a latch to self
         if (oy_data_flag==="OY_LIGHT_ACCEPT") {//node has accepted self's latch request
             if (OY_LIGHT_MODE===true&&OY_PEER_COUNT<OY_PEER_MAX) {
                 oy_peer_add(oy_node_id);
@@ -1868,12 +1783,6 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_push_def
             //oy_log("Routing data via peer "+oy_short(oy_peer_select)+" with flag "+oy_data_flag);
             oy_data_beam(oy_peer_select, oy_data_flag, oy_data_payload);
         }
-        if (oy_data_block_bool===true) {
-            let oy_time_local = Date.now()/1000;
-            for (let oy_node_select in OY_CLONES) {
-                if (OY_CLONES[oy_node_select][1]===3&&oy_time_local<OY_CLONES[oy_node_select][0]) oy_data_beam(oy_node_select, oy_data_flag, oy_data_payload);
-            }
-        }
     }
     else if (oy_data_logic==="OY_LOGIC_CHALLENGE") {
         //oy_data_payload[0] is oy_route_passport_passive
@@ -1923,7 +1832,7 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_push_def
 }
 
 function oy_data_direct(oy_data_flag) {
-    return !(oy_data_flag.indexOf("OY_PEER")===-1&&oy_data_flag.indexOf("OY_LATENCY")===-1&&oy_data_flag.indexOf("OY_CLONE")===-1&&oy_data_flag.indexOf("OY_LIGHT")===-1);
+    return !(oy_data_flag.indexOf("OY_PEER")===-1&&oy_data_flag.indexOf("OY_LATENCY")===-1&&oy_data_flag.indexOf("OY_LIGHT")===-1);
 }
 
 function oy_data_block(oy_data_flag) {
@@ -2318,11 +2227,7 @@ function oy_block_reset() {
     OY_BLOCK = [[null, []], {}, {}, {}, {}];
     OY_DIFF_TRACK = [[], []];
     OY_DIFF_TALLY = {};
-    OY_ORIGINS = {};
     OY_LIGHT_BUILD = [];
-    OY_CLONES = {};
-    OY_CLONE_UPTIME = null;
-    OY_CLONE_BUILD = [];
     OY_MESH_RANGE = 0;
     OY_CHALLENGE_TRIGGER = null;
     OY_BLACKLIST = {};
@@ -2383,12 +2288,7 @@ function oy_block_loop() {
             OY_BLOCK_DYNAMIC[1] = [];
             OY_BLOCK_DYNAMIC[2] = [];
             OY_LIGHT_BUILD = [];
-            OY_CLONE_BUILD = [];
             if (OY_BLOCK_DIVE_REWARD==="OY_NULL") OY_BLOCK_DIVE_TRACK = 0;
-
-            for (let oy_node_select in OY_CLONES) {
-                if (OY_CLONES[oy_node_select][1]===0||OY_CLONES[oy_node_select][1]===2||oy_time_local>=OY_CLONES[oy_node_select][0]) delete OY_CLONES[oy_node_select];
-            }
 
             if (oy_time_local-OY_BLOCK_SEEDTIME<OY_BLOCK_SEED_BUFFER) {
                 if (OY_LIGHT_MODE===true) {//if self elects to be a light node they cannot participate in the initial boot-up sequence of the mesh
@@ -2399,8 +2299,6 @@ function oy_block_loop() {
                 }
                 if (OY_LIGHT_STATE===true) OY_LIGHT_STATE = false;//since node has elected to being a full node, switch light state flag to false
             }
-
-            //TODO diff_tally gets processed here, legacy clone system might get scrapped
 
             if (OY_LIGHT_STATE===true&&OY_BLOCK_HASH!==null&&Object.keys(OY_DIFF_TALLY).length>0) {
                 let oy_diff_tally_set = [];
@@ -2449,8 +2347,6 @@ function oy_block_loop() {
                 OY_BLOCK_HASH = oy_hash_gen(OY_BLOCK_FLAT);
 
                 OY_BLOCK_WEIGHT = new Blob([OY_BLOCK_FLAT]).size;
-
-                //OY_CLONE_UPTIME = Date.now()/1000;
 
                 oy_log("DIFF MESHBLOCK HASH "+OY_BLOCK_HASH);
 
@@ -2761,8 +2657,6 @@ function oy_block_loop() {
 
             OY_BLOCK_WEIGHT = new Blob([OY_BLOCK_FLAT]).size;
 
-            OY_CLONE_UPTIME = Date.now()/1000;
-
             oy_log("NEW MESHBLOCK HASH "+OY_BLOCK_HASH);
 
             //oy_log_debug("HASH: "+OY_BLOCK_HASH+"\nBLOCK: "+oy_block_flat);
@@ -2806,27 +2700,6 @@ function oy_block_loop() {
                         }
                     }
                 }
-
-                /*marked for deletion
-                if (OY_CLONE_UPTIME!==null&&OY_CLONE_UPTIME>=OY_CLONE_UPTIME_MIN&&OY_PEER_COUNT>=OY_BLOCK_PEERS_MIN&&Object.keys(OY_CLONES).length>0) {
-                    let oy_block_split = null;
-                    let oy_block_nonce_max = -1;
-                    for (let oy_node_select in OY_CLONES) {
-                        if (Date.now()/1000>OY_CLONES[oy_node_select][0]||OY_CLONES[oy_node_select][1]!==1) continue;
-                        if (oy_block_split===null) {
-                            oy_block_split = [];
-                            for (let i = 0; i < OY_BLOCK_FLAT.length; i += OY_CLONE_CHUNK) {
-                                oy_block_split.push(OY_BLOCK_FLAT.slice(i, i+OY_CLONE_CHUNK));
-                                oy_block_nonce_max++;
-                            }
-                        }
-                        for (let oy_clone_nonce in oy_block_split) {
-                            oy_data_beam(oy_node_select, "OY_CLONE_PUSH", [oy_block_nonce_max, oy_clone_nonce, oy_block_split[oy_clone_nonce]]);
-                        }
-                        OY_CLONES[oy_node_select][1] = 2;
-                    }
-                }
-                */
             }, OY_BLOCK_LATCHTIME);
 
             for (let oy_command_hash in OY_BLOCK_CONFIRM) {
@@ -2888,20 +2761,6 @@ function oy_engine(oy_thread_track) {
         if (oy_time_local-OY_NODES[oy_node_select][1]>OY_NODE_EXPIRETIME) {
             oy_node_disconnect(oy_node_select);
             oy_log("Cleaned up expired connection object for node: "+oy_short(oy_node_select));
-        }
-    }
-
-    for (let oy_node_select in OY_ORIGINS) {
-        if (oy_time_local>OY_ORIGINS[oy_node_select]) {
-            delete OY_ORIGINS[oy_node_select];
-            oy_log("Cleaned up expired origin session for node: "+oy_short(oy_node_select));
-        }
-    }
-
-    for (let oy_node_select in OY_CLONES) {
-        if (oy_time_local>OY_CLONES[oy_node_select]) {
-            delete OY_CLONES[oy_node_select];
-            oy_log("Cleaned up expired clone session for node: "+oy_short(oy_node_select));
         }
     }
 
