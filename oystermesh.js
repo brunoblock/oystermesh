@@ -135,7 +135,6 @@ let OY_BLACKLIST = {};//nodes to block for x amount of time
 let OY_PUSH_HOLD = {};//holds data contents ready for pushing to mesh
 let OY_PUSH_TALLY = {};//tracks data push nonces that were deposited on the mesh
 let OY_LATCH_UPTIME = null;
-let OY_UNLATCH_REDEMPTION = {};
 let OY_LIGHT_BUILD = [];
 let OY_LOGIC_ALL_TYPE = ["OY_BLOCK_COMMAND", "OY_BLOCK_SYNC", "OY_BLOCK_SYNC_CHALLENGE", "OY_BLOCK_DIVE", "OY_DATA_PULL", "OY_CHANNEL_BROADCAST"];//OY_LOGIC_ALL definitions
 let OY_LOGIC_EXCEPT_TYPE = ["OY_BLOCK_SYNC", "OY_BLOCK_SYNC_CHALLENGE_RESPONSE", "OY_BLOCK_DIVE", "OY_CHANNEL_BROADCAST"];
@@ -2381,27 +2380,24 @@ function oy_block_loop() {
             //unlatch process
             if (OY_LIGHT_MODE===false&&OY_LIGHT_STATE===true) {//condition means node is unlatching to transition from light to full node
                 //OY_UNLATCH_REDEMPTION
-                if (OY_PEER_COUNT-OY_LATCH_COUNT<OY_LATCH_UNLATCH_MIN) {//self is not ready to unlatch, find more full node peers first
-                    //send unlatch flag to all full node peers not in redemption list, subsequently add to redemption list
-                    for (let oy_peer_select in OY_PEERS) {
-                        if (OY_PEERS[oy_peer_select][9]===false&&typeof(OY_UNLATCH_REDEMPTION[oy_peer_select])==="undefined") {
-                            oy_data_beam(oy_peer_select, "OY_LIGHT_UNLATCH", null);
-                            OY_UNLATCH_REDEMPTION[oy_peer_select] = true;
-                        }
+                let oy_light_count = 0;
+                let oy_light_weakest = [null, 0];
+                for (let oy_peer_select in OY_PEERS) {
+                    if (OY_PEERS[oy_peer_select][9]===true) {
+                        oy_light_count++;
+                        if (oy_light_weakest[1]<OY_PEERS[oy_peer_select][3]) oy_light_weakest = [oy_peer_select, OY_PEERS[oy_peer_select][3]];
                     }
+                }
+                if (OY_PEER_COUNT-oy_light_count<OY_LATCH_UNLATCH_MIN&&oy_light_weakest[0]!==null) {//self is not ready to unlatch, find more full node peers first
+                    oy_peer_remove(oy_light_weakest[0]);
+                    oy_node_assign();
                 }
                 else {//unlatch sequence
                     OY_LIGHT_STATE = false;
                     //send unlatch flag to all peers not in redemption list
                     for (let oy_peer_select in OY_PEERS) {
-                        if (typeof(OY_UNLATCH_REDEMPTION[oy_peer_select])==="undefined") oy_data_beam(oy_peer_select, "OY_LIGHT_UNLATCH", null);
+                        oy_data_beam(oy_peer_select, "OY_LIGHT_UNLATCH", null);
                     }
-                    OY_UNLATCH_REDEMPTION = {};
-                }
-            }
-            else if (Object.keys(OY_UNLATCH_REDEMPTION).length>0) {
-                for (let oy_peer_select in OY_UNLATCH_REDEMPTION) {
-                    oy_peer_remove(oy_peer_select);
                 }
             }
             //unlatch process
@@ -2453,8 +2449,6 @@ function oy_block_loop() {
             oy_sync_command.sort(function(a, b) {//TODO this might need to be random instead to increase hash diversity/security
                 return a[0] - b[0];
             });
-
-            //TODO do not emit block_sync packets if light_state = true
 
             //oy_log_debug("COMMAND: "+JSON.stringify(OY_BLOCK_COMMAND)+"\nSYNC COMMAND: "+JSON.stringify(oy_sync_command));
             oy_sync_command = LZString.compressToUTF16(JSON.stringify(oy_sync_command));
