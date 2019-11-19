@@ -2379,7 +2379,6 @@ function oy_block_loop() {
 
             //unlatch process
             if (OY_LIGHT_MODE===false&&OY_LIGHT_STATE===true) {//condition means node is unlatching to transition from light to full node
-                //OY_UNLATCH_REDEMPTION
                 let oy_light_count = 0;
                 let oy_light_weakest = [null, 0];
                 for (let oy_peer_select in OY_PEERS) {
@@ -2389,7 +2388,7 @@ function oy_block_loop() {
                     }
                 }
                 if (OY_PEER_COUNT-oy_light_count<OY_LATCH_UNLATCH_MIN&&oy_light_weakest[0]!==null) {//self is not ready to unlatch, find more full node peers first
-                    oy_peer_remove(oy_light_weakest[0]);
+                    if (OY_PEER_COUNT===OY_PEER_MAX) oy_peer_remove(oy_light_weakest[0]);
                     oy_node_assign();
                 }
                 else {//unlatch sequence
