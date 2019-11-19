@@ -41,7 +41,7 @@ const OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via 
 const OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a seeding event
 const OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims dive rewards
 const OY_BLOCK_RANGE_MIN = 5;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_SEEDTIME = 1574160400;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_SEEDTIME = 1574192900;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_CHALLENGE_SAFETY = 0.5;//safety margin for rogue packets reaching block_consensus. 1 means no changes, lower means further from block_consensus, higher means closer.
 const OY_CHALLENGE_BUFFER = 1.8;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (min of 1)
 const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
@@ -311,11 +311,13 @@ function oy_buffer_decode(oy_buffer_buffer, oy_buffer_base64) {
     return binary;
 }
 
+/*
 function oy_base_decode(str) {
     return decodeURIComponent(window.atob(str).split('').map(function(c) {
         return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
     }).join(''));
 }
+*/
 
 //encrypt data
 //WARNING, oy_crypt_pass **MUST** be unique each time this function is invoked (because the nonce is static)
@@ -415,7 +417,7 @@ function oy_peer_add(oy_peer_id, oy_latch_flag) {
         //[peership timestamp, last msg timestamp, last latency timestamp, latency avg, latency history, data beam, data beam history, data soak, data soak history, latch flag]
         OY_PEERS[oy_peer_id] = [Date.now()/1000|0, -1, -1, 0, [], 0, [], 0, [], oy_latch_flag];
         if (oy_latch_flag===true) OY_LATCH_COUNT++;
-        else OY_PEER_COUNT++;
+        OY_PEER_COUNT++;
         if (OY_PEER_COUNT===1) document.dispatchEvent(OY_PEERS_RECOVER);
         oy_node_reset(oy_peer_id);
     };
@@ -427,7 +429,7 @@ function oy_peer_remove(oy_peer_id, oy_punish_reason) {
     if (!oy_peer_check(oy_peer_id)) return false;
     oy_data_beam(oy_peer_id, "OY_PEER_TERMINATE", (typeof(oy_punish_reason)==="undefined")?"OY_REASON_PEER_REMOVE":oy_punish_reason);
     if (OY_PEERS[oy_peer_id][9]===true) OY_LATCH_COUNT--;
-    else OY_PEER_COUNT--;//TODO confirm logic
+    OY_PEER_COUNT--;
     if (OY_PEER_COUNT===0&&OY_PEERS[oy_peer_id][9]===false) document.dispatchEvent(OY_PEERS_NULL);
     delete OY_PEERS[oy_peer_id];
     oy_node_reset(oy_peer_id);
@@ -492,12 +494,12 @@ function oy_peer_rand(oy_peers_exception) {
 
 //process data sequence received from mutual peer oy_peer_id
 function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
-    if (!oy_peer_check(oy_peer_id)&&typeof(OY_ORIGINS[oy_peer_id])==="undefined") {
+    if (!oy_peer_check(oy_peer_id)) {
         oy_log("Tried to call peer_process on a non-existent peer", 1);
         return false;
     }
     let oy_time_local = Date.now()/1000;
-    if (typeof(OY_ORIGINS[oy_peer_id])==="undefined") OY_PEERS[oy_peer_id][1] = oy_time_local;//update last msg timestamp for peer
+    OY_PEERS[oy_peer_id][1] = oy_time_local;//update last msg timestamp for peer
     if (oy_data_flag==="OY_BLOCK_COMMAND") {
         //oy_data_payload = [oy_route_passport_passive, oy_route_dynamic, oy_command_array, oy_command_crypt]
         if (oy_data_payload.length!==4||typeof(oy_data_payload[0])!=="object") {
@@ -554,8 +556,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                         if (typeof(OY_BLOCK_COMMAND[oy_command_hash])==="undefined") oy_command_inherit.push(oy_sync_command[i]);
                     }
                     if (oy_block_sync_verify(oy_command_inherit)) {
-                        if (typeof(OY_ORIGINS[oy_peer_id])!=="undefined"&&oy_time_local<OY_ORIGINS[oy_peer_id]) OY_BLOCK_SYNC[oy_data_payload[6]] = [true, null, oy_data_payload, oy_command_pool];
-                        else if (typeof(OY_BLOCK_SYNC[oy_data_payload[6]])==="undefined") {//prevent concurrent thread overlap
+                        if (typeof(OY_BLOCK_SYNC[oy_data_payload[6]])==="undefined") {//prevent concurrent thread overlap
                             if (OY_CHALLENGE_TRIGGER!==null&&oy_data_payload[0].length===OY_CHALLENGE_TRIGGER) {
                                 let oy_sync_challenge = oy_rand_gen();
                                 OY_BLOCK_SYNC[oy_data_payload[6]] = [false, oy_sync_challenge+oy_sync_hash, oy_data_payload, oy_command_pool];
@@ -1905,7 +1906,7 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
                if (typeof(oy_data[1][0])==="object"&&oy_data[1][0].length>1&&!!oy_peer_find(oy_data[1][0][0])) return true;
                if (OY_LOGIC_ALL_TYPE.indexOf(oy_data[0])!==-1) {
                    let oy_time_local = Date.now()/1000;
-                   if (!oy_peer_check(oy_node_id)&&typeof(OY_ORIGINS[oy_node_id])==="undefined") return false;
+                   if (!oy_peer_check(oy_node_id)) return false;
 
                    if ((oy_data[0]==="OY_CHANNEL_BROADCAST"&&oy_data_raw.length>OY_CHANNEL_BROADCAST_PACKET_MAX)||
                        ((oy_data[0]==="OY_BLOCK_SYNC"||oy_data[0]==="OY_BLOCK_DIVE")&&oy_data_raw.length>OY_BLOCK_PACKET_MAX)||
@@ -2247,6 +2248,7 @@ function oy_block_loop() {
     let oy_block_time_local = oy_block_time();
     oy_chrono(oy_block_loop, OY_BLOCK_LOOP);
     if (oy_block_time_local!==OY_BLOCK_TIME&&(oy_block_time_local/10)%2===0) {
+        //oy_log_debug("LEMON: "+oy_block_time_local);
         OY_BLOCK_TIME = oy_block_time_local;
         OY_BLOCK_NEXT = oy_block_time_local+20;
         OY_BLOCK_DYNAMIC = [[], null, null, null];
@@ -2289,8 +2291,10 @@ function oy_block_loop() {
             OY_LIGHT_BUILD = [];
             if (OY_BLOCK_DIVE_REWARD==="OY_NULL") OY_BLOCK_DIVE_TRACK = 0;
 
-            if (oy_time_local-OY_BLOCK_SEEDTIME<OY_BLOCK_SEED_BUFFER) {
+            if (oy_time_local-OY_BLOCK_SEEDTIME<OY_BLOCK_SEED_BUFFER) {//TODO inconsistent invocation
+                oy_log_debug("B1");
                 if (OY_LIGHT_MODE===true) {//if self elects to be a light node they cannot participate in the initial boot-up sequence of the mesh
+                    oy_log_debug("B2");
                     oy_block_reset();
                     oy_log("MESHBLOCK VOID SEED BUFFER");
                     oy_block_continue = false;
@@ -2351,7 +2355,7 @@ function oy_block_loop() {
 
                 document.dispatchEvent(OY_BLOCK_TRIGGER);
             }
-
+            oy_log_debug("A1");
             if (OY_BLOCK_HASH===null) {
                 OY_MESH_RANGE = 0;
                 OY_CHALLENGE_TRIGGER = null;
@@ -2362,20 +2366,21 @@ function oy_block_loop() {
             }
 
             if (OY_BLOCK_UPTIME===null&&OY_PEER_COUNT>0) OY_BLOCK_UPTIME = oy_time_local;
-
+            oy_log_debug("A2");
             if (OY_BLOCK[0][0]!==null&&OY_BLOCK[0][0]!==oy_block_time_local-20) {
                 oy_block_reset();
                 oy_log("MESHBLOCK MISSTEP");
                 oy_block_continue = false;
                 return false;
             }
-
-            if (OY_PEER_COUNT===0&&Object.keys(OY_ORIGINS).length===0&&oy_time_local-OY_BLOCK_SEEDTIME>OY_BLOCK_SEED_BUFFER) {
+            oy_log_debug("A3");
+            if (OY_PEER_COUNT===0&&oy_time_local-OY_BLOCK_SEEDTIME>OY_BLOCK_SEED_BUFFER) {
                 oy_block_reset();
-                oy_log("MESHBLOCK DROP [ORIGIN/SOURCE]");
+                oy_log("MESHBLOCK DROP");
                 oy_block_continue = false;
                 return false;
             }
+            oy_log_debug("A4");
 
             //unlatch process
             if (OY_LIGHT_MODE===false&&OY_LIGHT_STATE===true) {//condition means node is unlatching to transition from light to full node
@@ -2424,11 +2429,6 @@ function oy_block_loop() {
             }, 100);
             //latency routine test
 
-            if (OY_LIGHT_STATE===true) {//do not process the meshblock anymore if in light state
-                oy_block_continue = true;
-                return false;
-            }
-
             if (Math.floor((Date.now()-30000)/10000000)!==Math.floor((Date.now()-10000)/10000000)) {//10000000
                 //oy_log_debug("SNAPSHOT: "+OY_BLOCK_HASH+"/"+JSON.stringify(OY_BLOCK));
                 OY_BLOCK[1] = {};
@@ -2438,6 +2438,12 @@ function oy_block_loop() {
             }
 
             OY_BLOCK[0][0] = oy_block_time_local;
+            oy_log_debug("APPLE: "+OY_BLOCK[0][0]);
+
+            if (OY_LIGHT_STATE===true) {//do not process the meshblock anymore if in light state
+                oy_block_continue = true;
+                return false;
+            }
 
             OY_BLOCK_COMMAND_KEY = {};
             for (let oy_command_hash in OY_BLOCK_COMMAND) {
@@ -2656,7 +2662,7 @@ function oy_block_loop() {
 
             oy_log("NEW MESHBLOCK HASH "+OY_BLOCK_HASH);
 
-            //oy_log_debug("HASH: "+OY_BLOCK_HASH+"\nBLOCK: "+oy_block_flat);
+            oy_log_debug("HASH: "+OY_BLOCK_HASH+"\nBLOCK: "+OY_BLOCK_FLAT);
 
             document.dispatchEvent(OY_BLOCK_TRIGGER);
 
@@ -2935,7 +2941,7 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
                 }
                 oy_peer_process(oy_conn.peer, oy_data[0], oy_data[1]);
             }
-            else if ((oy_data[0]==="OY_BLOCK_SYNC"||oy_data[0]==="OY_BLOCK_DIVE")&&(typeof(OY_ORIGINS[oy_conn.peer])!=="undefined"&&Date.now()/1000<OY_ORIGINS[oy_conn.peer])) oy_peer_process(oy_conn.peer, oy_data[0], oy_data[1]);
+            else if ((oy_data[0]==="OY_BLOCK_SYNC"||oy_data[0]==="OY_BLOCK_DIVE")&&OY_LIGHT_STATE===false) oy_peer_process(oy_conn.peer, oy_data[0], oy_data[1]);//TODO verify light state inclusion
             else {
                 if (oy_data_measure(false, "oy_aggregate_node", oy_data_raw.length)===false) oy_log("Node "+oy_short(oy_conn.peer)+" pushed aggregate mesh flow compliance beyond limit");
                 else oy_node_negotiate(oy_conn.peer, oy_data[0], oy_data[1]);
