@@ -38,10 +38,11 @@ const OY_BLOCK_HASH_KEEP = 1555;//how many hashes of previous blocks to keep in 
 const OY_BLOCK_DENSITY = 0.5;//higher means block syncs [0] and dives [1] are more spread out within their respective meshblock sectors
 const OY_BLOCK_PEERS_MIN = 3;//minimum peer count to be become a source for latches and broadcast SYNC/DIVE
 const OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via OY_BLOCK_SYNC and OY_BLOCK_DIVE (OY_LOGIC_ALL)
+const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
 const OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a seeding event
 const OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims dive rewards
 const OY_BLOCK_RANGE_MIN = 5;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_SEEDTIME = 1574192900;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_SEEDTIME = 1574249200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_CHALLENGE_SAFETY = 0.5;//safety margin for rogue packets reaching block_consensus. 1 means no changes, lower means further from block_consensus, higher means closer.
 const OY_CHALLENGE_BUFFER = 1.8;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (min of 1)
 const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
@@ -199,6 +200,7 @@ let OY_BLOCK_INIT = new Event('oy_block_init');//trigger-able event for when a n
 let OY_BLOCK_TRIGGER = new Event('oy_block_trigger');//trigger-able event for when a new block is issued
 let OY_BLOCK_RESET = new Event('oy_block_reset');//trigger-able event for when a new block is issued
 let OY_BLOCK_TRIGGER_TEMP = new Event('oy_block_trigger_temp');//trigger-able event for when a new block is issued
+let OY_BLOCK_HALT = null;
 let OY_DIFF_TRACK = [[], []];
 let OY_DIFF_CONSTRUCT = {};
 let OY_DIFF_TALLY = {};
@@ -415,9 +417,10 @@ function oy_peer_add(oy_peer_id, oy_latch_flag) {
     }
     let oy_callback_local = function() {
         //[peership timestamp, last msg timestamp, last latency timestamp, latency avg, latency history, data beam, data beam history, data soak, data soak history, latch flag]
-        OY_PEERS[oy_peer_id] = [Date.now()/1000|0, -1, -1, 0, [], 0, [], 0, [], oy_latch_flag];
-        if (oy_latch_flag===true) OY_LATCH_COUNT++;
+        if (OY_PEER_COUNT>=OY_PEER_MAX) return false;//prevent overflow on peer_count
         OY_PEER_COUNT++;
+        if (oy_latch_flag===true) OY_LATCH_COUNT++;
+        OY_PEERS[oy_peer_id] = [Date.now()/1000|0, -1, -1, 0, [], 0, [], 0, [], oy_latch_flag];
         if (OY_PEER_COUNT===1) document.dispatchEvent(OY_PEERS_RECOVER);
         oy_node_reset(oy_peer_id);
     };
@@ -427,16 +430,16 @@ function oy_peer_add(oy_peer_id, oy_latch_flag) {
 
 function oy_peer_remove(oy_peer_id, oy_punish_reason) {
     if (!oy_peer_check(oy_peer_id)) return false;
-    oy_data_beam(oy_peer_id, "OY_PEER_TERMINATE", (typeof(oy_punish_reason)==="undefined")?"OY_REASON_PEER_REMOVE":oy_punish_reason);
-    if (OY_PEERS[oy_peer_id][9]===true) OY_LATCH_COUNT--;
     OY_PEER_COUNT--;
-    if (OY_PEER_COUNT===0&&OY_PEERS[oy_peer_id][9]===false) document.dispatchEvent(OY_PEERS_NULL);
+    if (OY_PEERS[oy_peer_id][9]===true) OY_LATCH_COUNT--;
+    if (OY_PEER_COUNT===0) document.dispatchEvent(OY_PEERS_NULL);
     delete OY_PEERS[oy_peer_id];
     oy_node_reset(oy_peer_id);
     if (OY_PEER_COUNT<0||OY_LATCH_COUNT<0) {
         oy_log("Peer management system failed", 1);
         return false;
     }
+    oy_data_beam(oy_peer_id, "OY_PEER_TERMINATE", (typeof(oy_punish_reason)==="undefined")?"OY_REASON_PEER_REMOVE":oy_punish_reason);
     oy_log("Removed peer "+oy_short(oy_peer_id)+" with reason "+oy_punish_reason);
     if (typeof(oy_punish_reason)!=="undefined") oy_node_punish(oy_peer_id, oy_punish_reason);
 }
@@ -2206,6 +2209,11 @@ function oy_block_time_first(oy_next) {
 }
 
 function oy_block_reset() {
+    let oy_time_local = Date.now()/1000;
+
+    if (OY_BLOCK_HALT!==null&&oy_time_local-OY_BLOCK_HALT<OY_BLOCK_HALT_BUFFER) return false;//prevents duplicate calls of block_reset()
+
+    OY_BLOCK_HALT = oy_time_local;
     OY_BLOCK_HASH = null;
     OY_BLOCK_FLAT = null;
     OY_BLOCK_SIGN = null;
