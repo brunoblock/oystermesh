@@ -990,9 +990,15 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         }
 
     }
-    else if (oy_data_flag==="OY_PEER_UNLATCH") {//self as source receives unlatch directive from source
-        if (OY_PEERS[oy_peer_id][9]===true) {
-            OY_PEERS[oy_peer_id][9] = false;//set light/latch flag to false
+    else if (oy_data_flag==="OY_PEER_LATCH") {//self as source receives latch directive from source, means a full node is converting into a light node
+        if (OY_PEERS[oy_peer_id][9]===2) {
+            OY_PEERS[oy_peer_id][9] = 1;
+            OY_LATCH_COUNT++;
+        }
+    }
+    else if (oy_data_flag==="OY_PEER_UNLATCH") {//self as source receives unlatch directive from source, means a light node is converting into a full node
+        if (OY_PEERS[oy_peer_id][9]===1) {
+            OY_PEERS[oy_peer_id][9] = 2;
             OY_LATCH_COUNT--;
         }
     }
@@ -1365,7 +1371,7 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
                     let oy_peer_weak = [false, -1];
                     let oy_peer_local;
                     for (oy_peer_local in OY_PEERS) {
-                        if (oy_peer_local==="oy_aggregate_node"||OY_PEERS[oy_peer_local][9]===true) continue;
+                        if (oy_peer_local==="oy_aggregate_node") continue;
                         if (OY_PEERS[oy_peer_local][3]>oy_peer_weak[1]) oy_peer_weak = [oy_peer_local, OY_PEERS[oy_peer_local][3]];
                     }
                     oy_log("Current weakest peer is "+oy_short(oy_peer_weak[0])+" with latency of "+oy_peer_weak[1].toFixed(4));
@@ -1721,7 +1727,7 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_push_def
         let oy_data_block_bool = (oy_data_flag==="OY_BLOCK_SYNC"||oy_data_flag==="OY_BLOCK_DIVE");
         oy_data_payload[0].push(OY_SELF_SHORT);
         for (let oy_peer_select in OY_PEERS) {
-            if ((oy_data_block_bool===true&&OY_PEERS[oy_peer_select][9]===true)||oy_peer_select==="oy_aggregate_node"||oy_data_payload[0].indexOf(oy_short(oy_peer_select))!==-1) continue;
+            if ((oy_data_block_bool===true&&OY_PEERS[oy_peer_select][9]!==2)||oy_peer_select==="oy_aggregate_node"||oy_data_payload[0].indexOf(oy_short(oy_peer_select))!==-1) continue;
             //oy_log("Routing data via peer "+oy_short(oy_peer_select)+" with flag "+oy_data_flag);
             oy_data_beam(oy_peer_select, oy_data_flag, oy_data_payload);
         }
@@ -2333,7 +2339,7 @@ function oy_block_loop() {
                 let oy_light_count = 0;
                 let oy_light_weakest = [null, 0];
                 for (let oy_peer_select in OY_PEERS) {
-                    if (OY_PEERS[oy_peer_select][9]===true) {
+                    if (OY_PEERS[oy_peer_select][9]===1) {//TODO consider blank peers
                         oy_light_count++;
                         if (oy_light_weakest[1]<OY_PEERS[oy_peer_select][3]) oy_light_weakest = [oy_peer_select, OY_PEERS[oy_peer_select][3]];
                     }
@@ -2346,7 +2352,7 @@ function oy_block_loop() {
                     OY_LIGHT_STATE = false;
                     //send unlatch flag to all peers not in redemption list
                     for (let oy_peer_select in OY_PEERS) {
-                        oy_data_beam(oy_peer_select, "OY_LIGHT_UNLATCH", null);
+                        oy_data_beam(oy_peer_select, "OY_PEER_UNLATCH", null);
                     }
                 }
             }
@@ -2642,9 +2648,10 @@ function oy_block_loop() {
                         oy_diff_nonce_max++;
                     }
                     for (let oy_peer_select in OY_PEERS) {
-                        if (OY_PEERS[oy_peer_select][9]===false) continue;//check that the peer is a latch
+                        if (OY_PEERS[oy_peer_select][9]!==1) continue;//check that the peer is a latch
                         for (let oy_diff_nonce in oy_diff_split) {
-                            oy_data_beam(oy_peer_select, "OY_LIGHT_DIFF", [oy_diff_nonce_max, oy_diff_nonce, oy_diff_split[oy_diff_nonce]]);
+                            oy_data_beam(oy_peer_select, "OY_PEER_DIFF", [oy_diff_nonce_max, oy_diff_nonce, oy_diff_split[oy_diff_nonce]]);
+                            //TODO logic for latches to manage peer_diff packets
                         }
                     }
                 }
