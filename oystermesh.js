@@ -471,10 +471,10 @@ function oy_peer_latency(oy_peer_id, oy_latency_new) {
 }
 
 //checks if short id of node correlates with a mutual peer or a latch
-function oy_peer_find(oy_peer_short) {//TODO check if should block blank nodes from being referenced here
+function oy_peer_find(oy_peer_short) {
     if (oy_peer_short===OY_SELF_SHORT) return false;
     for (let oy_peer_local in OY_PEERS) {
-        if (oy_peer_local==="oy_aggregate_node") continue;
+        if (oy_peer_local==="oy_aggregate_node"||OY_PEERS[oy_peer_local][9]===0) continue;
         if (oy_peer_short===oy_short(oy_peer_local)) return oy_peer_local;
     }
     return false;
@@ -484,7 +484,7 @@ function oy_peer_find(oy_peer_short) {//TODO check if should block blank nodes f
 function oy_peer_rand(oy_peers_exception) {
     let oy_peers_local = {};
     for (let oy_peer_local in OY_PEERS) {
-        if (oy_peer_local==="oy_aggregate_node"||oy_peers_exception.indexOf(oy_short(oy_peer_local))!==-1) continue;
+        if (oy_peer_local==="oy_aggregate_node"||OY_PEERS[oy_peer_local][9]===0||oy_peers_exception.indexOf(oy_short(oy_peer_local))!==-1) continue;
         oy_peers_local[oy_peer_local] = true;
     }
     if (Object.keys(oy_peers_local).length===0) {
@@ -995,12 +995,22 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         OY_PEERS[oy_peer_id][9] = 0;
     }
     else if (oy_data_flag==="OY_PEER_LIGHT") {//peer as a full node is converting into a light node
+        if (!oy_key_verify(oy_peer_id, oy_data_payload, OY_MESH_DYNASTY+OY_BLOCK_HASH)) {
+            oy_node_punish(oy_peer_id, "OY_PUNISH_LIGHT_FAIL");
+            oy_log("Punished peer "+oy_short(oy_peer_id)+" who failed to upgrade to a light node");
+            return false;
+        }
         if (OY_PEERS[oy_peer_id][9]===2) {
             OY_PEERS[oy_peer_id][9] = 1;
             OY_LATCH_COUNT++;
         }
     }
     else if (oy_data_flag==="OY_PEER_FULL") {//peer as a light node is converting into a full node
+        if (!oy_key_verify(oy_peer_id, oy_data_payload, OY_MESH_DYNASTY+OY_BLOCK_HASH)) {
+            oy_node_punish(oy_peer_id, "OY_PUNISH_FULL_FAIL");
+            oy_log("Punished peer "+oy_short(oy_peer_id)+" who failed to upgrade to a full node");
+            return false;
+        }
         if (OY_PEERS[oy_peer_id][9]===1) {
             OY_PEERS[oy_peer_id][9] = 2;
             OY_LATCH_COUNT--;
@@ -1456,9 +1466,11 @@ function oy_latency_check(oy_node_id) {
 }
 
 function oy_state_current() {//TODO consider adding more conditions to this function, such as peering stability
-    if (OY_BLOCK_HASH===null) return "OY_STATE_BLANK";
-    if (OY_LIGHT_STATE===true) return "OY_STATE_LIGHT";
-    return "OY_STATE_FULL";
+    if (OY_BLOCK_HASH!==null) {
+        if (OY_LIGHT_STATE===false) return "OY_STATE_FULL";
+        return "OY_STATE_LIGHT";
+    }
+    return "OY_STATE_BLANK";
 }
 
 function oy_state_convert(oy_state_flag) {
@@ -1791,7 +1803,7 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_push_def
 }
 
 function oy_data_direct(oy_data_flag) {
-    return !(oy_data_flag.indexOf("OY_PEER")===-1&&oy_data_flag.indexOf("OY_LATENCY")===-1&&oy_data_flag.indexOf("OY_LIGHT")===-1);//TODO remove light
+    return !(oy_data_flag.indexOf("OY_PEER")===-1&&oy_data_flag.indexOf("OY_LATENCY")===-1);
 }
 
 function oy_data_block(oy_data_flag) {
@@ -2363,7 +2375,7 @@ function oy_block_loop() {
                     OY_LIGHT_STATE = false;
                     //send unlatch flag to all peers not in redemption list
                     for (let oy_peer_select in OY_PEERS) {
-                        oy_data_beam(oy_peer_select, "OY_PEER_UNLATCH", null);
+                        oy_data_beam(oy_peer_select, "OY_PEER_FULL", oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH));
                     }
                 }
             }
