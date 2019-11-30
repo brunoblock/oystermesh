@@ -148,6 +148,7 @@ let OY_BLOCK_TEMP_HASH = null;//hash of the most current block
 let OY_BLOCK = [[null, []], {}, {}, {}, {}];//the current meshblock - [oy_meta_sector, oy_history_sector, oy_akoya_sector, oy_dns_sector, oy_channel_sector]
 let OY_BLOCK_HASH = null;//hash of the most current block
 let OY_BLOCK_FLAT = null;
+let OY_BLOCK_DIFF = false;
 let OY_BLOCK_SIGN = null;
 let OY_BLOCK_TIME = oy_block_time_first(false);//the most recent block timestamp
 let OY_BLOCK_NEXT = oy_block_time_first(true);//the next block timestamp
@@ -956,19 +957,54 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         return true;
     }
     else if (oy_data_flag==="OY_PEER_DIFF") {//self as latch receives diff from source
-        //TODO broadcast peer_diff to all latches, except oy_peer_id, unless the diff was already processed before
-        if (OY_BLOCK_HASH===null||oy_time_local-OY_BLOCK_TIME>=OY_BLOCK_SECTORS[0][0]) return false;//verify meshblock zone
-        if (typeof(OY_DIFF_CONSTRUCT[oy_peer_id])==="undefined") OY_DIFF_CONSTRUCT[oy_peer_id] = [];//create diff construct space for peer_id if needed (if first part of construction sequence)
-        OY_DIFF_CONSTRUCT[oy_peer_id][oy_data_payload[1]] = oy_data_payload[2];//key is diff_nonce and value is diff_value
-        if (oy_data_payload[0]===oy_data_payload[1]) {//check if all the nonces have been fulfilled
-            //construct the diff instructions and compare the hashes
-            let oy_construct = OY_DIFF_CONSTRUCT[oy_peer_id].join("");//join the diff instructions together into the diff construct
-            delete OY_DIFF_CONSTRUCT[oy_peer_id];//delete the old array to save memory
-            let oy_hash = oy_hash_gen(oy_construct);//generate the hash of the diff construct
-            if (typeof(OY_DIFF_TALLY[oy_hash])==="undefined") OY_DIFF_TALLY[oy_hash] = [0, oy_construct];//generate diff tally entry if doesn't exist with hash as key
-            OY_DIFF_TALLY[oy_hash][0]++;//increment hash count, this way multiple instances of the same hash are considered in the count
+        //TODO ensure meshblock transaction limit respects packet size limit for peer_diff packet
+        if (OY_BLOCK_DIFF===true||OY_LIGHT_STATE===false||OY_BLOCK_HASH===null||oy_time_local-OY_BLOCK_TIME>=OY_BLOCK_SECTORS[0][0]) return false;//verify meshblock zone
+        OY_BLOCK_DIFF = true;
+        //beam to peers here
+        for (let oy_peer_select in OY_PEERS) {
+            if (oy_peer_select==="oy_aggregate_node"||OY_PEERS[oy_peer_select][9]!==1||oy_peer_select===oy_peer_id) continue;
+            oy_data_beam(oy_peer_select, "OY_PEER_DIFF", oy_data_payload);
+        }
+        let oy_diff_flat = JSON.parse(oy_data_payload);//join the diff instructions together into the diff construct
+        oy_data_payload = null;
+
+        if (oy_diff_flat[0].length>0) {
+            let oy_dive_share = oy_diff_flat[0][0].shift();
+            for (let i in oy_diff_flat[0]) {
+                if (typeof(OY_BLOCK[2][oy_diff_flat[0][i]])==="undefined") OY_BLOCK[2][oy_diff_flat[0][i]] = oy_dive_share;
+                else OY_BLOCK[2][oy_diff_flat[0][i]] += oy_dive_share;
+            }
+        }
+        if (oy_diff_flat[1].length>0) {
+            for (let i in oy_diff_flat[1]) {
+                if (oy_diff_flat[1][i][1][0]==="OY_AKOYA_SEND"&&typeof(OY_BLOCK[2][oy_diff_flat[1][i][1][2]])!=="undefined"&&OY_BLOCK[2][oy_diff_flat[1][i][1][2]]>=oy_diff_flat[1][i][1][3]) {
+                    if (typeof(OY_BLOCK[2][oy_diff_flat[1][i][1][4]])==="undefined") OY_BLOCK[2][oy_diff_flat[1][i][1][4]] = 0;
+                    let oy_balance_send = OY_BLOCK[2][oy_diff_flat[1][i][1][2]];
+                    let oy_balance_receive = OY_BLOCK[2][oy_diff_flat[1][i][1][4]];
+                    OY_BLOCK[2][oy_diff_flat[1][i][1][2]] -= oy_diff_flat[1][i][1][3];
+                    OY_BLOCK[2][oy_diff_flat[1][i][1][4]] += oy_diff_flat[1][i][1][3];
+                    if (OY_BLOCK[2][oy_diff_flat[1][i][1][2]]+OY_BLOCK[2][oy_diff_flat[1][i][1][4]]!==oy_balance_send+oy_balance_receive) {//verify balances, revert transaction if necessary
+                        OY_BLOCK[2][oy_diff_flat[1][i][1][2]] = oy_balance_send;
+                        OY_BLOCK[2][oy_diff_flat[1][i][1][4]] = oy_balance_receive;
+                    }
+                    else {
+                        if (OY_BLOCK[2][oy_diff_flat[1][i][1][2]]<=0) delete OY_BLOCK[2][oy_diff_flat[1][i][1][2]];
+                        if (OY_BLOCK[2][oy_diff_flat[1][i][1][4]]<=0) delete OY_BLOCK[2][oy_diff_flat[1][i][1][4]];
+                        OY_BLOCK[1][oy_diff_flat[1][i][0]] = oy_diff_flat[1][i][1];
+                    }
+                }
+            }
         }
 
+        OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK);
+
+        OY_BLOCK_HASH = oy_hash_gen(OY_BLOCK_FLAT);
+
+        OY_BLOCK_WEIGHT = new Blob([OY_BLOCK_FLAT]).size;
+
+        oy_log("DIFF MESHBLOCK HASH "+OY_BLOCK_HASH);
+
+        document.dispatchEvent(OY_BLOCK_TRIGGER);
     }
     else if (oy_data_flag==="OY_PEER_BLANK") {//peer as a full or light node is resetting to a blank node
         if (OY_PEERS[oy_peer_id][9]===1||OY_PEERS[oy_peer_id][9]===2) {
@@ -2169,6 +2205,7 @@ function oy_block_reset() {
     OY_BLOCK_HALT = oy_time_local;
     OY_BLOCK_HASH = null;
     OY_BLOCK_FLAT = null;
+    OY_BLOCK_DIFF = false;
     OY_BLOCK_SIGN = null;
     OY_BLOCK_UPTIME = null;
     OY_BLOCK_WEIGHT = null;
@@ -2187,7 +2224,6 @@ function oy_block_reset() {
     OY_BLOCK_ROSTER_AVG = null;
     OY_BLOCK = [[null, []], {}, {}, {}, {}];
     OY_DIFF_TRACK = [[], []];
-    OY_DIFF_TALLY = {};
     OY_BASE_BUILD = [];
     OY_MESH_RANGE = 0;
     OY_CHALLENGE_TRIGGER = null;
@@ -2213,7 +2249,6 @@ function oy_block_loop() {
         OY_BLOCK_NEXT = oy_block_time_local+20;
         OY_BLOCK_DYNAMIC = [[], null, null, null];
         OY_BLOCK_COMMAND = {};
-        OY_DIFF_TALLY = {};//TODO verify timing
         OY_DIFF_CONSTRUCT = {};
 
         document.dispatchEvent(OY_BLOCK_INIT);
@@ -2233,6 +2268,7 @@ function oy_block_loop() {
         }
         //BLOCK SEED--------------------------------------------------
 
+        OY_BLOCK_DIFF = false;
         let oy_dive_reward = "OY_NULL";
         let oy_sync_command = [];
         let oy_sync_keep = {};
@@ -2259,59 +2295,6 @@ function oy_block_loop() {
                     return false;
                 }
                 if (OY_LIGHT_STATE===true) OY_LIGHT_STATE = false;//since node has elected to being a full node, switch light state flag to false
-            }
-
-            if (OY_LIGHT_STATE===true&&OY_BLOCK_HASH!==null&&Object.keys(OY_DIFF_TALLY).length>0) {
-                let oy_diff_tally_set = [];
-                for (let oy_diff_hash in OY_DIFF_TALLY) {
-                    oy_diff_tally_set.push([OY_DIFF_TALLY[oy_diff_hash][0], oy_diff_hash]);
-                }
-                oy_diff_tally_set.sort(function(a, b) {
-                    return b[0] - a[0];
-                });
-                let oy_hash_select;
-                if (oy_diff_tally_set.length>=2&&oy_diff_tally_set[0][0]===oy_diff_tally_set[1][0]) oy_hash_select = oy_diff_tally_set[Math.round(Math.random())][1];//tie-breaker with low-grade randomness
-                else oy_hash_select = oy_diff_tally_set[0][1];
-
-                let oy_diff_track_new = JSON.parse(OY_DIFF_TALLY[oy_hash_select][1]);
-
-                if (oy_diff_track_new[0].length>0) {
-                    let oy_dive_share = oy_diff_track_new[0][0].shift();
-                    for (let i in oy_diff_track_new[0]) {
-                        if (typeof(OY_BLOCK[2][oy_diff_track_new[0][i]])==="undefined") OY_BLOCK[2][oy_diff_track_new[0][i]] = oy_dive_share;
-                        else OY_BLOCK[2][oy_diff_track_new[0][i]] += oy_dive_share;
-                    }
-                }
-                if (oy_diff_track_new[1].length>0) {
-                    for (let i in oy_diff_track_new[1]) {
-                        if (oy_diff_track_new[1][i][1][0]==="OY_AKOYA_SEND"&&typeof(OY_BLOCK[2][oy_diff_track_new[1][i][1][2]])!=="undefined"&&OY_BLOCK[2][oy_diff_track_new[1][i][1][2]]>=oy_diff_track_new[1][i][1][3]) {
-                            if (typeof(OY_BLOCK[2][oy_diff_track_new[1][i][1][4]])==="undefined") OY_BLOCK[2][oy_diff_track_new[1][i][1][4]] = 0;
-                            let oy_balance_send = OY_BLOCK[2][oy_diff_track_new[1][i][1][2]];
-                            let oy_balance_receive = OY_BLOCK[2][oy_diff_track_new[1][i][1][4]];
-                            OY_BLOCK[2][oy_diff_track_new[1][i][1][2]] -= oy_diff_track_new[1][i][1][3];
-                            OY_BLOCK[2][oy_diff_track_new[1][i][1][4]] += oy_diff_track_new[1][i][1][3];
-                            if (OY_BLOCK[2][oy_diff_track_new[1][i][1][2]]+OY_BLOCK[2][oy_diff_track_new[1][i][1][4]]!==oy_balance_send+oy_balance_receive) {//verify balances, revert transaction if necessary
-                                OY_BLOCK[2][oy_diff_track_new[1][i][1][2]] = oy_balance_send;
-                                OY_BLOCK[2][oy_diff_track_new[1][i][1][4]] = oy_balance_receive;
-                            }
-                            else {
-                                if (OY_BLOCK[2][oy_diff_track_new[1][i][1][2]]<=0) delete OY_BLOCK[2][oy_diff_track_new[1][i][1][2]];
-                                if (OY_BLOCK[2][oy_diff_track_new[1][i][1][4]]<=0) delete OY_BLOCK[2][oy_diff_track_new[1][i][1][4]];
-                                OY_BLOCK[1][oy_diff_track_new[1][i][0]] = oy_diff_track_new[1][i][1];
-                            }
-                        }
-                    }
-                }
-
-                OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK);
-
-                OY_BLOCK_HASH = oy_hash_gen(OY_BLOCK_FLAT);
-
-                OY_BLOCK_WEIGHT = new Blob([OY_BLOCK_FLAT]).size;
-
-                oy_log("DIFF MESHBLOCK HASH "+OY_BLOCK_HASH);
-
-                document.dispatchEvent(OY_BLOCK_TRIGGER);
             }
 
             if (OY_BLOCK_HASH===null) {
@@ -2397,7 +2380,7 @@ function oy_block_loop() {
             OY_BLOCK[0][0] = oy_block_time_local;
 
             if (OY_LIGHT_STATE===true) {//do not process the meshblock anymore if in light state
-                oy_block_continue = true;
+                oy_block_continue = false;
                 return false;
             }
 
@@ -2663,17 +2646,9 @@ function oy_block_loop() {
 
                 if (OY_BLOCK_UPTIME!==null&&(Date.now()/1000)-OY_BLOCK_UPTIME>=OY_LATCH_UPTIME_MIN&&OY_LATCH_COUNT>0) {
                     let oy_diff_flat = JSON.stringify(OY_DIFF_TRACK);
-                    let oy_diff_nonce_max = -1;
-                    let oy_diff_split = [];
-                    for (let i = 0; i < oy_diff_flat.length; i += OY_LATCH_CHUNK) {
-                        oy_diff_split.push(oy_diff_flat.slice(i, i+OY_LATCH_CHUNK));
-                        oy_diff_nonce_max++;
-                    }
                     for (let oy_peer_select in OY_PEERS) {
                         if (OY_PEERS[oy_peer_select][9]!==1) continue;//check that the peer is a latch
-                        for (let oy_diff_nonce in oy_diff_split) {
-                            oy_data_beam(oy_peer_select, "OY_PEER_DIFF", [oy_diff_nonce_max, oy_diff_nonce, oy_diff_split[oy_diff_nonce]]);
-                        }
+                        oy_data_beam(oy_peer_select, "OY_PEER_DIFF", oy_diff_flat);
                     }
                 }
             }, OY_BLOCK_LATCHTIME);
