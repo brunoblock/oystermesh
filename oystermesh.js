@@ -135,7 +135,7 @@ let OY_PROPOSED = {};//nodes that have been recently proposed to for mutual peer
 let OY_BLACKLIST = {};//nodes to block for x amount of time
 let OY_PUSH_HOLD = {};//holds data contents ready for pushing to mesh
 let OY_PUSH_TALLY = {};//tracks data push nonces that were deposited on the mesh
-let OY_LIGHT_BUILD = [];
+let OY_BASE_BUILD = [];
 let OY_LOGIC_ALL_TYPE = ["OY_BLOCK_COMMAND", "OY_BLOCK_SYNC", "OY_BLOCK_SYNC_CHALLENGE", "OY_BLOCK_DIVE", "OY_DATA_PULL", "OY_CHANNEL_BROADCAST"];//OY_LOGIC_ALL definitions
 let OY_LOGIC_EXCEPT_TYPE = ["OY_BLOCK_SYNC", "OY_BLOCK_SYNC_CHALLENGE_RESPONSE", "OY_BLOCK_DIVE", "OY_CHANNEL_BROADCAST"];
 let OY_MESH_RANGE = 0;
@@ -939,44 +939,24 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_data_route("OY_LOGIC_FOLLOW", "OY_CHANNEL_RESPOND", oy_data_payload);
         }
     }
-    else if (oy_data_flag==="OY_LIGHT_AFFIRM") {//latch is confirming to self that self is a source
-        if (OY_BLOCK_FLAT===null) return false;//can only continue if block_flat is assigned a usable value
-        let oy_light_push = function() {//pushes the entire block to the recently confirmed latch
-            let oy_block_nonce_max = -1;
-            let oy_block_split = [];
-            for (let i = 0; i < OY_BLOCK_FLAT.length; i+=OY_LATCH_CHUNK) {
-                oy_block_split.push(OY_BLOCK_FLAT.slice(i, i+OY_LATCH_CHUNK));//split the current block into chunks
-                oy_block_nonce_max++;
-            }
-            for (let oy_block_nonce in oy_block_split) {
-                oy_data_beam(oy_peer_id, "OY_LIGHT_PUSH", [oy_block_nonce_max, oy_block_nonce, oy_block_split[oy_block_nonce]]);//send each block chunk sequentially to the latch
-            }
-        };
-        oy_light_push();//TODO add delay if near end of block
-        return true;
-    }
-    else if (oy_data_flag==="OY_LIGHT_PUSH") {//source is sending entire block, in chunks, to self as latch
-        OY_LIGHT_BUILD[oy_data_payload[1]] = oy_data_payload[2];//key is block_nonce and value is block_split
+    else if (oy_data_flag==="OY_PEER_BASE") {//source is sending entire block, in chunks, to self as latch
+        if (OY_BLOCK_HASH!==null) return false;
+        OY_BASE_BUILD[oy_data_payload[1]] = oy_data_payload[2];//key is block_nonce and value is block_split
         let oy_nonce_count = -1;
         // noinspection JSUnusedLocalSymbols
-        for (let oy_block_nonce in OY_LIGHT_BUILD) {
+        for (let oy_block_nonce in OY_BASE_BUILD) {
             oy_nonce_count++;
         }
         if (oy_nonce_count===oy_data_payload[0]) {//check if block_nonce equals block_nonce_max
-            let oy_block_flat = OY_LIGHT_BUILD.join("");
+            let oy_block_flat = OY_BASE_BUILD.join("");
             OY_BLOCK = JSON.parse(oy_block_flat);
             OY_BLOCK_HASH = oy_hash_gen(oy_block_flat);
-            oy_data_beam(oy_peer_id, "OY_LIGHT_HASH", OY_BLOCK_HASH);//inform the source on the hash of the recently constructed block
+            oy_data_beam(oy_peer_id, "OY_PEER_LIGHT", oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH));
         }
         return true;
     }
-    else if (oy_data_flag==="OY_LIGHT_HASH") {//TODO enforce removal of latch if LIGHT_HASH packet is missing
-        if (OY_BLOCK_HASH===null) return false;//can only continue if block_hash is assigned a usable value
-        if (OY_BLOCK_HASH!==oy_data_payload[0]) {//check if own block_hash mismatches with block_hash of latch
-            oy_peer_remove(oy_peer_id, "OY_PUNISH_LIGHT_HASH");//remove and punish the latch
-        }
-    }
-    else if (oy_data_flag==="OY_LIGHT_DIFF") {//self as latch receives diff from source
+    else if (oy_data_flag==="OY_PEER_DIFF") {//self as latch receives diff from source
+        //TODO broadcast peer_diff to all latches, except oy_peer_id, unless the diff was already processed before
         if (OY_BLOCK_HASH===null||oy_time_local-OY_BLOCK_TIME>=OY_BLOCK_SECTORS[0][0]) return false;//verify meshblock zone
         if (typeof(OY_DIFF_CONSTRUCT[oy_peer_id])==="undefined") OY_DIFF_CONSTRUCT[oy_peer_id] = [];//create diff construct space for peer_id if needed (if first part of construction sequence)
         OY_DIFF_CONSTRUCT[oy_peer_id][oy_data_payload[1]] = oy_data_payload[2];//key is diff_nonce and value is diff_value
@@ -991,16 +971,18 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
     }
     else if (oy_data_flag==="OY_PEER_BLANK") {//peer as a full or light node is resetting to a blank node
-        if (OY_PEERS[oy_peer_id][9]===2) OY_LATCH_COUNT++;
-        OY_PEERS[oy_peer_id][9] = 0;
+        if (OY_PEERS[oy_peer_id][9]===1||OY_PEERS[oy_peer_id][9]===2) {
+            OY_PEERS[oy_peer_id][9] = 0;
+            if (OY_PEERS[oy_peer_id][9]===2) OY_LATCH_COUNT++;
+        }
     }
-    else if (oy_data_flag==="OY_PEER_LIGHT") {//peer as a full node is converting into a light node
+    else if (oy_data_flag==="OY_PEER_LIGHT") {//peer as a blank or full node is converting into a light node
         if (!oy_key_verify(oy_peer_id, oy_data_payload, OY_MESH_DYNASTY+OY_BLOCK_HASH)) {
             oy_node_punish(oy_peer_id, "OY_PUNISH_LIGHT_FAIL");
             oy_log("Punished peer "+oy_short(oy_peer_id)+" who failed to upgrade to a light node");
             return false;
         }
-        if (OY_PEERS[oy_peer_id][9]===2) {
+        if (OY_PEERS[oy_peer_id][9]===0||OY_PEERS[oy_peer_id][9]===2) {
             OY_PEERS[oy_peer_id][9] = 1;
             OY_LATCH_COUNT++;
         }
@@ -2206,7 +2188,7 @@ function oy_block_reset() {
     OY_BLOCK = [[null, []], {}, {}, {}, {}];
     OY_DIFF_TRACK = [[], []];
     OY_DIFF_TALLY = {};
-    OY_LIGHT_BUILD = [];
+    OY_BASE_BUILD = [];
     OY_MESH_RANGE = 0;
     OY_CHALLENGE_TRIGGER = null;
     OY_BLACKLIST = {};
@@ -2266,7 +2248,7 @@ function oy_block_loop() {
             OY_BLOCK_DYNAMIC[0] = null;
             OY_BLOCK_DYNAMIC[1] = [];
             OY_BLOCK_DYNAMIC[2] = [];
-            OY_LIGHT_BUILD = [];
+            OY_BASE_BUILD = [];
             if (OY_BLOCK_DIVE_REWARD==="OY_NULL") OY_BLOCK_DIVE_TRACK = 0;
 
             if (oy_time_local-OY_BLOCK_SEEDTIME<OY_BLOCK_SEED_BUFFER) {//TODO inconsistent invocation
@@ -2660,6 +2642,22 @@ function oy_block_loop() {
                 }
             }, OY_BLOCK_CHALLENGETIME);
 
+            oy_chrono(function() {//pushes the entire block to the recently confirmed latch
+                if (OY_BLOCK_FLAT===null) return false;
+
+                let oy_block_nonce_max = -1;
+                let oy_block_split = [];
+                for (let i = 0; i < OY_BLOCK_FLAT.length; i+=OY_LATCH_CHUNK) {
+                    oy_block_split.push(OY_BLOCK_FLAT.slice(i, i+OY_LATCH_CHUNK));//split the current block into chunks
+                    oy_block_nonce_max++;
+                }
+                for (let oy_block_nonce in oy_block_split) {
+                    for (let oy_peer_select in OY_PEERS) {//TODO prevent abuse from blank nodes that never apply the block base
+                        if (OY_PEERS[oy_peer_select][9]===0) oy_data_beam(oy_peer_select, "OY_PEER_BASE", [oy_block_nonce_max, oy_block_nonce, oy_block_split[oy_block_nonce]]);
+                    }
+                }
+            }, OY_BLOCK_LATCHTIME);
+
             oy_chrono(function() {
                 if (OY_BLOCK_HASH===null) return false;
 
@@ -2675,7 +2673,6 @@ function oy_block_loop() {
                         if (OY_PEERS[oy_peer_select][9]!==1) continue;//check that the peer is a latch
                         for (let oy_diff_nonce in oy_diff_split) {
                             oy_data_beam(oy_peer_select, "OY_PEER_DIFF", [oy_diff_nonce_max, oy_diff_nonce, oy_diff_split[oy_diff_nonce]]);
-                            //TODO logic for latches to manage peer_diff packets
                         }
                     }
                 }
