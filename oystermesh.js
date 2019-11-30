@@ -39,10 +39,10 @@ const OY_BLOCK_DENSITY = 0.5;//higher means block syncs [0] and dives [1] are mo
 const OY_BLOCK_PEERS_MIN = 3;//minimum peer count to be become a source for latches and broadcast SYNC/DIVE
 const OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via OY_BLOCK_SYNC and OY_BLOCK_DIVE (OY_LOGIC_ALL)
 const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
-const OY_BLOCK_SEED_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a seeding event
+const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a seeding event
 const OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims dive rewards
 const OY_BLOCK_RANGE_MIN = 5;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_SEEDTIME = 1574328600;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOTTIME = 1575148500;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_CHALLENGE_SAFETY = 0.5;//safety margin for rogue packets reaching block_consensus. 1 means no changes, lower means further from block_consensus, higher means closer.
 const OY_CHALLENGE_BUFFER = 1.8;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (min of 1)
 const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
@@ -1041,10 +1041,9 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         return true;
     }
     else if (oy_data_flag==="OY_PEER_LATENCY") {
-        if (OY_BLOCK_HASH===null) return false;
-        oy_log("Signed peer latency sequence from "+oy_short(oy_peer_id));
-        oy_data_payload[0] = oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH+oy_data_payload[0]);
+        oy_data_payload[0] = oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+((oy_state_current()==="OY_STATE_BLANK")?"OY_BLANK_FILLER":OY_BLOCK_HASH)+oy_data_payload[0]);
         oy_data_beam(oy_peer_id, "OY_LATENCY_RESPONSE", oy_data_payload);
+        oy_log("Signed peer latency sequence from "+oy_short(oy_peer_id));
         return true;
     }
     else if (oy_data_flag==="OY_PEER_TERMINATE") {
@@ -1171,7 +1170,7 @@ function oy_node_disconnect(oy_node_id) {
 //checks for peering proposal session
 function oy_node_proposed(oy_node_id) {
     if (typeof(OY_PROPOSED[oy_node_id])!=="undefined") {
-        if (OY_PROPOSED[oy_node_id][0]<(Date.now()/1000)) {//check if proposal session expired
+        if (OY_PROPOSED[oy_node_id]<(Date.now()/1000)) {//check if proposal session expired
             delete OY_PROPOSED[oy_node_id];
             return false;
         }
@@ -1245,7 +1244,7 @@ function oy_node_initiate(oy_node_id) {
         oy_log("Halted initiation whilst peer list is saturated");
         return false;
     }
-    else if (Date.now()/1000<=OY_BLOCK_SEEDTIME) {
+    else if (Date.now()/1000<=OY_BLOCK_BOOTTIME) {
         oy_log("Halted initiation for pending meshblock seeding event");
         return false;
     }
@@ -1259,7 +1258,7 @@ function oy_node_initiate(oy_node_id) {
 
 //retrieves nodes from and submit self id to top.oyster.org
 function oy_node_assign() {
-    if (Date.now()/1000<=OY_BLOCK_SEEDTIME) return false;
+    if (Date.now()/1000<=OY_BLOCK_BOOTTIME) return false;
     let oy_xhttp = new XMLHttpRequest();
     oy_xhttp.onreadystatechange = function() {
         if (this.readyState===4&&this.status===200) {
@@ -1307,8 +1306,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
         }
     }
     else if (oy_data_flag==="OY_PEER_LATENCY"&&(oy_node_proposed(oy_node_id)||oy_peer_pre_check(oy_node_id))) {//respond to latency ping from node with peer proposal arrangement
-        if (OY_BLOCK_HASH===null) return false;
-        oy_data_payload[0] = oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH+oy_data_payload[0]);
+        oy_data_payload[0] = oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+((oy_state_current()==="OY_STATE_BLANK")?"OY_BLANK_FILLER":OY_BLOCK_HASH)+oy_data_payload[0]);
         oy_data_beam(oy_node_id, "OY_LATENCY_RESPONSE", oy_data_payload);
         oy_log("Signed peer latency sequence from "+oy_short(oy_node_id));
         return true;
@@ -1320,7 +1318,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_PEER_REQUEST") {
         let oy_callback_local;
-        if (OY_BLOCK_HASH===null||oy_time_local<=OY_BLOCK_SEEDTIME) {
+        if (OY_BLOCK_HASH===null||oy_time_local<=OY_BLOCK_BOOTTIME) {
             oy_callback_local = function() {
                 oy_data_beam(oy_node_id, "OY_PEER_UNREADY", null);
             };
@@ -2254,7 +2252,7 @@ function oy_block_loop() {
         document.dispatchEvent(OY_BLOCK_INIT);
 
         //BLOCK SEED--------------------------------------------------
-        if (OY_BLOCK_TIME===OY_BLOCK_SEEDTIME) {
+        if (OY_BLOCK_TIME===OY_BLOCK_BOOTTIME) {
             OY_BLOCK = [[null, []], {}, {}, {}, {}];
 
             //SEED DEFINITION------------------------------------
@@ -2287,7 +2285,7 @@ function oy_block_loop() {
             OY_BASE_BUILD = [];
             if (OY_BLOCK_DIVE_REWARD==="OY_NULL") OY_BLOCK_DIVE_TRACK = 0;
 
-            if (oy_time_local-OY_BLOCK_SEEDTIME<OY_BLOCK_SEED_BUFFER) {//TODO inconsistent invocation
+            if (oy_time_local-OY_BLOCK_BOOTTIME<OY_BLOCK_BOOT_BUFFER) {//TODO inconsistent invocation
                 if (OY_LIGHT_MODE===true) {//if self elects to be a light node they cannot participate in the initial boot-up sequence of the mesh
                     oy_block_reset();
                     oy_log("MESHBLOCK VOID SEED BUFFER");
@@ -2315,7 +2313,7 @@ function oy_block_loop() {
                 return false;
             }
 
-            if (OY_PEER_COUNT===0&&oy_time_local-OY_BLOCK_SEEDTIME>OY_BLOCK_SEED_BUFFER) {
+            if (OY_PEER_COUNT===0&&oy_time_local-OY_BLOCK_BOOTTIME>OY_BLOCK_BOOT_BUFFER) {
                 oy_block_reset();
                 oy_log("MESHBLOCK DROP");
                 oy_block_continue = false;
@@ -2506,14 +2504,14 @@ function oy_block_loop() {
             OY_BLOCK_STABILITY = (OY_BLOCK_STABILITY_KEEP.length<OY_BLOCK_STABILITY_TRIGGER)?0:oy_block_stability(OY_BLOCK_STABILITY_KEEP);
             OY_BLOCK_STABILITY_ROSTER = (OY_BLOCK_STABILITY_KEEP.length<OY_BLOCK_STABILITY_TRIGGER)?OY_BLOCK_STABILITY_START:Math.max(OY_BLOCK_STABILITY_MIN, OY_BLOCK_STABILITY);
 
-            if (OY_MESH_RANGE<OY_BLOCK_RANGE_MIN&&oy_time_local-OY_BLOCK_SEEDTIME>OY_BLOCK_SEED_BUFFER) {
+            if (OY_MESH_RANGE<OY_BLOCK_RANGE_MIN&&oy_time_local-OY_BLOCK_BOOTTIME>OY_BLOCK_BOOT_BUFFER) {
                 oy_block_reset();
                 oy_log("MESHBLOCK DROP [RANGE_MIN]");
                 oy_block_continue = false;
                 return false;
             }
 
-            if (true||oy_time_local-OY_BLOCK_SEEDTIME<=OY_BLOCK_SEED_BUFFER) OY_CHALLENGE_TRIGGER = null;
+            if (true||oy_time_local-OY_BLOCK_BOOTTIME<=OY_BLOCK_BOOT_BUFFER) OY_CHALLENGE_TRIGGER = null;
             else OY_CHALLENGE_TRIGGER = Math.max(2, Math.floor(Math.sqrt(OY_MESH_RANGE*(1-OY_BLOCK_CONSENSUS))*OY_CHALLENGE_SAFETY));
 
             let oy_node_consensus = Math.ceil(OY_MESH_RANGE*OY_BLOCK_CONSENSUS);
@@ -2555,7 +2553,7 @@ function oy_block_loop() {
 
             //oy_log_debug("EXECUTE: "+JSON.stringify(oy_command_execute));
 
-            if (oy_time_local-OY_BLOCK_SEEDTIME>OY_BLOCK_SEED_BUFFER) {//only allow transactions after the meshblock boot-up sequence is complete
+            if (oy_time_local-OY_BLOCK_BOOTTIME>OY_BLOCK_BOOT_BUFFER) {//only allow transactions after the meshblock boot-up sequence is complete
                 //["OY_AKOYA_SEND", -1, oy_key_public, oy_transfer_amount, oy_receive_public]
                 for (let i in oy_command_execute) {
                     if (oy_command_execute[i][1][0]==="OY_AKOYA_SEND"&&typeof(OY_BLOCK[2][oy_command_execute[i][1][2]])!=="undefined"&&OY_BLOCK[2][oy_command_execute[i][1][2]]>=oy_command_execute[i][1][3]) {
@@ -2798,7 +2796,7 @@ function oy_engine(oy_thread_track) {
     }
 
     for (let oy_node_select in OY_PROPOSED) {
-        if (OY_PROPOSED[oy_node_select][0]<oy_time_local) {
+        if (OY_PROPOSED[oy_node_select]<oy_time_local) {
             delete OY_PROPOSED[oy_node_select];
             oy_log("Cleaned up expired proposal session for node: "+oy_short(oy_node_select));
         }
