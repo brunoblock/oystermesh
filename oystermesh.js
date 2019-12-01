@@ -39,10 +39,10 @@ const OY_BLOCK_DENSITY = 0.5;//higher means block syncs [0] and dives [1] are mo
 const OY_BLOCK_PEERS_MIN = 3;//minimum peer count to be become a source for latches and broadcast SYNC/DIVE
 const OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via OY_BLOCK_SYNC and OY_BLOCK_DIVE (OY_LOGIC_ALL)
 const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
-const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a seeding event
+const OY_BLOCK_BOOT_BUFFER = 60;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims dive rewards
 const OY_BLOCK_RANGE_MIN = 5;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOTTIME = 1575148500;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOTTIME = 1575161900;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_CHALLENGE_SAFETY = 0.5;//safety margin for rogue packets reaching block_consensus. 1 means no changes, lower means further from block_consensus, higher means closer.
 const OY_CHALLENGE_BUFFER = 1.8;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (min of 1)
 const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
@@ -58,10 +58,8 @@ const OY_NODE_EXPIRETIME = 600;//seconds of non-interaction until a node's conne
 const OY_BOOST_KEEP = 12;//node IDs to retain in boost memory, higher means more nodes retained but less average node quality
 const OY_BOOST_DELAY = 250;//ms delay per boost node initiation
 const OY_BOOST_EXPIRETIME = 600;//seconds until boost indexedDB retention is discarded
-const OY_LATCH_UPTIME_MIN = 30;//seconds since able to keep up with the meshblock required to become a light source
-const OY_LATCH_MAX = 3;//maximum simultaneous light node recipients count, should be less than peer_max
-const OY_LATCH_UNLATCH_MIN = 2;//minimum amount of peers that are full nodes to allow self to unlatch and become a full node
-const OY_LATCH_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
+const OY_LIGHT_UNLATCH_MIN = 2;//minimum amount of peers that are full nodes to allow self to unlatch and become a full node
+const OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 const OY_PEER_LATENCYTIME = 60;//peers are expected to establish latency timing with each other within this interval in seconds
 const OY_PEER_KEEPTIME = 20;//peers are expected to communicate with each other within this interval in seconds
 const OY_PEER_REPORTTIME = 10;//interval to report peer list to top
@@ -420,7 +418,7 @@ function oy_peer_add(oy_peer_id, oy_state_flag) {
         //[peership timestamp, last msg timestamp, last latency timestamp, latency avg, latency history, data beam, data beam history, data soak, data soak history, latch flag]
         if (OY_PEER_COUNT>=OY_PEER_MAX) return false;//prevent overflow on peer_count
         OY_PEER_COUNT++;
-        if (oy_state_flag===0||oy_state_flag===1) OY_LATCH_COUNT++;
+        if (oy_state_flag===1) OY_LATCH_COUNT++;
         OY_PEERS[oy_peer_id] = [Date.now()/1000|0, -1, -1, 0, [], 0, [], 0, [], oy_state_flag];
         if (OY_PEER_COUNT===1) document.dispatchEvent(OY_PEERS_RECOVER);
         oy_node_reset(oy_peer_id);
@@ -432,7 +430,7 @@ function oy_peer_add(oy_peer_id, oy_state_flag) {
 function oy_peer_remove(oy_peer_id, oy_punish_reason) {
     if (!oy_peer_check(oy_peer_id)) return false;
     OY_PEER_COUNT--;
-    if (OY_PEERS[oy_peer_id][9]===0||OY_PEERS[oy_peer_id][9]===1) OY_LATCH_COUNT--;
+    if (OY_PEERS[oy_peer_id][9]===1) OY_LATCH_COUNT--;
     if (OY_PEER_COUNT===0) document.dispatchEvent(OY_PEERS_NULL);
     delete OY_PEERS[oy_peer_id];
     oy_node_reset(oy_peer_id);
@@ -948,10 +946,13 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         for (let oy_block_nonce in OY_BASE_BUILD) {
             oy_nonce_count++;
         }
+        //console.log(oy_nonce_count);
+        //console.log(oy_data_payload[0]);
         if (oy_nonce_count===oy_data_payload[0]) {//check if block_nonce equals block_nonce_max
             let oy_block_flat = OY_BASE_BUILD.join("");
             OY_BLOCK = JSON.parse(oy_block_flat);
             OY_BLOCK_HASH = oy_hash_gen(oy_block_flat);
+            //console.log(OY_BLOCK_HASH);
             oy_data_beam(oy_peer_id, "OY_PEER_LIGHT", oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH));
         }
         return true;
@@ -1008,8 +1009,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_PEER_BLANK") {//peer as a full or light node is resetting to a blank node
         if (OY_PEERS[oy_peer_id][9]===1||OY_PEERS[oy_peer_id][9]===2) {
+            if (OY_PEERS[oy_peer_id][9]===1) OY_LATCH_COUNT--;
             OY_PEERS[oy_peer_id][9] = 0;
-            if (OY_PEERS[oy_peer_id][9]===2) OY_LATCH_COUNT++;
         }
     }
     else if (oy_data_flag==="OY_PEER_LIGHT") {//peer as a blank or full node is converting into a light node
@@ -1041,7 +1042,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         return true;
     }
     else if (oy_data_flag==="OY_PEER_LATENCY") {
-        oy_data_payload[0] = oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+((oy_state_current()==="OY_STATE_BLANK")?"OY_BLANK_FILLER":OY_BLOCK_HASH)+oy_data_payload[0]);
+        oy_data_payload[0] = oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+oy_data_payload[0]);
         oy_data_beam(oy_peer_id, "OY_LATENCY_RESPONSE", oy_data_payload);
         oy_log("Signed peer latency sequence from "+oy_short(oy_peer_id));
         return true;
@@ -1306,7 +1307,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
         }
     }
     else if (oy_data_flag==="OY_PEER_LATENCY"&&(oy_node_proposed(oy_node_id)||oy_peer_pre_check(oy_node_id))) {//respond to latency ping from node with peer proposal arrangement
-        oy_data_payload[0] = oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+((oy_state_current()==="OY_STATE_BLANK")?"OY_BLANK_FILLER":OY_BLOCK_HASH)+oy_data_payload[0]);
+        oy_data_payload[0] = oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+oy_data_payload[0]);
         oy_data_beam(oy_node_id, "OY_LATENCY_RESPONSE", oy_data_payload);
         oy_log("Signed peer latency sequence from "+oy_short(oy_node_id));
         return true;
@@ -1359,7 +1360,7 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
         return false;
     }
     let oy_time_local = Date.now()/1000;
-    if (!oy_key_verify(oy_node_id, oy_data_payload[0], OY_MESH_DYNASTY+((OY_LATENCY[oy_node_id][6]==="OY_STATE_BLANK")?"OY_BLANK_FILLER":OY_BLOCK_HASH)+OY_LATENCY[oy_node_id][0])) {
+    if (!oy_key_verify(oy_node_id, oy_data_payload[0], OY_MESH_DYNASTY+OY_LATENCY[oy_node_id][0])) {
         oy_log("Node "+oy_short(oy_node_id)+" failed to sign latency sequence, will punish");
         oy_node_punish(oy_node_id, "OY_PUNISH_SIGN_FAIL");
         delete OY_LATENCY[oy_node_id];
@@ -2251,8 +2252,22 @@ function oy_block_loop() {
 
         document.dispatchEvent(OY_BLOCK_INIT);
 
+        OY_BLOCK_DIFF = false;
+        let oy_dive_reward = "OY_NULL";
+        let oy_sync_command = [];
+        let oy_sync_keep = {};
+        let oy_command_execute = [];
+        let oy_dive_pool = [];
+        let oy_block_continue = true;
+
         //BLOCK SEED--------------------------------------------------
         if (OY_BLOCK_TIME===OY_BLOCK_BOOTTIME) {
+            if (OY_LIGHT_MODE===true) {//if self elects to be a light node they cannot participate in the initial boot-up sequence of the mesh
+                oy_block_continue = false;
+                return false;
+            }
+            if (OY_LIGHT_STATE===true) OY_LIGHT_STATE = false;//since node has elected to being a full node, switch light state flag to false
+
             OY_BLOCK = [[null, []], {}, {}, {}, {}];
 
             //SEED DEFINITION------------------------------------
@@ -2266,14 +2281,6 @@ function oy_block_loop() {
         }
         //BLOCK SEED--------------------------------------------------
 
-        OY_BLOCK_DIFF = false;
-        let oy_dive_reward = "OY_NULL";
-        let oy_sync_command = [];
-        let oy_sync_keep = {};
-        let oy_command_execute = [];
-        let oy_dive_pool = [];
-        let oy_block_continue = true;
-
         if (OY_BLOCK_UPTIME!==null&&OY_BLOCK_TIME-OY_BLOCK_UPTIME>=OY_BLOCK_DIVE_BUFFER) oy_dive_reward = (" "+OY_BLOCK_DIVE_REWARD).slice(1);
 
         oy_chrono(function() {
@@ -2284,16 +2291,6 @@ function oy_block_loop() {
             OY_BLOCK_DYNAMIC[2] = [];
             OY_BASE_BUILD = [];
             if (OY_BLOCK_DIVE_REWARD==="OY_NULL") OY_BLOCK_DIVE_TRACK = 0;
-
-            if (oy_time_local-OY_BLOCK_BOOTTIME<OY_BLOCK_BOOT_BUFFER) {//TODO inconsistent invocation
-                if (OY_LIGHT_MODE===true) {//if self elects to be a light node they cannot participate in the initial boot-up sequence of the mesh
-                    oy_block_reset();
-                    oy_log("MESHBLOCK VOID SEED BUFFER");
-                    oy_block_continue = false;
-                    return false;
-                }
-                if (OY_LIGHT_STATE===true) OY_LIGHT_STATE = false;//since node has elected to being a full node, switch light state flag to false
-            }
 
             if (OY_BLOCK_HASH===null) {
                 OY_MESH_RANGE = 0;
@@ -2325,12 +2322,12 @@ function oy_block_loop() {
                 let oy_light_count = 0;
                 let oy_light_weakest = [null, 0];
                 for (let oy_peer_select in OY_PEERS) {
-                    if (OY_PEERS[oy_peer_select][9]===1) {//TODO consider blank peers
+                    if (OY_PEERS[oy_peer_select][9]===1) {
                         oy_light_count++;
                         if (oy_light_weakest[1]<OY_PEERS[oy_peer_select][3]) oy_light_weakest = [oy_peer_select, OY_PEERS[oy_peer_select][3]];
                     }
                 }
-                if (OY_PEER_COUNT-oy_light_count<OY_LATCH_UNLATCH_MIN&&oy_light_weakest[0]!==null) {//self is not ready to unlatch, find more full node peers first
+                if (OY_PEER_COUNT-oy_light_count<OY_LIGHT_UNLATCH_MIN&&oy_light_weakest[0]!==null) {//self is not ready to unlatch, find more full node peers first
                     if (OY_PEER_COUNT===OY_PEER_MAX) oy_peer_remove(oy_light_weakest[0]);
                     oy_node_assign();
                 }
@@ -2607,7 +2604,7 @@ function oy_block_loop() {
                 if (OY_BLOCK_HASH===null) return false;
                 let oy_block_hash_crypt = oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH);
                 for (let oy_peer_select in OY_PEERS) {
-                    if (oy_peer_select==="oy_aggregate_node") continue;
+                    if (oy_peer_select==="oy_aggregate_node"||OY_PEERS[oy_peer_select][9]===0) continue;
                     oy_data_beam(oy_peer_select, "OY_PEER_CHALLENGE", oy_block_hash_crypt);
                 }
             }, OY_BLOCK_PROTECTTIME);
@@ -2628,8 +2625,8 @@ function oy_block_loop() {
 
                 let oy_block_nonce_max = -1;
                 let oy_block_split = [];
-                for (let i = 0; i < OY_BLOCK_FLAT.length; i+=OY_LATCH_CHUNK) {
-                    oy_block_split.push(OY_BLOCK_FLAT.slice(i, i+OY_LATCH_CHUNK));//split the current block into chunks
+                for (let i = 0; i < OY_BLOCK_FLAT.length; i+=OY_LIGHT_CHUNK) {
+                    oy_block_split.push(OY_BLOCK_FLAT.slice(i, i+OY_LIGHT_CHUNK));//split the current block into chunks
                     oy_block_nonce_max++;
                 }
                 for (let oy_block_nonce in oy_block_split) {
@@ -2642,7 +2639,7 @@ function oy_block_loop() {
             oy_chrono(function() {
                 if (OY_BLOCK_HASH===null) return false;
 
-                if (OY_BLOCK_UPTIME!==null&&(Date.now()/1000)-OY_BLOCK_UPTIME>=OY_LATCH_UPTIME_MIN&&OY_LATCH_COUNT>0) {
+                if (OY_BLOCK_UPTIME!==null&&OY_LATCH_COUNT>0) {
                     let oy_diff_flat = JSON.stringify(OY_DIFF_TRACK);
                     for (let oy_peer_select in OY_PEERS) {
                         if (OY_PEERS[oy_peer_select][9]!==1) continue;//check that the peer is a latch
