@@ -41,7 +41,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_BOOT_BUFFER = 120;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims dive rewards
 const OY_BLOCK_RANGE_MIN = 5;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOTTIME = 1575219900;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOTTIME = 1575224400;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_CHALLENGE_SAFETY = 0.5;//safety margin for rogue packets reaching block_consensus. 1 means no changes, lower means further from block_consensus, higher means closer.
 const OY_CHALLENGE_BUFFER = 1.8;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (min of 1)
 const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
@@ -979,8 +979,6 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_PEER_DIFF") {//self as latch receives diff from source
         //TODO ensure meshblock transaction limit respects packet size limit for peer_diff packet
-        console.log("BOB");
-        console.log(oy_data_payload);
         if (OY_BLOCK_DIFF===true||OY_LIGHT_STATE===false||OY_BLOCK_HASH===null||oy_time_local-OY_BLOCK_TIME>=OY_BLOCK_SECTORS[0][0]) return false;//verify meshblock zone
         OY_BLOCK_DIFF = true;
 
@@ -2378,6 +2376,7 @@ function oy_block_loop() {
                 let oy_light_count = 0;
                 let oy_light_weakest = [null, 0];
                 for (let oy_peer_select in OY_PEERS) {
+                    if (oy_peer_select==="oy_aggregate_node") continue;
                     if (OY_PEERS[oy_peer_select][9]===1) {
                         oy_light_count++;
                         if (oy_light_weakest[1]<OY_PEERS[oy_peer_select][3]) oy_light_weakest = [oy_peer_select, OY_PEERS[oy_peer_select][3]];
@@ -2391,6 +2390,7 @@ function oy_block_loop() {
                     OY_LIGHT_STATE = false;
                     //send unlatch flag to all peers not in redemption list
                     for (let oy_peer_select in OY_PEERS) {
+                        if (oy_peer_select==="oy_aggregate_node") continue;
                         oy_data_beam(oy_peer_select, "OY_PEER_FULL", oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH));
                     }
                 }
