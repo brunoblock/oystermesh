@@ -41,7 +41,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_BOOT_BUFFER = 120;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims dive rewards
 const OY_BLOCK_RANGE_MIN = 5;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOTTIME = 1575225900;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOTTIME = 1575317900;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_CHALLENGE_SAFETY = 0.5;//safety margin for rogue packets reaching block_consensus. 1 means no changes, lower means further from block_consensus, higher means closer.
 const OY_CHALLENGE_BUFFER = 1.8;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (min of 1)
 const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
@@ -96,7 +96,7 @@ const OY_KEY_BRUNO = "XLp6_wVPBF3Zg-QNRkEj6U8bOYEZddQITs1n2pyeRqwOG5k9w_1A-RMIES
 const OY_SHORT_LENGTH = 6;//various data value such as nonce IDs, data handles, data values are shortened for efficiency
 
 // INIT
-let OY_LIGHT_MODE = false;//seek to stay permanently connected to the mesh as a light node/latch, manipulable by the user
+let OY_LIGHT_MODE = true;//seek to stay permanently connected to the mesh as a light node/latch, manipulable by the user
 let OY_LIGHT_STATE = true;//immediate status of being a light node/latch, not manipulable by the user
 let OY_LIGHT_PENDING = false;//defines if node is transitioning into a light node from blank or full status
 let OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inputs are expected
@@ -957,8 +957,6 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         for (let oy_block_nonce in OY_BASE_BUILD) {
             oy_nonce_count++;
         }
-        console.log(oy_nonce_count);
-        console.log(oy_data_payload[0]);
         if (oy_nonce_count===oy_data_payload[0]) {//check if block_nonce equals block_nonce_max
             OY_LIGHT_PENDING = true;
             let oy_block_flat = OY_BASE_BUILD.join("");
@@ -968,7 +966,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             OY_BLOCK_HASH = oy_hash_gen(oy_block_flat);
 
             oy_log("BASE MESHBLOCK HASH "+OY_BLOCK_HASH);
-            console.log(OY_BLOCK_HASH);
+
             oy_chrono(function() {
                 for (let oy_peer_select in OY_PEERS) {
                     if (oy_peer_select==="oy_aggregate_node") continue;
@@ -999,7 +997,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         }
 
         if (oy_diff_track[0].length>0) {
-            let oy_dive_share = oy_diff_track[0][0].shift();
+            let oy_dive_share = oy_diff_track[0].shift();
             for (let i in oy_diff_track[0]) {
                 if (typeof(OY_BLOCK[2][oy_diff_track[0][i]])==="undefined") OY_BLOCK[2][oy_diff_track[0][i]] = oy_dive_share;
                 else OY_BLOCK[2][oy_diff_track[0][i]] += oy_dive_share;
@@ -1033,8 +1031,6 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         OY_BLOCK_WEIGHT = new Blob([OY_BLOCK_FLAT]).size;
 
         oy_log("DIFF MESHBLOCK HASH "+OY_BLOCK_HASH);
-        console.log(OY_BLOCK_HASH);
-        console.log(OY_BLOCK_FLAT);
 
         document.dispatchEvent(OY_BLOCK_TRIGGER);
     }
@@ -2266,7 +2262,6 @@ function oy_block_reset(oy_reset_flag) {
         oy_data_beam(oy_peer_select, "OY_PEER_BLANK", null);
     }
 
-    console.log("RESET: "+oy_reset_flag);
     oy_log("MESHBLOCK RESET ["+oy_reset_flag+"]");
 
     document.dispatchEvent(OY_BLOCK_RESET);
