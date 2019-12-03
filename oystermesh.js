@@ -198,6 +198,9 @@ let OY_BLOCK_INIT = new Event('oy_block_init');//trigger-able event for when a n
 let OY_BLOCK_TRIGGER = new Event('oy_block_trigger');//trigger-able event for when a new block is issued
 let OY_BLOCK_RESET = new Event('oy_block_reset');//trigger-able event for when a new block is issued
 let OY_BLOCK_TRIGGER_TEMP = new Event('oy_block_trigger_temp');//trigger-able event for when a new block is issued
+let OY_STATE_BLANK = new Event('oy_state_blank');//trigger-able event for when self becomes blank
+let OY_STATE_LIGHT = new Event('oy_state_light');//trigger-able event for when self becomes a light node
+let OY_STATE_FULL = new Event('oy_state_full');//trigger-able event for when self becomes a full node
 let OY_BLOCK_HALT = null;
 let OY_DIFF_TRACK = [[], []];
 let OY_DIFF_CONSTRUCT = {};
@@ -966,6 +969,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             OY_BLOCK_HASH = oy_hash_gen(oy_block_flat);
 
             oy_log("BASE MESHBLOCK HASH "+OY_BLOCK_HASH);
+
+            document.dispatchEvent(OY_STATE_LIGHT);
 
             oy_chrono(function() {
                 for (let oy_peer_select in OY_PEERS) {
@@ -2265,6 +2270,7 @@ function oy_block_reset(oy_reset_flag) {
     oy_log("MESHBLOCK RESET ["+oy_reset_flag+"]");
 
     document.dispatchEvent(OY_BLOCK_RESET);
+    document.dispatchEvent(OY_STATE_BLANK);
 
     oy_boost();
 }
@@ -2301,6 +2307,7 @@ function oy_block_loop() {
             //SEED DEFINITION------------------------------------
 
             OY_BLOCK_HASH = oy_hash_gen(JSON.stringify(OY_BLOCK));
+            document.dispatchEvent(OY_STATE_FULL);
         }
         //BLOCK SEED--------------------------------------------------
 
@@ -2385,6 +2392,7 @@ function oy_block_loop() {
                 }
                 else if (OY_LIGHT_PENDING===false) {//unlatch sequence
                     OY_LIGHT_STATE = false;
+                    document.dispatchEvent(OY_STATE_FULL);
                     //send unlatch flag to all peers not in redemption list
                     for (let oy_peer_select in OY_PEERS) {
                         if (oy_peer_select==="oy_aggregate_node") continue;
@@ -2937,6 +2945,7 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
             oy_log("Connection is now ready, sparking engine");
             oy_chrono(oy_engine, 50);
             setTimeout(oy_block_loop, 1);
+            document.dispatchEvent(OY_STATE_BLANK);
         }
         else {
             oy_log("Connection was not established before cutoff, re-sparking INIT");

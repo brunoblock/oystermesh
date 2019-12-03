@@ -81,26 +81,28 @@
             }
         }
 
-        @-webkit-keyframes flash {
-            0% { opacity: 1; }
-            50% { opacity: .25; }
-            100% { opacity: 1; }
-        }
         @keyframes flash {
             0% { opacity: 1; }
             50% { opacity: .25; }
             100% { opacity: 1; }
         }
 
-        @-webkit-keyframes flash_green {
-            0% { background-color: rgba(36, 171, 38, 0.9); }
-            50% { background-color: rgba(36, 171, 38, 0.3); }
-            100% { background-color: rgba(36, 171, 38, 0.9); }
-        }
         @keyframes flash_green {
             0% { background-color: rgba(36, 171, 38, 0.9); }
-            50% { background-color: rgba(36, 171, 38, 0.3); }
+            50% { background-color: rgba(36, 171, 38, 0.2); }
             100% { background-color: rgba(36, 171, 38, 0.9); }
+        }
+
+        @keyframes flash_blue {
+            0% { background-color: rgba(20, 162, 204, 0.9); }
+            50% { background-color: rgba(20, 162, 204, 0.2); }
+            100% { background-color: rgba(20, 162, 204, 0.9); }
+        }
+
+        @keyframes flash_purple {
+            0% { background-color: rgba(138, 55, 137, 0.9); }
+            50% { background-color: rgba(138, 55, 137, 0.2); }
+            100% { background-color: rgba(138, 55, 137, 0.9); }
         }
 
         .oy_button_execute_active {
@@ -1279,7 +1281,7 @@
                     MB&nbsp;STABILITY<br>
                     AKOYA&nbsp;DIVE<br>
                 </div>
-                <div class="oy_center_hor" style="top:2%;width:0.7%;height:100%;background-color: #2a2a2a;">
+                <div class="oy_center_hor" style="top:2%;width:0.7%;height:90%;background-color: #2a2a2a;">
                 </div>
                 <div style="position:absolute;right:-2.5%;top:0;width:50%;height:100%;font-weight:bold;">
                     <span id="oy_peer_count_cont"><span id="oy_peer_count">null</span>&nbsp;peer(s)</span><br>
@@ -1293,17 +1295,27 @@
                     <span id="oy_block_stability">null</span>&nbsp;SD<br>
                     <span id="oy_akoya_dive_track">null</span>&nbsp;AKYT<br>
                 </div>
-                <div id="oy_low_power" align="center" class="oy_button oy_button_all_active" style="position:absolute;bottom:-25%;left:30%;transform:translateX(-50%);width:40%;height:10%;" onclick="oy_low_power_toggle()">
+                <div id="oy_light_mode" align="center" class="oy_button oy_button_all_active" style="position:absolute;bottom:-12%;left:29%;transform:translateX(-50%);width:38%;height:10%;" onclick="oy_mode_push(true)">
                     <div style="position:relative;">
-                        LOW&nbsp;POWER
+                        LIGHT&nbsp;MODE
                     </div>
                 </div>
-                <div id="oy_obj_top" align="center" class="oy_button oy_button_all_active" style="position:absolute;bottom:-25%;left:70%;transform:translateX(-50%);width:30%;height:10%;">
+                <div id="oy_obj_top" align="center" class="oy_button oy_button_all_active" style="position:absolute;bottom:-12%;left:71%;transform:translateX(-50%);width:38%;height:10%;">
                     <a href="https://top.oyster.org" style="text-decoration: none">
                         <div style="position:relative;top:-3%">
                             OBJ&nbsp;TOP
                         </div>
                     </a>
+                </div>
+                <div id="oy_full_mode" align="center" class="oy_button oy_button_all_active" style="position:absolute;bottom:-27%;left:29%;transform:translateX(-50%);width:38%;height:10%;" onclick="oy_mode_push(false)">
+                    <div style="position:relative;">
+                        FULL&nbsp;MODE
+                    </div>
+                </div>
+                <div id="oy_low_power" align="center" class="oy_button oy_button_all_active" style="position:absolute;bottom:-27%;left:71%;transform:translateX(-50%);width:38%;height:10%;" onclick="oy_low_power_toggle()">
+                    <div style="position:relative;">
+                        LOW&nbsp;POWER
+                    </div>
                 </div>
             </div>
         </div>
@@ -1423,6 +1435,9 @@
         document.addEventListener("oy_peers_null", oy_top_render_reset, false);
         document.addEventListener("oy_peers_null", oy_block_reset_local, false);
         document.addEventListener("oy_peers_recover", oy_block_process, false);
+        document.addEventListener("oy_state_blank", oy_mode_state_blank, false);
+        document.addEventListener("oy_state_light", oy_mode_state_light, false);
+        document.addEventListener("oy_state_full", oy_mode_state_full, false);
 
         OY_ERROR_BROWSER = function() {
             document.getElementById("oy_graph_akoya_progress").innerHTML = "<div class='oy_center_both' style='font-size:2.8vh;color:#000000;font-weight:bold;font-family: \'Courier New\''>INCOMPATIBLE&nbsp;BROWSER</div>";
@@ -1510,6 +1525,68 @@
         oy_local_init();
     };
 
+    function oy_mode_state_blank() {
+        document.getElementById("oy_light_mode").classList.remove("oy_button_all_active");
+        document.getElementById("oy_light_mode").classList.add("oy_button_alt_active");
+        document.getElementById("oy_light_mode").style.animation = "flash_purple linear 0.5s infinite";
+
+        if (OY_LIGHT_MODE===true) {
+            document.getElementById("oy_full_mode").classList.remove("oy_button_execute_active");
+            document.getElementById("oy_full_mode").classList.add("oy_button_all_active");
+            document.getElementById("oy_full_mode").style.animation = null;
+        }
+        else {
+            document.getElementById("oy_full_mode").classList.remove("oy_button_all_active");
+            document.getElementById("oy_full_mode").classList.add("oy_button_execute_active");
+            document.getElementById("oy_full_mode").style.animation = "flash_blue linear 0.5s infinite";
+        }
+    }
+
+    function oy_mode_state_light() {
+        document.getElementById("oy_light_mode").classList.remove("oy_button_all_active");
+        document.getElementById("oy_light_mode").classList.add("oy_button_alt_active");
+        document.getElementById("oy_light_mode").style.animation = null;
+
+        if (OY_LIGHT_MODE===true) {
+            document.getElementById("oy_full_mode").classList.remove("oy_button_execute_active");
+            document.getElementById("oy_full_mode").classList.add("oy_button_all_active");
+        }
+        else {
+            document.getElementById("oy_full_mode").classList.remove("oy_button_all_active");
+            document.getElementById("oy_full_mode").classList.add("oy_button_execute_active");
+            document.getElementById("oy_full_mode").style.animation = "flash_blue linear 0.5s infinite";
+        }
+    }
+
+    function oy_mode_state_full() {
+        document.getElementById("oy_full_mode").classList.remove("oy_button_all_active");
+        document.getElementById("oy_full_mode").classList.add("oy_button_execute_active");
+        document.getElementById("oy_full_mode").style.animation = null;
+
+        if (OY_LIGHT_MODE===true) {
+            document.getElementById("oy_light_mode").classList.remove("oy_button_all_active");
+            document.getElementById("oy_light_mode").classList.add("oy_button_alt_active");
+            document.getElementById("oy_light_mode").style.animation = "flash_purple linear 0.5s infinite";
+        }
+        else {
+            document.getElementById("oy_light_mode").classList.remove("oy_button_alt_active");
+            document.getElementById("oy_light_mode").classList.add("oy_button_all_active");
+            document.getElementById("oy_light_mode").style.animation = null;
+        }
+    }
+
+    function oy_mode_push(oy_light_mode) {
+        OY_LIGHT_MODE = oy_light_mode;
+
+        let oy_state_local = oy_state_current();
+
+        console.log(oy_state_local);
+
+        if (oy_state_local==="OY_STATE_BLANK") oy_mode_state_blank();
+        else if (oy_state_local==="OY_STATE_LIGHT") oy_mode_state_light();
+        else if (oy_state_local==="OY_STATE_FULL") oy_mode_state_full();
+    }
+
     function oy_low_power_toggle() {
         if (OY_LOW_POWER===false) oy_low_power_on("OY_THREAD_TOGGLE");
         else if (OY_LOW_POWER===true) oy_low_power_off("OY_THREAD_TOGGLE");
@@ -1570,7 +1647,6 @@
         let oy_time_local = Date.now()/1000|0;
 
         let oy_avg_latency = [];
-        let oy_avg_peership = [];
         let oy_avg_beam = [];
         let oy_avg_soak = [];
         let oy_peer_keep = [];
@@ -1578,9 +1654,8 @@
             if (oy_peer_local==="oy_aggregate_node") continue;
             oy_data_measure(true, oy_peer_local, null);
             oy_data_measure(false, oy_peer_local, null);
-            oy_peer_keep.push([oy_short(oy_peer_local), OY_PEERS[oy_peer_local][3], OY_PEERS[oy_peer_local][5], OY_PEERS[oy_peer_local][7]]);
+            oy_peer_keep.push([oy_short(oy_peer_local), OY_PEERS[oy_peer_local][3], OY_PEERS[oy_peer_local][5], OY_PEERS[oy_peer_local][7], OY_PEERS[oy_peer_local][9]]);
             oy_avg_latency.push(OY_PEERS[oy_peer_local][3]);
-            oy_avg_peership.push(OY_PEERS[oy_peer_local][0]);
             oy_avg_beam.push(OY_PEERS[oy_peer_local][5]);
             oy_avg_soak.push(OY_PEERS[oy_peer_local][7]);
         }
@@ -1607,7 +1682,7 @@
         let i = -1;
         for (i in oy_peer_keep) {
             if (i>4) break;
-            oy_graph_peer(i, oy_peer_keep[i][0], " - "+oy_peer_keep[i][1].toFixed(3)+"s", Math.round((oy_peer_keep[i][2]/(oy_peer_keep[i][2]+oy_peer_keep[i][3]))*100));
+            oy_graph_peer(i, oy_peer_keep[i][0], " - "+oy_peer_keep[i][1].toFixed(3)+"s - ["+((oy_peer_keep[i][4]===2)?"F":((oy_peer_keep[i][4]===1)?"L":"B"))+"]", Math.round((oy_peer_keep[i][2]/(oy_peer_keep[i][2]+oy_peer_keep[i][3]))*100));
         }
         i++;
         while (i <= 4) {
