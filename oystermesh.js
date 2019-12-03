@@ -2393,7 +2393,6 @@ function oy_block_loop() {
                 else if (OY_LIGHT_PENDING===false) {//unlatch sequence
                     OY_LIGHT_STATE = false;
                     document.dispatchEvent(OY_STATE_FULL);
-                    //send unlatch flag to all peers not in redemption list
                     for (let oy_peer_select in OY_PEERS) {
                         if (oy_peer_select==="oy_aggregate_node") continue;
                         oy_data_beam(oy_peer_select, "OY_PEER_FULL", oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH));
@@ -2434,6 +2433,16 @@ function oy_block_loop() {
             }
 
             OY_BLOCK[0][0] = oy_block_time_local;
+
+            if (OY_LIGHT_MODE===true&&OY_LIGHT_STATE===false) {//convert from full node to light node
+                OY_BLOCK_DIFF = true;
+                OY_LIGHT_STATE = true;
+                document.dispatchEvent(OY_STATE_LIGHT);
+                for (let oy_peer_select in OY_PEERS) {
+                    if (oy_peer_select==="oy_aggregate_node") continue;
+                    oy_data_beam(oy_peer_select, "OY_PEER_LIGHT", oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH));
+                }
+            }
 
             if (OY_LIGHT_STATE===true) {//do not process the meshblock anymore if in light state
                 if (OY_BLOCK_DIFF===false) {
