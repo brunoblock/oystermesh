@@ -1390,6 +1390,8 @@
     let OY_AKOYA_AMOUNT_PREV = "";
     let OY_MAP_NODES = {};
     let OY_MAP_LINKS = {};
+    let OY_MAP_NODES_RESERVE = {};
+    let OY_MAP_LINKS_RESERVE = {};
     let OY_BLOCK_RENDER_ACTIVE = false;
     let OY_BLOCK_MAP_FUNC = null;
     let OY_MESH_MAP_FUNC = null;
@@ -1549,6 +1551,8 @@
         OY_MESH_MAP = null;
         OY_MAP_NODES = {};
         OY_MAP_LINKS = {};
+        OY_MAP_NODES_RESERVE = {};
+        OY_MAP_LINKS_RESERVE = {};
 
         document.getElementById("oy_top_inner").style.overflow = "visible";
         document.getElementById("oy_top_inner").innerHTML = "<div class='oy_center_both' style='font-family:geo_med, sans-serif;font-size:1.5vh;color:#e2e2e2;'>[BLANK&nbsp;MODE]</div>";
@@ -1573,6 +1577,8 @@
         OY_MESH_MAP = null;
         OY_MAP_NODES = {};
         OY_MAP_LINKS = {};
+        OY_MAP_NODES_RESERVE = {};
+        OY_MAP_LINKS_RESERVE = {};
 
         document.getElementById("oy_top_inner").style.overflow = "visible";
         document.getElementById("oy_top_inner").innerHTML = "<div class='oy_center_both' style='font-family:geo_med, sans-serif;font-size:1.5vh;color:#e2e2e2;'>[LIGHT&nbsp;MODE]</div>";
@@ -1595,16 +1601,14 @@
         }
 
         if (document.getElementById("oy_top_inner").style.overflow==="visible") {
-            OY_MAP_NODES = {};
-            OY_MAP_LINKS = {};
+            OY_MAP_NODES = OY_MAP_NODES_RESERVE;
+            OY_MAP_LINKS = OY_MAP_LINKS_RESERVE;
             OY_MESH_MAP = OY_MESH_MAP_FUNC;
 
             document.getElementById("oy_top_inner").innerHTML = "";
             document.getElementById("oy_top_inner").style.overflow = "hidden";
 
-            oy_top_init();
-            OY_TOP_NODES.push({id:OY_SELF_SHORT, x: Math.random()*OY_TOP_WIDTH|0, y: Math.random()*OY_TOP_HEIGHT|0,});
-            oy_top_restart(true);
+            oy_top_render();
         }
     }
 
@@ -2429,6 +2433,8 @@
                 }
             }
             oy_top_restart(false);
+            OY_MAP_NODES_RESERVE = OY_MAP_NODES;
+            OY_MAP_LINKS_RESERVE = OY_MAP_LINKS;
             OY_MAP_NODES = {};
             OY_MAP_LINKS = {};
         }, 100);
@@ -2437,6 +2443,8 @@
     function oy_top_render_reset() {
         OY_MAP_NODES = {};
         OY_MAP_LINKS = {};
+        OY_MAP_NODES_RESERVE = {};
+        OY_MAP_LINKS_RESERVE = {};
 
         oy_top_render();
     }
