@@ -1494,11 +1494,16 @@
             };
 
             OY_BLOCK_MAP = OY_BLOCK_MAP_FUNC;
-            OY_MESH_MAP = OY_MESH_MAP_FUNC;
+            OY_MESH_MAP = null;
 
             oy_maintain();
             oy_block_render_resume();
-            oy_top_render();
+
+            OY_MAP_NODES = {};
+            OY_MAP_LINKS = {};
+
+            document.getElementById("oy_top_inner").style.overflow = "visible";
+            document.getElementById("oy_top_inner").innerHTML = "<div class='oy_center_both' style='font-family:geo_med, sans-serif;font-size:1.5vh;color:#e2e2e2;'>[BLANK&nbsp;MODE]</div>";
 
             if (location.hash==="#akoya") oy_tab("oy_tab_wallet");
             else if (location.hash.indexOf(".mesh")!==-1) {
@@ -1540,6 +1545,13 @@
             document.getElementById("oy_full_mode").classList.add("oy_button_execute_active");
             document.getElementById("oy_full_mode").style.animation = "flash_blue linear 0.5s infinite";
         }
+
+        OY_MESH_MAP = null;
+        OY_MAP_NODES = {};
+        OY_MAP_LINKS = {};
+
+        document.getElementById("oy_top_inner").style.overflow = "visible";
+        document.getElementById("oy_top_inner").innerHTML = "<div class='oy_center_both' style='font-family:geo_med, sans-serif;font-size:1.5vh;color:#e2e2e2;'>[BLANK&nbsp;MODE]</div>";
     }
 
     function oy_mode_state_light() {
@@ -1550,12 +1562,20 @@
         if (OY_LIGHT_MODE===true) {
             document.getElementById("oy_full_mode").classList.remove("oy_button_execute_active");
             document.getElementById("oy_full_mode").classList.add("oy_button_all_active");
+            document.getElementById("oy_full_mode").style.animation = null;
         }
         else {
             document.getElementById("oy_full_mode").classList.remove("oy_button_all_active");
             document.getElementById("oy_full_mode").classList.add("oy_button_execute_active");
             document.getElementById("oy_full_mode").style.animation = "flash_blue linear 0.5s infinite";
         }
+
+        OY_MESH_MAP = null;
+        OY_MAP_NODES = {};
+        OY_MAP_LINKS = {};
+
+        document.getElementById("oy_top_inner").style.overflow = "visible";
+        document.getElementById("oy_top_inner").innerHTML = "<div class='oy_center_both' style='font-family:geo_med, sans-serif;font-size:1.5vh;color:#e2e2e2;'>[LIGHT&nbsp;MODE]</div>";
     }
 
     function oy_mode_state_full() {
@@ -1572,6 +1592,19 @@
             document.getElementById("oy_light_mode").classList.remove("oy_button_alt_active");
             document.getElementById("oy_light_mode").classList.add("oy_button_all_active");
             document.getElementById("oy_light_mode").style.animation = null;
+        }
+
+        if (document.getElementById("oy_top_inner").style.overflow==="visible") {
+            OY_MAP_NODES = {};
+            OY_MAP_LINKS = {};
+            OY_MESH_MAP = OY_MESH_MAP_FUNC;
+
+            document.getElementById("oy_top_inner").innerHTML = "";
+            document.getElementById("oy_top_inner").style.overflow = "hidden";
+
+            oy_top_init();
+            OY_TOP_NODES.push({id:OY_SELF_SHORT, x: Math.random()*OY_TOP_WIDTH|0, y: Math.random()*OY_TOP_HEIGHT|0,});
+            oy_top_restart(true);
         }
     }
 
@@ -1603,7 +1636,7 @@
 
             document.getElementById("oy_graph_block").innerHTML = OY_BLOCK_GRAPH;
             document.getElementById("oy_top_inner").style.overflow = "visible";
-            document.getElementById("oy_top_inner").innerHTML = "<div class='oy_center_both' style='font-family:geo_med, sans-serif;font-size:1.5vh;color:#e2e2e2;'>LOW&nbsp;POWER&nbsp;MODE</div>";
+            document.getElementById("oy_top_inner").innerHTML = "<div class='oy_center_both' style='font-family:geo_med, sans-serif;font-size:1.5vh;color:#e2e2e2;'>[LOW&nbsp;POWER&nbsp;MODE]</div>";
 
             oy_element_add("oy_console", "span", "oy_console_line_"+OY_CONSOLE_COUNTER, "***LOW POWER MODE***<br>");
             OY_CONSOLE_COUNTER++;
@@ -1619,23 +1652,16 @@
         delete OY_LOW_POWER_THREAD[oy_thread];
         if (Object.keys(OY_LOW_POWER_THREAD).length===0&&OY_LOW_POWER===true) {
             OY_LOW_POWER = false;
-            OY_MAP_NODES = {};
-            OY_MAP_LINKS = {};
             OY_BLOCK_MAP = OY_BLOCK_MAP_FUNC;
-            OY_MESH_MAP = OY_MESH_MAP_FUNC;
             OY_MAINTAIN_DELAY = 500;
 
             document.getElementById("oy_graph_block").innerHTML = OY_BLOCK_GRAPH;
             oy_block_render_resume();
-            document.getElementById("oy_top_inner").innerHTML = "";
-            document.getElementById("oy_top_inner").style.overflow = "hidden";
-
-            oy_top_init();
-            OY_TOP_NODES.push({id:OY_SELF_SHORT, x: Math.random()*OY_TOP_WIDTH|0, y: Math.random()*OY_TOP_HEIGHT|0,});
-            oy_top_restart(true);
 
             document.getElementById("oy_low_power").classList.remove("oy_button_execute_active");
             document.getElementById("oy_low_power").classList.add("oy_button_all_active");
+
+            oy_mode_push(OY_LIGHT_MODE);
         }
     }
 
@@ -2380,7 +2406,7 @@
     }
 
     function oy_top_render() {
-        if (OY_LOW_POWER===true) return false;
+        if (OY_LOW_POWER===true||OY_LIGHT_STATE===true) return false;
 
         OY_MAP_NODES[OY_SELF_SHORT] = true;
         document.getElementById("oy_top_inner").innerHTML = "";
