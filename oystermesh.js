@@ -41,7 +41,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_BOOT_BUFFER = 120;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims dive rewards
 const OY_BLOCK_RANGE_MIN = 15;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOTTIME = 1575454900;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOTTIME = 1575465900;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_CHALLENGE_SAFETY = 0.5;//safety margin for rogue packets reaching block_consensus. 1 means no changes, lower means further from block_consensus, higher means closer.
 const OY_CHALLENGE_BUFFER = 1.8;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (min of 1)
 const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
@@ -1104,7 +1104,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     }
 }
 
-//reports peership data to top, leads to seeing mesh big picture, mesh stability development
+//reports peership data to top, leads to seeing mesh big picture, mesh stability development, not required for mesh operation
 function oy_peer_report() {
     let oy_xhttp = new XMLHttpRequest();
     oy_xhttp.onreadystatechange = function() {
@@ -1126,7 +1126,7 @@ function oy_peer_report() {
         oy_peers_thin[oy_peer_select][8] = null;
     }
     oy_xhttp.open("POST", "https://top.oyster.org/oy_peer_report.php", true);
-    oy_xhttp.send("oy_peer_report="+JSON.stringify([OY_SELF_PUBLIC, oy_peers_thin, OY_BLACKLIST]));
+    oy_xhttp.send("oy_peer_report="+JSON.stringify([OY_SELF_PUBLIC, oy_state_convert(oy_state_current()), oy_peers_thin, OY_BLACKLIST]));
 }
 
 function oy_boost() {
@@ -2431,8 +2431,8 @@ function oy_block_loop() {
             }, 100);
             //latency routine test
 
-            if (false&&Math.floor((Date.now()-30000)/10000000)!==Math.floor((Date.now()-10000)/10000000)) {//10000000
-                oy_log_debug("SNAPSHOT: "+OY_BLOCK_HASH+"/"+JSON.stringify(OY_BLOCK));
+            if (Math.floor((Date.now()-30000)/10000000)!==Math.floor((Date.now()-10000)/10000000)) {//10000000
+                //oy_log_debug("SNAPSHOT: "+OY_BLOCK_HASH+"/"+JSON.stringify(OY_BLOCK));
                 OY_BLOCK[1] = {};
                 OY_BLOCK[0][1].push(OY_BLOCK_HASH);
 
