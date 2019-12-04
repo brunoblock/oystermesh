@@ -40,8 +40,8 @@ const OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via 
 const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
 const OY_BLOCK_BOOT_BUFFER = 120;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims dive rewards
-const OY_BLOCK_RANGE_MIN = 5;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOTTIME = 1575317900;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_RANGE_MIN = 15;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
+const OY_BLOCK_BOOTTIME = 1575454900;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_CHALLENGE_SAFETY = 0.5;//safety margin for rogue packets reaching block_consensus. 1 means no changes, lower means further from block_consensus, higher means closer.
 const OY_CHALLENGE_BUFFER = 1.8;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (min of 1)
 const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
@@ -71,7 +71,7 @@ const OY_LATENCY_LENGTH = 8;//length of rand sequence which is repeated for payl
 const OY_LATENCY_REPEAT = 2;//how many ping round trips should be performed to conclude the latency test
 const OY_LATENCY_MAX = 20;//max amount of seconds for latency test before peership is refused or starts breaking down
 const OY_LATENCY_TRACK = 200;//how many latency measurements to keep at a time per peer
-const OY_LATENCY_GEO_SENS = 25;//percentage buffer for comparing latency with peers, higher means less likely weakest peer will get dropped and mesh is less geo-sensitive
+const OY_LATENCY_GEO_SENS = 32;//percentage buffer for comparing latency with peers, higher means less likely weakest peer will get dropped and mesh is less geo-sensitive
 const OY_DATA_MAX = 64000;//max size of data that can be sent to another node
 const OY_DATA_CHUNK = 48000;//chunk size by which data is split up and sent per transmission
 const OY_DATA_PURGE = 10;//how many handles to delete if indexedDB limit is reached
@@ -202,9 +202,8 @@ let OY_STATE_BLANK = new Event('oy_state_blank');//trigger-able event for when s
 let OY_STATE_LIGHT = new Event('oy_state_light');//trigger-able event for when self becomes a light node
 let OY_STATE_FULL = new Event('oy_state_full');//trigger-able event for when self becomes a full node
 let OY_BLOCK_HALT = null;
-let OY_DIFF_TRACK = [[], []];
+let OY_DIFF_TRACK = [[], [], [], [], []];
 let OY_DIFF_CONSTRUCT = {};
-let OY_DIFF_TALLY = {};
 let OY_CHALLENGE_TRIGGER = null;//passive_passport length to trigger challenge
 let OY_CHANNEL_DYNAMIC = {};//track channel broadcasts to ensure allowance compliance
 let OY_CHANNEL_LISTEN = {};//track channels to listen for
@@ -995,35 +994,43 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         let oy_diff_track = JSON.parse(oy_data_payload);//join the diff instructions together into the diff construct
         oy_data_payload = null;
 
+        OY_MESH_RANGE = oy_diff_track[0][0];
+
+        if (OY_MESH_RANGE<OY_BLOCK_RANGE_MIN) {
+            oy_block_reset("OY_FLAG_DROP_RANGE_LIGHT");
+            oy_log("MESHBLOCK DROP [RANGE_MIN_LIGHT]");
+            return false;
+        }
+
         for (let oy_key_public in OY_BLOCK[2]) {
             OY_BLOCK[2][oy_key_public] -= OY_AKOYA_FEE;
             OY_BLOCK[2][oy_key_public] = Math.max(OY_BLOCK[2][oy_key_public], 0);
             if (OY_BLOCK[2][oy_key_public]<=0) delete OY_BLOCK[2][oy_key_public];
         }
 
-        if (oy_diff_track[0].length>0) {
-            let oy_dive_share = oy_diff_track[0].shift();
-            for (let i in oy_diff_track[0]) {
-                if (typeof(OY_BLOCK[2][oy_diff_track[0][i]])==="undefined") OY_BLOCK[2][oy_diff_track[0][i]] = oy_dive_share;
-                else OY_BLOCK[2][oy_diff_track[0][i]] += oy_dive_share;
+        if (oy_diff_track[1].length>0) {
+            let oy_dive_share = oy_diff_track[1].shift();
+            for (let i in oy_diff_track[1]) {
+                if (typeof(OY_BLOCK[2][oy_diff_track[1][i]])==="undefined") OY_BLOCK[2][oy_diff_track[1][i]] = oy_dive_share;
+                else OY_BLOCK[2][oy_diff_track[1][i]] += oy_dive_share;
             }
         }
-        if (oy_diff_track[1].length>0) {
-            for (let i in oy_diff_track[1]) {
-                if (oy_diff_track[1][i][1][0]==="OY_AKOYA_SEND"&&typeof(OY_BLOCK[2][oy_diff_track[1][i][1][2]])!=="undefined"&&OY_BLOCK[2][oy_diff_track[1][i][1][2]]>=oy_diff_track[1][i][1][3]) {
-                    if (typeof(OY_BLOCK[2][oy_diff_track[1][i][1][4]])==="undefined") OY_BLOCK[2][oy_diff_track[1][i][1][4]] = 0;
-                    let oy_balance_send = OY_BLOCK[2][oy_diff_track[1][i][1][2]];
-                    let oy_balance_receive = OY_BLOCK[2][oy_diff_track[1][i][1][4]];
-                    OY_BLOCK[2][oy_diff_track[1][i][1][2]] -= oy_diff_track[1][i][1][3];
-                    OY_BLOCK[2][oy_diff_track[1][i][1][4]] += oy_diff_track[1][i][1][3];
-                    if (OY_BLOCK[2][oy_diff_track[1][i][1][2]]+OY_BLOCK[2][oy_diff_track[1][i][1][4]]!==oy_balance_send+oy_balance_receive) {//verify balances, revert transaction if necessary
-                        OY_BLOCK[2][oy_diff_track[1][i][1][2]] = oy_balance_send;
-                        OY_BLOCK[2][oy_diff_track[1][i][1][4]] = oy_balance_receive;
+        if (oy_diff_track[2].length>0) {
+            for (let i in oy_diff_track[2]) {
+                if (oy_diff_track[2][i][1][0]==="OY_AKOYA_SEND"&&typeof(OY_BLOCK[2][oy_diff_track[2][i][1][2]])!=="undefined"&&OY_BLOCK[2][oy_diff_track[2][i][1][2]]>=oy_diff_track[2][i][1][3]) {
+                    if (typeof(OY_BLOCK[2][oy_diff_track[2][i][1][4]])==="undefined") OY_BLOCK[2][oy_diff_track[2][i][1][4]] = 0;
+                    let oy_balance_send = OY_BLOCK[2][oy_diff_track[2][i][1][2]];
+                    let oy_balance_receive = OY_BLOCK[2][oy_diff_track[2][i][1][4]];
+                    OY_BLOCK[2][oy_diff_track[2][i][1][2]] -= oy_diff_track[2][i][1][3];
+                    OY_BLOCK[2][oy_diff_track[2][i][1][4]] += oy_diff_track[2][i][1][3];
+                    if (OY_BLOCK[2][oy_diff_track[2][i][1][2]]+OY_BLOCK[2][oy_diff_track[2][i][1][4]]!==oy_balance_send+oy_balance_receive) {//verify balances, revert transaction if necessary
+                        OY_BLOCK[2][oy_diff_track[2][i][1][2]] = oy_balance_send;
+                        OY_BLOCK[2][oy_diff_track[2][i][1][4]] = oy_balance_receive;
                     }
                     else {
-                        if (OY_BLOCK[2][oy_diff_track[1][i][1][2]]<=0) delete OY_BLOCK[2][oy_diff_track[1][i][1][2]];
-                        if (OY_BLOCK[2][oy_diff_track[1][i][1][4]]<=0) delete OY_BLOCK[2][oy_diff_track[1][i][1][4]];
-                        OY_BLOCK[1][oy_diff_track[1][i][0]] = oy_diff_track[1][i][1];
+                        if (OY_BLOCK[2][oy_diff_track[2][i][1][2]]<=0) delete OY_BLOCK[2][oy_diff_track[2][i][1][2]];
+                        if (OY_BLOCK[2][oy_diff_track[2][i][1][4]]<=0) delete OY_BLOCK[2][oy_diff_track[2][i][1][4]];
+                        OY_BLOCK[1][oy_diff_track[2][i][0]] = oy_diff_track[2][i][1];
                     }
                 }
             }
@@ -2256,7 +2263,7 @@ function oy_block_reset(oy_reset_flag) {
     OY_BLOCK_ROSTER = {};
     OY_BLOCK_ROSTER_AVG = null;
     OY_BLOCK = [[null, []], {}, {}, {}, {}];
-    OY_DIFF_TRACK = [[], []];
+    OY_DIFF_TRACK = [[], [], [], [], []];
     OY_BASE_BUILD = [];
     OY_MESH_RANGE = 0;
     OY_CHALLENGE_TRIGGER = null;
@@ -2296,7 +2303,7 @@ function oy_block_loop() {
         let oy_block_continue = true;
 
         //BLOCK SEED--------------------------------------------------
-        if (OY_BLOCK_TIME===OY_BLOCK_BOOTTIME) {
+        if (OY_LIGHT_MODE===false&&OY_BLOCK_TIME===OY_BLOCK_BOOTTIME) {
             OY_BLOCK = [[null, []], {}, {}, {}, {}];
 
             //SEED DEFINITION------------------------------------
@@ -2595,7 +2602,15 @@ function oy_block_loop() {
             OY_BLOCK_NEW = {};
             OY_BLOCK_DIVE = {};
             OY_BLOCK_DIVE_SET = [];
-            OY_DIFF_TRACK = [[], []];
+            OY_DIFF_TRACK = [[], [], [], [], []];
+            //OY_DIFF_TRACK breakdown:
+            //[0] is metadata like mesh range
+            //[1] is dive reward
+            //[2] is akoya transactions
+            //[3] is DNS transactions
+            //[4] is DAPPER transactions
+
+            OY_DIFF_TRACK[0][0] = OY_MESH_RANGE;
 
             let oy_supply_pre = 0;
             let oy_dive_bounty = 0;
@@ -2611,12 +2626,12 @@ function oy_block_loop() {
             if (oy_dive_reward_pool.length>0) {
                 let oy_dive_share = Math.floor(oy_dive_bounty/oy_dive_reward_pool.length);//TODO verify math to make sure odd balances don't cause a gradual decrease of the entire supply
                 if (oy_dive_share>0) {
-                    OY_DIFF_TRACK[0].push(oy_dive_share);
+                    OY_DIFF_TRACK[1].push(oy_dive_share);
                     for (let i in oy_dive_reward_pool) {
                         if (oy_dive_reward===oy_dive_reward_pool[i]) OY_BLOCK_DIVE_TRACK += oy_dive_share;
                         if (typeof(OY_BLOCK[2][oy_dive_reward_pool[i]])==="undefined") OY_BLOCK[2][oy_dive_reward_pool[i]] = oy_dive_share;
                         else OY_BLOCK[2][oy_dive_reward_pool[i]] += oy_dive_share;
-                        OY_DIFF_TRACK[0].push(oy_dive_reward_pool[i]);
+                        OY_DIFF_TRACK[1].push(oy_dive_reward_pool[i]);
                     }
                 }
             }
@@ -2641,7 +2656,7 @@ function oy_block_loop() {
                             if (OY_BLOCK[2][oy_command_execute[i][1][4]]<=0) delete OY_BLOCK[2][oy_command_execute[i][1][4]];
                             OY_BLOCK[1][oy_command_execute[i][0]] = oy_command_execute[i][1];
                             OY_BLOCK_NEW[oy_command_execute[i][0]] = oy_command_execute[i][1];
-                            OY_DIFF_TRACK[1].push(oy_command_execute[i]);
+                            OY_DIFF_TRACK[2].push(oy_command_execute[i]);
                         }
                     }
                 }
