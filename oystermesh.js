@@ -961,11 +961,14 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         }
         if (oy_nonce_count===oy_data_payload[0]) {//check if block_nonce equals block_nonce_max
             OY_LIGHT_PENDING = true;
-            let oy_block_flat = OY_BASE_BUILD.join("");
 
-            OY_BLOCK = JSON.parse(oy_block_flat);
+            OY_BLOCK_FLAT = OY_BASE_BUILD.join("");
 
-            OY_BLOCK_HASH = oy_hash_gen(oy_block_flat);
+            OY_BLOCK = JSON.parse(OY_BLOCK_FLAT);
+
+            OY_BLOCK_HASH = oy_hash_gen(OY_BLOCK_FLAT);
+
+            OY_BLOCK_WEIGHT = new Blob([OY_BLOCK_FLAT]).size;
 
             oy_log("BASE MESHBLOCK HASH "+OY_BLOCK_HASH);
 
@@ -2321,6 +2324,47 @@ function oy_block_loop() {
         if (OY_BLOCK_UPTIME!==null&&OY_BLOCK_TIME-OY_BLOCK_UPTIME>=OY_BLOCK_DIVE_BUFFER) oy_dive_reward = (" "+OY_BLOCK_DIVE_REWARD).slice(1);
 
         oy_chrono(function() {
+            if (OY_BLOCK_HASH!==null&&OY_BLOCK_FLAT!==null) {
+                let oy_base_process = false;
+                for (let oy_peer_select in OY_PEERS) {
+                    if (oy_peer_select!=="oy_aggregate_node"&&OY_PEERS[oy_peer_select][9]===0) {
+                        oy_base_process = true;
+                        break;
+                    }
+                }
+                if (oy_base_process===true) {
+                    let oy_block_nonce_max = -1;
+                    let oy_block_split = [];
+                    for (let i = 0; i < OY_BLOCK_FLAT.length; i+=OY_LIGHT_CHUNK) {
+                        oy_block_split.push(OY_BLOCK_FLAT.slice(i, i+OY_LIGHT_CHUNK));//split the current block into chunks
+                        oy_block_nonce_max++;
+                    }
+
+                    let oy_block_juggle = [];
+                    for (let oy_block_nonce in oy_block_split) {
+                        oy_block_juggle.push(oy_block_nonce);
+                    }
+
+                    oy_shuffle(oy_block_juggle);
+
+                    for (let oy_peer_select in OY_PEERS) {
+                        if (oy_peer_select==="oy_aggregate_node"||OY_PEERS[oy_peer_select][9]!==0) continue;
+                        if (OY_PEERS[oy_peer_select][10]===true) {
+                            oy_peer_remove(oy_peer_select, "OY_PUNISH_BASE_ABUSE");
+                            oy_log("Removed and punished peer "+oy_short(oy_peer_select)+" for base abuse");
+                        }
+                        else {
+                            for (let i in oy_block_juggle) {
+                                oy_data_beam(oy_peer_select, "OY_PEER_BASE", [oy_block_nonce_max, oy_block_juggle[i], oy_block_split[oy_block_juggle[i]]]);
+                            }
+                            OY_PEERS[oy_peer_select][10] = true;
+                        }
+                    }
+                }
+            }
+        }, OY_MESH_BUFFER[1]);
+
+        oy_chrono(function() {
             if (OY_BLOCK_HASH===null) return false;
             let oy_block_hash_crypt = oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH);
             for (let oy_peer_select in OY_PEERS) {
@@ -2688,35 +2732,7 @@ function oy_block_loop() {
             if (OY_BLOCK_UPTIME!==null&&OY_LATCH_COUNT>0) {
                 let oy_diff_flat = JSON.stringify(OY_DIFF_TRACK);
                 for (let oy_peer_select in OY_PEERS) {
-                    if (OY_PEERS[oy_peer_select][9]===1) oy_data_beam(oy_peer_select, "OY_PEER_DIFF", oy_diff_flat);
-                }
-            }
-
-            let oy_block_nonce_max = -1;
-            let oy_block_split = [];
-            for (let i = 0; i < OY_BLOCK_FLAT.length; i+=OY_LIGHT_CHUNK) {
-                oy_block_split.push(OY_BLOCK_FLAT.slice(i, i+OY_LIGHT_CHUNK));//split the current block into chunks
-                oy_block_nonce_max++;
-            }
-
-            let oy_block_juggle = [];
-            for (let oy_block_nonce in oy_block_split) {
-                oy_block_juggle.push(oy_block_nonce);
-            }
-
-            oy_shuffle(oy_block_juggle);
-
-            for (let oy_peer_select in OY_PEERS) {
-                if (oy_peer_select==="oy_aggregate_node"||OY_PEERS[oy_peer_select][9]!==0) continue;
-                if (OY_PEERS[oy_peer_select][10]===true) {
-                    oy_peer_remove(oy_peer_select, "OY_PUNISH_BASE_ABUSE");
-                    oy_log("Removed and punished peer "+oy_short(oy_peer_select)+" for base abuse");
-                }
-                else {
-                    for (let i in oy_block_juggle) {
-                        oy_data_beam(oy_peer_select, "OY_PEER_BASE", [oy_block_nonce_max, oy_block_juggle[i], oy_block_split[oy_block_juggle[i]]]);
-                    }
-                    OY_PEERS[oy_peer_select][10] = true;
+                    if (oy_peer_select!=="oy_aggregate_node"&&OY_PEERS[oy_peer_select][9]===1) oy_data_beam(oy_peer_select, "OY_PEER_DIFF", oy_diff_flat);
                 }
             }
 
