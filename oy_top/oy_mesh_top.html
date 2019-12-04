@@ -133,11 +133,13 @@
                     for (let i in oy_mesh_top[2]) {
                         let oy_node_collect = [];
                         window.OY_TOP_NODES.forEach(function (target) {
-                            if (target.id === oy_mesh_top[2][i][0] || target.id === oy_mesh_top[2][i][1]) oy_node_collect.push(target);
+                            if (target.id===oy_mesh_top[2][i][0]||target.id===oy_mesh_top[2][i][1]) {
+                                oy_node_collect.push([target, target.state]);
+                            }
                         });
                         if (oy_node_collect.length === 2) {
                             //console.log("LINK PUSH: "+oy_node_collect[0].id+" <-> "+oy_node_collect[1].id);
-                            window.OY_TOP_LINKS.push({source: oy_node_collect[0], target: oy_node_collect[1]});
+                            window.OY_TOP_LINKS.push({source: oy_node_collect[0][0], target: oy_node_collect[1][0], state:Math.min(oy_node_collect[0][1], oy_node_collect[1][1])});
                         }
                     }
                     oy_top_restart();
@@ -189,10 +191,16 @@
             .attr("cy", function(d) { return d.y; });
     }
 
-    function oy_top_fill(oy_state) {
+    function oy_top_fill_node(oy_state) {
         if (oy_state===2) return "#348fab";
         else if (oy_state===1) return "#8a3789";
         return "#535353";
+    }
+
+    function oy_top_fill_link(oy_state) {
+        if (oy_state===2) return "#314a91";
+        else if (oy_state===1) return "#632862";
+        return "#424242";
     }
 
     function oy_top_restart() {
@@ -201,7 +209,7 @@
         window.OY_TOP_NODE.enter().insert("circle")
             .attr("class", "node")
             .attr("r", 5)
-            .style("fill", function(d) { return oy_top_fill(d.state); });
+            .style("fill", function(d) { return oy_top_fill_node(d.state); });
 
         window.OY_TOP_NODE.exit()
             .remove();
@@ -209,7 +217,9 @@
         window.OY_TOP_LINK = window.OY_TOP_LINK.data(window.OY_TOP_LINKS);
 
         window.OY_TOP_LINK.enter().insert("line", ".node")
-            .attr("class", "link");
+            .attr("class", "link")
+            .style("stroke", function(d) { return oy_top_fill_link(d.state); });
+
         window.OY_TOP_LINK.exit()
             .remove();
 

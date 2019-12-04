@@ -118,7 +118,7 @@ let OY_DATA_PUSH = {};//object for tracking data push threads
 let OY_DATA_PULL = {};//object for tracking data pull threads
 let OY_LATCH_COUNT = 0;
 let OY_PEER_COUNT = 0;//how many active connections with mutual peers
-let OY_PEERS = {"oy_aggregate_node":[-1, -1, -1, 0, [], 0, [], 0, [], false]};//peer tracking
+let OY_PEERS = {"oy_aggregate_node":[-1, -1, -1, 0, [], 0, [], 0, [], null, false]};//peer tracking
 let OY_PEERS_PRE = {};//tracks nodes that are almost peers, will become peers once PEER_AFFIRM is received from other node
 let OY_PEERS_NULL = new Event('oy_peers_null');//trigger-able event for when peer_count == 0
 let OY_PEERS_RECOVER = new Event('oy_peers_recover');//trigger-able event for when peer_count > 0
@@ -428,11 +428,11 @@ function oy_peer_add(oy_peer_id, oy_state_flag) {
         return false;//cancel if peer already exists in list
     }
     let oy_callback_local = function() {
-        //[peership timestamp, last msg timestamp, last latency timestamp, latency avg, latency history, data beam, data beam history, data soak, data soak history, latch flag]
+        //[peership timestamp, last msg timestamp, last latency timestamp, latency avg, latency history, data beam, data beam history, data soak, data soak history, latch flag, base sent]
         if (OY_PEER_COUNT>=OY_PEER_MAX) return false;//prevent overflow on peer_count
         OY_PEER_COUNT++;
         if (oy_state_flag===1) OY_LATCH_COUNT++;
-        OY_PEERS[oy_peer_id] = [Date.now()/1000|0, -1, -1, 0, [], 0, [], 0, [], oy_state_flag];
+        OY_PEERS[oy_peer_id] = [Date.now()/1000|0, -1, -1, 0, [], 0, [], 0, [], oy_state_flag, false];
         if (OY_PEER_COUNT===1) document.dispatchEvent(OY_PEERS_RECOVER);
         oy_node_reset(oy_peer_id);
     };
@@ -1054,8 +1054,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_PEER_LIGHT") {//peer as a blank or full node is converting into a light node
         if (!oy_key_verify(oy_peer_id, oy_data_payload, OY_MESH_DYNASTY+OY_BLOCK_HASH)) {
-            oy_node_punish(oy_peer_id, "OY_PUNISH_LIGHT_FAIL");
-            oy_log("Punished peer "+oy_short(oy_peer_id)+" who failed to upgrade to a light node");
+            oy_peer_remove(oy_peer_id, "OY_PUNISH_LIGHT_FAIL");
+            oy_log("Removed and punished peer "+oy_short(oy_peer_id)+" who failed to upgrade to a light node");
             return false;
         }
         if (OY_PEERS[oy_peer_id][9]===0||OY_PEERS[oy_peer_id][9]===2) {
@@ -1065,8 +1065,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_PEER_FULL") {//peer as a light node is converting into a full node
         if (!oy_key_verify(oy_peer_id, oy_data_payload, OY_MESH_DYNASTY+OY_BLOCK_HASH)) {
-            oy_node_punish(oy_peer_id, "OY_PUNISH_FULL_FAIL");
-            oy_log("Punished peer "+oy_short(oy_peer_id)+" who failed to upgrade to a full node");
+            oy_peer_remove(oy_peer_id, "OY_PUNISH_FULL_FAIL");
+            oy_log("Removed and punished peer "+oy_short(oy_peer_id)+" who failed to upgrade to a full node");
             return false;
         }
         if (OY_PEERS[oy_peer_id][9]===1) {
@@ -1077,7 +1077,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     else if (oy_data_flag==="OY_PEER_CHALLENGE") {
         if (OY_BLOCK_HASH===null) return false;
         if (typeof(OY_BLOCK_CHALLENGE[oy_peer_id])!=="undefined"&&oy_key_verify(oy_peer_id, oy_data_payload, OY_MESH_DYNASTY+OY_BLOCK_HASH)) delete OY_BLOCK_CHALLENGE[oy_peer_id];
-        else oy_log_debug("MISMATCH HASH: "+OY_BLOCK_HASH);
+        //else oy_log_debug("MISMATCH HASH: "+OY_BLOCK_HASH);
         return true;
     }
     else if (oy_data_flag==="OY_PEER_LATENCY") {
@@ -2336,7 +2336,7 @@ function oy_block_loop() {
                 oy_peer_remove(oy_peer_select, "OY_PUNISH_BLOCK_HASH");
                 delete OY_BLOCK_CHALLENGE[oy_peer_select];
                 oy_log("Removed and punished peer "+oy_short(oy_peer_select)+" who failed meshblock challenge");
-                oy_log_debug("PUNISH HASH["+OY_SELF_SHORT+"]["+oy_short(oy_peer_select)+"]: "+OY_BLOCK_HASH);
+                //oy_log_debug("PUNISH HASH["+OY_SELF_SHORT+"]["+oy_short(oy_peer_select)+"]: "+OY_BLOCK_HASH);
             }
         }, OY_BLOCK_CHALLENGETIME);
 
@@ -2356,6 +2356,26 @@ function oy_block_loop() {
                 }
                 if (OY_LIGHT_STATE===true) OY_LIGHT_STATE = false;//since node has elected to being a full node, switch light state flag to false
             }
+
+            //latency routine test
+            for (let oy_peer_local in OY_PEERS) {
+                if (oy_peer_local==="oy_aggregate_node") continue;
+                let oy_time_diff_last = oy_time_local-OY_PEERS[oy_peer_local][1];
+                let oy_time_diff_latency = oy_time_local-OY_PEERS[oy_peer_local][2];
+                if (oy_time_diff_last>=OY_PEER_KEEPTIME||oy_time_diff_latency>=OY_PEER_LATENCYTIME) {
+                    if (typeof(OY_ENGINE[0][oy_peer_local])==="undefined") {
+                        oy_log("Initiating latency test with peer "+oy_short(oy_peer_local)+", time_diff_last: "+oy_time_diff_last.toFixed(2)+"/"+OY_PEER_KEEPTIME+", time_diff_latency: "+oy_time_diff_latency.toFixed(2)+"/"+OY_PEER_LATENCYTIME);
+                        if (oy_latency_test(oy_peer_local, "OY_PEER_ROUTINE", true)) OY_ENGINE[0][oy_peer_local] = oy_time_local;
+                        else oy_log("Latency test with peer "+oy_short(oy_peer_local)+" was unable to launch");
+                    }
+                    else if (oy_time_local-OY_ENGINE[0][oy_peer_local]>OY_LATENCY_MAX) {
+                        oy_log("Found non-responsive peer "+oy_short(oy_peer_local)+" with latency lag: "+(oy_time_local-OY_ENGINE[0][oy_peer_local]).toFixed(4)+", will punish");
+                        oy_node_punish(oy_peer_local, "OY_PUNISH_LATENCY_LAG");
+                    }
+                }
+                else delete OY_ENGINE[0][oy_peer_local];
+            }
+            //latency routine test
 
             if (OY_BLOCK_HASH===null) {
                 OY_MESH_RANGE = 0;
@@ -2407,29 +2427,6 @@ function oy_block_loop() {
                 }
             }
             //unlatch process
-
-            //latency routine test
-            oy_chrono(function() {
-                let oy_peer_local;
-                for (oy_peer_local in OY_PEERS) {
-                    if (oy_peer_local==="oy_aggregate_node") continue;
-                    let oy_time_diff_last = oy_time_local-OY_PEERS[oy_peer_local][1];
-                    let oy_time_diff_latency = oy_time_local-OY_PEERS[oy_peer_local][2];
-                    if (oy_time_diff_last>=OY_PEER_KEEPTIME||oy_time_diff_latency>=OY_PEER_LATENCYTIME) {
-                        if (typeof(OY_ENGINE[0][oy_peer_local])==="undefined") {
-                            oy_log("Initiating latency test with peer "+oy_short(oy_peer_local)+", time_diff_last: "+oy_time_diff_last.toFixed(2)+"/"+OY_PEER_KEEPTIME+", time_diff_latency: "+oy_time_diff_latency.toFixed(2)+"/"+OY_PEER_LATENCYTIME);
-                            if (oy_latency_test(oy_peer_local, "OY_PEER_ROUTINE", true)) OY_ENGINE[0][oy_peer_local] = oy_time_local;
-                            else oy_log("Latency test with peer "+oy_short(oy_peer_local)+" was unable to launch");
-                        }
-                        else if (oy_time_local-OY_ENGINE[0][oy_peer_local]>OY_LATENCY_MAX) {
-                            oy_log("Found non-responsive peer "+oy_short(oy_peer_local)+" with latency lag: "+(oy_time_local-OY_ENGINE[0][oy_peer_local]).toFixed(4)+", will punish");
-                            oy_node_punish(oy_peer_local, "OY_PUNISH_LATENCY_LAG");
-                        }
-                    }
-                    else delete OY_ENGINE[0][oy_peer_local];
-                }
-            }, 100);
-            //latency routine test
 
             if (Math.floor((Date.now()-30000)/10000000)!==Math.floor((Date.now()-10000)/10000000)) {//10000000
                 //oy_log_debug("SNAPSHOT: "+OY_BLOCK_HASH+"/"+JSON.stringify(OY_BLOCK));
@@ -2684,7 +2681,7 @@ function oy_block_loop() {
 
             oy_log("NEW MESHBLOCK HASH "+OY_BLOCK_HASH);
 
-            oy_log_debug("HASH: "+OY_BLOCK_HASH+"\nBLOCK: "+OY_BLOCK_FLAT);
+            //oy_log_debug("HASH: "+OY_BLOCK_HASH+"\nBLOCK: "+OY_BLOCK_FLAT);
 
             document.dispatchEvent(OY_BLOCK_TRIGGER);
 
@@ -2709,9 +2706,17 @@ function oy_block_loop() {
 
             oy_shuffle(oy_block_juggle);
 
-            for (let i in oy_block_juggle) {
-                for (let oy_peer_select in OY_PEERS) {//TODO prevent abuse from blank nodes that never apply the block base
-                    if (OY_PEERS[oy_peer_select][9]===0) oy_data_beam(oy_peer_select, "OY_PEER_BASE", [oy_block_nonce_max, oy_block_juggle[i], oy_block_split[oy_block_juggle[i]]]);
+            for (let oy_peer_select in OY_PEERS) {
+                if (oy_peer_select==="oy_aggregate_node"||OY_PEERS[oy_peer_select][9]!==0) continue;
+                if (OY_PEERS[oy_peer_select][10]===true) {
+                    oy_peer_remove(oy_peer_select, "OY_PUNISH_BASE_ABUSE");
+                    oy_log("Removed and punished peer "+oy_short(oy_peer_select)+" for base abuse");
+                }
+                else {
+                    for (let i in oy_block_juggle) {
+                        oy_data_beam(oy_peer_select, "OY_PEER_BASE", [oy_block_nonce_max, oy_block_juggle[i], oy_block_split[oy_block_juggle[i]]]);
+                    }
+                    OY_PEERS[oy_peer_select][10] = true;
                 }
             }
 
