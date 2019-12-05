@@ -1054,10 +1054,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
         document.dispatchEvent(OY_BLOCK_TRIGGER);
 
-        for (let oy_command_hash in OY_BLOCK_CONFIRM) {
-            OY_BLOCK_CONFIRM[oy_command_hash](typeof(OY_BLOCK[1][oy_command_hash])!=="undefined");
-        }
-        OY_BLOCK_CONFIRM = {};
+        oy_block_finish();
     }
     else if (oy_data_flag==="OY_PEER_BLANK") {//peer as a full or light node is resetting to a blank node
         if (OY_PEERS[oy_peer_id][9]===1||OY_PEERS[oy_peer_id][9]===2) {
@@ -2744,14 +2741,7 @@ function oy_block_loop() {
                 }
             }
 
-            for (let oy_command_hash in OY_BLOCK_CONFIRM) {
-                OY_BLOCK_CONFIRM[oy_command_hash](typeof(OY_BLOCK[1][oy_command_hash])!=="undefined");
-            }
-            OY_BLOCK_CONFIRM = {};
-
-            while (OY_BOOST.length>OY_BOOST_KEEP) OY_BOOST.shift();
-            oy_local_set("oy_boost", OY_BOOST);
-            oy_local_set("oy_boost_expire", (Date.now()/1000|0)+OY_BOOST_EXPIRETIME);
+            oy_block_finish();
         }, OY_BLOCK_SECTORS[2][1]);
 
         //----------transitory centralized solution
@@ -2767,6 +2757,17 @@ function oy_block_loop() {
         oy_xhttp.send();
         //----------transitory centralized solution
     }
+}
+
+function oy_block_finish() {
+    for (let oy_command_hash in OY_BLOCK_CONFIRM) {
+        OY_BLOCK_CONFIRM[oy_command_hash](typeof(OY_BLOCK[1][oy_command_hash])!=="undefined");
+    }
+    OY_BLOCK_CONFIRM = {};
+
+    while (OY_BOOST.length>OY_BOOST_KEEP) OY_BOOST.shift();
+    oy_local_set("oy_boost", OY_BOOST);
+    oy_local_set("oy_boost_expire", (Date.now()/1000|0)+OY_BOOST_EXPIRETIME);
 }
 
 //core loop that runs critical functions and checks
