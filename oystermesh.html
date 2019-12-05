@@ -2196,7 +2196,7 @@
     function oy_wallet_unlock(oy_pass) {
         try {
             let oy_key_private = oy_crypt_decrypt(OY_WALLET_CRYPT, oy_pass);
-            let oy_key_public = window.atob(oy_key_private).substr(43);
+            let oy_key_public = oy_key_gen(oy_key_private)[1];
             let oy_data = oy_rand_gen();
             if (oy_key_private.length>0&&oy_key_verify(oy_key_public, oy_key_sign(oy_key_private, oy_data), oy_data)) {
                 document.getElementById("oy_wallet_upload_pass_0").blur();

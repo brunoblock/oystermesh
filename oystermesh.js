@@ -41,7 +41,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_BOOT_BUFFER = 120;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims dive rewards
 const OY_BLOCK_RANGE_MIN = 15;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOTTIME = 1575539200;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOTTIME = 1575575600;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_CHALLENGE_SAFETY = 0.5;//safety margin for rogue packets reaching block_consensus. 1 means no changes, lower means further from block_consensus, higher means closer.
 const OY_CHALLENGE_BUFFER = 1.8;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (min of 1)
 const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
@@ -92,7 +92,7 @@ const OY_CHANNEL_RESPOND_MAX = 6;//max amount of broadcast payloads to send in r
 const OY_CHANNEL_ALLOWANCE = 58;//broadcast allowance in seconds per public key, an anti-spam mechanism to prevent spamming chat forums with garbage text
 const OY_CHANNEL_CONSENSUS = 0.5;//node signature requirement for a broadcast to be retained in channel_keep
 const OY_CHANNEL_TOP_TOLERANCE = 2;//node count difference allowed between broadcast claim and perceived claim
-const OY_KEY_BRUNO = "XLp6_wVPBF3Zg-QNRkEj6U8bOYEZddQITs1n2pyeRqwOG5k9w_1A-RMIESIrVv_5HbvzoLhq-xPLE7z2na0C6M";//prevent impersonation (custom avatar), achieve AKY coin-lock
+const OY_KEY_BRUNO = "JSJqmlzAxwuINY2FCpWPJYvKIK1AjavBgkIwIm139k4M";//prevent impersonation (custom avatar), achieve AKY coin-lock. This is the testnet wallet, will change for mainnet
 const OY_SHORT_LENGTH = 6;//various data value such as nonce IDs, data handles, data values are shortened for efficiency
 
 // INIT
@@ -2313,9 +2313,8 @@ function oy_block_loop() {
 
             //SEED DEFINITION------------------------------------
             OY_BLOCK[2][OY_KEY_BRUNO] = 1000000*OY_AKOYA_DECIMALS;
-            OY_BLOCK[2]["6SMQSTFOYwECyJUbT4sIaUr3ZgtAI0cUnSC50oADLNY6NnFd0B3m0etogvlJ8rjiQgVKeAtVepyHsmMiVFs7UI"] = 1000000*OY_AKOYA_DECIMALS;
-            OY_BLOCK[2]["6PpZ_Rkylq1kBxDsmEBtrpbu7NR9zCYoybybectEMcoy0cR88Jj0zKaGLroFA3ubSJMdPfMIk0HW7Jw6FdVMSU"] = 1000000*OY_AKOYA_DECIMALS;
-            OY_BLOCK[2]["yg8s2bpiH48jn7m0sLmoAYRP0yLWKXmxyktJ2rvp7msag5qhcV4yBI3zbkn2JoD42R36rLkmgwHePFynxxPqlw"] = 1000000*OY_AKOYA_DECIMALS;
+            OY_BLOCK[2]["cJo3PZm9o5fwx0g2QlNKNTD9eOlOygpe9ShKetEfg0Qw"] = 1000000*OY_AKOYA_DECIMALS;
+            OY_BLOCK[2]["yvU1vKfFZHygqi5oQl22phfTFTbo5qwQBHZuesCOtdgA"] = 1000000*OY_AKOYA_DECIMALS;
             //SEED DEFINITION------------------------------------
 
             OY_BLOCK_HASH = oy_hash_gen(JSON.stringify(OY_BLOCK));
