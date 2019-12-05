@@ -22,8 +22,8 @@ const OY_MESH_SOURCE = 3;//node in route passport (from destination) that is ass
 const OY_BLOCK_LOOP = 100;//a lower value means increased accuracy for detecting the start of the next meshblock
 const OY_BLOCK_CONSENSUS = 0.5;//mesh topology corroboration to agree on confirming a meshblock transaction
 const OY_BLOCK_LAUNCHTIME = 200;//ms delay from block_trigger to launch a command broadcast
-const OY_BLOCK_PROTECTTIME = 600;//ms delay until meshblock challenge protection is enacted
-const OY_BLOCK_CHALLENGETIME = 1600;//ms delay until meshblock challenge to peers is enforced
+const OY_BLOCK_PROTECTTIME = 500;//ms delay until meshblock challenge protection is enacted
+const OY_BLOCK_CHALLENGETIME = 2500;//ms delay until meshblock challenge to peers is enforced
 const OY_BLOCK_MISS_MULTI = 0.3;//multiplication factor for passport length, lower means more sybil-attack secure yet more honest block_syncs dropped
 const OY_BLOCK_MISS_MULTI_MIN = 1;//minimum miss_limit value for roster calculations
 const OY_BLOCK_STABILITY_START = 50;//starting stability value for making roster calculations
@@ -972,6 +972,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
             oy_log("BASE MESHBLOCK HASH "+OY_BLOCK_HASH);
 
+            OY_LIGHT_STATE = true;
+
             document.dispatchEvent(OY_STATE_LIGHT);
 
             oy_chrono(function() {
@@ -979,8 +981,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                     if (oy_peer_select==="oy_aggregate_node") continue;
                     oy_data_beam(oy_peer_select, "OY_PEER_LIGHT", oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH));
                 }
-                OY_LIGHT_PENDING = false;
-            }, OY_BLOCK_SECTORS[0][1]+OY_BLOCK_SECTORS[1][1]);
+            }, OY_MESH_BUFFER[1]+OY_BLOCK_CHALLENGETIME);
         }
         return true;
     }
@@ -2298,6 +2299,7 @@ function oy_block_loop() {
         document.dispatchEvent(OY_BLOCK_INIT);
 
         OY_BLOCK_DIFF = false;
+        OY_LIGHT_PENDING = false;
         let oy_dive_reward = "OY_NULL";
         let oy_sync_command = [];
         let oy_sync_keep = {};
