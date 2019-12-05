@@ -1902,7 +1902,6 @@
 
     function oy_block_process() {
         if (OY_BLOCK_HASH===null||OY_WALLET_PUBLIC===null) return false;
-
         oy_akoya_balance();
         let oy_akoya_render = [];
         if (OY_AKOYA_PROCESS===false) {
@@ -2079,7 +2078,7 @@
             document.getElementById("oy_akoya_reset_button").classList.remove("oy_button_reset_active");
             document.getElementById("oy_akoya_reset_button").classList.add("oy_button_all_dull");
         }
-        if (oy_public_check(document.getElementById("oy_wallet_akoya_send").value)&&(typeof(OY_BLOCK[2][OY_WALLET_PUBLIC])!=="undefined"&&parseInt(document.getElementById("oy_wallet_akoya_amount").value)*OY_AKOYA_DECIMALS<=OY_BLOCK[2][OY_WALLET_PUBLIC])&&document.getElementById("oy_wallet_akoya_send").value!=="Receiving Address"&&document.getElementById("oy_wallet_akoya_send").value.length>0&&document.getElementById("oy_wallet_akoya_amount").value!=="Receiving Amount"&&document.getElementById("oy_wallet_akoya_amount").value.length>0) {
+        if (oy_key_check(document.getElementById("oy_wallet_akoya_send").value)&&(typeof(OY_BLOCK[2][OY_WALLET_PUBLIC])!=="undefined"&&parseInt(document.getElementById("oy_wallet_akoya_amount").value)*OY_AKOYA_DECIMALS<=OY_BLOCK[2][OY_WALLET_PUBLIC])&&document.getElementById("oy_wallet_akoya_send").value!=="Receiving Address"&&document.getElementById("oy_wallet_akoya_send").value.length>0&&document.getElementById("oy_wallet_akoya_amount").value!=="Receiving Amount"&&document.getElementById("oy_wallet_akoya_amount").value.length>0) {
             document.getElementById("oy_akoya_execute_button").classList.remove("oy_button_all_dull");
             document.getElementById("oy_akoya_execute_button").classList.add("oy_button_execute_active");
         }
