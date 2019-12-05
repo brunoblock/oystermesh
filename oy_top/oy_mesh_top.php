@@ -47,7 +47,10 @@ $oy_punish_permit = array(
     "OY_PUNISH_COMMAND_INVALID",
     "OY_PUNISH_SYNC_INVALID",
     "OY_PUNISH_DIVE_INVALID",
-    "OY_PUNISH_BLOCK_HASH");
+    "OY_PUNISH_BLOCK_HASH",
+    "OY_PUNISH_LIGHT_FAIL",
+    "OY_PUNISH_FULL_FAIL",
+    "OY_PUNISH_BASE_ABUSE");
 
 function oy_flow_format($oy_bytes, $oy_precision = 2) {
     $oy_base = log($oy_bytes, 1000);
@@ -100,7 +103,7 @@ foreach ($oy_mesh_keep as $oy_mesh_data) {
             $oy_mesh_top[3][0]["oy_stat_mesh_flow"] += ($oy_peer_data[5]+$oy_peer_data[7])/2;
         }
     }
-    foreach ($oy_mesh_data[2] as $oy_mesh_blacklist) {
+    foreach ($oy_mesh_data[3] as $oy_mesh_blacklist) {
         foreach ($oy_mesh_blacklist[3] as $oy_punish_unique) {
             if (!in_array($oy_punish_unique, $oy_punish_permit)) continue;
             if (!isset($oy_punish_track[$oy_punish_unique])) $oy_punish_track[$oy_punish_unique] = 1;
