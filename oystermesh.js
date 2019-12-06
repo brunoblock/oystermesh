@@ -40,8 +40,8 @@ const OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via 
 const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
 const OY_BLOCK_BOOT_BUFFER = 120;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims dive rewards
-const OY_BLOCK_RANGE_MIN = 15;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOTTIME = 1575575600;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_RANGE_MIN = 5;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
+const OY_BLOCK_BOOTTIME = 1575618900;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_CHALLENGE_SAFETY = 0.5;//safety margin for rogue packets reaching block_consensus. 1 means no changes, lower means further from block_consensus, higher means closer.
 const OY_CHALLENGE_BUFFER = 1.8;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (min of 1)
 const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
@@ -323,14 +323,6 @@ function oy_buffer_decode(oy_buffer_buffer, oy_buffer_base64) {
     if (oy_buffer_base64===true) return window.btoa(binary);
     return binary;
 }
-
-/*
-function oy_base_decode(str) {
-    return decodeURIComponent(window.atob(str).split('').map(function(c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-    }).join(''));
-}
-*/
 
 //encrypt data
 //WARNING, oy_crypt_pass **MUST** be unique each time this function is invoked (because the nonce is static)
@@ -701,7 +693,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             return false;
         }
         if (oy_data_payload[1][0]===OY_SELF_SHORT) {
-            oy_log("Data deposit sequence with handle "+oy_short(oy_data_payload[3])+" at nonce "+oy_data_payload[4]+" found self as the final destination");
+            oy_log("Data deposit sequence with handle "+oy_short(oy_data_payload[3])+" at nonce "+oy_data_payload[4]+" found self");
             oy_data_tally(oy_data_payload[2], oy_data_payload[3], oy_data_payload[4], oy_data_payload[0].length);
         }
         else {//carry on reversing the passport until the data reaches the intended destination
@@ -718,7 +710,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             return false;
         }
         if (oy_data_payload[1][0]===OY_SELF_SHORT) {
-            oy_log("Data fulfillment sequence with handle "+oy_short(oy_data_payload[3])+" at nonce "+oy_data_payload[4]+" found self as the final destination");
+            oy_log("Data fulfillment sequence with handle "+oy_short(oy_data_payload[3])+" at nonce "+oy_data_payload[4]+" found self");
             oy_data_collect(oy_data_payload[2], oy_data_payload[3], oy_data_payload[4], oy_data_payload[5], oy_data_payload[0].length);
         }
         else {//carry on reversing the passport until the data reaches the intended destination
@@ -806,7 +798,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             return false;
         }
         if (oy_data_payload[1][0]===OY_SELF_SHORT) {
-            oy_log("Echo for channel "+oy_short(oy_data_payload[3])+" found self as the final destination");
+            oy_log("Echo for channel "+oy_short(oy_data_payload[3])+" found self");
 
             let oy_echo_key = oy_data_payload[3]+oy_data_payload[2];
             if (typeof(OY_CHANNEL_ECHO[oy_echo_key])==="undefined") {
@@ -847,7 +839,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             return false;
         }
         if (oy_data_payload[1][0]===OY_SELF_SHORT) {
-            oy_log("Channel recover request for channel "+oy_short(oy_data_payload[2])+" found self as the final destination");
+            oy_log("Channel recover request for channel "+oy_short(oy_data_payload[2])+" found self");
             if (typeof(OY_CHANNEL_LISTEN[oy_data_payload[2]])==="undefined"||typeof(OY_CHANNEL_KEEP[oy_data_payload[2]])==="undefined") {
                 oy_log("Channel "+oy_short(oy_data_payload[2])+" is not being kept locally");
                 return false;
@@ -890,7 +882,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             return false;
         }
         if (oy_data_payload[1][0]===OY_SELF_SHORT) {
-            oy_log("Channel respond sequence for channel "+oy_short(oy_data_payload[2])+" found self as the final destination");
+            oy_log("Channel respond sequence for channel "+oy_short(oy_data_payload[2])+" found self");
             let oy_top_pass = null;
             if (typeof(OY_CHANNEL_TOP[oy_data_payload[2]])!=="undefined") {
                 for (let oy_top_key in OY_CHANNEL_TOP[oy_data_payload[2]]) {
