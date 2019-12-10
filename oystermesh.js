@@ -214,10 +214,12 @@ let OY_CHANNEL_RENDER = {};//track channel broadcasts that have been rendered
 let OY_DB = null;
 let OY_ERROR_BROWSER;
 
-if (OY_SIMULATOR_MODE===true) {
-    // noinspection JSUnresolvedFunction
-    //require("oystersimulate.js");
-}
+/* SIMULATOR BLOCK
+const LZString = require('lz-string');
+const nacl = require('tweetnacl');
+nacl.util = require('tweetnacl-util');
+const parentPort  = require('worker_threads');
+*/
 
 function oy_log(oy_log_msg, oy_log_flag) {
     //oy_log_debug(oy_log_msg);
@@ -2928,6 +2930,12 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
         return true;
     }
 
+    /* SIMULATOR BLOCK
+    parentPort.once('message', (message) => {
+        parentPort.postMessage(message);
+    });
+    */
+
     //Dexie.delete("oy_db");
     OY_DB = new Dexie("oy_db");
     OY_DB.version(1).stores({
@@ -2954,31 +2962,31 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
 
     OY_CONN.on('connection', function(oy_conn) {
         // Receive messages
-        oy_conn.on('data', function(oy_data_raw) {
-            if (oy_node_blocked(oy_conn.peer)) {
-                oy_node_punish(oy_conn.peer, "OY_PUNISH_PEER_BLACKLIST");
-                return false;
+    oy_conn.on('data', function(oy_data_raw) {
+        if (oy_node_blocked(oy_conn.peer)) {
+            oy_node_punish(oy_conn.peer, "OY_PUNISH_PEER_BLACKLIST");
+            return false;
+        }
+        let oy_data = oy_data_soak(oy_conn.peer, oy_data_raw);
+        if (oy_data===true) return true;
+        else if (oy_data===false) {
+            oy_node_punish(oy_conn.peer, "OY_PUNISH_DATA_INVALID");
+            return false;
+        }
+        if (oy_data[0]==="OY_LATENCY_RESPONSE") oy_latency_response(oy_conn.peer, oy_data[1]);
+        else if (oy_peer_check(oy_conn.peer)) {
+            if (oy_data_measure(false, oy_conn.peer, oy_data_raw.length)===false) {
+                oy_log("Peer "+oy_short(oy_conn.peer)+" exceeded mesh flow compliance limits, will punish");
+                oy_node_punish(oy_conn.peer, "OY_PUNISH_MESH_FLOW");
             }
-            let oy_data = oy_data_soak(oy_conn.peer, oy_data_raw);
-            if (oy_data===true) return true;
-            else if (oy_data===false) {
-                oy_node_punish(oy_conn.peer, "OY_PUNISH_DATA_INVALID");
-                return false;
-            }
-            if (oy_data[0]==="OY_LATENCY_RESPONSE") oy_latency_response(oy_conn.peer, oy_data[1]);
-            else if (oy_peer_check(oy_conn.peer)) {
-                if (oy_data_measure(false, oy_conn.peer, oy_data_raw.length)===false) {
-                    oy_log("Peer "+oy_short(oy_conn.peer)+" exceeded mesh flow compliance limits, will punish");
-                    oy_node_punish(oy_conn.peer, "OY_PUNISH_MESH_FLOW");
-                }
-                oy_peer_process(oy_conn.peer, oy_data[0], oy_data[1]);
-            }
-            else if ((oy_data[0]==="OY_BLOCK_SYNC"||oy_data[0]==="OY_BLOCK_DIVE")&&OY_LIGHT_STATE===false) oy_peer_process(oy_conn.peer, oy_data[0], oy_data[1]);//TODO verify light state inclusion
-            else {
-                if (oy_data_measure(false, "oy_aggregate_node", oy_data_raw.length)===false) oy_log("Node "+oy_short(oy_conn.peer)+" pushed aggregate mesh flow compliance beyond limit");
-                else oy_node_negotiate(oy_conn.peer, oy_data[0], oy_data[1]);
-            }
-        });
+            oy_peer_process(oy_conn.peer, oy_data[0], oy_data[1]);
+        }
+        else if ((oy_data[0]==="OY_BLOCK_SYNC"||oy_data[0]==="OY_BLOCK_DIVE")&&OY_LIGHT_STATE===false) oy_peer_process(oy_conn.peer, oy_data[0], oy_data[1]);//TODO verify light state inclusion
+        else {
+            if (oy_data_measure(false, "oy_aggregate_node", oy_data_raw.length)===false) oy_log("Node "+oy_short(oy_conn.peer)+" pushed aggregate mesh flow compliance beyond limit");
+            else oy_node_negotiate(oy_conn.peer, oy_data[0], oy_data[1]);
+        }
+    });
     }, null);
 
     OY_CONN.on('error', function(oy_error) {
@@ -3003,12 +3011,12 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
 
 let oy_call_detect = document.getElementById("oy.js");
 if (!!oy_call_detect) {
-    let oy_dive_detect = oy_call_detect.getAttribute("payout");
-    if (oy_key_check(oy_dive_detect)) {
-        OY_PASSIVE_MODE = true;
-        OY_BLOCK_DIVE_REWARD = oy_dive_detect;
-        oy_init(function() {
-            console.log("Oyster is diving for address "+OY_BLOCK_DIVE_REWARD)
-        });
-    }
+let oy_dive_detect = oy_call_detect.getAttribute("payout");
+if (oy_key_check(oy_dive_detect)) {
+    OY_PASSIVE_MODE = true;
+    OY_BLOCK_DIVE_REWARD = oy_dive_detect;
+    oy_init(function() {
+        console.log("Oyster is diving for address "+OY_BLOCK_DIVE_REWARD)
+    });
+}
 }
