@@ -948,73 +948,34 @@
 <span id="oy_github_ribbon" class="oy_fade two"><a href="https://github.com/brunoblock/oystermesh" target="_blank">GITHUB REPO</a></span>
 <div id="front" class="oy_slide" style="height:100%">
     <div id="oy_cover" style="position:absolute;top:0;left:0;width:100%;height:100%;background-color:#0f0f0f;opacity:0.85;z-index:2000;display:none"></div>
-    <div id="oy_dapper" style="position:absolute;top:50%;left:50%;transform: translate(-50%, -50%);background-color: #000000;border:0.2vh solid #141414;border-radius:0.4vh;width:90vh;height:96%;opacity:1;z-index: 4000;display: none">
-        <div id="oy_dapper_control" style="position:absolute;top:0;left:0;width:100%;height:3vh;background-color: #606060;border-top-left-radius: 0.5vh;border-top-right-radius: 0.5vh;">
-            <div id="ot_title" style="position:relative;top:0.2vh;left:1vh;font-size:1.8vh;font-family: geo_med, sans-serif">Oyster&nbsp;Talk</div>
-            <div id="ot_channel_stats" align="center" class="oy_center_both" style="width:50%;font-size:1.5vh;color:#dadada;display:none;"></div>
-            <div id="ot_peers_null" align="center" class="oy_center_both" style="width:12vh;height:80%;background-color: #c37b2c;color:#dadada;border-radius:0.15vh;font-size:2vh;font-family: geo_med, sans-serif;display:none;">
-                <div class="oy_center_both">NO&nbsp;PEERS</div>
+    <div id="oy_dapper" style="position:absolute;top:50%;left:50%;transform: translate(-50%, -50%);background-color: #000000;border:0.2vh solid #141414;border-radius:0.4vh;width:100%;height:100%;opacity:1;z-index: 4000;display: block">
+        <div id="oy_dapper_control" style="position:absolute;top:0;left:0;width:100%;height:5vh;background-color: #606060;">
+            <div style="position:absolute;top:0;left:0;height:100%;width:6vh;">
+                <img src="oy_resources/oy_logo_shadow.png" class="oy_center_both" style="height:4.75vh;width:auto;" />
             </div>
-            <div id="ot_rebuild_progress" align="center" class="oy_center_both" style="width:12vh;height:80%;background-color: #3094f4;border-radius:0.15vh;font-size:1.7vh;font-family: geo_med, sans-serif;display:none;">
-                <div id="ot_rebuild_progress_inner" style="position:absolute;top:50%;transform:translateY(-50%);right:5%;width:90%;height:70%;background-color:#606060;display: block"></div>
-                <div class="oy_center_both" style="width:90%;height:70%;color:#3094f4;font-size:1.3vh;">REBUILDING</div>
+            <div style="position:absolute;top:10%;left:6vh;height:60%;width:6vh;background-color: #3a3a3a;border: 0.5vh solid #3a3a3a;border-radius:0.4vh;">
+                <div id="oy_dapper_signal_0" style="position:absolute;width:14%;height:40%;bottom:0;left:2.5%;border-radius:0.2vh;background-color: #7a7a7a;"></div>
+                <div id="oy_dapper_signal_1" style="position:absolute;width:14%;height:55%;bottom:0;left:22.5%;border-radius:0.2vh;background-color: #7a7a7a;"></div>
+                <div id="oy_dapper_signal_2" style="position:absolute;width:14%;height:70%;bottom:0;left:42.5%;border-radius:0.2vh;background-color: #7a7a7a;"></div>
+                <div id="oy_dapper_signal_3" style="position:absolute;width:14%;height:85%;bottom:0;left:62.5%;border-radius:0.2vh;background-color: #7a7a7a;"></div>
+                <div id="oy_dapper_signal_4" style="position:absolute;width:14%;height:100%;bottom:0;left:82.5%;border-radius:0.2vh;background-color: #7a7a7a"></div>
             </div>
-            <div id="ot_toggle_cont" style="position:absolute;width:12%;height:100%;top:0;right:9%;">
-                <div id="ot_toggle" align="center" class="oy_center_both oy_button oy_button_reset_active" style="width:auto;height:auto;" onclick="oy_dapper_toggle()">
-                    <div id="ot_toggle_inner" style="position:relative;top:-3%;">
+            <div id="oy_toggle_cont" style="position:absolute;width:6%;height:100%;top:0;right:5%;">
+                <div id="oy_toggle" align="center" class="oy_center_both oy_button oy_button_reset_active" style="width:auto;height:auto;" onclick="oy_dapper_toggle()">
+                    <div id="oy_toggle_inner" style="position:relative;top:-3%;">
                         &nbsp;&nbsp;MINIMIZE&nbsp;&nbsp;
                     </div>
                 </div><br>
             </div>
-            <div id="ot_close_cont" style="position:absolute;width:12%;height:100%;top:0;right:0;">
-                <div id="ot_close" align="center" class="oy_center_both oy_button oy_button_alt_active" style="width:auto;height:auto;" onclick="ot_close();oy_dapper_close()">
+            <div id="oy_close_cont" style="position:absolute;width:6%;height:100%;top:0;right:0;">
+                <div id="oy_close" align="center" class="oy_center_both oy_button oy_button_alt_active" style="width:auto;height:auto;" onclick="oy_dapper_close()">
                     <div style="position:relative;top:-3%;">
                         &nbsp;&nbsp;CLOSE&nbsp;&nbsp;
                     </div>
                 </div><br>
             </div>
         </div>
-        <div id="oy_dapper_content">
-            <div id="ot_render_cont" style="position:absolute;top:3vh;left:0;width:100%;height:calc(100% - 11vh);background-color: #fdfdfd;overflow:scroll" onscroll="ot_scroll()">
-                <div id="ot_render" style="position:absolute;top:0;left:calc(9.5% - 2vh);width:70%;height:100%;font-size:1.7vh;">
-                    <br>
-                    <div style='position:relative;'><div style='position:absolute;left:0;top:0;width:4vh;height:4vh;background-color: #414141'></div><div style='position:relative;top:0;left:calc(4vh + 1.5%);padding:0.5vh 1vh;border-radius:0.15vh;background-color: #414141;color:#9b9b9b;min-height:3vh;display: inline-flex;align-items: center;'><div>Discussion Top</div><div style='position:absolute;right:0;top:50%;transform: translate(calc(100% + 0.8vh), -50%);font-size:0.9vh;color: #dbdbdb'>[null]</div></div></div><br>
-                </div>
-            </div>
-            <div id="ot_scroll_jump" style="position: absolute;bottom:9vh;right:2vh;padding:0.5vh;border:0.15vh solid black;font-size:3.8vh;color:#000;background-color: #eeeeee;z-index:400;display:none;" onmouseover="this.style.cursor = 'pointer'" onclick="ot_scroll_jump()">&#10515;</div>
-            <div id="ot_bar_cover" style="position:absolute;bottom:0;width:100%;height:8vh;opacity:0.85;background-color:#000000;border-bottom-left-radius: 0.5vh;border-bottom-right-radius: 0.5vh;z-index: 200;">
-                <div id="ot_wallet_load_cont" style="display:block;">
-                    <div id="ot_wallet_load" align="center" class="oy_center_both oy_button oy_button_go_active" style="width:auto;height:auto;" onclick="oy_wallet_open()">
-                        <div style="position:relative;top:-3%;">
-                            &nbsp;&nbsp;LOAD&nbsp;WALLET&nbsp;&nbsp;
-                        </div>
-                    </div><br>
-                </div>
-                <div id="ot_approval_cont" style="display:none;">
-                    <div id="ot_approval" align="center" class="oy_center_both oy_button oy_button_alt_active" style="width:auto;height:auto;" onclick="ot_join()">
-                        <div style="position:relative;top:-3%;">
-                            &nbsp;&nbsp;JOIN&nbsp;GROUP&nbsp;&nbsp;
-                        </div>
-                    </div><br>
-                </div>
-                <div id="ot_message" align="center" class="oy_center_both" style="width: 90%;"></div>
-            </div>
-            <div id="ot_bar" style="position:absolute;bottom:0;width:100%;height:8vh;background-color: #606060;border-bottom-left-radius: 0.5vh;border-bottom-right-radius: 0.5vh;z-index: 100;">
-                <div id="ot_broadcast_cont" class="oy_center_both" style="top:55%;width:90%;height:90%;">
-                    <div id="ot_broadcast_avatar_cont" class="oy_center_both" style="top:3.5vh;left:5%;width:4vh;height:4vh;background-color: #2a2a2a"></div>
-                    <div id="ot_broadcast_reply" style="position:absolute;left:50%;bottom:calc(50% + 1.2vh);transform: translate(-54%, -50%);width:calc(75% - 4vh);height:1.9vh;font-size:1.2vh;color:#000000;display:none;"></div>
-                    <textarea id="ot_broadcast_input" class="oy_center_both" style="transform: translateX(-54%);top:1.4vh;width:75%;height:3.7vh;font-size:1.6vh;" oninput="ot_input()"></textarea>
-                    <div id="ot_broadcast_button_cont" style="position:absolute;width:15%;height:100%;top:0;right:0;display:block;">
-                        <div id="ot_broadcast_button" align="center" class="oy_center_both oy_button oy_button_all_dull" style="top:3.4vh;width:auto;height:auto;" onclick="ot_broadcast()">
-                            <div id="ot_broadcast_button_inner" style="position:relative;top:-3%;">
-                                &nbsp;&nbsp;BROADCAST&nbsp;&nbsp;
-                            </div>
-                        </div><br>
-                    </div>
-                    <div id="ot_broadcast_limit" style="position:absolute;width:12.5%;top:6%;right:0;font-size:1.2vh;display:block;"></div>
-                </div>
-            </div>
-            <input type="text" id="ot_copy_key_input" style="position:absolute;bottom:-100vh;left:0;opacity:0" />
+        <div id="oy_dapper_content" style="position:absolute;top:5vh;left:0;width:100%;height:calc(100% - 5vh);background-color: #fdfdfd;overflow:scroll">
         </div>
     </div>
     <div id="oy_key_interface_cont" style="position:absolute;top:50%;left:50%;transform: translate(-50%, -52%);background-color:#121212;padding:1.5%;border:1vh solid #14a2cc;border-radius:1vh;z-index: 5000;display:none">
@@ -1710,11 +1671,11 @@
         let i = -1;
         for (i in oy_peer_keep) {
             if (i>4) break;
-            oy_graph_peer(i, oy_peer_keep[i][0], " - "+oy_peer_keep[i][1].toFixed(3)+"s - ["+((oy_peer_keep[i][4]===2)?"F":((oy_peer_keep[i][4]===1)?"L":"B"))+"]", Math.round((oy_peer_keep[i][2]/(oy_peer_keep[i][2]+oy_peer_keep[i][3]))*100));
+            oy_graph_peer(i, oy_peer_keep[i][0], " - "+oy_peer_keep[i][1].toFixed(3)+"s - ["+((oy_peer_keep[i][4]===2)?"F":((oy_peer_keep[i][4]===1)?"L":"B"))+"]", oy_peer_keep[i][4], Math.round((oy_peer_keep[i][2]/(oy_peer_keep[i][2]+oy_peer_keep[i][3]))*100));
         }
         i++;
         while (i <= 4) {
-            oy_graph_peer(i, null, null, 0);
+            oy_graph_peer(i, null, null, null, 0);
             i++;
         }
 
@@ -2375,7 +2336,7 @@
             document.getElementById("oy_dapper").style.backgroundColor = "#000000";
             document.getElementById("oy_dapper").style.border = "0.2vh solid #141414";
             document.getElementById("oy_dapper_control").style.backgroundColor = "#606060";
-            document.getElementById("ot_toggle_inner").innerHTML = "&nbsp;&nbsp;MINIMIZE&nbsp;&nbsp;";
+            document.getElementById("oy_toggle_inner").innerHTML = "&nbsp;&nbsp;MINIMIZE&nbsp;&nbsp;";
 
             oy_cover_on("OY_THREAD_DAPPER");
 
@@ -2390,7 +2351,7 @@
             document.getElementById("oy_dapper").style.backgroundColor = null;
             document.getElementById("oy_dapper").style.border = null;
             document.getElementById("oy_dapper_control").style.backgroundColor = "#3b3b3b";
-            document.getElementById("ot_toggle_inner").innerHTML = "&nbsp;&nbsp;RESTORE&nbsp;&nbsp;";
+            document.getElementById("oy_toggle_inner").innerHTML = "&nbsp;&nbsp;RESTORE&nbsp;&nbsp;";
 
             oy_cover_off("OY_THREAD_DAPPER");
         }
@@ -2616,7 +2577,7 @@
         return true;
     }
 
-    function oy_graph_peer(oy_graph_slot, oy_peer_short, oy_peer_info, oy_beam_ratio) {
+    function oy_graph_peer(oy_graph_slot, oy_peer_short, oy_peer_info, oy_peer_state, oy_beam_ratio) {
         if (OY_GRAPH_PEERS[oy_graph_slot]===false&&oy_peer_short!==null) {
             OY_GRAPH_PEERS[oy_graph_slot] = oy_peer_short;
             oy_element_add("oy_graph_slot_"+oy_graph_slot, "div", "oy_graph_slot_"+oy_graph_slot+"_base", "<div id='oy_graph_slot_"+oy_graph_slot+"_front' style='transition: all .3s ease-out;z-index:300;'><div id='oy_graph_slot_"+oy_graph_slot+"_name'>"+oy_peer_short+oy_peer_info+"</div></div><div id='oy_graph_slot_"+oy_graph_slot+"_beam' style='transition: all .3s ease-out;z-index:200;'></div><div id='oy_graph_slot_"+oy_graph_slot+"_soak' style='z-index:100;'></div>");
@@ -2626,7 +2587,18 @@
             document.getElementById("oy_graph_slot_"+oy_graph_slot+"_soak").classList.add("oy_peer_soak");
             document.getElementById("oy_graph_slot_"+oy_graph_slot+"_beam").classList.add("oy_peer_beam");
             document.getElementById("oy_graph_slot_"+oy_graph_slot+"_beam").style.width = oy_beam_ratio+"%";
-            document.getElementById("oy_graph_slot_"+oy_graph_slot+"_front").style.backgroundColor = "#348fab";
+            if (oy_peer_state===2) {
+                document.getElementById("oy_graph_slot_"+oy_graph_slot+"_front").style.backgroundColor = "#348fab";
+                document.getElementById("oy_dapper_signal_"+oy_graph_slot).style.backgroundColor = "#348fab";
+            }
+            else if (oy_peer_state===1) {
+                document.getElementById("oy_graph_slot_"+oy_graph_slot+"_front").style.backgroundColor = "#8a3789";
+                document.getElementById("oy_dapper_signal_"+oy_graph_slot).style.backgroundColor = "#8a3789";
+            }
+            else {
+                document.getElementById("oy_graph_slot_"+oy_graph_slot+"_front").style.backgroundColor = "#D4D4D4";
+                document.getElementById("oy_dapper_signal_"+oy_graph_slot).style.backgroundColor = "#D4D4D4";
+            }
             setTimeout(function() {
                 document.getElementById("oy_graph_slot_"+oy_graph_slot+"_front").style.backgroundColor = "transparent";
             }, 220);
@@ -2635,6 +2607,7 @@
             if (oy_peer_short===null) {
                 OY_GRAPH_PEERS[oy_graph_slot] = false;
                 document.getElementById("oy_graph_slot_"+oy_graph_slot+"_front").style.backgroundColor = "#c37b2c";
+                document.getElementById("oy_dapper_signal_"+oy_graph_slot).style.backgroundColor = "#7a7a7a";
                 setTimeout(function() {
                     oy_element_remove("oy_graph_slot_"+oy_graph_slot+"_base");
                 }, 220);
@@ -2643,6 +2616,9 @@
                 OY_GRAPH_PEERS[oy_graph_slot] = oy_peer_short;
                 document.getElementById("oy_graph_slot_"+oy_graph_slot+"_name").innerHTML = oy_peer_short+oy_peer_info;
                 document.getElementById("oy_graph_slot_"+oy_graph_slot+"_beam").style.width = oy_beam_ratio+"%";
+                if (oy_peer_state===2) document.getElementById("oy_dapper_signal_"+oy_graph_slot).style.backgroundColor = "#348fab";
+                else if (oy_peer_state===1) document.getElementById("oy_dapper_signal_"+oy_graph_slot).style.backgroundColor = "#8a3789";
+                else document.getElementById("oy_dapper_signal_"+oy_graph_slot).style.backgroundColor = "#D4D4D4";
             }
         }
     }
