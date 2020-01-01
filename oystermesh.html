@@ -930,6 +930,37 @@
                 transform: rotate(45deg);
             }
         }
+
+        .oy_dapper_control {
+            position:relative;
+            top:0;
+            height:100%;
+            background-color: #3a3a3a;
+            border-radius:0.4vh;
+            color:#FFF;
+            font-size:2vh;
+            font-family: geo_med, Fallback, sans-serif;
+            user-select: none;
+        }
+
+        .oy_dapper_control:hover {
+            background-color: #8a3789;
+            color:#FFF;
+            cursor:pointer;
+        }
+
+        .oy_dapper_control_disabled {
+            position:relative;
+            top:0;
+            height:100%;
+            background-color: #3a3a3a;
+            border-radius:0.4vh;
+            color: #5a5a5a;
+            font-size:2vh;
+            font-family: geo_med, Fallback, sans-serif;
+            user-select: none;
+        }
+
         .oy_center_hor {
             position: absolute;
             left: 50%;
@@ -960,28 +991,29 @@
                 <div id="oy_dapper_signal_3" style="width:17%;height:85%;border-radius:0.2vh;background-color: #474747;"></div>
                 <div id="oy_dapper_signal_4" style="width:17%;height:100%;border-radius:0.2vh;background-color: #474747;"></div>
             </div>
-            <div style="position:absolute;display:flex;align-items:flex-end;justify-content:space-between;top:10%;left:15.7vh;height:80%;width:26.7vh;color:#FFF;font-size:2vh;font-family: geo_med, Fallback, sans-serif">
-                <div id="oy_dapper_signal_a2" style="position:relative;width:18.75%;top:0;height:100%;border-radius:0.4vh;background-color: #3a3a3a;">
-                    <div class="oy_center_both"></div>
+            <div style="position:absolute;display:flex;align-items:flex-end;justify-content:space-between;top:10%;left:15.7vh;height:80%;width:26.7vh;">
+                <div id="oy_dapper_control_login" class="oy_dapper_control" style="width:18.75%;" onclick="oy_dapper_login()">
+                    <div class="oy_center_both">L</div>
                 </div>
-                <div id="oy_dapper_signal_a1" style="position:relative;width:18.75%;top:0;height:100%;border-radius:0.4vh;background-color: #3a3a3a;">
+                <div id="oy_dapper_control_back" class="oy_dapper_control_disabled" style="width:18.75%;">
                     <div class="oy_center_both">&larr;</div>
                 </div>
-                <div id="oy_dapper_signal_b1" style="position:relative;width:18.75%;top:0;height:100%;border-radius:0.4vh;background-color: #3a3a3a;">
+                <div id="oy_dapper_control_forward" class="oy_dapper_control_disabled" style="width:18.75%;">
                     <div class="oy_center_both">&rarr;</div>
                 </div>
-                <div id="oy_dapper_signal_c1" style="position:relative;width:18.75%;top:0;height:100%;border-radius:0.4vh;background-color: #3a3a3a;">
+                <div id="oy_dapper_control_refresh" class="oy_dapper_control_disabled" style="width:18.75%;">
                     <div class="oy_center_both">&#8635;</div>
                 </div>
             </div>
-            <div style="position:absolute;display:flex;align-items:flex-end;justify-content:space-between;top:10%;right:2vh;height:80%;width:20vh;color:#FFF;font-size:2vh;font-family: geo_med, Fallback, sans-serif">
-                <div id="oy_dapper_signal_a" style="position:relative;width:25%;top:0;height:100%;border-radius:0.4vh;background-color: #3a3a3a;">
+            <input type="text" style="position:absolute;top:12%;height:60%;left:45vh;width:calc(99vw - 68vh);border-radius: 0.4vh;font-size:2vh;font-family: geo_light, Fallback, sans-serif" />
+            <div style="position:absolute;display:flex;align-items:flex-end;justify-content:space-between;top:10%;right:2vh;height:80%;width:20vh;">
+                <div id="oy_dapper_control_tab" class="oy_dapper_control" style="width:25%;top:0;height:100%;" onclick="oy_dapper_tab()">
                     <div class="oy_center_both">T</div>
                 </div>
-                <div id="oy_dapper_signal_b" style="position:relative;width:25%;top:0;height:100%;border-radius:0.4vh;background-color: #3a3a3a;">
+                <div id="oy_dapper_control_toggle" class="oy_dapper_control" style="width:25%;" onclick="oy_dapper_toggle()">
                     <div class="oy_center_both">−</div>
                 </div>
-                <div id="oy_dapper_signal_c" style="position:relative;width:25%;top:0;height:100%;border-radius:0.4vh;background-color: #3a3a3a;">
+                <div id="oy_dapper_control_close" class="oy_dapper_control" style="width:25%;" onclick="oy_dapper_close()">
                     <div class="oy_center_both">X</div>
                 </div>
             </div>
@@ -2315,16 +2347,11 @@
         if (oy_dapper_murl.indexOf(".mesh")===-1) return false;
         location.hash = oy_dapper_murl;
 
-        if (oy_dapper_murl==="oystertalk.mesh") {
-            ot_init();
-            document.getElementById("oy_dapper_input").disabled = true;
-            document.getElementById("oy_dapper").style.display = "block";
+        document.getElementById("oy_dapper_input").disabled = true;
+        document.getElementById("oy_dapper").style.display = "block";
 
-            oy_cover_on("OY_THREAD_DAPPER");
-
-            document.getElementById("oy_dapper_launch").classList.remove("oy_button_execute_active");
-            document.getElementById("oy_dapper_launch").classList.add("oy_button_all_dull");
-        }
+        document.getElementById("oy_dapper_launch").classList.remove("oy_button_execute_active");
+        document.getElementById("oy_dapper_launch").classList.add("oy_button_all_dull");
     }
 
     function oy_dapper_input() {
@@ -2349,8 +2376,6 @@
             document.getElementById("oy_dapper_control").style.backgroundColor = "#606060";
             document.getElementById("oy_toggle_inner").innerHTML = "&nbsp;&nbsp;MINIMIZE&nbsp;&nbsp;";
 
-            oy_cover_on("OY_THREAD_DAPPER");
-
             //TODO there should be nothing ot in this oy section once the container system is setup properly
             document.getElementById("ot_render_cont").scrollTo(0, document.getElementById("ot_render_cont").scrollHeight);
         }
@@ -2363,17 +2388,13 @@
             document.getElementById("oy_dapper").style.border = null;
             document.getElementById("oy_dapper_control").style.backgroundColor = "#3b3b3b";
             document.getElementById("oy_toggle_inner").innerHTML = "&nbsp;&nbsp;RESTORE&nbsp;&nbsp;";
-
-            oy_cover_off("OY_THREAD_DAPPER");
         }
     }
 
     function oy_dapper_close() {
-        oy_dapper_toggle(true);
+        //oy_dapper_toggle(true);
 
-        if (typeof(OY_COVER_THREAD["OY_THREAD_DAPPER"])!=="undefined") document.getElementById("oy_dapper").style.display = "none";
-
-        oy_cover_off("OY_THREAD_DAPPER");
+        document.getElementById("oy_dapper").style.display = "none";
 
         document.getElementById("oy_dapper_input").disabled = false;
         oy_dapper_input();
