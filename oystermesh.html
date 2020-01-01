@@ -979,10 +979,10 @@
 <span id="oy_github_ribbon" class="oy_fade two"><a href="https://github.com/brunoblock/oystermesh" target="_blank">GITHUB REPO</a></span>
 <div id="front" class="oy_slide" style="height:100%">
     <div id="oy_cover" style="position:absolute;top:0;left:0;width:100%;height:100%;background-color:#0f0f0f;opacity:0.85;z-index:2000;display:none"></div>
-    <div id="oy_dapper" style="position:absolute;top:50%;left:50%;transform: translate(-50%, -50%);background-color: #000000;border:0.2vh solid #141414;border-radius:0.4vh;width:100%;height:100%;opacity:1;z-index: 4000;display: block">
+    <div id="oy_dapper" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:1;z-index: 4000;display:none;">
         <div id="oy_dapper_control" style="position:absolute;top:0;left:0;width:100%;height:5vh;background-color: #606060;">
             <div style="position:absolute;top:0;left:0;height:100%;width:6vh;">
-                <img src="oy_resources/oy_logo_shadow.png" class="oy_center_both" style="height:4vh;width:auto;" />
+                <img src="oy_resources/oy_logo_shadow.png" class="oy_center_both" style="height:4.5vh;width:auto;" />
             </div>
             <div style="position:absolute;display:flex;align-items:flex-end;justify-content:space-between;top:10%;left:6.5vh;height:60%;width:6vh;background-color: #3a3a3a;border: 0.5vh solid #3a3a3a;border-radius:0.4vh;">
                 <div id="oy_dapper_signal_0" style="width:17%;height:40%;border-radius:0.2vh;background-color: #474747;"></div>
@@ -1005,7 +1005,7 @@
                     <div class="oy_center_both">&#8635;</div>
                 </div>
             </div>
-            <input type="text" style="position:absolute;top:12%;height:60%;left:45vh;width:calc(99vw - 68vh);border-radius: 0.4vh;font-size:2vh;font-family: geo_light, Fallback, sans-serif" />
+            <input type="text" id="oy_dapper_input" style="position:absolute;top:12%;height:60%;left:45vh;width:calc(99vw - 68vh);border-radius: 0.4vh;font-size:2vh;font-family: geo_light, Fallback, sans-serif" />
             <div style="position:absolute;display:flex;align-items:flex-end;justify-content:space-between;top:10%;right:2vh;height:80%;width:20vh;">
                 <div id="oy_dapper_control_tab" class="oy_dapper_control" style="width:25%;top:0;height:100%;" onclick="oy_dapper_tab()">
                     <div class="oy_center_both">T</div>
@@ -1115,7 +1115,7 @@
             <div id="oy_tab_download" class="oy_tab oy_right" style="position:fixed;top:-20%;right: 10%;height:20%;background-color: #7A7A7A;color:#232323;z-index:-50;" onclick="oy_tab(this.id)">DOWNLOAD</div>
             <div id="oy_interface_dapper" class="oy_center_hor oy_border oy_interface_main" style="top:0;width:100%;height:100%;background-color: #404040;z-index:100;display:block">
                 <div align="center" class="oy_center_both" style="transform:translate(-60%, -50%)">
-                    <span style="font-size:2vh;font-family: geo_med, sans-serif">mURL:</span>&nbsp;&nbsp;<input id="oy_dapper_input" type="text" style="width:20vh;height:3vh;font-size:2vh;" oninput="oy_dapper_input()" />
+                    <span style="font-size:2vh;font-family: geo_med, sans-serif">mURL:</span>&nbsp;&nbsp;<input id="oy_dapper_input_pre" type="text" style="width:20vh;height:3vh;font-size:2vh;" oninput="oy_dapper_input_pre()" />
                     <div id="oy_dapper_launch" align="center" class="oy_button oy_button_all_dull" style="position:absolute;top:50%;right:0;transform:translate(110%, -50%);width:8vh;height:2vh;" onclick="oy_dapper_launch()">
                         <div style="position:relative;">
                             LAUNCH
@@ -1406,7 +1406,7 @@
     let oy_local_init = function() {
         document.getElementById("oy_graph_block").innerHTML = OY_BLOCK_GRAPH;
 
-        oy_dapper_input();
+        oy_dapper_input_pre();
 
         document.getElementById("oy_push_superhandle").value = "-".repeat(82);
         document.getElementById("oy_pull_superhandle").value = "-".repeat(82);
@@ -1514,8 +1514,8 @@
             if (location.hash==="#akoya") oy_tab("oy_tab_wallet");
             else if (location.hash.indexOf(".mesh")!==-1) {
                 oy_tab("oy_tab_dapper");
-                document.getElementById("oy_dapper_input").value = location.hash.substr(1);
-                oy_dapper_input();
+                document.getElementById("oy_dapper_input_pre").value = location.hash.substr(1);
+                oy_dapper_input_pre();
                 oy_dapper_launch();
             }
             else if (location.hash.substr(0, 3)==="#OY"&&location.hash.length>=46) {
@@ -2343,19 +2343,26 @@
     function oy_dapper_launch() {
         if (document.getElementById("oy_dapper_launch").classList.contains("oy_button_all_dull")||document.getElementById("oy_interface_dapper").style.display==="none"||OY_COVER===true) return false;
 
-        let oy_dapper_murl = document.getElementById("oy_dapper_input").value;
+        let oy_dapper_murl = document.getElementById("oy_dapper_input_pre").value;
         if (oy_dapper_murl.indexOf(".mesh")===-1) return false;
         location.hash = oy_dapper_murl;
 
-        document.getElementById("oy_dapper_input").disabled = true;
+        oy_dapper_init(oy_dapper_murl);
+
+        document.getElementById("oy_dapper_input_pre").disabled = true;
         document.getElementById("oy_dapper").style.display = "block";
 
         document.getElementById("oy_dapper_launch").classList.remove("oy_button_execute_active");
         document.getElementById("oy_dapper_launch").classList.add("oy_button_all_dull");
     }
 
-    function oy_dapper_input() {
-        if (document.getElementById("oy_dapper_input").value.indexOf(".mesh")===-1) {
+    function oy_dapper_init(oy_dapper_murl) {
+        if (oy_dapper_murl.indexOf(".mesh")===-1) return false;
+        document.getElementById("oy_dapper_input").value = oy_dapper_murl;
+    }
+
+    function oy_dapper_input_pre() {
+        if (document.getElementById("oy_dapper_input_pre").value.indexOf(".mesh")===-1) {
             document.getElementById("oy_dapper_launch").classList.remove("oy_button_execute_active");
             document.getElementById("oy_dapper_launch").classList.add("oy_button_all_dull");
         }
@@ -2369,35 +2376,32 @@
         if (OY_DAPPER_MINIMIZED===true||typeof(oy_force_reset)!=="undefined") {
             OY_DAPPER_MINIMIZED = false;
             document.getElementById("oy_dapper_content").style.display = "block";
-            document.getElementById("oy_dapper").style.height = "96%";
-            document.getElementById("oy_dapper").style.top = "50%";
-            document.getElementById("oy_dapper").style.backgroundColor = "#000000";
-            document.getElementById("oy_dapper").style.border = "0.2vh solid #141414";
+            document.getElementById("oy_dapper").style.height = "100%";
+            document.getElementById("oy_dapper").style.top = "0";
+            document.getElementById("oy_dapper").style.bottom = null;
+            document.getElementById("oy_dapper").style.transform = null;
             document.getElementById("oy_dapper_control").style.backgroundColor = "#606060";
-            document.getElementById("oy_toggle_inner").innerHTML = "&nbsp;&nbsp;MINIMIZE&nbsp;&nbsp;";
-
-            //TODO there should be nothing ot in this oy section once the container system is setup properly
-            document.getElementById("ot_render_cont").scrollTo(0, document.getElementById("ot_render_cont").scrollHeight);
+            document.getElementById("oy_dapper_control_toggle").innerHTML = "<div class=\"oy_center_both\">-</div>";
         }
         else {
             OY_DAPPER_MINIMIZED = true;
             document.getElementById("oy_dapper_content").style.display = "none";
-            document.getElementById("oy_dapper").style.height = "0";
-            document.getElementById("oy_dapper").style.top = "calc(100% - 3vh)";
-            document.getElementById("oy_dapper").style.backgroundColor = null;
-            document.getElementById("oy_dapper").style.border = null;
-            document.getElementById("oy_dapper_control").style.backgroundColor = "#3b3b3b";
-            document.getElementById("oy_toggle_inner").innerHTML = "&nbsp;&nbsp;RESTORE&nbsp;&nbsp;";
+            document.getElementById("oy_dapper").style.height = "4.2vh";
+            document.getElementById("oy_dapper").style.transform = "scale(0.75)";
+            document.getElementById("oy_dapper").style.top = null;
+            document.getElementById("oy_dapper").style.bottom = "0";
+            document.getElementById("oy_dapper_control").style.backgroundColor = "#474747";
+            document.getElementById("oy_dapper_control_toggle").innerHTML = "<div class=\"oy_center_both\">+</div>";
         }
     }
 
     function oy_dapper_close() {
-        //oy_dapper_toggle(true);
+        oy_dapper_toggle(true);
 
         document.getElementById("oy_dapper").style.display = "none";
 
-        document.getElementById("oy_dapper_input").disabled = false;
-        oy_dapper_input();
+        document.getElementById("oy_dapper_input_pre").disabled = false;
+        oy_dapper_input_pre();
         location.hash = "";
     }
 
