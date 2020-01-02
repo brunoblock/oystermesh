@@ -2352,6 +2352,8 @@
         document.getElementById("oy_dapper_input_pre").disabled = true;
         document.getElementById("oy_dapper").style.display = "block";
 
+        oy_cover_on("OY_THREAD_DAPPER");
+
         document.getElementById("oy_dapper_launch").classList.remove("oy_button_execute_active");
         document.getElementById("oy_dapper_launch").classList.add("oy_button_all_dull");
     }
@@ -2382,6 +2384,8 @@
             document.getElementById("oy_dapper").style.transform = null;
             document.getElementById("oy_dapper_control").style.backgroundColor = "#606060";
             document.getElementById("oy_dapper_control_toggle").innerHTML = "<div class=\"oy_center_both\">-</div>";
+
+            oy_cover_on("OY_THREAD_DAPPER");
         }
         else {
             OY_DAPPER_MINIMIZED = true;
@@ -2392,6 +2396,8 @@
             document.getElementById("oy_dapper").style.bottom = "0";
             document.getElementById("oy_dapper_control").style.backgroundColor = "#474747";
             document.getElementById("oy_dapper_control_toggle").innerHTML = "<div class=\"oy_center_both\">+</div>";
+
+            oy_cover_off("OY_THREAD_DAPPER");
         }
     }
 
@@ -2399,6 +2405,8 @@
         oy_dapper_toggle(true);
 
         document.getElementById("oy_dapper").style.display = "none";
+
+        oy_cover_off("OY_THREAD_DAPPER");
 
         document.getElementById("oy_dapper_input_pre").disabled = false;
         oy_dapper_input_pre();
