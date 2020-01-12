@@ -1,6 +1,6 @@
 // OYSTER MESH
 // Bruno Block
-// v0.5
+// v0.6
 // License: GNU GPLv3
 
 // GLOBAL VARS
@@ -160,10 +160,10 @@ let OY_BLOCK_COMMANDS = {
         if (oy_command_array.length===5&&//check the element count in the command
             oy_command_array[3]>0&&//check that the sending amount is greater than zero
             oy_command_array[3]<OY_AKOYA_MAX_SUPPY&&//check that the sending amount smaller than the max supply
-            typeof(OY_BLOCK[2][oy_command_array[2]])!=="undefined"&&//check the sending wallet exists
-            oy_command_array[3]<=OY_BLOCK[2][oy_command_array[2]]&&//check the sending wallet has sufficient akoya
+            typeof(OY_BLOCK[2][oy_command_array[2]])!=="undefined"&&//check that the sending wallet exists
+            oy_command_array[3]<=OY_BLOCK[2][oy_command_array[2]]&&//check that the sending wallet has sufficient akoya
             oy_command_array[2]!==oy_command_array[4]&&//check that the sender and the receiver are different
-            oy_key_check(oy_command_array[4])) return true;//check that receiving address is a valid address
+            oy_key_check(oy_command_array[4])) return true;//check that the receiving address is a valid address
         return false;
         //TODO - either one wallet transaction per block or need additional checks
     }],
@@ -178,6 +178,37 @@ let OY_BLOCK_COMMANDS = {
         //TODO
     }],
     "OY_DNS_TRANSFER":[function(oy_command_array) {
+        if (oy_command_array.length===5&&//check the element count in the command
+            typeof(OY_BLOCK[2][oy_command_array[2]])!=="undefined"&&//check that the sending wallet exists
+            typeof(OY_BLOCK[2][oy_command_array[4]])!=="undefined") return false;//check that the receiving wallet exists
+        //TODO
+    }],
+    "OY_DNS_RELEASE":[function(oy_command_array) {
+        if (oy_command_array.length===4) return true;//check the element count in the command
+        return false;
+        //TODO
+    }],
+    "OY_DNS_NULLIFY":[function(oy_command_array) {
+        if (oy_command_array.length===4) return true;//check the element count in the command
+        return false;
+        //TODO
+    }],
+    "OY_META_SET":[function(oy_command_array) {
+        if (oy_command_array.length===4) return true;//check the element count in the command
+        return false;
+        //TODO
+    }],
+    "OY_META_MODIFY":[function(oy_command_array) {
+        if (oy_command_array.length===4) return true;//check the element count in the command
+        return false;
+        //TODO
+    }],
+    "OY_META_DELETE":[function(oy_command_array) {
+        if (oy_command_array.length===4) return true;//check the element count in the command
+        return false;
+        //TODO
+    }],
+    "OY_META_NULLIFY":[function(oy_command_array) {
         if (oy_command_array.length===4) return true;//check the element count in the command
         return false;
         //TODO
@@ -2147,6 +2178,10 @@ function oy_akoya_transfer(oy_key_private, oy_key_public, oy_transfer_amount, oy
     oy_block_command(oy_key_private, ["OY_AKOYA_SEND", -1, oy_key_public, oy_transfer_amount, oy_receive_public], oy_callback_confirm);
 }
 
+function oy_dns_transfer(oy_key_private, oy_key_public, oy_dns_name, oy_receive_public, oy_callback_confirm) {
+    oy_block_command(oy_key_private, ["OY_DNS_TRANSFER", -1, oy_key_public, oy_dns_name, oy_receive_public], oy_callback_confirm);
+}
+
 function oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm) {
     let oy_block_command_execute = function() {
         document.removeEventListener("oy_block_trigger", oy_block_command_execute, false);
@@ -2700,6 +2735,8 @@ function oy_block_loop() {
                         }
                     }
                 }
+
+                //["OY_DNS_TRANSFER", -1, oy_key_public, oy_dns_name, oy_receive_public]
 
                 let oy_supply_post = 0;
                 for (let oy_key_public in OY_BLOCK[2]) {
