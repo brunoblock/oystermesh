@@ -143,7 +143,7 @@ let OY_BLOCK_ROSTER = {};
 let OY_BLOCK_ROSTER_AVG = null;
 let OY_BLOCK_TEMP = [[null, []], {}, {}, {}, {}];//temporary centralized block
 let OY_BLOCK_TEMP_HASH = null;//hash of the most current block
-let OY_BLOCK = [[null, []], {}, {}, {}, {}];//the current meshblock - [oy_meta_sector, oy_history_sector, oy_akoya_sector, oy_dns_sector, oy_channel_sector]
+let OY_BLOCK = [[null, []], {}, {}, {}, {}];//the current meshblock - [[oy_block_timestamp, oy_hash_keep], oy_command_sector, oy_akoya_sector, oy_dns_sector, oy_meta_sector]
 let OY_BLOCK_HASH = null;//hash of the most current block
 let OY_BLOCK_FLAT = null;
 let OY_BLOCK_DIFF = false;
@@ -2527,9 +2527,7 @@ function oy_block_loop() {
             }
 
             if (OY_LIGHT_STATE===true) {//do not process the meshblock anymore if in light state
-                if (OY_BLOCK_DIFF===false) {
-                    oy_block_reset("OY_FLAG_DIFF");
-                }
+                if (OY_BLOCK_DIFF===false) oy_block_reset("OY_FLAG_DIFF");
                 oy_block_continue = false;
                 return false;
             }
@@ -2714,8 +2712,8 @@ function oy_block_loop() {
             //oy_log_debug("EXECUTE: "+JSON.stringify(oy_command_execute));
 
             if (oy_time_local-OY_BLOCK_BOOTTIME>OY_BLOCK_BOOT_BUFFER) {//only allow transactions after the meshblock boot-up sequence is complete
-                //["OY_AKOYA_SEND", -1, oy_key_public, oy_transfer_amount, oy_receive_public]
                 for (let i in oy_command_execute) {
+                    //["OY_AKOYA_SEND", -1, oy_key_public, oy_transfer_amount, oy_receive_public]
                     if (oy_command_execute[i][1][0]==="OY_AKOYA_SEND"&&typeof(OY_BLOCK[2][oy_command_execute[i][1][2]])!=="undefined"&&OY_BLOCK[2][oy_command_execute[i][1][2]]>=oy_command_execute[i][1][3]) {
                         if (typeof(OY_BLOCK[2][oy_command_execute[i][1][4]])==="undefined") OY_BLOCK[2][oy_command_execute[i][1][4]] = 0;
                         let oy_balance_send = OY_BLOCK[2][oy_command_execute[i][1][2]];
@@ -2734,9 +2732,11 @@ function oy_block_loop() {
                             OY_DIFF_TRACK[2].push(oy_command_execute[i]);
                         }
                     }
-                }
+                    //["OY_DNS_TRANSFER", -1, oy_key_public, oy_dns_name, oy_receive_public]
+                    if (oy_command_execute[i][1][0]==="OY_DNS_TRANSFER"&&typeof(OY_BLOCK[2][oy_command_execute[i][1][3]])!=="undefined") {
 
-                //["OY_DNS_TRANSFER", -1, oy_key_public, oy_dns_name, oy_receive_public]
+                    }
+                }
 
                 let oy_supply_post = 0;
                 for (let oy_key_public in OY_BLOCK[2]) {

@@ -4,7 +4,7 @@ Bandwidth Bound Consensus.
 
 ## The Mesh
 
-NOTICE: The mesh is currently offline whilst V5 development is underway
+NOTICE: The mesh is currently offline or inaccessible whilst V6 development is underway
 
 The Oyster Mesh Protocol provides:
 
@@ -124,11 +124,13 @@ Chrome runs Oyster fine for 1 hour or less. Chrome has a known bug that affects 
 
 ### Safari
 
-Oyster runs fine in Safari on both macOS and iOS devices. However, I have noticed a bug where after some heavy usage your node will become unable to make new connections, and restarting the browser is the only solution. The front-end interface has not been optimized for mobile devices so it may render somewhat inelegantly. File downloads, including those of private keys, have not been tested extensively.
+Safari used to work but was recently broken by a recent Apple update.
 
 ## Questions/Contact
 
-Join us at the mesh chat room: https://oyster.org/#oystertalk.mesh
+Open a Github issue if you have any questions about the technology.
+
+~~Join us at the mesh chat room: https://oyster.org/#oystertalk.mesh~~
 
 ## License
 This project is licensed under GNU GPLv3 - see the [LICENSE.md](LICENSE.md) file for details.
