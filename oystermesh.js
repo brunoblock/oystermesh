@@ -170,7 +170,7 @@ let OY_BLOCK_COMMANDS = {
         return false;
         //TODO
     }],
-    "OY_DNS_SET":[function(oy_command_array) {
+    "OY_DNS_BID":[function(oy_command_array) {
         if (oy_command_array.length===4) return true;//check the element count in the command
         return false;
         //TODO
@@ -2279,7 +2279,7 @@ function oy_block_reset(oy_reset_flag) {
     OY_BLOCK_ROSTER = {};
     OY_BLOCK_ROSTER_AVG = null;
     OY_BLOCK = [null, [], {}, {}, {}, {}, {}];//the current meshblock - [[0]:oy_block_timestamp, [1]:oy_snapshot_sector, [2]:oy_command_sector, [3]:oy_akoya_sector, [4]:oy_dns_sector, [5]:oy_meta_sector, [6]:oy_channel_sector]
-    OY_DIFF_TRACK = [[], [], [], [], []];
+    OY_DIFF_TRACK = [[], [], []];
     OY_BASE_BUILD = [];
     OY_MESH_RANGE = 0;
     OY_CHALLENGE_TRIGGER = null;
@@ -2652,13 +2652,11 @@ function oy_block_loop() {
             OY_BLOCK_NEW = {};
             OY_BLOCK_DIVE = {};
             OY_BLOCK_DIVE_SET = [];
-            OY_DIFF_TRACK = [[], [], [], [], []];
+            OY_DIFF_TRACK = [[], [], []];
             //OY_DIFF_TRACK breakdown:
             //[0] is metadata like mesh range
             //[1] is dive reward
-            //[2] is akoya transactions
-            //[3] is DNS transactions
-            //[4] is DAPPER transactions
+            //[2] is command transactions
 
             OY_DIFF_TRACK[0][0] = OY_MESH_RANGE;
 
@@ -2733,9 +2731,9 @@ function oy_block_loop() {
 function oy_block_process(oy_command_execute, oy_diff_flag) {
     for (let i in oy_command_execute) {
         //["OY_AKOYA_SEND", -1, oy_key_public, oy_transfer_amount, oy_receive_public]
-        if (oy_command_execute[i][1][0]==="OY_AKOYA_SEND"&&
-            typeof(OY_BLOCK[3][oy_command_execute[i][1][2]])!=="undefined"&&
-            OY_BLOCK[3][oy_command_execute[i][1][2]]>=oy_command_execute[i][1][3]) {
+        if (oy_command_execute[i][1][0]==="OY_AKOYA_SEND"&&//check command type
+            typeof(OY_BLOCK[3][oy_command_execute[i][1][2]])!=="undefined"&&//check if oy_key_public exists in the akoya ledger (has a balance greater than zero)
+            OY_BLOCK[3][oy_command_execute[i][1][2]]>=oy_command_execute[i][1][3]) {//check that oy_transfer_amount is greater than the akoya ledger balance of oy_key_public
             if (typeof(OY_BLOCK[3][oy_command_execute[i][1][4]])==="undefined") OY_BLOCK[3][oy_command_execute[i][1][4]] = 0;
             let oy_balance_send = OY_BLOCK[3][oy_command_execute[i][1][2]];
             let oy_balance_receive = OY_BLOCK[3][oy_command_execute[i][1][4]];
@@ -2754,11 +2752,20 @@ function oy_block_process(oy_command_execute, oy_diff_flag) {
             }
         }
         //["OY_DNS_TRANSFER", -1, oy_key_public, oy_dns_name, oy_receive_public]
-        else if (oy_command_execute[i][1][0]==="OY_DNS_TRANSFER"&&
-            typeof(OY_BLOCK[3][oy_command_execute[i][1][3]])!=="undefined"&&
-            OY_BLOCK[3][oy_command_execute[i][1][3]][1]===oy_command_execute[i][1][2]&&
-            typeof(OY_BLOCK[2][oy_command_execute[i][1][4]])!=="undefined") {
-            OY_BLOCK[3][oy_command_execute[i][1][3]][1] = oy_command_execute[i][1][4];
+        else if (oy_command_execute[i][1][0]==="OY_DNS_TRANSFER"&&//check command type
+            typeof(OY_BLOCK[4][oy_command_execute[i][1][3]])!=="undefined"&&//check that oy_dns_name exists in the dns_sector of the meshblock
+            OY_BLOCK[4][oy_command_execute[i][1][3]][1]===oy_command_execute[i][1][2]&&//check that oy_key_public owns oy_dns_name
+            typeof(OY_BLOCK[3][oy_command_execute[i][1][4]])!=="undefined") {//check that oy_receive_public has a positive balance in the akoya ledger
+            OY_BLOCK[4][oy_command_execute[i][1][3]][1] = oy_command_execute[i][1][4];
+            OY_BLOCK[2][oy_command_execute[i][0]] = oy_command_execute[i][1];
+            OY_BLOCK_NEW[oy_command_execute[i][0]] = oy_command_execute[i][1];
+            if (oy_diff_flag===true) OY_DIFF_TRACK[2].push(oy_command_execute[i]);
+        }
+        //["OY_DNS_RELEASE", -1, oy_key_public, oy_dns_name]
+        else if (oy_command_execute[i][1][0]==="OY_DNS_RELEASE"&&//check command type
+            typeof(OY_BLOCK[4][oy_command_execute[i][1][3]])!=="undefined"&&//check that oy_dns_name exists in the dns_sector of the meshblock
+            OY_BLOCK[4][oy_command_execute[i][1][3]][1]===oy_command_execute[i][1][2]) {//check that oy_key_public owns oy_dns_name
+            delete OY_BLOCK[4][oy_command_execute[i][1][3]];
             OY_BLOCK[2][oy_command_execute[i][0]] = oy_command_execute[i][1];
             OY_BLOCK_NEW[oy_command_execute[i][0]] = oy_command_execute[i][1];
             if (oy_diff_flag===true) OY_DIFF_TRACK[2].push(oy_command_execute[i]);
