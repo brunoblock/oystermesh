@@ -33,7 +33,7 @@ const OY_BLOCK_STABILITY_MIN = 20;//lower means more sybil-attack secure yet mor
 const OY_BLOCK_ROSTER_PERSIST = 0.8;//node roster persistence against getting deleted due to an absent sync, higher means more stable connection but weaker security implications
 const OY_BLOCK_HOP_CALCTIME = 60;//ms time limit for verifying passports on a block_sync transmission, lower is more scalable yet less secure
 const OY_BLOCK_KEY_LIMIT = 5;//permitted transactions per wallet per block (20 seconds)
-const OY_BLOCK_HASH_KEEP = 1555;//how many hashes of previous blocks to keep in the current meshblock, value is for 6 months worth
+const OY_BLOCK_HASH_KEEP = 240;//how many hashes of previous blocks to keep in the current meshblock, value is for 1 month's worth (3 hrs x 8 = 24 hrs x 30 = 30 days, 8 x 30 = 240)
 const OY_BLOCK_DENSITY = 0.5;//higher means block syncs [0] and dives [1] are more spread out within their respective meshblock sectors
 const OY_BLOCK_PEERS_MIN = 3;//minimum peer count to be become a source for latches and broadcast SYNC/DIVE
 const OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via OY_BLOCK_SYNC and OY_BLOCK_DIVE (OY_LOGIC_ALL)
@@ -2506,7 +2506,7 @@ function oy_block_loop() {
             }
             //unlatch process
 
-            if (Math.floor((Date.now()-30000)/10000000)!==Math.floor((Date.now()-10000)/10000000)) {//10000000
+            if (Math.floor((Date.now()-30000)/10800000)!==Math.floor((Date.now()-10000)/10800000)) {//10800000
                 //oy_log_debug("SNAPSHOT: "+OY_BLOCK_HASH+"/"+JSON.stringify(OY_BLOCK));
                 OY_BLOCK[1] = {};
                 OY_BLOCK[0][1].push(OY_BLOCK_HASH);
@@ -2774,19 +2774,6 @@ function oy_block_loop() {
 
             oy_block_finish();
         }, OY_BLOCK_SECTORS[2][1]);
-
-        //----------transitory centralized solution
-        let oy_xhttp = new XMLHttpRequest();
-        oy_xhttp.onreadystatechange = function() {
-            if (this.readyState===4&&this.status===200) {
-                OY_BLOCK_TEMP = JSON.parse(this.responseText);
-                OY_BLOCK_TEMP_HASH = oy_hash_gen(JSON.stringify(OY_BLOCK_TEMP));//this is what this line will look like in the decentralized version
-                document.dispatchEvent(OY_BLOCK_TRIGGER_TEMP);
-            }
-        };
-        oy_xhttp.open("POST", "https://top.oyster.org/oy_block_update.php", true);
-        oy_xhttp.send();
-        //----------transitory centralized solution
     }
 }
 
