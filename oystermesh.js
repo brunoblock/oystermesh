@@ -1044,27 +1044,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                 else OY_BLOCK[3][oy_diff_track[1][i]] += oy_dive_share;
             }
         }
-        if (oy_diff_track[2].length>0) {
-            for (let i in oy_diff_track[2]) {
-                if (oy_diff_track[2][i][1][0]==="OY_AKOYA_SEND"&&typeof(OY_BLOCK[3][oy_diff_track[2][i][1][2]])!=="undefined"&&OY_BLOCK[3][oy_diff_track[2][i][1][2]]>=oy_diff_track[2][i][1][3]) {
-                    if (typeof(OY_BLOCK[3][oy_diff_track[2][i][1][4]])==="undefined") OY_BLOCK[3][oy_diff_track[2][i][1][4]] = 0;
-                    let oy_balance_send = OY_BLOCK[3][oy_diff_track[2][i][1][2]];
-                    let oy_balance_receive = OY_BLOCK[3][oy_diff_track[2][i][1][4]];
-                    OY_BLOCK[3][oy_diff_track[2][i][1][2]] -= oy_diff_track[2][i][1][3];
-                    OY_BLOCK[3][oy_diff_track[2][i][1][4]] += oy_diff_track[2][i][1][3];
-                    if (OY_BLOCK[3][oy_diff_track[2][i][1][2]]+OY_BLOCK[3][oy_diff_track[2][i][1][4]]!==oy_balance_send+oy_balance_receive) {//verify balances, revert transaction if necessary
-                        OY_BLOCK[3][oy_diff_track[2][i][1][2]] = oy_balance_send;
-                        OY_BLOCK[3][oy_diff_track[2][i][1][4]] = oy_balance_receive;
-                    }
-                    else {
-                        if (OY_BLOCK[3][oy_diff_track[2][i][1][2]]<=0) delete OY_BLOCK[3][oy_diff_track[2][i][1][2]];
-                        if (OY_BLOCK[3][oy_diff_track[2][i][1][4]]<=0) delete OY_BLOCK[3][oy_diff_track[2][i][1][4]];
-                        OY_BLOCK[2][oy_diff_track[2][i][0]] = oy_diff_track[2][i][1];
-                        OY_BLOCK_NEW[oy_diff_track[2][i][0]] = oy_diff_track[2][i][1];
-                    }
-                }
-            }
-        }
+        if (oy_diff_track[2].length>0) oy_block_process(oy_diff_track[2], false);
 
         OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK);
 
@@ -2709,31 +2689,7 @@ function oy_block_loop() {
             //oy_log_debug("EXECUTE: "+JSON.stringify(oy_command_execute));
 
             if (oy_time_local-OY_BLOCK_BOOTTIME>OY_BLOCK_BOOT_BUFFER) {//only allow transactions after the meshblock boot-up sequence is complete
-                for (let i in oy_command_execute) {
-                    //["OY_AKOYA_SEND", -1, oy_key_public, oy_transfer_amount, oy_receive_public]
-                    if (oy_command_execute[i][1][0]==="OY_AKOYA_SEND"&&typeof(OY_BLOCK[3][oy_command_execute[i][1][2]])!=="undefined"&&OY_BLOCK[3][oy_command_execute[i][1][2]]>=oy_command_execute[i][1][3]) {
-                        if (typeof(OY_BLOCK[3][oy_command_execute[i][1][4]])==="undefined") OY_BLOCK[3][oy_command_execute[i][1][4]] = 0;
-                        let oy_balance_send = OY_BLOCK[3][oy_command_execute[i][1][2]];
-                        let oy_balance_receive = OY_BLOCK[3][oy_command_execute[i][1][4]];
-                        OY_BLOCK[3][oy_command_execute[i][1][2]] -= oy_command_execute[i][1][3];
-                        OY_BLOCK[3][oy_command_execute[i][1][4]] += oy_command_execute[i][1][3];
-                        if (OY_BLOCK[3][oy_command_execute[i][1][2]]+OY_BLOCK[3][oy_command_execute[i][1][4]]!==oy_balance_send+oy_balance_receive) {//verify balances, revert transaction if necessary
-                            OY_BLOCK[3][oy_command_execute[i][1][2]] = oy_balance_send;
-                            OY_BLOCK[3][oy_command_execute[i][1][4]] = oy_balance_receive;
-                        }
-                        else {
-                            if (OY_BLOCK[3][oy_command_execute[i][1][2]]<=0) delete OY_BLOCK[3][oy_command_execute[i][1][2]];
-                            if (OY_BLOCK[3][oy_command_execute[i][1][4]]<=0) delete OY_BLOCK[3][oy_command_execute[i][1][4]];
-                            OY_BLOCK[2][oy_command_execute[i][0]] = oy_command_execute[i][1];
-                            OY_BLOCK_NEW[oy_command_execute[i][0]] = oy_command_execute[i][1];
-                            OY_DIFF_TRACK[2].push(oy_command_execute[i]);
-                        }
-                    }
-                    //["OY_DNS_TRANSFER", -1, oy_key_public, oy_dns_name, oy_receive_public]
-                    if (oy_command_execute[i][1][0]==="OY_DNS_TRANSFER"&&typeof(OY_BLOCK[3][oy_command_execute[i][1][3]])!=="undefined") {
-
-                    }
-                }
+                oy_block_process(oy_command_execute, true);
 
                 let oy_supply_post = 0;
                 for (let oy_key_public in OY_BLOCK[3]) {
@@ -2771,6 +2727,42 @@ function oy_block_loop() {
 
             oy_block_finish();
         }, OY_BLOCK_SECTORS[2][1]);
+    }
+}
+
+function oy_block_process(oy_command_execute, oy_diff_flag) {
+    for (let i in oy_command_execute) {
+        //["OY_AKOYA_SEND", -1, oy_key_public, oy_transfer_amount, oy_receive_public]
+        if (oy_command_execute[i][1][0]==="OY_AKOYA_SEND"&&
+            typeof(OY_BLOCK[3][oy_command_execute[i][1][2]])!=="undefined"&&
+            OY_BLOCK[3][oy_command_execute[i][1][2]]>=oy_command_execute[i][1][3]) {
+            if (typeof(OY_BLOCK[3][oy_command_execute[i][1][4]])==="undefined") OY_BLOCK[3][oy_command_execute[i][1][4]] = 0;
+            let oy_balance_send = OY_BLOCK[3][oy_command_execute[i][1][2]];
+            let oy_balance_receive = OY_BLOCK[3][oy_command_execute[i][1][4]];
+            OY_BLOCK[3][oy_command_execute[i][1][2]] -= oy_command_execute[i][1][3];
+            OY_BLOCK[3][oy_command_execute[i][1][4]] += oy_command_execute[i][1][3];
+            if (OY_BLOCK[3][oy_command_execute[i][1][2]]+OY_BLOCK[3][oy_command_execute[i][1][4]]!==oy_balance_send+oy_balance_receive) {//verify balances, revert transaction if necessary
+                OY_BLOCK[3][oy_command_execute[i][1][2]] = oy_balance_send;
+                OY_BLOCK[3][oy_command_execute[i][1][4]] = oy_balance_receive;
+            }
+            else {
+                if (OY_BLOCK[3][oy_command_execute[i][1][2]]<=0) delete OY_BLOCK[3][oy_command_execute[i][1][2]];
+                if (OY_BLOCK[3][oy_command_execute[i][1][4]]<=0) delete OY_BLOCK[3][oy_command_execute[i][1][4]];
+                OY_BLOCK[2][oy_command_execute[i][0]] = oy_command_execute[i][1];
+                OY_BLOCK_NEW[oy_command_execute[i][0]] = oy_command_execute[i][1];
+                if (oy_diff_flag===true) OY_DIFF_TRACK[2].push(oy_command_execute[i]);
+            }
+        }
+        //["OY_DNS_TRANSFER", -1, oy_key_public, oy_dns_name, oy_receive_public]
+        else if (oy_command_execute[i][1][0]==="OY_DNS_TRANSFER"&&
+            typeof(OY_BLOCK[3][oy_command_execute[i][1][3]])!=="undefined"&&
+            OY_BLOCK[3][oy_command_execute[i][1][3]][1]===oy_command_execute[i][1][2]&&
+            typeof(OY_BLOCK[2][oy_command_execute[i][1][4]])!=="undefined") {
+            OY_BLOCK[3][oy_command_execute[i][1][3]][1] = oy_command_execute[i][1][4];
+            OY_BLOCK[2][oy_command_execute[i][0]] = oy_command_execute[i][1];
+            OY_BLOCK_NEW[oy_command_execute[i][0]] = oy_command_execute[i][1];
+            if (oy_diff_flag===true) OY_DIFF_TRACK[2].push(oy_command_execute[i]);
+        }
     }
 }
 
