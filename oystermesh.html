@@ -1909,11 +1909,11 @@
         oy_akoya_balance();
         let oy_akoya_render = [];
         if (OY_AKOYA_PROCESS===false) {
-            for (let oy_command_hash in OY_BLOCK[1]) {
-                let oy_send_bool = OY_BLOCK[1][oy_command_hash][2]===OY_WALLET_PUBLIC;
-                if (OY_BLOCK[1][oy_command_hash][0]==="OY_AKOYA_SEND"&&(oy_send_bool||OY_BLOCK[1][oy_command_hash][4]===OY_WALLET_PUBLIC)&&typeof(OY_AKOYA_KEEP[oy_command_hash])==="undefined") {
+            for (let oy_command_hash in OY_BLOCK[2]) {
+                let oy_send_bool = OY_BLOCK[2][oy_command_hash][2]===OY_WALLET_PUBLIC;
+                if (OY_BLOCK[2][oy_command_hash][0]==="OY_AKOYA_SEND"&&(oy_send_bool||OY_BLOCK[2][oy_command_hash][4]===OY_WALLET_PUBLIC)&&typeof(OY_AKOYA_KEEP[oy_command_hash])==="undefined") {
                     OY_AKOYA_KEEP[oy_command_hash] = true;
-                    oy_akoya_render.push([oy_command_hash, OY_BLOCK[1][oy_command_hash], oy_send_bool]);
+                    oy_akoya_render.push([oy_command_hash, OY_BLOCK[2][oy_command_hash], oy_send_bool]);
                 }
             }
             OY_AKOYA_PROCESS = true;
@@ -1991,7 +1991,7 @@
     }
 
     function oy_akoya_balance() {
-        if (OY_BLOCK_HASH!==null&&OY_WALLET_PUBLIC!==null) document.getElementById("oy_akoya_balance_inner").innerHTML = (typeof(OY_BLOCK[2][OY_WALLET_PUBLIC])==="undefined")?"0.0000":(OY_BLOCK[2][OY_WALLET_PUBLIC]/OY_AKOYA_DECIMALS).toFixed(4);
+        if (OY_BLOCK_HASH!==null&&OY_WALLET_PUBLIC!==null) document.getElementById("oy_akoya_balance_inner").innerHTML = (typeof(OY_BLOCK[3][OY_WALLET_PUBLIC])==="undefined")?"0.0000":(OY_BLOCK[3][OY_WALLET_PUBLIC]/OY_AKOYA_DECIMALS).toFixed(4);
         else document.getElementById("oy_akoya_balance_inner").innerHTML = "------";
     }
 
@@ -2034,7 +2034,7 @@
         if (oy_value.length>0&&(parseInt(oy_value*OY_AKOYA_DECIMALS)+"").match(/^[0-9]+$/)===null) document.getElementById("oy_wallet_akoya_amount").value = OY_AKOYA_AMOUNT_PREV;
         else OY_AKOYA_AMOUNT_PREV = oy_value;
         if (oy_value.length===0) document.getElementById("oy_amount_avatar_cont").style.backgroundColor = "#2a2a2a";
-        else if (typeof(OY_BLOCK[2][OY_WALLET_PUBLIC])!=="undefined"&&parseInt(document.getElementById("oy_wallet_akoya_amount").value)*OY_AKOYA_DECIMALS<=OY_BLOCK[2][OY_WALLET_PUBLIC]) {
+        else if (typeof(OY_BLOCK[3][OY_WALLET_PUBLIC])!=="undefined"&&parseInt(document.getElementById("oy_wallet_akoya_amount").value)*OY_AKOYA_DECIMALS<=OY_BLOCK[3][OY_WALLET_PUBLIC]) {
             document.getElementById("oy_amount_avatar_cont").style.backgroundColor = "#00C800";
         }
         else document.getElementById("oy_amount_avatar_cont").style.backgroundColor = "#c37b2c";
@@ -2082,7 +2082,7 @@
             document.getElementById("oy_akoya_reset_button").classList.remove("oy_button_reset_active");
             document.getElementById("oy_akoya_reset_button").classList.add("oy_button_all_dull");
         }
-        if (oy_key_check(document.getElementById("oy_wallet_akoya_send").value)&&(typeof(OY_BLOCK[2][OY_WALLET_PUBLIC])!=="undefined"&&parseInt(document.getElementById("oy_wallet_akoya_amount").value)*OY_AKOYA_DECIMALS<=OY_BLOCK[2][OY_WALLET_PUBLIC])&&document.getElementById("oy_wallet_akoya_send").value!=="Receiving Address"&&document.getElementById("oy_wallet_akoya_send").value.length>0&&document.getElementById("oy_wallet_akoya_amount").value!=="Receiving Amount"&&document.getElementById("oy_wallet_akoya_amount").value.length>0) {
+        if (oy_key_check(document.getElementById("oy_wallet_akoya_send").value)&&(typeof(OY_BLOCK[3][OY_WALLET_PUBLIC])!=="undefined"&&parseInt(document.getElementById("oy_wallet_akoya_amount").value)*OY_AKOYA_DECIMALS<=OY_BLOCK[3][OY_WALLET_PUBLIC])&&document.getElementById("oy_wallet_akoya_send").value!=="Receiving Address"&&document.getElementById("oy_wallet_akoya_send").value.length>0&&document.getElementById("oy_wallet_akoya_amount").value!=="Receiving Amount"&&document.getElementById("oy_wallet_akoya_amount").value.length>0) {
             document.getElementById("oy_akoya_execute_button").classList.remove("oy_button_all_dull");
             document.getElementById("oy_akoya_execute_button").classList.add("oy_button_execute_active");
         }
