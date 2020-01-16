@@ -50,6 +50,8 @@ const OY_AKOYA_FEE = 0.000001*OY_AKOYA_DECIMALS;//akoya fee per block
 const OY_DNS_AUCTION_DURATION = 259200;//seconds of auction duration since latest valid bid - 3 days worth
 const OY_DNS_OWNER_DURATION = 2592000;//seconds worth of ownership solvency required to bid - 30 days worth
 const OY_DNS_NAME_LIMIT = 32;//max length of a mesh domain name
+const OY_DNS_NAV_LIMIT = 1024;//max length
+const OY_DNS_FEE = 0.00001*OY_AKOYA_DECIMALS;//akoya fee per block
 const OY_NODE_TOLERANCE = 3;//max amount of protocol communication violations until node is blacklisted
 const OY_NODE_BLACKTIME = 300;//seconds to blacklist a punished node for
 const OY_NODE_PROPOSETIME = 12;//seconds for peer proposal session duration
@@ -99,8 +101,8 @@ const OY_KEY_BRUNO = "JSJqmlzAxwuINY2FCpWPJYvKIK1AjavBgkIwIm139k4M";//prevent im
 const OY_SHORT_LENGTH = 6;//various data value such as nonce IDs, data handles, data values are shortened for efficiency
 
 // PRE-CALCULATED VARS
-const OY_DNS_AUCTION_MIN = OY_AKOYA_FEE*(OY_DNS_AUCTION_DURATION/20);
-const OY_DNS_OWNER_MIN = OY_DNS_AUCTION_MIN+(OY_AKOYA_FEE*(OY_DNS_OWNER_DURATION/20));
+const OY_DNS_AUCTION_MIN = (OY_AKOYA_FEE+OY_DNS_FEE)*(OY_DNS_AUCTION_DURATION/20);
+const OY_DNS_OWNER_MIN = (OY_AKOYA_FEE+OY_DNS_FEE)*OY_DNS_AUCTION_MIN+(OY_AKOYA_FEE*(OY_DNS_OWNER_DURATION/20));
 
 // INIT
 let OY_LIGHT_MODE = true;//seek to stay permanently connected to the mesh as a light node/latch, manipulable by the user
@@ -178,6 +180,20 @@ let OY_BLOCK_COMMANDS = {
         return false;
         //TODO
     }],
+    //["OY_DNS_MODIFY", -1, oy_key_public, oy_dns_name, oy_nav_set]
+    "OY_DNS_MODIFY":[function(oy_command_array) {
+        let oy_nav_set_flat = JSON.stringify(oy_command_array[4]);
+        if (oy_command_array.length===5&&//check the element count in the command
+            oy_command_array[3].length<=OY_DNS_NAME_LIMIT&&//check that the domain name's length is compliant
+            oy_an_check(oy_command_array[3])&&//check that the domain name is fully alphanumeric
+            typeof(OY_BLOCK[4][oy_command_array[3]])!=="undefined"&&//check that oy_dns_name exists in the dns_sector of the meshblock
+            OY_BLOCK[4][oy_command_array[3]][0]===oy_command_array[2]&&//check that oy_key_public owns oy_dns_name
+            typeof(oy_command_array[4])==="object"&&//check that oy_nav_set is an object
+            oy_command_array[4]!==null&&//further ensure that oy_nav_set is an object
+            oy_nav_set_flat.length<=OY_DNS_NAV_LIMIT&&//check that oy_nav_set has a compliant size
+            oy_an_check(oy_nav_set_flat.replace(/{}[]'", /g, ""))) return true;//check that the contents of oy_nav_set are fully alphanumeric
+        return false;
+    }],
     //["OY_DNS_BID", -1, oy_key_public, oy_dns_name, oy_bid_amount]
     "OY_DNS_BID":[function(oy_command_array) {
         if (oy_command_array.length===5&&//check the element count in the command
@@ -197,7 +213,8 @@ let OY_BLOCK_COMMANDS = {
             oy_an_check(oy_command_array[3])&&//check that the domain name is fully alphanumeric
             typeof(OY_BLOCK[4][oy_command_array[3]])!=="undefined"&&//check that oy_dns_name exists in the dns_sector of the meshblock
             OY_BLOCK[4][oy_command_array[3]][0]===oy_command_array[2]&&//check that oy_key_public owns oy_dns_name
-            typeof(OY_BLOCK[3][oy_command_array[4]])!=="undefined") return false;//check that oy_receive_public has a positive balance in the akoya ledger
+            typeof(OY_BLOCK[3][oy_command_array[4]])!=="undefined") return true;//check that oy_receive_public has a positive balance in the akoya ledger
+        return false;
     }],
     //["OY_DNS_RELEASE", -1, oy_key_public, oy_dns_name]
     "OY_DNS_RELEASE":[function(oy_command_array) {
@@ -1062,6 +1079,24 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             OY_BLOCK[3][oy_key_public] -= OY_AKOYA_FEE;
             OY_BLOCK[3][oy_key_public] = Math.max(OY_BLOCK[3][oy_key_public], 0);
             if (OY_BLOCK[3][oy_key_public]<=0) delete OY_BLOCK[3][oy_key_public];
+        }
+
+        for (let oy_dns_name in OY_BLOCK[4]) {
+            if (OY_BLOCK[4][oy_dns_name][0]==="A") continue;
+            if (typeof(OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]])==="undefined") delete OY_BLOCK[4][oy_dns_name];
+            else {
+                OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]] -= OY_DNS_FEE;
+                OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]] = Math.max(OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]], 0);
+                if (OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]]<=0) delete OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]];
+            }
+        }
+
+        for (let oy_dns_name in OY_BLOCK[5]) {
+            if (OY_BLOCK[5][oy_dns_name][2]<=OY_BLOCK_TIME) {
+                OY_BLOCK[3]["oy_escrow_dns"] -= OY_BLOCK[5][oy_dns_name][1];
+                OY_BLOCK[4][oy_dns_name][0] = OY_BLOCK[5][oy_dns_name][0];
+                delete OY_BLOCK[5][oy_dns_name];
+            }
         }
 
         if (oy_diff_track[1].length>0) {
@@ -2700,6 +2735,27 @@ function oy_block_loop() {
                 if (OY_BLOCK[3][oy_key_public]<=0) delete OY_BLOCK[3][oy_key_public];
             }
 
+            for (let oy_dns_name in OY_BLOCK[4]) {
+                if (OY_BLOCK[4][oy_dns_name][0]==="A") continue;
+                if (typeof(OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]])==="undefined") delete OY_BLOCK[4][oy_dns_name];
+                else {
+                    let oy_balance_prev = OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]];
+                    OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]] -= OY_DNS_FEE;
+                    OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]] = Math.max(OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]], 0);
+                    oy_dive_bounty += oy_balance_prev - OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]];
+                    if (OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]]<=0) delete OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]];
+                }
+            }
+
+            for (let oy_dns_name in OY_BLOCK[5]) {
+                if (OY_BLOCK[5][oy_dns_name][2]<=OY_BLOCK_TIME) {
+                    OY_BLOCK[3]["oy_escrow_dns"] -= OY_BLOCK[5][oy_dns_name][1];
+                    oy_dive_bounty += OY_BLOCK[5][oy_dns_name][1];
+                    OY_BLOCK[4][oy_dns_name][0] = OY_BLOCK[5][oy_dns_name][0];
+                    delete OY_BLOCK[5][oy_dns_name];
+                }
+            }
+
             if (oy_dive_reward_pool.length>0) {
                 let oy_dive_share = Math.floor(oy_dive_bounty/oy_dive_reward_pool.length);//TODO verify math to make sure odd balances don't cause a gradual decrease of the entire supply
                 if (oy_dive_share>0) {
@@ -2782,6 +2838,12 @@ function oy_block_process(oy_command_execute, oy_diff_flag) {
                 oy_command_allocate(oy_command_execute[i]);
             }
         }
+        //["OY_DNS_MODIFY", -1, oy_key_public, oy_dns_name, oy_nav_set]
+        else if (oy_command_execute[i][1][0]==="OY_DNS_MODIFY"&&OY_BLOCK_COMMANDS[oy_command_execute[i][1][0]][0](oy_command_execute[i][1])) {
+            OY_BLOCK[4][oy_command_execute[i][1][3]][1] = oy_command_execute[i][1][4];
+
+            oy_command_allocate(oy_command_execute[i]);
+        }
         //["OY_DNS_BID", -1, oy_key_public, oy_dns_name, oy_bid_amount]
         else if (oy_command_execute[i][1][0]==="OY_DNS_BID"&&OY_BLOCK_COMMANDS[oy_command_execute[i][1][0]][0](oy_command_execute[i][1])) {
             let oy_balance_send = OY_BLOCK[3][oy_command_execute[i][1][2]];
@@ -2810,7 +2872,7 @@ function oy_block_process(oy_command_execute, oy_diff_flag) {
                 else oy_bid_pass = true;
 
                 if (oy_bid_pass===true) {
-                    if (typeof(OY_BLOCK[4][oy_command_execute[i][1][3]])==="undefined") OY_BLOCK[4][oy_command_execute[i][1][3]] = ["A", "", ""];//[owner, point, nav]
+                    if (typeof(OY_BLOCK[4][oy_command_execute[i][1][3]])==="undefined") OY_BLOCK[4][oy_command_execute[i][1][3]] = ["A", ""];//[owner, nav]
                     OY_BLOCK[5][oy_command_execute[i][1][3]] = [oy_command_execute[i][1][2], oy_command_execute[i][1][4], OY_BLOCK_TIME+OY_DNS_AUCTION_DURATION];//[bid holder, bid amount, auction expire]
                 }
             }
