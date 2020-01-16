@@ -48,6 +48,7 @@ const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya cu
 const OY_AKOYA_MAX_SUPPY = 10000000*OY_AKOYA_DECIMALS;//akoya max supply
 const OY_AKOYA_FEE = 0.000001*OY_AKOYA_DECIMALS;//akoya fee per block
 const OY_DNS_AUCTION_DURATION = 259200;//seconds of auction duration since latest valid bid - 3 days worth
+const OY_DNS_OWNER_DURATION = 2592000;//seconds worth of ownership solvency required to bid - 30 days worth
 const OY_DNS_NAME_LIMIT = 32;//max length of a mesh domain name
 const OY_NODE_TOLERANCE = 3;//max amount of protocol communication violations until node is blacklisted
 const OY_NODE_BLACKTIME = 300;//seconds to blacklist a punished node for
@@ -96,6 +97,10 @@ const OY_CHANNEL_CONSENSUS = 0.5;//node signature requirement for a broadcast to
 const OY_CHANNEL_TOP_TOLERANCE = 2;//node count difference allowed between broadcast claim and perceived claim
 const OY_KEY_BRUNO = "JSJqmlzAxwuINY2FCpWPJYvKIK1AjavBgkIwIm139k4M";//prevent impersonation (custom avatar), achieve AKY coin-lock. This is the testnet wallet, will change for mainnet
 const OY_SHORT_LENGTH = 6;//various data value such as nonce IDs, data handles, data values are shortened for efficiency
+
+// PRE-CALCULATED VARS
+const OY_DNS_AUCTION_MIN = OY_AKOYA_FEE*(OY_DNS_AUCTION_DURATION/20);
+const OY_DNS_OWNER_MIN = OY_DNS_AUCTION_MIN+(OY_AKOYA_FEE*(OY_DNS_OWNER_DURATION/20));
 
 // INIT
 let OY_LIGHT_MODE = true;//seek to stay permanently connected to the mesh as a light node/latch, manipulable by the user
@@ -178,7 +183,9 @@ let OY_BLOCK_COMMANDS = {
         if (oy_command_array.length===5&&//check the element count in the command
             oy_command_array[3].length<=OY_DNS_NAME_LIMIT&&//check that the domain name's length is compliant
             oy_an_check(oy_command_array[3])&&//check that the domain name is fully alphanumeric
-            oy_command_array[4]>=OY_AKOYA_FEE*OY_DNS_AUCTION_DURATION&&//check that the bid amount is at least the minimum required amount
+            oy_command_array[4]>=OY_DNS_AUCTION_MIN&&//check that the bid amount is at least the minimum required amount
+            typeof(OY_BLOCK[3][oy_command_array[2]])!=="undefined"&&//check that the sending wallet exists
+            OY_BLOCK[3][oy_command_array[2]]>=oy_command_array[4]+OY_DNS_OWNER_MIN&&//check that the sending wallet has sufficient akoya for the bid
             (typeof(OY_BLOCK[4][oy_command_array[3]])==="undefined"||OY_BLOCK[4][oy_command_array[3]][0]==="A")&&//check that oy_dns_name doesn't exist as a domain, or is in auction mode
             (typeof(OY_BLOCK[4][oy_command_array[3]])==="undefined"||oy_command_array[4]>=OY_BLOCK[5][oy_command_array[3]][1]*2)) return true;//check that oy_dns_name doesn't exist as a domain, or the bid amount is at least double the previous bid
         return false;
@@ -201,10 +208,14 @@ let OY_BLOCK_COMMANDS = {
             OY_BLOCK[4][oy_command_array[3]][0]===oy_command_array[2]) return true;//check that oy_key_public owns oy_dns_name
         return false;
     }],
-    "OY_DNS_NULLIFY":[function(oy_command_array) {
-        if (oy_command_array.length===4) return true;//check the element count in the command
+    //["OY_DNS_NULLING", -1, oy_key_public, oy_dns_name, oy_nulling_amount]
+    "OY_DNS_NULLING":[function(oy_command_array) {
+        if (oy_command_array.length===5&&//check the element count in the command
+            oy_command_array[3].length<=OY_DNS_NAME_LIMIT&&//check that the domain name's length is compliant
+            oy_an_check(oy_command_array[3])&&//check that the domain name is fully alphanumeric
+            typeof(OY_BLOCK[4][oy_command_array[3]])!=="undefined"&&//check that oy_dns_name exists in the dns_sector of the meshblock
+            OY_BLOCK[4][oy_command_array[3]][0]===oy_command_array[2]) return true;//check that oy_key_public owns oy_dns_name
         return false;
-        //TODO
     }],
     "OY_META_SET":[function(oy_command_array) {
         if (oy_command_array.length===4) return true;//check the element count in the command
@@ -221,7 +232,7 @@ let OY_BLOCK_COMMANDS = {
         return false;
         //TODO
     }],
-    "OY_META_NULLIFY":[function(oy_command_array) {
+    "OY_META_NULLING":[function(oy_command_array) {
         if (oy_command_array.length===4) return true;//check the element count in the command
         return false;
         //TODO
@@ -2770,11 +2781,10 @@ function oy_block_process(oy_command_execute, oy_diff_flag) {
         }
         //["OY_DNS_BID", -1, oy_key_public, oy_dns_name, oy_bid_amount]
         else if (oy_command_execute[i][1][0]==="OY_DNS_BID"&&OY_BLOCK_COMMANDS[oy_command_execute[i][1][0]][0](oy_command_execute[i][1])) {
-            if (typeof(OY_BLOCK[4][oy_command_execute[i][1][3]])==="undefined") {
-                OY_BLOCK[4][oy_command_execute[i][1][3]] = ["A", "", ""];//[owner, point, nav]
-            }
+            if (typeof(OY_BLOCK[4][oy_command_execute[i][1][3]])==="undefined") OY_BLOCK[4][oy_command_execute[i][1][3]] = ["A", "", ""];//[owner, point, nav]
             OY_BLOCK[5][oy_command_execute[i][1][3]] = [oy_command_execute[i][1][2], oy_command_execute[i][1][4], OY_BLOCK_TIME+OY_DNS_AUCTION_DURATION];//[bid holder, bid amount, auction expire]
-            //TODO encoding and length check for dns_name
+
+            //TODO send funds to escrow, refund for those outbid. Exception for no akoya fee on escrow wallet
 
             oy_command_allocate(oy_command_execute[i]);
         }
@@ -2789,6 +2799,10 @@ function oy_block_process(oy_command_execute, oy_diff_flag) {
             delete OY_BLOCK[4][oy_command_execute[i][1][3]];
 
             oy_command_allocate(oy_command_execute[i]);
+        }
+        //["OY_DNS_NULLING", -1, oy_key_public, oy_dns_name, oy_nulling_amount]
+        else if (oy_command_execute[i][1][0]==="OY_DNS_NULLING"&&OY_BLOCK_COMMANDS[oy_command_execute[i][1][0]][0](oy_command_execute[i][1])) {
+            OY_BLOCK[4][oy_command_execute[i][1][3]][0] = "";
         }
     }
 }
