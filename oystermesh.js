@@ -177,7 +177,7 @@ let OY_BLOCK_COMMANDS = {
         if (oy_command_array.length===5&&//check the element count in the command
             oy_command_array[4]>=OY_AKOYA_FEE*OY_DNS_AUCTION_DURATION&&//check that the bid amount is at least the minimum required amount
             (typeof(OY_BLOCK[4][oy_command_array[3]])==="undefined"||OY_BLOCK[4][oy_command_array[3]][0]==="A")&&//check that oy_dns_name doesn't exist as a domain, or is in auction mode
-            (typeof(OY_BLOCK[4][oy_command_array[3]])==="undefined"||oy_command_array[4]>=OY_BLOCK[5][oy_command_array[3]][2]*2)) return true;//check that oy_dns_name doesn't exist as a domain, or the bid amount is at least double the previous bid
+            (typeof(OY_BLOCK[4][oy_command_array[3]])==="undefined"||oy_command_array[4]>=OY_BLOCK[5][oy_command_array[3]][1]*2)) return true;//check that oy_dns_name doesn't exist as a domain, or the bid amount is at least double the previous bid
         return false;
     }],
     //["OY_DNS_TRANSFER", -1, oy_key_public, oy_dns_name, oy_receive_public]
@@ -2737,6 +2737,11 @@ function oy_block_loop() {
 }
 
 function oy_block_process(oy_command_execute, oy_diff_flag) {
+    let oy_command_allocate = function(oy_command_data) {
+        OY_BLOCK[2][oy_command_data[0]] = oy_command_data[1];
+        OY_BLOCK_NEW[oy_command_data[0]] = oy_command_data[1];
+        if (oy_diff_flag===true) OY_DIFF_TRACK[2].push(oy_command_data);
+    };
     for (let i in oy_command_execute) {
         //["OY_AKOYA_SEND", -1, oy_key_public, oy_transfer_amount, oy_receive_public]
         if (oy_command_execute[i][1][0]==="OY_AKOYA_SEND"&&OY_BLOCK_COMMANDS[oy_command_execute[i][1][0]][0](oy_command_execute[i][1])) {
@@ -2753,30 +2758,30 @@ function oy_block_process(oy_command_execute, oy_diff_flag) {
                 if (OY_BLOCK[3][oy_command_execute[i][1][2]]<=0) delete OY_BLOCK[3][oy_command_execute[i][1][2]];
                 if (OY_BLOCK[3][oy_command_execute[i][1][4]]<=0) delete OY_BLOCK[3][oy_command_execute[i][1][4]];
 
-                OY_BLOCK[2][oy_command_execute[i][0]] = oy_command_execute[i][1];
-                OY_BLOCK_NEW[oy_command_execute[i][0]] = oy_command_execute[i][1];
-                if (oy_diff_flag===true) OY_DIFF_TRACK[2].push(oy_command_execute[i]);
+                oy_command_allocate(oy_command_execute[i]);
             }
         }
         //["OY_DNS_BID", -1, oy_key_public, oy_dns_name, oy_bid_amount]
         else if (oy_command_execute[i][1][0]==="OY_DNS_BID"&&OY_BLOCK_COMMANDS[oy_command_execute[i][1][0]][0](oy_command_execute[i][1])) {
+            if (typeof(OY_BLOCK[4][oy_command_execute[i][1][3]])==="undefined") {
+                OY_BLOCK[4][oy_command_execute[i][1][3]] = ["A", "", ""];//[owner, point, nav]
+            }
+            OY_BLOCK[5][oy_command_execute[i][1][3]] = [oy_command_execute[i][1][2], oy_command_execute[i][1][4], OY_BLOCK_TIME+OY_DNS_AUCTION_DURATION];//[bid holder, bid amount, auction expire]
+            //TODO encoding and length check for dns_name
 
+            oy_command_allocate(oy_command_execute[i]);
         }
         //["OY_DNS_TRANSFER", -1, oy_key_public, oy_dns_name, oy_receive_public]
         else if (oy_command_execute[i][1][0]==="OY_DNS_TRANSFER"&&OY_BLOCK_COMMANDS[oy_command_execute[i][1][0]][0](oy_command_execute[i][1])) {
             OY_BLOCK[4][oy_command_execute[i][1][3]][0] = oy_command_execute[i][1][4];
 
-            OY_BLOCK[2][oy_command_execute[i][0]] = oy_command_execute[i][1];
-            OY_BLOCK_NEW[oy_command_execute[i][0]] = oy_command_execute[i][1];
-            if (oy_diff_flag===true) OY_DIFF_TRACK[2].push(oy_command_execute[i]);
+            oy_command_allocate(oy_command_execute[i]);
         }
         //["OY_DNS_RELEASE", -1, oy_key_public, oy_dns_name]
         else if (oy_command_execute[i][1][0]==="OY_DNS_RELEASE"&&OY_BLOCK_COMMANDS[oy_command_execute[i][1][0]][0](oy_command_execute[i][1])) {
             delete OY_BLOCK[4][oy_command_execute[i][1][3]];
 
-            OY_BLOCK[2][oy_command_execute[i][0]] = oy_command_execute[i][1];
-            OY_BLOCK_NEW[oy_command_execute[i][0]] = oy_command_execute[i][1];
-            if (oy_diff_flag===true) OY_DIFF_TRACK[2].push(oy_command_execute[i]);
+            oy_command_allocate(oy_command_execute[i]);
         }
     }
 }
