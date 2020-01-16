@@ -1058,6 +1058,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         OY_BLOCK_NEW = {};
 
         for (let oy_key_public in OY_BLOCK[3]) {
+            if (oy_key_public==="oy_escrow_dns") continue;
             OY_BLOCK[3][oy_key_public] -= OY_AKOYA_FEE;
             OY_BLOCK[3][oy_key_public] = Math.max(OY_BLOCK[3][oy_key_public], 0);
             if (OY_BLOCK[3][oy_key_public]<=0) delete OY_BLOCK[3][oy_key_public];
@@ -2348,6 +2349,7 @@ function oy_block_loop() {
         //BLOCK SEED--------------------------------------------------
         if (OY_LIGHT_MODE===false&&OY_BLOCK_TIME===OY_BLOCK_BOOTTIME) {
             OY_BLOCK = [null, [], {}, {}, {}, {}, {}, {}];//the current meshblock
+            OY_BLOCK[3]["oy_escrow_dns"] = 0;
 
             //SEED DEFINITION------------------------------------
             OY_BLOCK[3][OY_KEY_BRUNO] = 1000000*OY_AKOYA_DECIMALS;
@@ -2690,6 +2692,7 @@ function oy_block_loop() {
             let oy_dive_bounty = 0;
             for (let oy_key_public in OY_BLOCK[3]) {
                 oy_supply_pre += OY_BLOCK[3][oy_key_public];
+                if (oy_key_public==="oy_escrow_dns") continue;
                 let oy_balance_prev = OY_BLOCK[3][oy_key_public];
                 OY_BLOCK[3][oy_key_public] -= OY_AKOYA_FEE;
                 OY_BLOCK[3][oy_key_public] = Math.max(OY_BLOCK[3][oy_key_public], 0);
@@ -2781,10 +2784,36 @@ function oy_block_process(oy_command_execute, oy_diff_flag) {
         }
         //["OY_DNS_BID", -1, oy_key_public, oy_dns_name, oy_bid_amount]
         else if (oy_command_execute[i][1][0]==="OY_DNS_BID"&&OY_BLOCK_COMMANDS[oy_command_execute[i][1][0]][0](oy_command_execute[i][1])) {
-            if (typeof(OY_BLOCK[4][oy_command_execute[i][1][3]])==="undefined") OY_BLOCK[4][oy_command_execute[i][1][3]] = ["A", "", ""];//[owner, point, nav]
-            OY_BLOCK[5][oy_command_execute[i][1][3]] = [oy_command_execute[i][1][2], oy_command_execute[i][1][4], OY_BLOCK_TIME+OY_DNS_AUCTION_DURATION];//[bid holder, bid amount, auction expire]
+            let oy_balance_send = OY_BLOCK[3][oy_command_execute[i][1][2]];
+            let oy_balance_receive = OY_BLOCK[3]["oy_escrow_dns"];
+            OY_BLOCK[3][oy_command_execute[i][1][2]] -= oy_command_execute[i][1][4];
+            OY_BLOCK[3]["oy_escrow_dns"] += oy_command_execute[i][1][4];
+            if (OY_BLOCK[3][oy_command_execute[i][1][2]]+OY_BLOCK[3]["oy_escrow_dns"]!==oy_balance_send+oy_balance_receive) {//verify balances, revert transaction if necessary
+                OY_BLOCK[3][oy_command_execute[i][1][2]] = oy_balance_send;
+                OY_BLOCK[3]["oy_escrow_dns"] = oy_balance_receive;
+            }
+            else {
+                let oy_bid_pass = false;
+                if (typeof(OY_BLOCK[5][oy_command_execute[i][1][3]])!=="undefined") {
+                    if (typeof(OY_BLOCK[3][OY_BLOCK[5][oy_command_execute[i][1][3]][0]])==="undefined") OY_BLOCK[3][OY_BLOCK[5][oy_command_execute[i][1][3]][0]] = 0;
+                    let oy_balance_send = OY_BLOCK[3]["oy_escrow_dns"];
+                    let oy_balance_receive = OY_BLOCK[3][OY_BLOCK[5][oy_command_execute[i][1][3]][0]];
+                    OY_BLOCK[3]["oy_escrow_dns"] -= OY_BLOCK[3][OY_BLOCK[5][oy_command_execute[i][1][3]][1]];
+                    OY_BLOCK[3][OY_BLOCK[5][oy_command_execute[i][1][3]][0]] += OY_BLOCK[3][OY_BLOCK[5][oy_command_execute[i][1][3]][1]];
+                    if (OY_BLOCK[3]["oy_escrow_dns"]+OY_BLOCK[3][OY_BLOCK[5][oy_command_execute[i][1][3]][0]]!==oy_balance_send+oy_balance_receive) {//verify balances, revert transaction if necessary
+                        OY_BLOCK[3]["oy_escrow_dns"] = oy_balance_send;
+                        if (oy_balance_receive===0) delete OY_BLOCK[3][OY_BLOCK[5][oy_command_execute[i][1][3]][0]];
+                        else OY_BLOCK[3][OY_BLOCK[5][oy_command_execute[i][1][3]][0]] = oy_balance_receive;
+                    }
+                    else oy_bid_pass = true;
+                }
+                else oy_bid_pass = true;
 
-            //TODO send funds to escrow, refund for those outbid. Exception for no akoya fee on escrow wallet
+                if (oy_bid_pass===true) {
+                    if (typeof(OY_BLOCK[4][oy_command_execute[i][1][3]])==="undefined") OY_BLOCK[4][oy_command_execute[i][1][3]] = ["A", "", ""];//[owner, point, nav]
+                    OY_BLOCK[5][oy_command_execute[i][1][3]] = [oy_command_execute[i][1][2], oy_command_execute[i][1][4], OY_BLOCK_TIME+OY_DNS_AUCTION_DURATION];//[bid holder, bid amount, auction expire]
+                }
+            }
 
             oy_command_allocate(oy_command_execute[i]);
         }
