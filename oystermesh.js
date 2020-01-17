@@ -51,7 +51,8 @@ const OY_DNS_AUCTION_DURATION = 259200;//seconds of auction duration since lates
 const OY_DNS_OWNER_DURATION = 2592000;//seconds worth of ownership solvency required to bid - 30 days worth
 const OY_DNS_NAME_LIMIT = 32;//max length of a mesh domain name
 const OY_DNS_NAV_LIMIT = 1024;//max length
-const OY_DNS_FEE = 0.00001*OY_AKOYA_DECIMALS;//akoya fee per block
+const OY_DNS_FEE = 0.00001*OY_AKOYA_DECIMALS;//dns fee per block
+const OY_META_FEE = 0.0001*OY_AKOYA_DECIMALS;//meta fee per block
 const OY_NODE_TOLERANCE = 3;//max amount of protocol communication violations until node is blacklisted
 const OY_NODE_BLACKTIME = 300;//seconds to blacklist a punished node for
 const OY_NODE_PROPOSETIME = 12;//seconds for peer proposal session duration
@@ -1074,30 +1075,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
         OY_BLOCK_NEW = {};
 
-        for (let oy_key_public in OY_BLOCK[3]) {
-            if (oy_key_public==="oy_escrow_dns") continue;
-            OY_BLOCK[3][oy_key_public] -= OY_AKOYA_FEE;
-            OY_BLOCK[3][oy_key_public] = Math.max(OY_BLOCK[3][oy_key_public], 0);
-            if (OY_BLOCK[3][oy_key_public]<=0) delete OY_BLOCK[3][oy_key_public];
-        }
-
-        for (let oy_dns_name in OY_BLOCK[4]) {
-            if (OY_BLOCK[4][oy_dns_name][0]==="A") continue;
-            if (typeof(OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]])==="undefined") delete OY_BLOCK[4][oy_dns_name];
-            else {
-                OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]] -= OY_DNS_FEE;
-                OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]] = Math.max(OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]], 0);
-                if (OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]]<=0) delete OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]];
-            }
-        }
-
-        for (let oy_dns_name in OY_BLOCK[5]) {
-            if (OY_BLOCK[5][oy_dns_name][2]<=OY_BLOCK_TIME) {
-                OY_BLOCK[3]["oy_escrow_dns"] -= OY_BLOCK[5][oy_dns_name][1];
-                OY_BLOCK[4][oy_dns_name][0] = OY_BLOCK[5][oy_dns_name][0];
-                delete OY_BLOCK[5][oy_dns_name];
-            }
-        }
+        oy_block_amend(false);
 
         if (oy_diff_track[1].length>0) {
             let oy_dive_share = oy_diff_track[1].shift();
@@ -2723,38 +2701,7 @@ function oy_block_loop() {
 
             OY_DIFF_TRACK[0][0] = OY_MESH_RANGE;
 
-            let oy_supply_pre = 0;
-            let oy_dive_bounty = 0;
-            for (let oy_key_public in OY_BLOCK[3]) {
-                oy_supply_pre += OY_BLOCK[3][oy_key_public];
-                if (oy_key_public==="oy_escrow_dns") continue;
-                let oy_balance_prev = OY_BLOCK[3][oy_key_public];
-                OY_BLOCK[3][oy_key_public] -= OY_AKOYA_FEE;
-                OY_BLOCK[3][oy_key_public] = Math.max(OY_BLOCK[3][oy_key_public], 0);
-                oy_dive_bounty += oy_balance_prev - OY_BLOCK[3][oy_key_public];
-                if (OY_BLOCK[3][oy_key_public]<=0) delete OY_BLOCK[3][oy_key_public];
-            }
-
-            for (let oy_dns_name in OY_BLOCK[4]) {
-                if (OY_BLOCK[4][oy_dns_name][0]==="A") continue;
-                if (typeof(OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]])==="undefined") delete OY_BLOCK[4][oy_dns_name];
-                else {
-                    let oy_balance_prev = OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]];
-                    OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]] -= OY_DNS_FEE;
-                    OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]] = Math.max(OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]], 0);
-                    oy_dive_bounty += oy_balance_prev - OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]];
-                    if (OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]]<=0) delete OY_BLOCK[3][OY_BLOCK[4][oy_dns_name][0]];
-                }
-            }
-
-            for (let oy_dns_name in OY_BLOCK[5]) {
-                if (OY_BLOCK[5][oy_dns_name][2]<=OY_BLOCK_TIME) {
-                    OY_BLOCK[3]["oy_escrow_dns"] -= OY_BLOCK[5][oy_dns_name][1];
-                    oy_dive_bounty += OY_BLOCK[5][oy_dns_name][1];
-                    OY_BLOCK[4][oy_dns_name][0] = OY_BLOCK[5][oy_dns_name][0];
-                    delete OY_BLOCK[5][oy_dns_name];
-                }
-            }
+            let [oy_supply_pre, oy_dive_bounty] = oy_block_amend(true);
 
             if (oy_dive_reward_pool.length>0) {
                 let oy_dive_share = Math.floor(oy_dive_bounty/oy_dive_reward_pool.length);//TODO verify math to make sure odd balances don't cause a gradual decrease of the entire supply
@@ -2813,11 +2760,66 @@ function oy_block_loop() {
     }
 }
 
-function oy_block_process(oy_command_execute, oy_diff_flag) {
+function oy_block_amend(oy_full_flag) {
+    let oy_supply_pre = 0;
+    let oy_dive_bounty = 0;
+
+    for (let oy_key_public in OY_BLOCK[3]) {
+        if (oy_full_flag===true) oy_supply_pre += OY_BLOCK[3][oy_key_public];
+        if (oy_key_public==="oy_escrow_dns") continue;
+        let oy_balance_prev = OY_BLOCK[3][oy_key_public];
+        OY_BLOCK[3][oy_key_public] -= OY_AKOYA_FEE;
+        OY_BLOCK[3][oy_key_public] = Math.max(OY_BLOCK[3][oy_key_public], 0);
+        if (oy_full_flag===true) oy_dive_bounty += oy_balance_prev - OY_BLOCK[3][oy_key_public];
+        if (OY_BLOCK[3][oy_key_public]<=0) delete OY_BLOCK[3][oy_key_public];
+    }
+
+    for (let oy_dns_name in OY_BLOCK[4]) {
+        if (OY_BLOCK[4][oy_dns_name][0]==="A") continue;
+        let oy_akoya_wallet;
+        if (OY_BLOCK[4][oy_dns_name][0]==="") oy_akoya_wallet = oy_dns_name;
+        else oy_akoya_wallet = OY_BLOCK[4][oy_dns_name][0];
+        if (typeof(OY_BLOCK[3][oy_akoya_wallet])==="undefined") delete OY_BLOCK[4][oy_dns_name];
+        else {
+            let oy_balance_prev = OY_BLOCK[3][oy_akoya_wallet];
+            OY_BLOCK[3][oy_akoya_wallet] -= OY_DNS_FEE;
+            OY_BLOCK[3][oy_akoya_wallet] = Math.max(OY_BLOCK[3][oy_akoya_wallet], 0);
+            if (oy_full_flag===true) oy_dive_bounty += oy_balance_prev - OY_BLOCK[3][oy_akoya_wallet];
+            if (OY_BLOCK[3][oy_akoya_wallet]<=0) delete OY_BLOCK[3][oy_akoya_wallet];
+        }
+    }
+
+    for (let oy_dns_name in OY_BLOCK[5]) {
+        if (OY_BLOCK[5][oy_dns_name][2]<=OY_BLOCK_TIME) {
+            OY_BLOCK[3]["oy_escrow_dns"] -= OY_BLOCK[5][oy_dns_name][1];
+            if (oy_full_flag===true) oy_dive_bounty += OY_BLOCK[5][oy_dns_name][1];
+            OY_BLOCK[4][oy_dns_name][0] = OY_BLOCK[5][oy_dns_name][0];
+            delete OY_BLOCK[5][oy_dns_name];
+        }
+    }
+
+    for (let oy_entropy_id in OY_BLOCK[6]) {
+        let oy_akoya_wallet;
+        if (OY_BLOCK[6][oy_entropy_id][0]==="") oy_akoya_wallet = oy_entropy_id;
+        else oy_akoya_wallet = OY_BLOCK[6][oy_entropy_id][0];
+        if (typeof(OY_BLOCK[3][oy_akoya_wallet])==="undefined") delete OY_BLOCK[6][oy_entropy_id];
+        else {
+            let oy_balance_prev = OY_BLOCK[3][oy_akoya_wallet];
+            OY_BLOCK[3][oy_akoya_wallet] -= OY_META_FEE;
+            OY_BLOCK[3][oy_akoya_wallet] = Math.max(OY_BLOCK[3][oy_akoya_wallet], 0);
+            if (oy_full_flag===true) oy_dive_bounty += oy_balance_prev - OY_BLOCK[3][oy_akoya_wallet];
+            if (OY_BLOCK[3][oy_akoya_wallet]<=0) delete OY_BLOCK[3][oy_akoya_wallet];
+        }
+    }
+
+    if (oy_full_flag===true) return [oy_supply_pre, oy_dive_bounty];
+}
+
+function oy_block_process(oy_command_execute, oy_full_flag) {
     let oy_command_allocate = function(oy_command_data) {
         OY_BLOCK[2][oy_command_data[0]] = oy_command_data[1];
         OY_BLOCK_NEW[oy_command_data[0]] = oy_command_data[1];
-        if (oy_diff_flag===true) OY_DIFF_TRACK[2].push(oy_command_data);
+        if (oy_full_flag===true) OY_DIFF_TRACK[2].push(oy_command_data);
     };
     for (let i in oy_command_execute) {
         //["OY_AKOYA_SEND", -1, oy_key_public, oy_transfer_amount, oy_receive_public]
