@@ -49,10 +49,11 @@ const OY_AKOYA_MAX_SUPPY = 10000000*OY_AKOYA_DECIMALS;//akoya max supply
 const OY_AKOYA_FEE = 0.000001*OY_AKOYA_DECIMALS;//akoya fee per block
 const OY_DNS_AUCTION_DURATION = 259200;//seconds of auction duration since latest valid bid - 3 days worth
 const OY_DNS_OWNER_DURATION = 2592000;//seconds worth of ownership solvency required to bid - 30 days worth
-const OY_DNS_NAME_LIMIT = 32;//max length of a mesh domain name
+const OY_DNS_NAME_LIMIT = 32;//max length of a mesh domain name - must be shorter than akoya public_key length for security reasons
 const OY_DNS_NAV_LIMIT = 1024;//max length
 const OY_DNS_FEE = 0.00001*OY_AKOYA_DECIMALS;//dns fee per block
 const OY_META_FEE = 0.0001*OY_AKOYA_DECIMALS;//meta fee per block
+const OY_NULLING_BUFFER = 0.001*OY_AKOYA_DECIMALS;
 const OY_NODE_TOLERANCE = 3;//max amount of protocol communication violations until node is blacklisted
 const OY_NODE_BLACKTIME = 300;//seconds to blacklist a punished node for
 const OY_NODE_PROPOSETIME = 12;//seconds for peer proposal session duration
@@ -104,6 +105,7 @@ const OY_SHORT_LENGTH = 6;//various data value such as nonce IDs, data handles, 
 // PRE-CALCULATED VARS
 const OY_DNS_AUCTION_MIN = (OY_AKOYA_FEE+OY_DNS_FEE)*(OY_DNS_AUCTION_DURATION/20);
 const OY_DNS_OWNER_MIN = (OY_AKOYA_FEE+OY_DNS_FEE)*OY_DNS_AUCTION_MIN+(OY_AKOYA_FEE*(OY_DNS_OWNER_DURATION/20));
+//const OY_META_OWNER_MIN
 
 // INIT
 let OY_LIGHT_MODE = true;//seek to stay permanently connected to the mesh as a light node/latch, manipulable by the user
@@ -232,7 +234,10 @@ let OY_BLOCK_COMMANDS = {
             oy_command_array[3].length<=OY_DNS_NAME_LIMIT&&//check that the domain name's length is compliant
             oy_an_check(oy_command_array[3])&&//check that the domain name is fully alphanumeric
             typeof(OY_BLOCK[4][oy_command_array[3]])!=="undefined"&&//check that oy_dns_name exists in the dns_sector of the meshblock
-            OY_BLOCK[4][oy_command_array[3]][0]===oy_command_array[2]) return true;//check that oy_key_public owns oy_dns_name
+            OY_BLOCK[4][oy_command_array[3]][0]===oy_command_array[2]&&//check that oy_key_public owns oy_dns_name
+            oy_command_array[4]>=OY_DNS_OWNER_MIN&&//check that the nulling amount complies with DNS_OWNER_MIN funding requirement
+            typeof(OY_BLOCK[3][oy_command_array[2]])!=="undefined"&&//check that oy_key_public has a positive balance in the akoya ledger
+            OY_BLOCK[3][oy_command_array[2]]>=oy_command_array[4]+OY_NULLING_BUFFER) return true;//check that oy_key_public has sufficient akoya to execute the nulling event
         return false;
     }],
     "OY_META_SET":[function(oy_command_array) {
@@ -2816,11 +2821,6 @@ function oy_block_amend(oy_full_flag) {
 }
 
 function oy_block_process(oy_command_execute, oy_full_flag) {
-    let oy_command_allocate = function(oy_command_data) {
-        OY_BLOCK[2][oy_command_data[0]] = oy_command_data[1];
-        OY_BLOCK_NEW[oy_command_data[0]] = oy_command_data[1];
-        if (oy_full_flag===true) OY_DIFF_TRACK[2].push(oy_command_data);
-    };
     for (let i in oy_command_execute) {
         //["OY_AKOYA_SEND", -1, oy_key_public, oy_transfer_amount, oy_receive_public]
         if (oy_command_execute[i][1][0]==="OY_AKOYA_SEND"&&OY_BLOCK_COMMANDS[oy_command_execute[i][1][0]][0](oy_command_execute[i][1])) {
@@ -2832,19 +2832,16 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
             if (OY_BLOCK[3][oy_command_execute[i][1][2]]+OY_BLOCK[3][oy_command_execute[i][1][4]]!==oy_balance_send+oy_balance_receive) {//verify balances, revert transaction if necessary
                 OY_BLOCK[3][oy_command_execute[i][1][2]] = oy_balance_send;
                 OY_BLOCK[3][oy_command_execute[i][1][4]] = oy_balance_receive;
+                continue;
             }
             else {
                 if (OY_BLOCK[3][oy_command_execute[i][1][2]]<=0) delete OY_BLOCK[3][oy_command_execute[i][1][2]];
                 if (OY_BLOCK[3][oy_command_execute[i][1][4]]<=0) delete OY_BLOCK[3][oy_command_execute[i][1][4]];
-
-                oy_command_allocate(oy_command_execute[i]);
             }
         }
         //["OY_DNS_MODIFY", -1, oy_key_public, oy_dns_name, oy_nav_set]
         else if (oy_command_execute[i][1][0]==="OY_DNS_MODIFY"&&OY_BLOCK_COMMANDS[oy_command_execute[i][1][0]][0](oy_command_execute[i][1])) {
             OY_BLOCK[4][oy_command_execute[i][1][3]][1] = oy_command_execute[i][1][4];
-
-            oy_command_allocate(oy_command_execute[i]);
         }
         //["OY_DNS_BID", -1, oy_key_public, oy_dns_name, oy_bid_amount]
         else if (oy_command_execute[i][1][0]==="OY_DNS_BID"&&OY_BLOCK_COMMANDS[oy_command_execute[i][1][0]][0](oy_command_execute[i][1])) {
@@ -2855,6 +2852,7 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
             if (OY_BLOCK[3][oy_command_execute[i][1][2]]+OY_BLOCK[3]["oy_escrow_dns"]!==oy_balance_send+oy_balance_receive) {//verify balances, revert transaction if necessary
                 OY_BLOCK[3][oy_command_execute[i][1][2]] = oy_balance_send;
                 OY_BLOCK[3]["oy_escrow_dns"] = oy_balance_receive;
+                continue;
             }
             else {
                 let oy_bid_pass = false;
@@ -2878,25 +2876,36 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
                     OY_BLOCK[5][oy_command_execute[i][1][3]] = [oy_command_execute[i][1][2], oy_command_execute[i][1][4], OY_BLOCK_TIME+OY_DNS_AUCTION_DURATION];//[bid holder, bid amount, auction expire]
                 }
             }
-
-            oy_command_allocate(oy_command_execute[i]);
         }
         //["OY_DNS_TRANSFER", -1, oy_key_public, oy_dns_name, oy_receive_public]
         else if (oy_command_execute[i][1][0]==="OY_DNS_TRANSFER"&&OY_BLOCK_COMMANDS[oy_command_execute[i][1][0]][0](oy_command_execute[i][1])) {
             OY_BLOCK[4][oy_command_execute[i][1][3]][0] = oy_command_execute[i][1][4];
-
-            oy_command_allocate(oy_command_execute[i]);
         }
         //["OY_DNS_RELEASE", -1, oy_key_public, oy_dns_name]
         else if (oy_command_execute[i][1][0]==="OY_DNS_RELEASE"&&OY_BLOCK_COMMANDS[oy_command_execute[i][1][0]][0](oy_command_execute[i][1])) {
             delete OY_BLOCK[4][oy_command_execute[i][1][3]];
-
-            oy_command_allocate(oy_command_execute[i]);
         }
         //["OY_DNS_NULLING", -1, oy_key_public, oy_dns_name, oy_nulling_amount]
         else if (oy_command_execute[i][1][0]==="OY_DNS_NULLING"&&OY_BLOCK_COMMANDS[oy_command_execute[i][1][0]][0](oy_command_execute[i][1])) {
-            OY_BLOCK[4][oy_command_execute[i][1][3]][0] = "";
+            let oy_balance_send = OY_BLOCK[3][oy_command_execute[i][1][2]];
+            OY_BLOCK[3][oy_command_execute[i][1][2]] -= oy_command_execute[i][1][4];
+            OY_BLOCK[3][oy_command_execute[i][1][3]] = oy_command_execute[i][1][4];
+            if (OY_BLOCK[3][oy_command_execute[i][1][2]]+OY_BLOCK[3][oy_command_execute[i][1][3]]!==oy_balance_send) {//verify balances, revert transaction if necessary
+                OY_BLOCK[3][oy_command_execute[i][1][2]] = oy_balance_send;
+                delete OY_BLOCK[3][oy_command_execute[i][1][3]];
+                continue;
+            }
+            else OY_BLOCK[4][oy_command_execute[i][1][3]][0] = "";
         }
+        //["OY_META_SET", -1, oy_key_public, oy_meta_data]
+        else if (oy_command_execute[i][1][0]==="OY_META_SET"&&OY_BLOCK_COMMANDS[oy_command_execute[i][1][0]][0](oy_command_execute[i][1])) {
+            let oy_entropy_id = oy_hash_gen(OY_BLOCK_HASH+oy_command_execute[i][0]);//recycle meshblock entropy to ensure random meta handles are assigned in a decentralized manner
+            if (typeof(OY_BLOCK[6][oy_entropy_id])!=="undefined") continue;//there is a nonzero chance that a legitimate META_SET transaction would get rejected and need to be tried again
+            else OY_BLOCK[6][oy_entropy_id] = [oy_command_execute[i][1][2], oy_command_execute[i][1][3]];
+        }
+        OY_BLOCK[2][oy_command_execute[i][0]] = oy_command_execute[i][1];
+        OY_BLOCK_NEW[oy_command_execute[i][0]] = oy_command_execute[i][1];
+        if (oy_full_flag===true) OY_DIFF_TRACK[2].push(oy_command_execute[i]);
     }
 }
 
