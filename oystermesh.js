@@ -46,7 +46,8 @@ const OY_CHALLENGE_SAFETY = 0.5;//safety margin for rogue packets reaching block
 const OY_CHALLENGE_BUFFER = 1.8;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (min of 1)
 const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
 const OY_AKOYA_MAX_SUPPY = 10000000*OY_AKOYA_DECIMALS;//akoya max supply
-const OY_AKOYA_FEE = 0.000001*OY_AKOYA_DECIMALS;//akoya fee per block
+const OY_AKOYA_FEE_BLOCK = 0.000001*OY_AKOYA_DECIMALS;//akoya fee per block
+const OY_AKOYA_FEE_WALLET = 0.001*OY_AKOYA_DECIMALS;//akoya fee per wallet creation
 const OY_DNS_AUCTION_DURATION = 259200;//seconds of auction duration since latest valid bid - 3 days worth
 const OY_DNS_OWNER_DURATION = 2592000;//seconds worth of ownership solvency required to bid - 30 days worth
 const OY_DNS_NAME_LIMIT = 32;//max length of a mesh domain name - must be shorter than akoya public_key length for security reasons
@@ -105,8 +106,8 @@ const OY_KEY_BRUNO = "JSJqmlzAxwuINY2FCpWPJYvKIK1AjavBgkIwIm139k4M";//prevent im
 const OY_SHORT_LENGTH = 6;//various data value such as nonce IDs, data handles, data values are shortened for efficiency
 
 // PRE-CALCULATED VARS
-const OY_DNS_AUCTION_MIN = (OY_AKOYA_FEE+OY_DNS_FEE)*(OY_DNS_AUCTION_DURATION/20);
-const OY_DNS_OWNER_MIN = (OY_AKOYA_FEE+OY_DNS_FEE)*OY_DNS_AUCTION_MIN+(OY_AKOYA_FEE*(OY_DNS_OWNER_DURATION/20));
+const OY_DNS_AUCTION_MIN = (OY_AKOYA_FEE_BLOCK+OY_DNS_FEE)*(OY_DNS_AUCTION_DURATION/20);
+const OY_DNS_OWNER_MIN = (OY_AKOYA_FEE_BLOCK+OY_DNS_FEE)*OY_DNS_AUCTION_MIN+(OY_AKOYA_FEE_BLOCK*(OY_DNS_OWNER_DURATION/20));
 //const OY_META_OWNER_MIN
 
 // INIT
@@ -174,11 +175,17 @@ let OY_BLOCK_COMMANDS = {
             oy_command_array[3]>0&&//check that the sending amount is greater than zero
             oy_command_array[3]<OY_AKOYA_MAX_SUPPY&&//check that the sending amount smaller than the max supply
             typeof(OY_BLOCK[3][oy_command_array[2]])!=="undefined"&&//check that the sending wallet exists
+            oy_key_check(oy_command_array[4])&&//check that the receiving address is a valid address
+            (typeof(OY_BLOCK[3][oy_command_array[4]])!=="undefined"||oy_command_array[3]>OY_AKOYA_FEE_WALLET+OY_AKOYA_FEE_BLOCK)&&//enforce akoya wallet creation fees
             OY_BLOCK[3][oy_command_array[2]]>=oy_command_array[3]&&//check that the sending wallet has sufficient akoya
-            oy_command_array[2]!==oy_command_array[4]&&//check that the sender and the receiver are different
-            oy_key_check(oy_command_array[4]));//check that the receiving address is a valid address
+            oy_command_array[2]!==oy_command_array[4]);//check that the sender and the receiver are different
         //TODO - either one wallet transaction per block or need additional checks
     }],
+    //["OY_AKOYA_SINK", -1, oy_key_public, oy_sink_amount]
+    "OY_AKOYA_SINK":[function(oy_command_array) {
+        return (oy_command_array.length===4);//check the element count in the command
+    }],
+    //["OY_AKOYA_SINK", -1, oy_key_public, oy_burn_amount]
     "OY_AKOYA_BURN":[function(oy_command_array) {
         return (oy_command_array.length===4);//check the element count in the command
         //TODO
@@ -1073,7 +1080,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
         OY_BLOCK_NEW = {};
 
-        oy_block_amend(false);
+        oy_block_process(oy_diff_track[2], false);
 
         if (oy_diff_track[1].length>0) {
             let oy_dive_share = oy_diff_track[1].shift();
@@ -1082,7 +1089,6 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                 else OY_BLOCK[3][oy_diff_track[1][i]] += oy_dive_share;
             }
         }
-        if (oy_diff_track[2].length>0) oy_block_process(oy_diff_track[2], false);
 
         OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK);
 
@@ -2699,9 +2705,9 @@ function oy_block_loop() {
 
             OY_DIFF_TRACK[0][0] = OY_MESH_RANGE;
 
-            let [oy_supply_pre, oy_dive_bounty] = oy_block_amend(true);
+            let oy_dive_bounty = oy_block_process(oy_command_execute, true);
 
-            if (oy_dive_reward_pool.length>0) {
+            if (oy_dive_bounty>0&&oy_dive_reward_pool.length>0) {
                 let oy_dive_share = Math.floor(oy_dive_bounty/oy_dive_reward_pool.length);//TODO verify math to make sure odd balances don't cause a gradual decrease of the entire supply
                 if (oy_dive_share>0) {
                     OY_DIFF_TRACK[1].push(oy_dive_share);
@@ -2715,17 +2721,6 @@ function oy_block_loop() {
             }
 
             //oy_log_debug("EXECUTE: "+JSON.stringify(oy_command_execute));
-
-            if (oy_time_local-OY_BLOCK_BOOTTIME>OY_BLOCK_BOOT_BUFFER) {//only allow transactions after the meshblock boot-up sequence is complete
-                oy_block_process(oy_command_execute, true);
-
-                let oy_supply_post = 0;
-                for (let oy_key_public in OY_BLOCK[3]) {
-                    oy_supply_post += OY_BLOCK[3][oy_key_public];
-                }
-
-                if (oy_supply_post>oy_supply_pre||oy_supply_post>OY_AKOYA_MAX_SUPPY) return false;//confirms that the supply has not increased nor breached AKOYA_MAX_SUPPLY
-            }
 
             OY_BLOCK_CHALLENGE = {};
 
@@ -2758,15 +2753,18 @@ function oy_block_loop() {
     }
 }
 
-function oy_block_amend(oy_full_flag) {
+function oy_block_process(oy_command_execute, oy_full_flag) {
     let oy_supply_pre = 0;
     let oy_dive_bounty = 0;
 
+    if (OY_BLOCK_TIME-OY_BLOCK_BOOTTIME<=OY_BLOCK_BOOT_BUFFER) return oy_dive_bounty;//transactions and fees are paused whilst the mesh calibrates its initial topology
+
+    //AMEND-----------------------------------
     for (let oy_key_public in OY_BLOCK[3]) {
         if (oy_full_flag===true) oy_supply_pre += OY_BLOCK[3][oy_key_public];
         if (oy_key_public==="oy_escrow_dns") continue;
         let oy_balance_prev = OY_BLOCK[3][oy_key_public];
-        OY_BLOCK[3][oy_key_public] -= OY_AKOYA_FEE;
+        OY_BLOCK[3][oy_key_public] -= OY_AKOYA_FEE_BLOCK;
         OY_BLOCK[3][oy_key_public] = Math.max(OY_BLOCK[3][oy_key_public], 0);
         if (oy_full_flag===true) oy_dive_bounty += oy_balance_prev - OY_BLOCK[3][oy_key_public];
         if (OY_BLOCK[3][oy_key_public]<=0) delete OY_BLOCK[3][oy_key_public];
@@ -2813,15 +2811,17 @@ function oy_block_amend(oy_full_flag) {
     //TODO process META apps with flag 1 (hivemind)
 
     //TODO channel sector, made redundant by META?
+    //AMEND-----------------------------------
 
-    if (oy_full_flag===true) return [oy_supply_pre, oy_dive_bounty];
-}
-
-function oy_block_process(oy_command_execute, oy_full_flag) {
+    //TRANSACT--------------------------------
     for (let i in oy_command_execute) {
         //["OY_AKOYA_SEND", -1, oy_key_public, oy_transfer_amount, oy_receive_public]
         if (oy_command_execute[i][1][0]==="OY_AKOYA_SEND"&&OY_BLOCK_COMMANDS[oy_command_execute[i][1][0]][0](oy_command_execute[i][1])) {
-            if (typeof(OY_BLOCK[3][oy_command_execute[i][1][4]])==="undefined") OY_BLOCK[3][oy_command_execute[i][1][4]] = 0;
+            let oy_wallet_create = false;
+            if (typeof(OY_BLOCK[3][oy_command_execute[i][1][4]])==="undefined") {
+                OY_BLOCK[3][oy_command_execute[i][1][4]] = 0;
+                oy_wallet_create = true;
+            }
             let oy_balance_send = OY_BLOCK[3][oy_command_execute[i][1][2]];
             let oy_balance_receive = OY_BLOCK[3][oy_command_execute[i][1][4]];
             OY_BLOCK[3][oy_command_execute[i][1][2]] -= oy_command_execute[i][1][3];
@@ -2832,6 +2832,7 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
                 continue;
             }
             else {
+                if (oy_wallet_create===true) OY_BLOCK[3][oy_command_execute[i][1][4]] -= OY_AKOYA_FEE_WALLET;
                 if (OY_BLOCK[3][oy_command_execute[i][1][2]]<=0) delete OY_BLOCK[3][oy_command_execute[i][1][2]];
                 if (OY_BLOCK[3][oy_command_execute[i][1][4]]<=0) delete OY_BLOCK[3][oy_command_execute[i][1][4]];
             }
@@ -2916,6 +2917,15 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
         OY_BLOCK_NEW[oy_command_execute[i][0]] = oy_command_execute[i][1];
         if (oy_full_flag===true) OY_DIFF_TRACK[2].push(oy_command_execute[i]);
     }
+    //TRANSACT--------------------------------
+
+    let oy_supply_post = 0;
+    for (let oy_key_public in OY_BLOCK[3]) {
+        oy_supply_post += OY_BLOCK[3][oy_key_public];
+    }
+    if (oy_supply_post>oy_supply_pre||oy_supply_post>OY_AKOYA_MAX_SUPPY) oy_block_reset("OY_FLAG_AKOYA_SUPPLY_OVERFLOW");//confirms that the supply has not increased nor breached AKOYA_MAX_SUPPLY
+
+    return oy_dive_bounty;
 }
 
 function oy_block_finish() {
@@ -3176,12 +3186,12 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
 
 let oy_call_detect = document.getElementById("oy.js");
 if (!!oy_call_detect) {
-let oy_dive_detect = oy_call_detect.getAttribute("payout");
-if (oy_key_check(oy_dive_detect)) {
-    OY_PASSIVE_MODE = true;
-    OY_BLOCK_DIVE_REWARD = oy_dive_detect;
-    oy_init(function() {
-        console.log("Oyster is diving for address "+OY_BLOCK_DIVE_REWARD)
-    });
-}
+    let oy_dive_detect = oy_call_detect.getAttribute("payout");
+    if (oy_key_check(oy_dive_detect)) {
+        OY_PASSIVE_MODE = true;
+        OY_BLOCK_DIVE_REWARD = oy_dive_detect;
+        oy_init(function() {
+            console.log("Oyster is diving for address "+OY_BLOCK_DIVE_REWARD)
+        });
+    }
 }
