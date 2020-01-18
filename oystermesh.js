@@ -185,7 +185,6 @@ let OY_BLOCK_COMMANDS = {
     }],
     //["OY_DNS_MODIFY", -1, oy_key_public, oy_dns_name, oy_nav_set]
     "OY_DNS_MODIFY":[function(oy_command_array) {
-        let oy_nav_set_flat = JSON.stringify(oy_command_array[4]);
         if (oy_command_array.length===5&&//check the element count in the command
             oy_command_array[3].length<=OY_DNS_NAME_LIMIT&&//check that the domain name's length is compliant
             oy_an_check(oy_command_array[3])&&//check that the domain name is fully alphanumeric
@@ -193,8 +192,7 @@ let OY_BLOCK_COMMANDS = {
             OY_BLOCK[4][oy_command_array[3]][0]===oy_command_array[2]&&//check that oy_key_public owns oy_dns_name
             typeof(oy_command_array[4])==="object"&&//check that oy_nav_set is an object
             oy_command_array[4]!==null&&//further ensure that oy_nav_set is an object
-            oy_nav_set_flat.length<=OY_DNS_NAV_LIMIT&&//check that oy_nav_set has a compliant size
-            oy_an_check(oy_nav_set_flat.replace(/{}[]'", /g, ""))) return true;//check that the contents of oy_nav_set are fully alphanumeric
+            JSON.stringify(oy_command_array[4]).length<=OY_DNS_NAV_LIMIT) return true;//check that oy_nav_set has a compliant size
         return false;
     }],
     //["OY_DNS_BID", -1, oy_key_public, oy_dns_name, oy_bid_amount]
@@ -241,12 +239,7 @@ let OY_BLOCK_COMMANDS = {
         return false;
     }],
     "OY_META_SET":[function(oy_command_array) {
-        if (oy_command_array.length===4) return true;//check the element count in the command
-        return false;
-        //TODO
-    }],
-    "OY_META_MODIFY":[function(oy_command_array) {
-        if (oy_command_array.length===4) return true;//check the element count in the command
+        if (oy_command_array.length===5) return true;//check the element count in the command
         return false;
         //TODO
     }],
@@ -2841,7 +2834,7 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
         }
         //["OY_DNS_MODIFY", -1, oy_key_public, oy_dns_name, oy_nav_set]
         else if (oy_command_execute[i][1][0]==="OY_DNS_MODIFY"&&OY_BLOCK_COMMANDS[oy_command_execute[i][1][0]][0](oy_command_execute[i][1])) {
-            OY_BLOCK[4][oy_command_execute[i][1][3]][1] = oy_command_execute[i][1][4];
+            if (oy_an_check(JSON.stringify(oy_command_execute[i][1]).replace(/{}[]'", /g, ""))) OY_BLOCK[4][oy_command_execute[i][1][3]][1] = oy_command_execute[i][1][4];//check that the contents of oy_nav_set are fully alphanumeric
         }
         //["OY_DNS_BID", -1, oy_key_public, oy_dns_name, oy_bid_amount]
         else if (oy_command_execute[i][1][0]==="OY_DNS_BID"&&OY_BLOCK_COMMANDS[oy_command_execute[i][1][0]][0](oy_command_execute[i][1])) {
@@ -2897,11 +2890,13 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
             }
             else OY_BLOCK[4][oy_command_execute[i][1][3]][0] = "";
         }
-        //["OY_META_SET", -1, oy_key_public, oy_meta_data]
+        //["OY_META_SET", -1, oy_key_public, oy_entropy_id, oy_meta_data]
         else if (oy_command_execute[i][1][0]==="OY_META_SET"&&OY_BLOCK_COMMANDS[oy_command_execute[i][1][0]][0](oy_command_execute[i][1])) {
-            let oy_entropy_id = oy_hash_gen(OY_BLOCK_HASH+oy_command_execute[i][0]);//recycle meshblock entropy to ensure random meta handles are assigned in a decentralized manner
+            let oy_entropy_id;
+            if (oy_command_execute[i][1][3]==="") oy_entropy_id = oy_hash_gen(OY_BLOCK_HASH+oy_command_execute[i][0]);//recycle meshblock entropy to ensure random meta handles are assigned in a decentralized manner
+            else oy_entropy_id = oy_command_execute[i][1][3];
             if (typeof(OY_BLOCK[6][oy_entropy_id])!=="undefined") continue;//there is a nonzero chance that a legitimate META_SET transaction would get rejected and need to be tried again
-            else OY_BLOCK[6][oy_entropy_id] = [oy_command_execute[i][1][2], oy_command_execute[i][1][3]];
+            else OY_BLOCK[6][oy_entropy_id] = [oy_command_execute[i][1][2], oy_command_execute[i][1][4]];
         }
         OY_BLOCK[2][oy_command_execute[i][0]] = oy_command_execute[i][1];
         OY_BLOCK_NEW[oy_command_execute[i][0]] = oy_command_execute[i][1];
