@@ -41,7 +41,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_BOOT_BUFFER = 120;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims dive rewards
 const OY_BLOCK_RANGE_MIN = 5;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOTTIME = 1578993300;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOTTIME = 1579373900;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_CHALLENGE_SAFETY = 0.5;//safety margin for rogue packets reaching block_consensus. 1 means no changes, lower means further from block_consensus, higher means closer.
 const OY_CHALLENGE_BUFFER = 1.8;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (min of 1)
 const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
@@ -67,7 +67,7 @@ const OY_NODE_EXPIRETIME = 600;//seconds of non-interaction until a node's conne
 const OY_BOOST_KEEP = 12;//node IDs to retain in boost memory, higher means more nodes retained but less average node quality
 const OY_BOOST_DELAY = 250;//ms delay per boost node initiation
 const OY_BOOST_EXPIRETIME = 600;//seconds until boost indexedDB retention is discarded
-const OY_LIGHT_UNLATCH_MIN = 2;//minimum amount of peers that are full nodes to allow self to unlatch and become a full node
+const OY_LIGHT_UNLATCH_MIN = 1;//minimum amount of peers that are full nodes to allow self to unlatch and become a full node
 const OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 const OY_PEER_LATENCYTIME = 60;//peers are expected to establish latency timing with each other within this interval in seconds
 const OY_PEER_KEEPTIME = 20;//peers are expected to communicate with each other within this interval in seconds
@@ -2335,6 +2335,7 @@ function oy_block_reset(oy_reset_flag) {
     }
 
     oy_log("MESHBLOCK RESET ["+oy_reset_flag+"]");
+    console.log("MESHBLOCK RESET ["+oy_reset_flag+"]");//TODO temp
 
     document.dispatchEvent(OY_BLOCK_RESET);
     document.dispatchEvent(OY_STATE_BLANK);
@@ -2643,7 +2644,7 @@ function oy_block_loop() {
             });
             if (oy_dive_reward!=="OY_NULL") oy_dive_pool.push([oy_dive_reward, OY_SELF_PUBLIC]);
             for (let oy_key_public in OY_BLOCK_SYNC) {
-                if (OY_BLOCK_SYNC[oy_key_public][0]===true&&OY_BLOCK_SYNC[oy_key_public][2][7]!=="OY_NULL") oy_dive_pool.push([OY_BLOCK_SYNC[oy_key_public][2][7], oy_key_public]);//TODO review security
+                if (OY_BLOCK_SYNC[oy_key_public][0]===true&&OY_BLOCK_SYNC[oy_key_public][2][7]!=="OY_NULL"&&typeof(OY_BLOCK[3][OY_BLOCK_SYNC[oy_key_public][2][7]])!=="undefined") oy_dive_pool.push([OY_BLOCK_SYNC[oy_key_public][2][7], oy_key_public]);//TODO review security
             }
 
             OY_BLOCK_DIVE = {};
@@ -2690,7 +2691,7 @@ function oy_block_loop() {
             let oy_dive_reward_pool = [];
             for (let oy_key_dive in OY_BLOCK_DIVE) {
                 for (let oy_key_public in OY_BLOCK_DIVE[oy_key_dive]) {
-                    if (OY_BLOCK_DIVE[oy_key_dive][oy_key_public]>=oy_node_consensus) oy_dive_reward_pool.push(oy_key_dive);
+                    if (OY_BLOCK_DIVE[oy_key_dive][oy_key_public]>=oy_node_consensus&&typeof(OY_BLOCK[3][oy_key_dive])!=="undefined") oy_dive_reward_pool.push(oy_key_dive);
                 }
             }
 
@@ -2713,8 +2714,7 @@ function oy_block_loop() {
                     OY_DIFF_TRACK[1].push(oy_dive_share);
                     for (let i in oy_dive_reward_pool) {
                         if (oy_dive_reward===oy_dive_reward_pool[i]) OY_BLOCK_DIVE_TRACK += oy_dive_share;
-                        if (typeof(OY_BLOCK[3][oy_dive_reward_pool[i]])==="undefined") OY_BLOCK[3][oy_dive_reward_pool[i]] = oy_dive_share;
-                        else OY_BLOCK[3][oy_dive_reward_pool[i]] += oy_dive_share;
+                        OY_BLOCK[3][oy_dive_reward_pool[i]] += oy_dive_share;
                         OY_DIFF_TRACK[1].push(oy_dive_reward_pool[i]);
                     }
                 }
