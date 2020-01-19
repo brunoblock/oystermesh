@@ -47,7 +47,7 @@ const OY_CHALLENGE_BUFFER = 1.8;//amount of node hop buffer for challenge broadc
 const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
 const OY_AKOYA_MAX_SUPPY = 10000000*OY_AKOYA_DECIMALS;//akoya max supply
 const OY_AKOYA_FEE_BLOCK = 0.000001*OY_AKOYA_DECIMALS;//akoya fee per block
-const OY_AKOYA_FEE_WALLET = 0.001*OY_AKOYA_DECIMALS;//akoya fee per wallet creation
+const OY_AKOYA_FEE_WALLET = 0.001*OY_AKOYA_DECIMALS;//akoya fee per wallet creation, not applied to nulling events
 const OY_DNS_AUCTION_DURATION = 259200;//seconds of auction duration since latest valid bid - 3 days worth
 const OY_DNS_OWNER_DURATION = 2592000;//seconds worth of ownership solvency required to bid - 30 days worth
 const OY_DNS_NAME_LIMIT = 32;//max length of a mesh domain name - must be shorter than akoya public_key length for security reasons
@@ -104,6 +104,9 @@ const OY_CHANNEL_CONSENSUS = 0.5;//node signature requirement for a broadcast to
 const OY_CHANNEL_TOP_TOLERANCE = 2;//node count difference allowed between broadcast claim and perceived claim
 const OY_KEY_BRUNO = "JSJqmlzAxwuINY2FCpWPJYvKIK1AjavBgkIwIm139k4M";//prevent impersonation (custom avatar), achieve AKY coin-lock. This is the testnet wallet, will change for mainnet
 const OY_SHORT_LENGTH = 6;//various data value such as nonce IDs, data handles, data values are shortened for efficiency
+
+// DAPP VARS
+const OY_HIVEMIND_EXPIRE = [12, 24, 36, 48, 72];
 
 // PRE-CALCULATED VARS
 const OY_DNS_AUCTION_MIN = (OY_AKOYA_FEE_BLOCK+OY_DNS_FEE)*(OY_DNS_AUCTION_DURATION/20);
@@ -2918,6 +2921,8 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
         else if (oy_command_execute[i][1][0]==="OY_META_SET"&&OY_BLOCK_COMMANDS[oy_command_execute[i][1][0]][0](oy_command_execute[i][1])) {
             let oy_meta_flat = JSON.stringify(oy_command_execute[i][1][5]);
             if (oy_meta_flat.length<=OY_META_DATA_LIMIT&&oy_an_check(oy_meta_flat.replace(/@{}[]'", /g, ""))) {//TODO confirm if these conditions should be checked every hop
+                let oy_meta_owner = oy_command_execute[i][1][2];
+
                 let oy_entropy_id;
                 if (oy_command_execute[i][1][3]==="") {//recycle meshblock entropy to ensure random meta handles are assigned in a decentralized manner
                     oy_entropy_id = oy_hash_gen(OY_BLOCK_HASH+oy_command_execute[i][0]);
@@ -2933,20 +2938,49 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
 
                 //DAPP 1 - HIVEMIND
                 if (oy_command_execute[i][1][4]===1) {
-                    if (!Array.isArray(oy_command_execute[i][1][5])||!Array.isArray(oy_command_execute[i][1][5][0])) continue;
+                    if (!Array.isArray(oy_command_execute[i][1][5])||!Array.isArray(oy_command_execute[i][1][5][0])||!Number.isInteger(oy_command_execute[i][1][5][0][0])) continue;
+                    //MASTER[0] = [0, author_rights, submission_price, vote_limit, post_expiration_quota]
                     if (oy_command_execute[i][1][5][0][0]===0) {
-                        if (oy_command_execute[i][1][5].length>1) continue;
+                        if (oy_command_execute[i][1][5].length!==3||
+                            !Number.isInteger(oy_command_execute[i][1][5][0][1])||
+                            !Number.isInteger(oy_command_execute[i][1][5][0][2])||
+                            !Number.isInteger(oy_command_execute[i][1][5][0][3])||
+                            !Number.isInteger(oy_command_execute[i][1][5][0][4])||
+                            (oy_command_execute[i][1][5][0][0]!==0&&oy_command_execute[i][1][5][0][0]!==1)||
+                            (oy_command_execute[i][1][5][0][1]!==0&&oy_command_execute[i][1][5][0][1]!==1)||
+                            oy_command_execute[i][1][5][0][2]>=0||
+                            oy_command_execute[i][1][5][0][3]>=0||
+                            OY_HIVEMIND_EXPIRE.indexOf(oy_command_execute[i][1][5][0][4])===-1) continue;
                     }
+                    //POST[0] = [1, master_entropy_id, author_public, submission_payment, post_expiration_deadline]
                     else if (oy_command_execute[i][1][5][0][0]===1) {
-                        if (oy_command_execute[i][1][5].length>3||
+                        if (oy_command_execute[i][1][5].length!==3||
                             !oy_hash_check(oy_command_execute[i][1][5][0][1])||
+                            !Number.isInteger(oy_command_execute[i][1][5][0][2])||
+                            !Number.isInteger(oy_command_execute[i][1][5][0][3])||
+                            !Number.isInteger(oy_command_execute[i][1][5][0][4])||
                             typeof(OY_BLOCK[6][oy_command_execute[i][1][5][0][1]])==="undefined"||
-                            OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][1]!==1) continue;//TODO submission price transaction, check availability etc.
+                            OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][1]!==1||
+                            oy_command_execute[i][1][5][0][2]!==-1||
+                            oy_command_execute[i][1][5][0][3]<OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][2]+((((oy_command_execute[i][1][5][0][4]*3600)/20))*OY_AKOYA_FEE_BLOCK)||
+                            typeof(OY_BLOCK[3][oy_command_execute[i][1][2]])==="undefined"||
+                            OY_BLOCK[3][oy_command_execute[i][1][2]]>=oy_command_execute[i][1][5][0][3]||
+                            oy_command_execute[i][1][5][0][4]!==-1) continue;//TODO submission price transaction, check availability etc.
+                        oy_meta_owner = "";
+                        oy_command_execute[i][1][5][0][2] = oy_command_execute[i][1][2];
+                        oy_command_execute[i][1][5][0][4] = OY_BLOCK_TIME+(oy_command_execute[i][1][5][0][4]*3600);
+
+                        OY_BLOCK[3][oy_command_execute[i][1][2]] -= oy_command_execute[i][1][5][0][3];
+                        OY_BLOCK[3][oy_command_execute[i][1][5][0][1]] += OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][2];
+                        OY_BLOCK[3][oy_entropy_id] = oy_command_execute[i][1][5][0][3] - OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][2];
+                        //TODO akoya underflow/overflow checks
+                        oy_command_execute[i][1][2]
                     }
+                    else continue;
                 }
                 //DAPP 1 - HIVEMIND
 
-                OY_BLOCK[6][oy_entropy_id] = [oy_command_execute[i][1][2], oy_command_execute[i][1][4], Math.max(99, oy_meta_flat.length), oy_command_execute[i][1][5]];//[owner, meta_dapp, meta_size, meta_data]
+                OY_BLOCK[6][oy_entropy_id] = [oy_meta_owner, oy_command_execute[i][1][4], Math.max(99, oy_meta_flat.length), oy_command_execute[i][1][5]];//[owner, meta_dapp, meta_size, meta_data]
             }
         }
 
