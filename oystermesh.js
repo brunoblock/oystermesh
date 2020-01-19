@@ -41,7 +41,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_BOOT_BUFFER = 120;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims dive rewards
 const OY_BLOCK_RANGE_MIN = 5;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOTTIME = 1579373900;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOTTIME = 1579396600;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_CHALLENGE_SAFETY = 0.5;//safety margin for rogue packets reaching block_consensus. 1 means no changes, lower means further from block_consensus, higher means closer.
 const OY_CHALLENGE_BUFFER = 1.8;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (min of 1)
 const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
@@ -2642,7 +2642,7 @@ function oy_block_loop() {
                 }
                 return a[1][1] - b[1][1];
             });
-            if (oy_dive_reward!=="OY_NULL") oy_dive_pool.push([oy_dive_reward, OY_SELF_PUBLIC]);
+            if (oy_dive_reward!=="OY_NULL"&&typeof(OY_BLOCK[3][oy_dive_reward])!=="undefined") oy_dive_pool.push([oy_dive_reward, OY_SELF_PUBLIC]);
             for (let oy_key_public in OY_BLOCK_SYNC) {
                 if (OY_BLOCK_SYNC[oy_key_public][0]===true&&OY_BLOCK_SYNC[oy_key_public][2][7]!=="OY_NULL"&&typeof(OY_BLOCK[3][OY_BLOCK_SYNC[oy_key_public][2][7]])!=="undefined") oy_dive_pool.push([OY_BLOCK_SYNC[oy_key_public][2][7], oy_key_public]);//TODO review security
             }
@@ -2706,7 +2706,9 @@ function oy_block_loop() {
 
             OY_DIFF_TRACK[0][0] = OY_MESH_RANGE;
 
-            let oy_dive_bounty = oy_block_process(oy_command_execute, true);
+            let [oy_supply_fail, oy_dive_bounty] = oy_block_process(oy_command_execute, true);
+
+            if (oy_supply_fail===true) return false;
 
             if (oy_dive_bounty>0&&oy_dive_reward_pool.length>0) {
                 let oy_dive_share = Math.floor(oy_dive_bounty/oy_dive_reward_pool.length);//TODO verify math to make sure odd balances don't cause a gradual decrease of the entire supply
@@ -2757,7 +2759,7 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
     let oy_supply_pre = 0;
     let oy_dive_bounty = 0;
 
-    if (OY_BLOCK_TIME-OY_BLOCK_BOOTTIME<=OY_BLOCK_BOOT_BUFFER) return oy_dive_bounty;//transactions and fees are paused whilst the mesh calibrates its initial topology
+    if (OY_BLOCK_TIME-OY_BLOCK_BOOTTIME<=OY_BLOCK_BOOT_BUFFER) return [false, oy_dive_bounty];//transactions and fees are paused whilst the mesh calibrates its initial topology
 
     //AMEND-----------------------------------
     for (let oy_key_public in OY_BLOCK[3]) {
@@ -2795,6 +2797,7 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
     }
 
     for (let oy_entropy_id in OY_BLOCK[6]) {
+        //META FEE PROCESSING
         let oy_akoya_wallet;
         if (OY_BLOCK[6][oy_entropy_id][0]==="") oy_akoya_wallet = oy_entropy_id;
         else oy_akoya_wallet = OY_BLOCK[6][oy_entropy_id][0];
@@ -2806,9 +2809,20 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
             if (oy_full_flag===true) oy_dive_bounty += oy_balance_prev - OY_BLOCK[3][oy_akoya_wallet];
             if (OY_BLOCK[3][oy_akoya_wallet]<=0) delete OY_BLOCK[3][oy_akoya_wallet];
         }
-    }
+        //META FEE PROCESSING
 
-    //TODO process META apps with flag 1 (hivemind)
+        //DAPP 0 - WEB 3 HOSTING
+        if (OY_BLOCK[6][oy_entropy_id][1]===0) {
+            //TODO
+        }
+        //DAPP 0 - WEB 3 HOSTING
+
+        //DAPP 1 - HIVEMIND
+        else if (OY_BLOCK[6][oy_entropy_id][1]===1) {
+
+        }
+        //DAPP 1 - HIVEMIND
+    }
 
     //TODO channel sector, made redundant by META?
     //AMEND-----------------------------------
@@ -2909,6 +2923,19 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
                     if (typeof(OY_BLOCK[6][oy_entropy_id])!=="undefined") continue;//there is a nonzero chance that a legitimate META_SET transaction would get rejected and need to be tried again
                 }
                 else oy_entropy_id = oy_command_execute[i][1][3];
+
+                //DAPP 0 - WEB 3 HOSTING
+                if (oy_command_execute[i][1][4]===0) {
+                    //TODO
+                }
+                //DAPP 0 - WEB 3 HOSTING
+
+                //DAPP 1 - HIVEMIND
+                if (oy_command_execute[i][1][4]===1) {
+                    //TODO
+                }
+                //DAPP 1 - HIVEMIND
+
                 OY_BLOCK[6][oy_entropy_id] = [oy_command_execute[i][1][2], oy_command_execute[i][1][4], Math.max(99, oy_meta_flat.length), oy_command_execute[i][1][5]];//[owner, meta_dapp, meta_size, meta_data]
             }
         }
@@ -2919,13 +2946,17 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
     }
     //TRANSACT--------------------------------
 
-    let oy_supply_post = 0;
-    for (let oy_key_public in OY_BLOCK[3]) {
-        oy_supply_post += OY_BLOCK[3][oy_key_public];
+    if (oy_full_flag===true) {
+        let oy_supply_post = 0;
+        for (let oy_key_public in OY_BLOCK[3]) {
+            oy_supply_post += OY_BLOCK[3][oy_key_public];
+        }
+        if (oy_supply_post>oy_supply_pre||oy_supply_post>OY_AKOYA_MAX_SUPPY) {//confirms that the supply has not increased nor breached AKOYA_MAX_SUPPLY
+            oy_block_reset("OY_FLAG_AKOYA_SUPPLY_OVERFLOW");
+            return [true, 0];
+        }
+        return [false, oy_dive_bounty];
     }
-    if (oy_supply_post>oy_supply_pre||oy_supply_post>OY_AKOYA_MAX_SUPPY) oy_block_reset("OY_FLAG_AKOYA_SUPPLY_OVERFLOW");//confirms that the supply has not increased nor breached AKOYA_MAX_SUPPLY
-
-    return oy_dive_bounty;
 }
 
 function oy_block_finish() {

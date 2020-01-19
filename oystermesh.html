@@ -1436,11 +1436,11 @@
         document.addEventListener("oy_block_init", oy_block_render, false);
         document.addEventListener("oy_block_reset", oy_block_render_reset, false);
         document.addEventListener("oy_block_reset", oy_block_reset_local, false);
-        document.addEventListener("oy_block_trigger", oy_block_process, false);
+        document.addEventListener("oy_block_trigger", oy_block_parse, false);
         document.addEventListener("oy_block_trigger", oy_top_render, false);
         document.addEventListener("oy_peers_null", oy_top_render_reset, false);
         document.addEventListener("oy_peers_null", oy_block_reset_local, false);
-        document.addEventListener("oy_peers_recover", oy_block_process, false);
+        document.addEventListener("oy_peers_recover", oy_block_parse, false);
         document.addEventListener("oy_state_blank", oy_mode_state_blank, false);
         document.addEventListener("oy_state_light", oy_mode_state_light, false);
         document.addEventListener("oy_state_full", oy_mode_state_full, false);
@@ -1904,7 +1904,7 @@
         document.getElementById("oy_graph_akoya_progress_inner").style.backgroundColor = "transparent";
     }
 
-    function oy_block_process() {
+    function oy_block_parse() {
         if (OY_BLOCK_HASH===null||OY_WALLET_PUBLIC===null) return false;
         oy_akoya_balance();
         let oy_akoya_render = [];
@@ -1987,7 +1987,7 @@
         OY_AKOYA_KEEP = {};
         OY_AKOYA_PROCESS = false;
         document.getElementById("oy_akoya_balance_inner").innerHTML = "------";
-        oy_block_process();
+        oy_block_parse();
     }
 
     function oy_akoya_balance() {
