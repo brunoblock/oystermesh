@@ -105,9 +105,6 @@ const OY_CHANNEL_TOP_TOLERANCE = 2;//node count difference allowed between broad
 const OY_KEY_BRUNO = "JSJqmlzAxwuINY2FCpWPJYvKIK1AjavBgkIwIm139k4M";//prevent impersonation (custom avatar), achieve AKY coin-lock. This is the testnet wallet, will change for mainnet
 const OY_SHORT_LENGTH = 6;//various data value such as nonce IDs, data handles, data values are shortened for efficiency
 
-// DAPP VARS
-const OY_HIVEMIND_EXPIRE = [12, 24, 36, 48, 72];
-
 // PRE-CALCULATED VARS
 const OY_DNS_AUCTION_MIN = (OY_AKOYA_FEE_BLOCK+OY_DNS_FEE)*(OY_DNS_AUCTION_DURATION/20);
 const OY_DNS_OWNER_MIN = (OY_AKOYA_FEE_BLOCK+OY_DNS_FEE)*OY_DNS_AUCTION_MIN+(OY_AKOYA_FEE_BLOCK*(OY_DNS_OWNER_DURATION/20));
@@ -2823,7 +2820,11 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
 
         //DAPP 1 - HIVEMIND
         else if (OY_BLOCK[6][oy_entropy_id][1]===1) {
-
+            if (OY_BLOCK[6][oy_entropy_id][3][0][0]===0) {
+                for (let oy_entropy_id_sub in OY_BLOCK[6][oy_entropy_id][3][1]) {
+                    if (OY_BLOCK_TIME>=OY_BLOCK[6][oy_entropy_id][3][1][oy_entropy_id_sub]||typeof(OY_BLOCK[6][oy_entropy_id_sub])==="undefined") delete OY_BLOCK[6][oy_entropy_id][3][1][oy_entropy_id_sub];
+                }
+            }
         }
         //DAPP 1 - HIVEMIND
     }
@@ -2939,48 +2940,68 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
                 //DAPP 1 - HIVEMIND
                 if (oy_command_execute[i][1][4]===1) {
                     if (!Array.isArray(oy_command_execute[i][1][5])||!Array.isArray(oy_command_execute[i][1][5][0])||!Number.isInteger(oy_command_execute[i][1][5][0][0])) continue;
-                    //MASTER[0] = [0, author_rights, submission_price, vote_limit, post_expiration_quota]
+                    //MASTER[0] = [0, author_rights, submission_price, vote_limit, post_expiration_quota, post_capacity_active, post_capacity_inactive]
+                    //MASTER[1] = {} - holding object for posts
                     if (oy_command_execute[i][1][5][0][0]===0) {
-                        if (oy_command_execute[i][1][5].length!==3||
+                        if (oy_command_execute[i][1][5].length!==2||
                             !Number.isInteger(oy_command_execute[i][1][5][0][1])||
                             !Number.isInteger(oy_command_execute[i][1][5][0][2])||
                             !Number.isInteger(oy_command_execute[i][1][5][0][3])||
                             !Number.isInteger(oy_command_execute[i][1][5][0][4])||
+                            !Number.isInteger(oy_command_execute[i][1][5][0][5])||
+                            !Number.isInteger(oy_command_execute[i][1][5][0][6])||
                             (oy_command_execute[i][1][5][0][0]!==0&&oy_command_execute[i][1][5][0][0]!==1)||
                             (oy_command_execute[i][1][5][0][1]!==0&&oy_command_execute[i][1][5][0][1]!==1)||
                             oy_command_execute[i][1][5][0][2]>=0||
                             oy_command_execute[i][1][5][0][3]>=0||
-                            OY_HIVEMIND_EXPIRE.indexOf(oy_command_execute[i][1][5][0][4])===-1) continue;
+                            oy_command_execute[i][1][5][0][4]>0||
+                            oy_command_execute[i][1][5][0][5]>=2||
+                            oy_command_execute[i][1][5][0][6]>=2||
+                            typeof(oy_command_execute[i][1][5][1])!=="object") continue;
                     }
-                    //POST[0] = [1, master_entropy_id, author_public, submission_payment, post_expiration_deadline]
+                    //POST[0] = [1, master_entropy_id, author_public, submission_payment]
+                    //POST[1] = [] - rendering object for post content
                     else if (oy_command_execute[i][1][5][0][0]===1) {
-                        if (oy_command_execute[i][1][5].length!==3||
+                        if (oy_command_execute[i][1][5].length!==2||
                             !oy_hash_check(oy_command_execute[i][1][5][0][1])||
                             !Number.isInteger(oy_command_execute[i][1][5][0][2])||
                             !Number.isInteger(oy_command_execute[i][1][5][0][3])||
                             !Number.isInteger(oy_command_execute[i][1][5][0][4])||
                             typeof(OY_BLOCK[6][oy_command_execute[i][1][5][0][1]])==="undefined"||
-                            OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][1]!==1||
+                            OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][0][0]!==0||
                             oy_command_execute[i][1][5][0][2]!==-1||
-                            oy_command_execute[i][1][5][0][3]<OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][2]+((((oy_command_execute[i][1][5][0][4]*3600)/20))*OY_AKOYA_FEE_BLOCK)||
+                            oy_command_execute[i][1][5][0][3]<OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][2]+((((OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][0][4]*3600)/20))*OY_AKOYA_FEE_BLOCK)||
                             typeof(OY_BLOCK[3][oy_command_execute[i][1][2]])==="undefined"||
                             OY_BLOCK[3][oy_command_execute[i][1][2]]>=oy_command_execute[i][1][5][0][3]||
-                            oy_command_execute[i][1][5][0][4]!==-1) continue;//TODO submission price transaction, check availability etc.
+                            typeof(OY_BLOCK[3][oy_command_execute[i][1][5][0][1]])==="undefined"||
+                            oy_command_execute[i][1][5][0][4]!==-1) continue;//TODO validation for POST[1]
                         oy_meta_owner = "";
                         oy_command_execute[i][1][5][0][2] = oy_command_execute[i][1][2];
-                        oy_command_execute[i][1][5][0][4] = OY_BLOCK_TIME+(oy_command_execute[i][1][5][0][4]*3600);
 
+                        let oy_balance_send = OY_BLOCK[3][oy_command_execute[i][1][2]];
+                        let oy_balance_receive = OY_BLOCK[3][oy_command_execute[i][1][5][0][1]];
                         OY_BLOCK[3][oy_command_execute[i][1][2]] -= oy_command_execute[i][1][5][0][3];
                         OY_BLOCK[3][oy_command_execute[i][1][5][0][1]] += OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][2];
                         OY_BLOCK[3][oy_entropy_id] = oy_command_execute[i][1][5][0][3] - OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][2];
-                        //TODO akoya underflow/overflow checks
-                        oy_command_execute[i][1][2]
+                        if (OY_BLOCK[3][oy_command_execute[i][1][2]]+OY_BLOCK[3][oy_command_execute[i][1][5][0][1]]+OY_BLOCK[3][oy_entropy_id]!==oy_balance_send+oy_balance_receive) {//TODO verify security
+                            OY_BLOCK[3][oy_command_execute[i][1][2]] = oy_balance_send;
+                            OY_BLOCK[3][oy_command_execute[i][1][5][0][1]] = oy_balance_receive;
+                            delete OY_BLOCK[3][oy_entropy_id];
+                            continue;
+                        }
+                        else {
+                            if (Object.keys(OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][1]).length<OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][0][5]+OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][0][6]&&typeof(OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][1][oy_entropy_id])==="undefined") {
+                                OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][1][oy_entropy_id] = OY_BLOCK_TIME+(OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][0][4]*3600);
+                            }
+                            else continue;
+                        }
                     }
                     else continue;
                 }
                 //DAPP 1 - HIVEMIND
 
-                OY_BLOCK[6][oy_entropy_id] = [oy_meta_owner, oy_command_execute[i][1][4], Math.max(99, oy_meta_flat.length), oy_command_execute[i][1][5]];//[owner, meta_dapp, meta_size, meta_data]
+                //[owner, meta_dapp, meta_size, meta_data]
+                OY_BLOCK[6][oy_entropy_id] = [oy_meta_owner, oy_command_execute[i][1][4], Math.max(99, oy_meta_flat.length), oy_command_execute[i][1][5]];
             }
         }
 
