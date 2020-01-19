@@ -377,7 +377,7 @@ function oy_hash_gen(oy_input) {
 }
 
 function oy_hash_check(oy_input) {
-    return (oy_input.length===40&&oy_an_check(oy_input));
+    return (oy_an_check(oy_input)&&oy_input.length===40);
 }
 
 function oy_buffer_encode(oy_buffer_text, oy_buffer_base64) {
@@ -447,8 +447,9 @@ function oy_key_gen(oy_key_private) {
 }
 
 function oy_an_check(oy_input) {
-    let code, i, len;
+    if (typeof(oy_input)!=="string") return false;
 
+    let code, i, len;
     for (i = 0, len = oy_input.length; i < len; i++) {
         code = oy_input.charCodeAt(i);
         if (!(code > 47 && code < 58) && // numeric (0-9)
@@ -2932,7 +2933,16 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
 
                 //DAPP 1 - HIVEMIND
                 if (oy_command_execute[i][1][4]===1) {
-                    //TODO
+                    if (!Array.isArray(oy_command_execute[i][1][5])||!Array.isArray(oy_command_execute[i][1][5][0])) continue;
+                    if (oy_command_execute[i][1][5][0][0]===0) {
+                        if (oy_command_execute[i][1][5].length>1) continue;
+                    }
+                    else if (oy_command_execute[i][1][5][0][0]===1) {
+                        if (oy_command_execute[i][1][5].length>3||
+                            !oy_hash_check(oy_command_execute[i][1][5][0][1])||
+                            typeof(OY_BLOCK[6][oy_command_execute[i][1][5][0][1]])==="undefined"||
+                            OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][1]!==1) continue;//TODO submission price transaction, check availability etc.
+                    }
                 }
                 //DAPP 1 - HIVEMIND
 
