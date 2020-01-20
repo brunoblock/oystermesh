@@ -2943,38 +2943,36 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
                     //MASTER[0] = [0, author_rights, submission_price, vote_limit, post_expiration_quota, post_capacity_active, post_capacity_inactive]
                     //MASTER[1] = {} - holding object for posts
                     if (oy_command_execute[i][1][5][0][0]===0) {
-                        if (oy_command_execute[i][1][5].length!==2||
-                            !Number.isInteger(oy_command_execute[i][1][5][0][1])||
-                            !Number.isInteger(oy_command_execute[i][1][5][0][2])||
-                            !Number.isInteger(oy_command_execute[i][1][5][0][3])||
-                            !Number.isInteger(oy_command_execute[i][1][5][0][4])||
-                            !Number.isInteger(oy_command_execute[i][1][5][0][5])||
-                            !Number.isInteger(oy_command_execute[i][1][5][0][6])||
-                            (oy_command_execute[i][1][5][0][0]!==0&&oy_command_execute[i][1][5][0][0]!==1)||
-                            (oy_command_execute[i][1][5][0][1]!==0&&oy_command_execute[i][1][5][0][1]!==1)||
-                            oy_command_execute[i][1][5][0][2]>=0||
-                            oy_command_execute[i][1][5][0][3]>=0||
-                            oy_command_execute[i][1][5][0][4]>0||
-                            oy_command_execute[i][1][5][0][5]>=2||
-                            oy_command_execute[i][1][5][0][6]>=2||
-                            typeof(oy_command_execute[i][1][5][1])!=="object") continue;
+                        if (oy_command_execute[i][1][5].length!==2||//verify dual sectors of oy_meta_data
+                            !Number.isInteger(oy_command_execute[i][1][5][0][1])||//check author_rights is an integer
+                            !Number.isInteger(oy_command_execute[i][1][5][0][2])||//check submission_price is an integer
+                            !Number.isInteger(oy_command_execute[i][1][5][0][3])||//check vote_limit is an integer
+                            !Number.isInteger(oy_command_execute[i][1][5][0][4])||//check post_expiration_quota is an integer, represents hours
+                            !Number.isInteger(oy_command_execute[i][1][5][0][5])||//check post_capacity_active is an integer
+                            !Number.isInteger(oy_command_execute[i][1][5][0][6])||//check post_capacity_inactive is an integer
+                            (oy_command_execute[i][1][5][0][1]!==0&&oy_command_execute[i][1][5][0][1]!==1)||//check that author rights has a valid value of 0 or 1
+                            oy_command_execute[i][1][5][0][2]>=0||//check that submission price is a non negative value
+                            oy_command_execute[i][1][5][0][3]>=0||//check that vote_limit has a non negative value
+                            oy_command_execute[i][1][5][0][4]>0||//check that post expiration_quota has a positive value, represents hours
+                            oy_command_execute[i][1][5][0][5]>=2||//check that post_capacity_active has a plural value
+                            oy_command_execute[i][1][5][0][6]>=2||//check that post_capacity_inactive has a plural value
+                            typeof(oy_command_execute[i][1][5][1])!=="object") continue;//check that the holding object for posts is a valid object
                     }
                     //POST[0] = [1, master_entropy_id, author_public, submission_payment]
                     //POST[1] = [] - rendering object for post content
                     else if (oy_command_execute[i][1][5][0][0]===1) {
-                        if (oy_command_execute[i][1][5].length!==2||
-                            !oy_hash_check(oy_command_execute[i][1][5][0][1])||
-                            !Number.isInteger(oy_command_execute[i][1][5][0][2])||
-                            !Number.isInteger(oy_command_execute[i][1][5][0][3])||
-                            !Number.isInteger(oy_command_execute[i][1][5][0][4])||
-                            typeof(OY_BLOCK[6][oy_command_execute[i][1][5][0][1]])==="undefined"||
-                            OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][0][0]!==0||
-                            oy_command_execute[i][1][5][0][2]!==-1||
-                            oy_command_execute[i][1][5][0][3]<OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][2]+((((OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][0][4]*3600)/20))*OY_AKOYA_FEE_BLOCK)||
-                            typeof(OY_BLOCK[3][oy_command_execute[i][1][2]])==="undefined"||
-                            OY_BLOCK[3][oy_command_execute[i][1][2]]>=oy_command_execute[i][1][5][0][3]||
-                            typeof(OY_BLOCK[3][oy_command_execute[i][1][5][0][1]])==="undefined"||
-                            oy_command_execute[i][1][5][0][4]!==-1) continue;//TODO validation for POST[1]
+                        if (oy_command_execute[i][1][5].length!==2||//verify dual sectors of oy_meta_data
+                            !oy_hash_check(oy_command_execute[i][1][5][0][1])||//check that master_entropy_id is a valid hash
+                            !Number.isInteger(oy_command_execute[i][1][5][0][2])||//check that author_public is an integer, must be -1 TODO unnecessary?
+                            !Number.isInteger(oy_command_execute[i][1][5][0][3])||//check that submission_payment is an integer
+                            typeof(OY_BLOCK[6][oy_command_execute[i][1][5][0][1]])==="undefined"||//check that the master thread exists in the meta section of the meshblock
+                            OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][0][0]!==0||//check that the master thread is structured as a master thread in the meta section of the meshblock
+                            oy_command_execute[i][1][5][0][2]!==-1||//check that author_public is set to -1, to be assigned by the meshblock
+                            oy_command_execute[i][1][5][0][3]<OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][2]+((((OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][0][4]*3600)/20))*OY_AKOYA_FEE_BLOCK)||//check that the submission_payment is large enough to cover the submission fee defined in the master thread, and enough akoya to host the data for the original intended amount of time
+                            typeof(OY_BLOCK[3][oy_command_execute[i][1][2]])==="undefined"||//check that the author of the transaction has a positive akoya balance
+                            OY_BLOCK[3][oy_command_execute[i][1][2]]>=oy_command_execute[i][1][5][0][3]||//check that the author of the transaction has sufficient akoya to fund the submission payment
+                            typeof(OY_BLOCK[3][oy_command_execute[i][1][5][0][1]])==="undefined") continue;//check that there is a funding wallet with a positive akoya balance for the master thread
+                        //TODO validation for POST[1]
                         oy_meta_owner = "";
                         oy_command_execute[i][1][5][0][2] = oy_command_execute[i][1][2];
 
