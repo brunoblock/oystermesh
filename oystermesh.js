@@ -225,12 +225,12 @@ const OY_BLOCK_TRANSACTS = {
             Number.isInteger(oy_command_array[5][0][2])&&//check that author_public is an integer, must be -1 TODO unnecessary?
             Number.isInteger(oy_command_array[5][0][3])&&//check that submission_payment is an integer
             typeof(OY_BLOCK[6][oy_command_array[5][0][1]])!=="undefined"&&//check that the master thread exists in the meta section of the meshblock
-            OY_BLOCK[6][oy_command_array[5][0][1]][0][0]===0&&//check that the master thread is structured as a master thread in the meta section of the meshblock
+            OY_BLOCK[6][oy_command_array[5][0][1]][3][0][0]===0&&//check that the master thread is structured as a master thread in the meta section of the meshblock
             oy_command_array[5][0][2]===-1&&//check that author_public is set to -1, to be assigned by the meshblock
-            oy_command_array[5][0][3]>=OY_BLOCK[6][oy_command_array[5][0][1]][2]+((((OY_BLOCK[6][oy_command_array[5][0][1]][0][4]*3600)/20))*OY_AKOYA_FEE_BLOCK)&&//check that the submission_payment is large enough to cover the submission fee defined in the master thread, and enough akoya to host the data for the original intended amount of time
+            oy_command_array[5][0][3]>=OY_BLOCK[6][oy_command_array[5][0][1]][3][0][2]+((((OY_BLOCK[6][oy_command_array[5][0][1]][3][0][4]*3600)/20))*OY_AKOYA_FEE_BLOCK)&&//check that the submission_payment is large enough to cover the submission fee defined in the master thread, and enough akoya to host the data for the original intended amount of time
             typeof(OY_BLOCK[3][oy_command_array[2]])!=="undefined"&&//check that the author of the transaction has a positive akoya balance
             OY_BLOCK[3][oy_command_array[2]]>=oy_command_array[5][0][3]&&//check that the author of the transaction has sufficient akoya to fund the submission payment
-            typeof(OY_BLOCK[3][oy_command_array[5][0][1]])!=="undefined");//check that there is a funding wallet with a positive akoya balance for the master thread
+            (OY_BLOCK[6][oy_command_array[5][0][1]][0]===""&&typeof(OY_BLOCK[3][oy_command_array[5][0][1]])!=="undefined")||(OY_BLOCK[6][oy_command_array[5][0][1]][0]!==""&&typeof(OY_BLOCK[3][OY_BLOCK[6][oy_command_array[5][0][1]][0]])!=="undefined"));//check that there is a funding wallet with a positive akoya balance for the master thread
         //TODO validation for POST[1]
     }]
 };
@@ -1128,6 +1128,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         }
 
         OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK);
+        console.log(OY_BLOCK_FLAT);
 
         OY_BLOCK_HASH = oy_hash_gen(OY_BLOCK_FLAT);
 
@@ -2232,6 +2233,8 @@ function oy_channel_commit(oy_channel_id, oy_broadcast_hash, oy_broadcast_payloa
 }
 
 function oy_akoya_transfer(oy_key_private, oy_key_public, oy_transfer_amount, oy_receive_public, oy_callback_confirm) {
+    if (OY_BLOCK_HASH===null||oy_key_private===null||oy_key_public===null) return false;
+
     let oy_command_array = ["OY_AKOYA_SEND", -1, oy_key_public, Math.floor(oy_transfer_amount*OY_AKOYA_DECIMALS), oy_receive_public];
     if (!OY_BLOCK_COMMANDS[oy_command_array[0]][0](oy_command_array)) return false;
 
@@ -2241,6 +2244,8 @@ function oy_akoya_transfer(oy_key_private, oy_key_public, oy_transfer_amount, oy
 }
 
 function oy_dns_transfer(oy_key_private, oy_key_public, oy_dns_name, oy_receive_public, oy_callback_confirm) {
+    if (OY_BLOCK_HASH===null||oy_key_private===null||oy_key_public===null) return false;
+
     let oy_command_array = ["OY_DNS_TRANSFER", -1, oy_key_public, oy_dns_name, oy_receive_public];
     if (!OY_BLOCK_COMMANDS[oy_command_array[0]][0](oy_command_array)) return false;
 
@@ -2250,7 +2255,9 @@ function oy_dns_transfer(oy_key_private, oy_key_public, oy_dns_name, oy_receive_
 }
 
 function oy_hivemind_cluster(oy_key_private, oy_key_public, oy_entropy_id, oy_author_revoke, oy_submission_price, oy_vote_limit, oy_expire_quota, oy_capacity_active, oy_capacity_inactive, oy_post_holder, oy_callback_confirm) {
-    let oy_command_array = ["OY_META_SET", -1, oy_key_public, oy_entropy_id, 1, [[0, oy_author_revoke, oy_submission_price, oy_vote_limit, oy_expire_quota, oy_capacity_active, oy_capacity_inactive], oy_post_holder]];
+    if (OY_BLOCK_HASH===null||oy_key_private===null||oy_key_public===null) return false;
+
+    let oy_command_array = ["OY_META_SET", -1, oy_key_public, oy_entropy_id, 1, [[0, oy_author_revoke, Math.floor(oy_submission_price*OY_AKOYA_DECIMALS), oy_vote_limit, oy_expire_quota, oy_capacity_active, oy_capacity_inactive], oy_post_holder]];
     if (!OY_BLOCK_COMMANDS[oy_command_array[0]][0](oy_command_array)||!OY_BLOCK_TRANSACTS["OY_HIVEMIND_CLUSTER"][0](oy_command_array)) return false;
 
     oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm);
@@ -2259,7 +2266,9 @@ function oy_hivemind_cluster(oy_key_private, oy_key_public, oy_entropy_id, oy_au
 }
 
 function oy_hivemind_post(oy_key_private, oy_key_public, oy_cluster_id, oy_submission_payment, oy_post_title, oy_post_handle, oy_callback_confirm) {
-    let oy_command_array = ["OY_META_SET", -1, oy_key_public, "", 1, [[1, oy_cluster_id, -1, oy_submission_payment], [oy_post_title, oy_post_handle]]];
+    if (OY_BLOCK_HASH===null||oy_key_private===null||oy_key_public===null) return false;
+
+    let oy_command_array = ["OY_META_SET", -1, oy_key_public, "", 1, [[1, oy_cluster_id, -1, Math.floor(oy_submission_payment*OY_AKOYA_DECIMALS)], [oy_post_title, oy_post_handle]]];
     if (!OY_BLOCK_COMMANDS[oy_command_array[0]][0](oy_command_array)||!OY_BLOCK_TRANSACTS["OY_HIVEMIND_POST"][0](oy_command_array)) return false;
 
     oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm);
@@ -2922,7 +2931,7 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
         //["OY_DNS_MODIFY", -1, oy_key_public, oy_dns_name, oy_nav_data]
         else if (oy_command_execute[i][1][0]==="OY_DNS_MODIFY"&&OY_BLOCK_COMMANDS[oy_command_execute[i][1][0]][0](oy_command_execute[i][1])) {
             let oy_nav_flat = JSON.stringify(oy_command_execute[i][1]);
-            if (oy_nav_flat.length<=OY_DNS_NAV_LIMIT&&oy_an_check(oy_nav_flat.replace(/@{}[]'", /g, ""))) {//check that the contents of oy_nav_data are compliant in size and fully alphanumeric
+            if (oy_nav_flat.length<=OY_DNS_NAV_LIMIT&&oy_an_check(oy_nav_flat.replace(/[\[\]{}'":,@=-]/g, "").replace(/ /g, ""))) {//check that the contents of oy_nav_data are compliant in size and fully alphanumeric
                 OY_BLOCK[4][oy_command_execute[i][1][3]][1] = Math.max(99, oy_nav_flat.length);
                 OY_BLOCK[4][oy_command_execute[i][1][3]][2] = oy_command_execute[i][1][4];
             }
@@ -2983,8 +2992,14 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
         }
         //["OY_META_SET", -1, oy_key_public, oy_entropy_id, oy_meta_dapp, oy_meta_data]
         else if (oy_command_execute[i][1][0]==="OY_META_SET"&&OY_BLOCK_COMMANDS[oy_command_execute[i][1][0]][0](oy_command_execute[i][1])) {
+            console.log(1);
             let oy_meta_flat = JSON.stringify(oy_command_execute[i][1][5]);
-            if (oy_meta_flat.length<=OY_META_DATA_LIMIT&&oy_an_check(oy_meta_flat.replace(/@{}[]'", /g, ""))) {//TODO confirm if these conditions should be checked every hop
+            console.log(oy_meta_flat.length);
+            console.log(OY_META_DATA_LIMIT);
+            console.log(oy_meta_flat);
+            console.log(oy_meta_flat.replace(/[\[\]{}'":,@=-]/g, "").replace(/ /g, ""));
+            if (oy_meta_flat.length<=OY_META_DATA_LIMIT&&oy_an_check(oy_meta_flat.replace(/[\[\]{}'":,@=-]/g, "").replace(/ /g, ""))) {//TODO confirm if these conditions should be checked every hop
+                console.log(2);
                 let oy_meta_owner = oy_command_execute[i][1][2];
 
                 let oy_entropy_id;
@@ -3002,32 +3017,51 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
 
                 //DAPP 1 - HIVEMIND
                 if (oy_command_execute[i][1][4]===1) {//TODO approved_authors + render_mode (works like a blog)
+                    console.log(3);
                     if (!Array.isArray(oy_command_execute[i][1][5])||!Array.isArray(oy_command_execute[i][1][5][0])||!Number.isInteger(oy_command_execute[i][1][5][0][0])) continue;
+                    console.log(4);
                     //MASTER[0] = [0, author_revoke, submission_price, vote_limit, expire_quota, capacity_active, capacity_inactive]
                     //MASTER[1] = {} - holding object for posts
                     if (oy_command_execute[i][1][5][0][0]===0) {
+                        console.log(5);
                         if (!OY_BLOCK_TRANSACTS["OY_HIVEMIND_CLUSTER"][0](oy_command_execute[i][1])) continue;
                     }
                     //POST[0] = [1, master_entropy_id, author_public, submission_payment]
                     //POST[1] = [] - rendering object for post content
                     else if (oy_command_execute[i][1][5][0][0]===1) {
+                        console.log(6);
                         if (!OY_BLOCK_TRANSACTS["OY_HIVEMIND_POST"][0](oy_command_execute[i][1])) continue;
 
                         oy_meta_owner = "";
                         oy_command_execute[i][1][5][0][2] = oy_command_execute[i][1][2];
 
+                        let oy_cluster_owner;
+                        if (OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][0]==="") oy_cluster_owner = oy_command_execute[i][1][5][0][1];
+                        else oy_cluster_owner = OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][0];
                         let oy_balance_send = OY_BLOCK[3][oy_command_execute[i][1][2]];
-                        let oy_balance_receive = OY_BLOCK[3][oy_command_execute[i][1][5][0][1]];
+                        let oy_balance_receive = OY_BLOCK[3][oy_cluster_owner];
                         OY_BLOCK[3][oy_command_execute[i][1][2]] -= oy_command_execute[i][1][5][0][3];
-                        OY_BLOCK[3][oy_command_execute[i][1][5][0][1]] += OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][2];
-                        OY_BLOCK[3][oy_entropy_id] = oy_command_execute[i][1][5][0][3] - OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][2];
-                        if (OY_BLOCK[3][oy_command_execute[i][1][2]]+OY_BLOCK[3][oy_command_execute[i][1][5][0][1]]+OY_BLOCK[3][oy_entropy_id]!==oy_balance_send+oy_balance_receive) {//TODO verify security
+                        OY_BLOCK[3][oy_cluster_owner] += OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][3][0][2];
+                        OY_BLOCK[3][oy_entropy_id] = oy_command_execute[i][1][5][0][3] - OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][3][0][2];
+                        console.log(oy_command_execute[i][1][5][0][3]);
+                        console.log(OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][3][0][2]);
+                        console.log(oy_command_execute[i][1][5][0][3] - OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][3][0][2]);
+                        console.log(oy_cluster_owner);
+                        console.log(oy_command_execute[i][1][2]);
+                        console.log(OY_BLOCK[3][oy_command_execute[i][1][2]]);
+                        console.log(OY_BLOCK[3][oy_cluster_owner]);
+                        console.log(OY_BLOCK[3][oy_entropy_id]);
+                        console.log(oy_balance_send);
+                        console.log(oy_balance_receive);
+                        if (OY_BLOCK[3][oy_command_execute[i][1][2]]+OY_BLOCK[3][oy_cluster_owner]+OY_BLOCK[3][oy_entropy_id]!==oy_balance_send+oy_balance_receive) {//TODO verify security
+                            console.log(7);
                             OY_BLOCK[3][oy_command_execute[i][1][2]] = oy_balance_send;
                             OY_BLOCK[3][oy_command_execute[i][1][5][0][1]] = oy_balance_receive;
                             delete OY_BLOCK[3][oy_entropy_id];
                             continue;
                         }
                         else {
+                            console.log(8);
                             if (Object.keys(OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][1]).length<OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][0][5]+OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][0][6]&&typeof(OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][1][oy_entropy_id])==="undefined") {
                                 OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][1][oy_entropy_id] = OY_BLOCK_TIME+(OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][0][4]*3600);
                             }
@@ -3041,14 +3075,16 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
                 //[owner, meta_dapp, meta_size, meta_data]
                 OY_BLOCK[6][oy_entropy_id] = [oy_meta_owner, oy_command_execute[i][1][4], Math.max(99, oy_meta_flat.length), oy_command_execute[i][1][5]];
             }
+            else continue;
         }
+        else continue;
 
         OY_BLOCK[2][oy_command_execute[i][0]] = oy_command_execute[i][1];
         OY_BLOCK_NEW[oy_command_execute[i][0]] = oy_command_execute[i][1];
         if (oy_full_flag===true) OY_DIFF_TRACK[2].push(oy_command_execute[i]);
     }
     //TRANSACT--------------------------------
-
+console.log(0);
     if (oy_full_flag===true) {
         let oy_supply_post = 0;
         for (let oy_key_public in OY_BLOCK[3]) {

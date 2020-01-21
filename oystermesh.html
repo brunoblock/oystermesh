@@ -2374,6 +2374,27 @@
         }
     }
 
+    function oy_dapper_tab() {
+        //let bob = {"test":[5, "chin chilla="]};
+        //let oy_meta_flat = JSON.stringify(bob);
+        //console.log(oy_meta_flat.replace(/[\[\]{}'":,@=]/g, "").replace(/ /g, ""));
+        //console.log(oy_an_check(oy_meta_flat.replace(/[{}]/g, "")));
+        //return true;
+        console.log("HIVEMIND PRE");
+        let hippy = oy_hivemind_post(OY_WALLET_PRIVATE, OY_WALLET_PUBLIC, "2a1640a0e6d50833b259296bb9a7dde7f445913a", 50, "Chinchilla Title", "Hamster Content", function(bob) {
+            console.log("HIVEMIND POST");
+            console.log(bob);
+        });
+        console.log("BOB");
+        console.log(hippy);
+        return true;
+        console.log("HIVEMIND PRE");
+        oy_hivemind_cluster(OY_WALLET_PRIVATE, OY_WALLET_PUBLIC, "", 0, 20, 100, 24, 10, 10, {}, function(bob) {
+            console.log("HIVEMIND POST");
+            console.log(bob);
+        });
+    }
+
     function oy_dapper_toggle(oy_force_reset) {
         if (OY_DAPPER_MINIMIZED===true||typeof(oy_force_reset)!=="undefined") {
             OY_DAPPER_MINIMIZED = false;
