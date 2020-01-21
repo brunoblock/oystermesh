@@ -110,65 +110,8 @@ const OY_DNS_AUCTION_MIN = (OY_AKOYA_FEE_BLOCK+OY_DNS_FEE)*(OY_DNS_AUCTION_DURAT
 const OY_DNS_OWNER_MIN = (OY_AKOYA_FEE_BLOCK+OY_DNS_FEE)*OY_DNS_AUCTION_MIN+(OY_AKOYA_FEE_BLOCK*(OY_DNS_OWNER_DURATION/20));
 //const OY_META_OWNER_MIN
 
-// INIT
-let OY_LIGHT_MODE = true;//seek to stay permanently connected to the mesh as a light node/latch, manipulable by the user
-let OY_LIGHT_STATE = true;//immediate status of being a light node/latch, not manipulable by the user
-let OY_LIGHT_PENDING = false;//defines if node is transitioning into a light node from blank or full status
-let OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inputs are expected
-let OY_SIMULATOR_MODE = false;//run in node.js simulator, requires oystersimulate.js
-let OY_SELF_PRIVATE;//private key of node identity
-let OY_SELF_PUBLIC;//public key of node identity
-let OY_SELF_SHORT;//short representation of public key of node identity
-let OY_READY = false;//connection status
-let OY_CONN;//global P2P connection handle
-let OY_ENGINE_KILL = false;//forces engine to stop its loop
-let OY_CONSOLE;//custom function for handling console
-let OY_MESH_MAP;//custom function for tracking mesh map
-let OY_BLOCK_MAP;//custom function for tracking meshblock map
-let OY_INIT = 0;//prevents multiple instances of oy_init() from running simultaneously
-let OY_ENGINE = [{}, {}];//tracking object for core engine variables, [0] is latency tracking
-let OY_COLLECT = {};//object for tracking pull fulfillments
-let OY_CONSTRUCT = {};//data considered valid from OY_COLLECT is stored here, awaiting for final data reconstruction
-let OY_DATA_PUSH = {};//object for tracking data push threads
-let OY_DATA_PULL = {};//object for tracking data pull threads
-let OY_LATCH_COUNT = 0;
-let OY_PEER_COUNT = 0;//how many active connections with mutual peers
-let OY_PEERS = {"oy_aggregate_node":[-1, -1, -1, 0, [], 0, [], 0, [], null, false]};//peer tracking
-let OY_PEERS_PRE = {};//tracks nodes that are almost peers, will become peers once PEER_AFFIRM is received from other node
-let OY_PEERS_NULL = new Event('oy_peers_null');//trigger-able event for when peer_count == 0
-let OY_PEERS_RECOVER = new Event('oy_peers_recover');//trigger-able event for when peer_count > 0
-let OY_NODES = {};//P2P connection handling for individual nodes
-let OY_BOOST = [];//store all node IDs from the most recent meshblock and use to find new peers in-case of peers_null/meshblock reset event
-let OY_BOOST_MODE = false;
-let OY_WARM = {};//tracking connections to nodes that are warming up
-let OY_COLD = {};//tracking connection shutdowns to specific nodes
-let OY_ROUTE_DYNAMIC = [];//tracks dynamic identifier for a routed data sequence
-let OY_LATENCY = {};//handle latency sessions
-let OY_PROPOSED = {};//nodes that have been recently proposed to for mutual peering
-let OY_BLACKLIST = {};//nodes to block for x amount of time
-let OY_PUSH_HOLD = {};//holds data contents ready for pushing to mesh
-let OY_PUSH_TALLY = {};//tracks data push nonces that were deposited on the mesh
-let OY_BASE_BUILD = [];
-let OY_LOGIC_ALL_TYPE = ["OY_BLOCK_COMMAND", "OY_BLOCK_SYNC", "OY_BLOCK_SYNC_CHALLENGE", "OY_BLOCK_DIVE", "OY_DATA_PULL", "OY_CHANNEL_BROADCAST"];//OY_LOGIC_ALL definitions
-let OY_LOGIC_EXCEPT_TYPE = ["OY_BLOCK_SYNC", "OY_BLOCK_SYNC_CHALLENGE_RESPONSE", "OY_BLOCK_DIVE", "OY_CHANNEL_BROADCAST"];
-let OY_MESH_RANGE = 0;
-let OY_BLOCK_SECTORS = [[4, 4000], [12, 12000], [20, 20000]];//timing definitions for the meshblock
-let OY_BLOCK_DYNAMIC = [null, null, null, null];
-let OY_BLOCK_ROSTER = {};
-let OY_BLOCK_ROSTER_AVG = null;
-let OY_BLOCK = [null, [], {}, {}, {}, {}, {}, {}];//the current meshblock - [[0]:oy_block_timestamp, [1]:oy_snapshot_sector, [2]:oy_command_sector, [3]:oy_akoya_sector, [4]:oy_dns_sector, [5]:oy_auction_sector, [6]:oy_meta_sector, [7]:oy_channel_sector]
-let OY_BLOCK_HASH = null;//hash of the most current block
-let OY_BLOCK_FLAT = null;
-let OY_BLOCK_DIFF = false;
-let OY_BLOCK_SIGN = null;
-let OY_BLOCK_TIME = oy_block_time_first(false);//the most recent block timestamp
-let OY_BLOCK_NEXT = oy_block_time_first(true);//the next block timestamp
-let OY_BLOCK_UPTIME = null;
-let OY_BLOCK_WEIGHT = null;
-let OY_BLOCK_STABILITY = 0;
-let OY_BLOCK_STABILITY_KEEP = [OY_BLOCK_RANGE_MIN];
-let OY_BLOCK_STABILITY_ROSTER = parseInt(OY_BLOCK_STABILITY_START+"");
-let OY_BLOCK_COMMANDS = {
+// SECURITY CHECK FUNCTIONS
+const OY_BLOCK_COMMANDS = {
     //["OY_AKOYA_SEND", -1, oy_key_public, oy_transfer_amount, oy_receive_public]
     "OY_AKOYA_SEND":[function(oy_command_array) {
         return (oy_command_array.length===5&&//check the element count in the command
@@ -244,9 +187,10 @@ let OY_BLOCK_COMMANDS = {
         return (oy_command_array.length===6&&
             (oy_command_array[3]===""||oy_hash_check(oy_command_array[3]))&&//check that the input for oy_entropy_id is valid
             parseInt(oy_command_array[4])===oy_command_array[4]&&
+            oy_command_array[4]>=0&&
             oy_command_array[4]<=OY_META_DAPP_RANGE);
     }],
-    "OY_META_DELETE":[function(oy_command_array) {
+    "OY_META_REVOKE":[function(oy_command_array) {
         if (oy_command_array.length===4) return true;//check the element count in the command
         return false;
         //TODO
@@ -257,6 +201,98 @@ let OY_BLOCK_COMMANDS = {
         //TODO
     }]
 };
+const OY_BLOCK_TRANSACTS = {
+    "OY_HIVEMIND_CLUSTER":[function(oy_command_array) {
+        return (oy_command_array[5].length===2&&//verify dual sectors of oy_meta_data
+            Number.isInteger(oy_command_array[5][0][1])&&//check author_rights is an integer
+            Number.isInteger(oy_command_array[5][0][2])&&//check submission_price is an integer
+            Number.isInteger(oy_command_array[5][0][3])&&//check vote_limit is an integer
+            Number.isInteger(oy_command_array[5][0][4])&&//check post_expiration_quota is an integer, represents hours
+            Number.isInteger(oy_command_array[5][0][5])&&//check post_capacity_active is an integer
+            Number.isInteger(oy_command_array[5][0][6])&&//check post_capacity_inactive is an integer
+            (oy_command_array[5][0][1]===0||oy_command_array[5][0][1]===1)&&//check that author rights has a valid value of 0 or 1
+            oy_command_array[5][0][2]>=0&&//check that submission price is a non negative value
+            oy_command_array[5][0][3]>=0&&//check that vote_limit has a non negative value
+            oy_command_array[5][0][4]>0&&//check that post expiration_quota has a positive value, represents hours
+            oy_command_array[5][0][5]>=2&&//check that post_capacity_active has a plural value
+            oy_command_array[5][0][6]>=2&&//check that post_capacity_inactive has a plural value
+            typeof(oy_command_array[5][1])==="object");//check that the holding object for posts is a valid object
+    }],
+    "OY_HIVEMIND_POST":[function(oy_command_array) {
+        return (oy_command_array[3]===""&&//verify that oy_entropy_id was set as null, further preventing changes to already existing hivemind posts
+            oy_command_array[5].length===2&&//verify dual sectors of oy_meta_data
+            oy_hash_check(oy_command_array[5][0][1])&&//check that master_entropy_id is a valid hash
+            Number.isInteger(oy_command_array[5][0][2])&&//check that author_public is an integer, must be -1 TODO unnecessary?
+            Number.isInteger(oy_command_array[5][0][3])&&//check that submission_payment is an integer
+            typeof(OY_BLOCK[6][oy_command_array[5][0][1]])!=="undefined"&&//check that the master thread exists in the meta section of the meshblock
+            OY_BLOCK[6][oy_command_array[5][0][1]][0][0]===0&&//check that the master thread is structured as a master thread in the meta section of the meshblock
+            oy_command_array[5][0][2]===-1&&//check that author_public is set to -1, to be assigned by the meshblock
+            oy_command_array[5][0][3]>=OY_BLOCK[6][oy_command_array[5][0][1]][2]+((((OY_BLOCK[6][oy_command_array[5][0][1]][0][4]*3600)/20))*OY_AKOYA_FEE_BLOCK)&&//check that the submission_payment is large enough to cover the submission fee defined in the master thread, and enough akoya to host the data for the original intended amount of time
+            typeof(OY_BLOCK[3][oy_command_array[2]])!=="undefined"&&//check that the author of the transaction has a positive akoya balance
+            OY_BLOCK[3][oy_command_array[2]]>=oy_command_array[5][0][3]&&//check that the author of the transaction has sufficient akoya to fund the submission payment
+            typeof(OY_BLOCK[3][oy_command_array[5][0][1]])!=="undefined");//check that there is a funding wallet with a positive akoya balance for the master thread
+        //TODO validation for POST[1]
+    }]
+};
+
+// INIT
+let OY_LIGHT_MODE = true;//seek to stay permanently connected to the mesh as a light node/latch, manipulable by the user
+let OY_LIGHT_STATE = true;//immediate status of being a light node/latch, not manipulable by the user
+let OY_LIGHT_PENDING = false;//defines if node is transitioning into a light node from blank or full status
+let OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inputs are expected
+let OY_SIMULATOR_MODE = false;//run in node.js simulator, requires oystersimulate.js
+let OY_SELF_PRIVATE;//private key of node identity
+let OY_SELF_PUBLIC;//public key of node identity
+let OY_SELF_SHORT;//short representation of public key of node identity
+let OY_READY = false;//connection status
+let OY_CONN;//global P2P connection handle
+let OY_ENGINE_KILL = false;//forces engine to stop its loop
+let OY_CONSOLE;//custom function for handling console
+let OY_MESH_MAP;//custom function for tracking mesh map
+let OY_BLOCK_MAP;//custom function for tracking meshblock map
+let OY_INIT = 0;//prevents multiple instances of oy_init() from running simultaneously
+let OY_ENGINE = [{}, {}];//tracking object for core engine variables, [0] is latency tracking
+let OY_COLLECT = {};//object for tracking pull fulfillments
+let OY_CONSTRUCT = {};//data considered valid from OY_COLLECT is stored here, awaiting for final data reconstruction
+let OY_DATA_PUSH = {};//object for tracking data push threads
+let OY_DATA_PULL = {};//object for tracking data pull threads
+let OY_LATCH_COUNT = 0;
+let OY_PEER_COUNT = 0;//how many active connections with mutual peers
+let OY_PEERS = {"oy_aggregate_node":[-1, -1, -1, 0, [], 0, [], 0, [], null, false]};//peer tracking
+let OY_PEERS_PRE = {};//tracks nodes that are almost peers, will become peers once PEER_AFFIRM is received from other node
+let OY_PEERS_NULL = new Event('oy_peers_null');//trigger-able event for when peer_count == 0
+let OY_PEERS_RECOVER = new Event('oy_peers_recover');//trigger-able event for when peer_count > 0
+let OY_NODES = {};//P2P connection handling for individual nodes
+let OY_BOOST = [];//store all node IDs from the most recent meshblock and use to find new peers in-case of peers_null/meshblock reset event
+let OY_BOOST_MODE = false;
+let OY_WARM = {};//tracking connections to nodes that are warming up
+let OY_COLD = {};//tracking connection shutdowns to specific nodes
+let OY_ROUTE_DYNAMIC = [];//tracks dynamic identifier for a routed data sequence
+let OY_LATENCY = {};//handle latency sessions
+let OY_PROPOSED = {};//nodes that have been recently proposed to for mutual peering
+let OY_BLACKLIST = {};//nodes to block for x amount of time
+let OY_PUSH_HOLD = {};//holds data contents ready for pushing to mesh
+let OY_PUSH_TALLY = {};//tracks data push nonces that were deposited on the mesh
+let OY_BASE_BUILD = [];
+let OY_LOGIC_ALL_TYPE = ["OY_BLOCK_COMMAND", "OY_BLOCK_SYNC", "OY_BLOCK_SYNC_CHALLENGE", "OY_BLOCK_DIVE", "OY_DATA_PULL", "OY_CHANNEL_BROADCAST"];//OY_LOGIC_ALL definitions
+let OY_LOGIC_EXCEPT_TYPE = ["OY_BLOCK_SYNC", "OY_BLOCK_SYNC_CHALLENGE_RESPONSE", "OY_BLOCK_DIVE", "OY_CHANNEL_BROADCAST"];
+let OY_MESH_RANGE = 0;
+let OY_BLOCK_SECTORS = [[4, 4000], [12, 12000], [20, 20000]];//timing definitions for the meshblock
+let OY_BLOCK_DYNAMIC = [null, null, null, null];
+let OY_BLOCK_ROSTER = {};
+let OY_BLOCK_ROSTER_AVG = null;
+let OY_BLOCK = [null, [], {}, {}, {}, {}, {}, {}];//the current meshblock - [[0]:oy_block_timestamp, [1]:oy_snapshot_sector, [2]:oy_command_sector, [3]:oy_akoya_sector, [4]:oy_dns_sector, [5]:oy_auction_sector, [6]:oy_meta_sector, [7]:oy_channel_sector]
+let OY_BLOCK_HASH = null;//hash of the most current block
+let OY_BLOCK_FLAT = null;
+let OY_BLOCK_DIFF = false;
+let OY_BLOCK_SIGN = null;
+let OY_BLOCK_TIME = oy_block_time_first(false);//the most recent block timestamp
+let OY_BLOCK_NEXT = oy_block_time_first(true);//the next block timestamp
+let OY_BLOCK_UPTIME = null;
+let OY_BLOCK_WEIGHT = null;
+let OY_BLOCK_STABILITY = 0;
+let OY_BLOCK_STABILITY_KEEP = [OY_BLOCK_RANGE_MIN];
+let OY_BLOCK_STABILITY_ROSTER = parseInt(OY_BLOCK_STABILITY_START+"");
 let OY_BLOCK_COMMAND = {};
 let OY_BLOCK_COMMAND_KEY = {};
 let OY_BLOCK_SYNC_HASH = null;
@@ -2196,12 +2232,39 @@ function oy_channel_commit(oy_channel_id, oy_broadcast_hash, oy_broadcast_payloa
 }
 
 function oy_akoya_transfer(oy_key_private, oy_key_public, oy_transfer_amount, oy_receive_public, oy_callback_confirm) {
-    oy_transfer_amount = Math.floor(oy_transfer_amount*OY_AKOYA_DECIMALS);
-    oy_block_command(oy_key_private, ["OY_AKOYA_SEND", -1, oy_key_public, oy_transfer_amount, oy_receive_public], oy_callback_confirm);
+    let oy_command_array = ["OY_AKOYA_SEND", -1, oy_key_public, Math.floor(oy_transfer_amount*OY_AKOYA_DECIMALS), oy_receive_public];
+    if (!OY_BLOCK_COMMANDS[oy_command_array[0]][0](oy_command_array)) return false;
+
+    oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm);
+
+    return true;
 }
 
 function oy_dns_transfer(oy_key_private, oy_key_public, oy_dns_name, oy_receive_public, oy_callback_confirm) {
-    oy_block_command(oy_key_private, ["OY_DNS_TRANSFER", -1, oy_key_public, oy_dns_name, oy_receive_public], oy_callback_confirm);
+    let oy_command_array = ["OY_DNS_TRANSFER", -1, oy_key_public, oy_dns_name, oy_receive_public];
+    if (!OY_BLOCK_COMMANDS[oy_command_array[0]][0](oy_command_array)) return false;
+
+    oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm);
+
+    return true;
+}
+
+function oy_hivemind_cluster(oy_key_private, oy_key_public, oy_entropy_id, oy_author_revoke, oy_submission_price, oy_vote_limit, oy_expire_quota, oy_capacity_active, oy_capacity_inactive, oy_post_holder, oy_callback_confirm) {
+    let oy_command_array = ["OY_META_SET", -1, oy_key_public, oy_entropy_id, 1, [[0, oy_author_revoke, oy_submission_price, oy_vote_limit, oy_expire_quota, oy_capacity_active, oy_capacity_inactive], oy_post_holder]];
+    if (!OY_BLOCK_COMMANDS[oy_command_array[0]][0](oy_command_array)||!OY_BLOCK_TRANSACTS["OY_HIVEMIND_CLUSTER"][0](oy_command_array)) return false;
+
+    oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm);
+
+    return true;
+}
+
+function oy_hivemind_post(oy_key_private, oy_key_public, oy_cluster_id, oy_submission_payment, oy_post_title, oy_post_handle, oy_callback_confirm) {
+    let oy_command_array = ["OY_META_SET", -1, oy_key_public, "", 1, [[1, oy_cluster_id, -1, oy_submission_payment], [oy_post_title, oy_post_handle]]];
+    if (!OY_BLOCK_COMMANDS[oy_command_array[0]][0](oy_command_array)||!OY_BLOCK_TRANSACTS["OY_HIVEMIND_POST"][0](oy_command_array)) return false;
+
+    oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm);
+
+    return true;
 }
 
 function oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm) {
@@ -2938,41 +3001,18 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
                 //DAPP 0 - WEB 3 HOSTING
 
                 //DAPP 1 - HIVEMIND
-                if (oy_command_execute[i][1][4]===1) {
+                if (oy_command_execute[i][1][4]===1) {//TODO approved_authors + render_mode (works like a blog)
                     if (!Array.isArray(oy_command_execute[i][1][5])||!Array.isArray(oy_command_execute[i][1][5][0])||!Number.isInteger(oy_command_execute[i][1][5][0][0])) continue;
-                    //MASTER[0] = [0, author_rights, submission_price, vote_limit, post_expiration_quota, post_capacity_active, post_capacity_inactive]
+                    //MASTER[0] = [0, author_revoke, submission_price, vote_limit, expire_quota, capacity_active, capacity_inactive]
                     //MASTER[1] = {} - holding object for posts
                     if (oy_command_execute[i][1][5][0][0]===0) {
-                        if (oy_command_execute[i][1][5].length!==2||//verify dual sectors of oy_meta_data
-                            !Number.isInteger(oy_command_execute[i][1][5][0][1])||//check author_rights is an integer
-                            !Number.isInteger(oy_command_execute[i][1][5][0][2])||//check submission_price is an integer
-                            !Number.isInteger(oy_command_execute[i][1][5][0][3])||//check vote_limit is an integer
-                            !Number.isInteger(oy_command_execute[i][1][5][0][4])||//check post_expiration_quota is an integer, represents hours
-                            !Number.isInteger(oy_command_execute[i][1][5][0][5])||//check post_capacity_active is an integer
-                            !Number.isInteger(oy_command_execute[i][1][5][0][6])||//check post_capacity_inactive is an integer
-                            (oy_command_execute[i][1][5][0][1]!==0&&oy_command_execute[i][1][5][0][1]!==1)||//check that author rights has a valid value of 0 or 1
-                            oy_command_execute[i][1][5][0][2]>=0||//check that submission price is a non negative value
-                            oy_command_execute[i][1][5][0][3]>=0||//check that vote_limit has a non negative value
-                            oy_command_execute[i][1][5][0][4]>0||//check that post expiration_quota has a positive value, represents hours
-                            oy_command_execute[i][1][5][0][5]>=2||//check that post_capacity_active has a plural value
-                            oy_command_execute[i][1][5][0][6]>=2||//check that post_capacity_inactive has a plural value
-                            typeof(oy_command_execute[i][1][5][1])!=="object") continue;//check that the holding object for posts is a valid object
+                        if (!OY_BLOCK_TRANSACTS["OY_HIVEMIND_CLUSTER"][0](oy_command_execute[i][1])) continue;
                     }
                     //POST[0] = [1, master_entropy_id, author_public, submission_payment]
                     //POST[1] = [] - rendering object for post content
                     else if (oy_command_execute[i][1][5][0][0]===1) {
-                        if (oy_command_execute[i][1][5].length!==2||//verify dual sectors of oy_meta_data
-                            !oy_hash_check(oy_command_execute[i][1][5][0][1])||//check that master_entropy_id is a valid hash
-                            !Number.isInteger(oy_command_execute[i][1][5][0][2])||//check that author_public is an integer, must be -1 TODO unnecessary?
-                            !Number.isInteger(oy_command_execute[i][1][5][0][3])||//check that submission_payment is an integer
-                            typeof(OY_BLOCK[6][oy_command_execute[i][1][5][0][1]])==="undefined"||//check that the master thread exists in the meta section of the meshblock
-                            OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][0][0]!==0||//check that the master thread is structured as a master thread in the meta section of the meshblock
-                            oy_command_execute[i][1][5][0][2]!==-1||//check that author_public is set to -1, to be assigned by the meshblock
-                            oy_command_execute[i][1][5][0][3]<OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][2]+((((OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][0][4]*3600)/20))*OY_AKOYA_FEE_BLOCK)||//check that the submission_payment is large enough to cover the submission fee defined in the master thread, and enough akoya to host the data for the original intended amount of time
-                            typeof(OY_BLOCK[3][oy_command_execute[i][1][2]])==="undefined"||//check that the author of the transaction has a positive akoya balance
-                            OY_BLOCK[3][oy_command_execute[i][1][2]]>=oy_command_execute[i][1][5][0][3]||//check that the author of the transaction has sufficient akoya to fund the submission payment
-                            typeof(OY_BLOCK[3][oy_command_execute[i][1][5][0][1]])==="undefined") continue;//check that there is a funding wallet with a positive akoya balance for the master thread
-                        //TODO validation for POST[1]
+                        if (!OY_BLOCK_TRANSACTS["OY_HIVEMIND_POST"][0](oy_command_execute[i][1])) continue;
+
                         oy_meta_owner = "";
                         oy_command_execute[i][1][5][0][2] = oy_command_execute[i][1][2];
 
