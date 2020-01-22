@@ -3043,27 +3043,23 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
                         OY_BLOCK[3][oy_command_execute[i][1][2]] -= oy_command_execute[i][1][5][0][3];
                         OY_BLOCK[3][oy_cluster_owner] += OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][3][0][2];
                         OY_BLOCK[3][oy_entropy_id] = oy_command_execute[i][1][5][0][3] - OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][3][0][2];
-                        console.log(oy_command_execute[i][1][5][0][3]);
-                        console.log(OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][3][0][2]);
-                        console.log(oy_command_execute[i][1][5][0][3] - OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][3][0][2]);
-                        console.log(oy_cluster_owner);
-                        console.log(oy_command_execute[i][1][2]);
-                        console.log(OY_BLOCK[3][oy_command_execute[i][1][2]]);
-                        console.log(OY_BLOCK[3][oy_cluster_owner]);
-                        console.log(OY_BLOCK[3][oy_entropy_id]);
-                        console.log(oy_balance_send);
-                        console.log(oy_balance_receive);
-                        if (OY_BLOCK[3][oy_command_execute[i][1][2]]+OY_BLOCK[3][oy_cluster_owner]+OY_BLOCK[3][oy_entropy_id]!==oy_balance_send+oy_balance_receive) {//TODO verify security
+
+                        if ((oy_cluster_owner===oy_command_execute[i][1][2]&&OY_BLOCK[3][oy_cluster_owner]+OY_BLOCK[3][oy_entropy_id]!==oy_balance_send)||(oy_cluster_owner!==oy_command_execute[i][1][2]&&OY_BLOCK[3][oy_command_execute[i][1][2]]+OY_BLOCK[3][oy_cluster_owner]+OY_BLOCK[3][oy_entropy_id]!==oy_balance_send+oy_balance_receive)) {//TODO verify security
                             console.log(7);
                             OY_BLOCK[3][oy_command_execute[i][1][2]] = oy_balance_send;
-                            OY_BLOCK[3][oy_command_execute[i][1][5][0][1]] = oy_balance_receive;
+                            OY_BLOCK[3][oy_cluster_owner] = oy_balance_receive;
                             delete OY_BLOCK[3][oy_entropy_id];
                             continue;
                         }
                         else {
                             console.log(8);
-                            if (Object.keys(OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][1]).length<OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][0][5]+OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][0][6]&&typeof(OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][1][oy_entropy_id])==="undefined") {
-                                OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][1][oy_entropy_id] = OY_BLOCK_TIME+(OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][0][4]*3600);
+                            console.log(Object.keys(OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][1]).length);
+                            console.log(OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][3][0][5]);
+                            console.log(OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][3][0][6]);
+                            console.log(typeof(OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][3][1][oy_entropy_id]));
+                            if (Object.keys(OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][1]).length<OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][3][0][5]+OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][3][0][6]&&
+                                typeof(OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][3][1][oy_entropy_id])==="undefined") {
+                                OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][3][1][oy_entropy_id] = OY_BLOCK_TIME+(OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][3][0][4]*3600);
                             }
                             else continue;
                         }
@@ -3090,6 +3086,8 @@ console.log(0);
         for (let oy_key_public in OY_BLOCK[3]) {
             oy_supply_post += OY_BLOCK[3][oy_key_public];
         }
+        console.log("PRE: "+oy_supply_pre);
+        console.log("POST: "+oy_supply_post);
         if (oy_supply_post>oy_supply_pre||oy_supply_post>OY_AKOYA_MAX_SUPPY) {//confirms that the supply has not increased nor breached AKOYA_MAX_SUPPLY
             oy_block_reset("OY_FLAG_AKOYA_SUPPLY_OVERFLOW");
             return [true, 0];
