@@ -236,6 +236,7 @@ const OY_BLOCK_TRANSACTS = {
             typeof(OY_BLOCK[3][oy_command_array[2]])!=="undefined"&&//check that the author of the transaction has a positive akoya balance
             OY_BLOCK[3][oy_command_array[2]]>=oy_command_array[5][0][3]&&//check that the author of the transaction has sufficient akoya to fund the submission payment
             (OY_BLOCK[6][oy_command_array[5][0][1]][0]===""&&typeof(OY_BLOCK[3][oy_command_array[5][0][1]])!=="undefined")||(OY_BLOCK[6][oy_command_array[5][0][1]][0]!==""&&typeof(OY_BLOCK[3][OY_BLOCK[6][oy_command_array[5][0][1]][0]])!=="undefined")&&//check that there is a funding wallet with a positive akoya balance for the master thread
+            oy_an_check(oy_command_array[5][1][0].replace(/[=]/g, ""))&&//check that the post title is in valid base64
             oy_handle_check(oy_command_array[5][1][1]));//check that the post content is a mesh handle
     }]
 };
