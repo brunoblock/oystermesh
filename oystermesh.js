@@ -1133,6 +1133,13 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             }
         }
 
+        OY_BLOCK_CHALLENGE = {};
+
+        for (let oy_peer_select in OY_PEERS) {
+            if (oy_peer_select==="oy_aggregate_node") continue;
+            OY_BLOCK_CHALLENGE[oy_peer_select] = true;
+        }
+
         OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK);
         console.log(OY_BLOCK_FLAT);
 
