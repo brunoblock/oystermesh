@@ -235,7 +235,8 @@ const OY_BLOCK_TRANSACTS = {
             oy_command_array[5][0][3]>=OY_BLOCK[6][oy_command_array[5][0][1]][3][0][2]+((((OY_BLOCK[6][oy_command_array[5][0][1]][3][0][4]*3600)/20))*OY_AKOYA_FEE_BLOCK)&&//check that the submission_payment is large enough to cover the submission fee defined in the master thread, and enough akoya to host the data for the original intended amount of time
             typeof(OY_BLOCK[3][oy_command_array[2]])!=="undefined"&&//check that the author of the transaction has a positive akoya balance
             OY_BLOCK[3][oy_command_array[2]]>=oy_command_array[5][0][3]&&//check that the author of the transaction has sufficient akoya to fund the submission payment
-            (OY_BLOCK[6][oy_command_array[5][0][1]][0]===""&&typeof(OY_BLOCK[3][oy_command_array[5][0][1]])!=="undefined")||(OY_BLOCK[6][oy_command_array[5][0][1]][0]!==""&&typeof(OY_BLOCK[3][OY_BLOCK[6][oy_command_array[5][0][1]][0]])!=="undefined")&&//check that there is a funding wallet with a positive akoya balance for the master thread
+            typeof(OY_BLOCK[6][oy_command_array[5][0][1]])!=="undefined"&&//check that the master thread exists in the meta sector of the meshblock
+            ((OY_BLOCK[6][oy_command_array[5][0][1]][0]===""&&typeof(OY_BLOCK[3][oy_command_array[5][0][1]])!=="undefined")||(OY_BLOCK[6][oy_command_array[5][0][1]][0]!==""&&typeof(OY_BLOCK[3][OY_BLOCK[6][oy_command_array[5][0][1]][0]])!=="undefined"))&&//check that there is a funding wallet with a positive akoya balance for the master thread
             oy_an_check(oy_command_array[5][1][0].replace(/[=]/g, ""))&&//check that the post title is in valid base64
             oy_handle_check(oy_command_array[5][1][1]));//check that the post content is a mesh handle
     }]
@@ -2284,7 +2285,7 @@ function oy_hivemind_cluster(oy_key_private, oy_key_public, oy_entropy_id, oy_au
 function oy_hivemind_post(oy_key_private, oy_key_public, oy_cluster_id, oy_submission_payment, oy_post_title, oy_post_handle, oy_callback_confirm) {
     if (OY_BLOCK_HASH===null||oy_key_private===null||oy_key_public===null) return false;
 
-    let oy_command_array = ["OY_META_SET", -1, oy_key_public, "", 1, [[1, oy_cluster_id, -1, Math.floor(oy_submission_payment*OY_AKOYA_DECIMALS)], [nacl.util.encodeBase64(oy_post_title), oy_post_handle]]];
+    let oy_command_array = ["OY_META_SET", -1, oy_key_public, "", 1, [[1, oy_cluster_id, -1, Math.floor(oy_submission_payment*OY_AKOYA_DECIMALS)], [LZString.compressToBase64(oy_post_title), oy_post_handle]]];
     if (!OY_BLOCK_COMMANDS[oy_command_array[0]][0](oy_command_array)||!OY_BLOCK_TRANSACTS["OY_HIVEMIND_POST"][0](oy_command_array)) return false;
 
     oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm);
