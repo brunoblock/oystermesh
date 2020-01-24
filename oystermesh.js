@@ -41,7 +41,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_BOOT_BUFFER = 120;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims dive rewards
 const OY_BLOCK_RANGE_MIN = 5;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOTTIME = 1579819200;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOTTIME = 1579887500;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_CHALLENGE_SAFETY = 0.5;//safety margin for rogue packets reaching block_consensus. 1 means no changes, lower means further from block_consensus, higher means closer.
 const OY_CHALLENGE_BUFFER = 1.8;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (min of 1)
 const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
@@ -1077,6 +1077,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             OY_LIGHT_PENDING = true;
 
             OY_BLOCK_FLAT = OY_BASE_BUILD.join("");
+            console.log(OY_BLOCK_FLAT);//TODO temp
 
             OY_BLOCK = JSON.parse(OY_BLOCK_FLAT);
 
@@ -1141,7 +1142,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         }
 
         OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK);
-        console.log(OY_BLOCK_FLAT);
+        console.log(OY_BLOCK_FLAT);//TODO temp
 
         OY_BLOCK_HASH = oy_hash_gen(OY_BLOCK_FLAT);
 
@@ -1444,7 +1445,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_PEER_AFFIRM") {
         if (oy_peer_pre_check(oy_node_id)) {
-            oy_peer_add(oy_node_id, oy_state_convert(oy_data_payload));
+            oy_peer_add(oy_node_id, oy_data_payload);
             oy_log("Confirmed mutual peer "+oy_short(oy_node_id));
             return true;
         }
@@ -2820,6 +2821,7 @@ function oy_block_loop() {
             }
 
             OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK);
+            console.log(OY_BLOCK_FLAT);//TODO temp
 
             OY_BLOCK_HASH = oy_hash_gen(OY_BLOCK_FLAT);
 
