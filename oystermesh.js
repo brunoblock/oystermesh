@@ -40,8 +40,8 @@ const OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via 
 const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
 const OY_BLOCK_BOOT_BUFFER = 120;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_DIVE_BUFFER = 40;//seconds of uptime required until self claims dive rewards
-const OY_BLOCK_RANGE_MIN = 5;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOTTIME = 1579887500;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_RANGE_MIN = 15;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
+const OY_BLOCK_BOOTTIME = 1579983800;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_CHALLENGE_SAFETY = 0.5;//safety margin for rogue packets reaching block_consensus. 1 means no changes, lower means further from block_consensus, higher means closer.
 const OY_CHALLENGE_BUFFER = 1.8;//amount of node hop buffer for challenge broadcasts, higher means more chance the challenge will be received yet more bandwidth taxing (min of 1)
 const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
@@ -2299,10 +2299,10 @@ function oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm)
         oy_chrono(function() {
             oy_command_array[1] = Date.now()/1000;
             let oy_command_flat = JSON.stringify(oy_command_array);
-            if (typeof(oy_callback_confirm)!=="undefined") OY_BLOCK_CONFIRM[oy_hash_gen(oy_command_flat)] = oy_callback_confirm;
+            let oy_command_hash = oy_hash_gen(oy_command_flat);
+            if (typeof(oy_callback_confirm)!=="undefined") OY_BLOCK_CONFIRM[oy_command_hash] = oy_callback_confirm;
             let oy_command_crypt = oy_key_sign(oy_key_private, oy_command_flat);
             if (oy_block_command_verify([oy_command_array, oy_command_crypt])) {
-                let oy_command_hash = oy_hash_gen(oy_command_flat);
                 let oy_data_payload = [[], null, oy_command_array, oy_command_crypt];
                 OY_BLOCK_COMMAND[oy_command_hash] = oy_data_payload;
                 if (typeof(OY_BLOCK_MAP)==="function") OY_BLOCK_MAP(0, true);
@@ -3013,6 +3013,7 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
             let oy_meta_flat = JSON.stringify(oy_command_execute[i][1][5]);
             if (oy_meta_flat.length<=OY_META_DATA_LIMIT&&oy_an_check(oy_meta_flat.replace(/[\[\]{}'":,@=-]/g, ""))) {//TODO confirm if these conditions should be checked every hop
                 let oy_meta_owner = oy_command_execute[i][1][2];
+                let oy_meta_data = JSON.parse(JSON.stringify(oy_command_execute[i][1][5]));
 
                 let oy_entropy_id;
                 if (oy_command_execute[i][1][3]==="") {//recycle meshblock entropy to ensure random meta handles are assigned in a decentralized manner
@@ -3042,7 +3043,7 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
                         if (!OY_BLOCK_TRANSACTS["OY_HIVEMIND_POST"][0](oy_command_execute[i][1])) continue;
 
                         oy_meta_owner = "";
-                        oy_command_execute[i][1][5][0][2] = oy_command_execute[i][1][2];
+                        oy_meta_data[0][2] = oy_command_execute[i][1][2];
 
                         let oy_cluster_owner;
                         if (OY_BLOCK[6][oy_command_execute[i][1][5][0][1]][0]==="") oy_cluster_owner = oy_command_execute[i][1][5][0][1];
@@ -3071,8 +3072,8 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
                 }
                 //DAPP 1 - HIVEMIND
 
-                //[owner, meta_dapp, meta_size, meta_data]
-                OY_BLOCK[6][oy_entropy_id] = [oy_meta_owner, oy_command_execute[i][1][4], Math.max(99, oy_meta_flat.length), oy_command_execute[i][1][5]];
+                //[meta_owner, meta_dapp, meta_size, meta_data]
+                OY_BLOCK[6][oy_entropy_id] = [oy_meta_owner, oy_command_execute[i][1][4], Math.max(99, oy_meta_flat.length), oy_meta_data];
             }
             else continue;
         }
