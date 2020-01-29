@@ -1276,7 +1276,6 @@
                 <div align="right" style="position:absolute;left:-2.5%;top:0;width:50%;height:100%;">
                     PEER&nbsp;COUNT<br>
                     MESH&nbsp;RANGE<br>
-                    ROSTER&nbsp;AVG<br>
                     LATENCY&nbsp;AVG<br>
                     BEAM&nbsp;FLOW<br>
                     SOAK&nbsp;FLOW<br>
@@ -1290,7 +1289,6 @@
                 <div style="position:absolute;right:-2.5%;top:0;width:50%;height:100%;font-weight:bold;">
                     <span id="oy_peer_count_cont"><span id="oy_peer_count">null</span>&nbsp;peer(s)</span><br>
                     <span id="oy_mesh_range">null</span>&nbsp;node(s)<br>
-                    <span id="oy_roster_avg">null</span>&nbsp;sig<br>
                     <span id="oy_latency_avg">null</span>&nbsp;sec<br>
                     <span id="oy_beam_flow">null</span>&nbsp;kbps<br>
                     <span id="oy_soak_flow">null</span>&nbsp;kbps<br>
@@ -1694,7 +1692,6 @@
 
         let oy_blank = "---";
         document.getElementById("oy_mesh_range").innerHTML = OY_MESH_RANGE;
-        document.getElementById("oy_roster_avg").innerHTML = (OY_BLOCK_ROSTER_AVG===null)?oy_blank:OY_BLOCK_ROSTER_AVG.toFixed(3);
         if (oy_avg_latency.length>0) document.getElementById("oy_latency_avg").innerHTML = (oy_avg_latency.reduce(oy_reduce_sum)/oy_avg_latency.length).toFixed(3);
         else document.getElementById("oy_latency_avg").innerHTML = 0;
         if (oy_avg_beam.length>0) document.getElementById("oy_beam_flow").innerHTML = (oy_avg_beam.reduce(oy_reduce_sum)/1000).toFixed(2);
@@ -1906,6 +1903,10 @@
 
     function oy_block_parse() {
         if (OY_BLOCK_HASH===null||OY_WALLET_PUBLIC===null) return false;
+        for (let delay = 0;delay <= 400; delay += 40) {
+            setTimeout(oy_dapper_tab, delay);
+        }
+
         oy_akoya_balance();
         let oy_akoya_render = [];
         if (OY_AKOYA_PROCESS===false) {
@@ -2382,12 +2383,9 @@
             console.log(result);
         });
         */
-
-        let pass = oy_hivemind_post(OY_WALLET_PRIVATE, OY_WALLET_PUBLIC, "7d0704e107280717c4bca6621034f5eb2c699506", 50, "Chinchilla Title", "OY30a2e2d9d36cc0b381b4aebd729ae067bf20701070e128@423808571b977c0742359846396e727a", function(bob) {
-            console.log("HIVEMIND POST");
-            console.log(bob);
+        oy_akoya_transfer(OY_WALLET_PRIVATE, OY_WALLET_PUBLIC, 10, "JSJqmlzAxwuINY2FCpWPJYvKIK1AjavBgkIwIm139k4M", function(result) {
+            console.log(result);
         });
-        console.log(pass);
     }
 
     function oy_dapper_toggle(oy_force_reset) {
