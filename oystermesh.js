@@ -115,7 +115,7 @@ const OY_DNS_OWNER_MIN = (OY_AKOYA_FEE_BLOCK+OY_DNS_FEE)*OY_DNS_AUCTION_MIN+(OY_
 const OY_PEERS_TEMPLATE = Object.freeze({"oy_aggregate_node":[-1, -1, -1, 0, [], 0, [], 0, [], null, false]});
 let OY_PEERS = JSON.parse(JSON.stringify(OY_PEERS_TEMPLATE));
 //the current meshblock - [[0]:[oy_mesh_dynasty, oy_block_timestamp, oy_mesh_range, oy_work_difficulty], [1]:oy_dive_sector, [2]:oy_snapshot_sector, [3]:oy_command_sector, [4]:oy_akoya_sector, [5]:oy_dns_sector, [6]:oy_auction_sector, [7]:oy_meta_sector]
-const OY_BLOCK_TEMPLATE = Object.freeze([[null, null, null, null], [], [], {}, {}, {}, {}, {}, {}, {}]);//TODO figure out channel sector, figure out if dive sector will track transact payments
+const OY_BLOCK_TEMPLATE = Object.freeze([[null, null, null, null], [], [], {}, {}, {}, {}, {}, {}, {}]);//TODO figure out channel sector
 let OY_BLOCK = JSON.parse(JSON.stringify(OY_BLOCK_TEMPLATE));
 
 // SECURITY CHECK FUNCTIONS
@@ -307,10 +307,7 @@ let OY_BLOCK_UPTIME = null;
 let OY_BLOCK_WEIGHT = null;
 let OY_BLOCK_STABILITY = 0;
 let OY_BLOCK_STABILITY_KEEP = [OY_BLOCK_RANGE_MIN];
-let OY_BLOCK_STABILITY_ROSTER = parseInt(OY_BLOCK_STABILITY_START+"");
 let OY_BLOCK_COMMAND = {};
-let OY_BLOCK_COMMAND_KEY = {};
-let OY_BLOCK_SYNC_HASH = null;
 let OY_BLOCK_SYNC = {};
 let OY_BLOCK_DIVE = {};
 let OY_BLOCK_CHALLENGE = {};
@@ -630,19 +627,15 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             return false;
         }
 
-        if (oy_data_payload[2][1]<oy_time_local+OY_MESH_BUFFER[0]&&//check that the broadcast timestamp is not in the future, with buffer leniency
+        if (OY_BLOCK_HASH!==null&&//check that there is a known meshblock hash
+            oy_data_payload[2][1]<oy_time_local+OY_MESH_BUFFER[0]&&//check that the broadcast timestamp is not in the future, with buffer leniency
             oy_time_local-oy_data_payload[2][1]<OY_MESH_EDGE+OY_MESH_BUFFER[0]&&//check that the broadcast timestamp complies with MESH_EDGE restrictions
             oy_data_payload[2][1]-OY_BLOCK_TIME>=0&&//check that the broadcast timestamp is in the first sector of the current block
             oy_data_payload[2][1]-OY_BLOCK_TIME<OY_BLOCK_SECTORS[0][0]) {//check that the broadcast timestamp is in the first sector of the current block
 
-            let oy_command_hash = oy_hash_gen(JSON.stringify(oy_data_payload[2]));
-            if (typeof(OY_BLOCK_COMMAND_KEY[oy_data_payload[2][2]])==="undefined") OY_BLOCK_COMMAND_KEY[oy_data_payload[2][2]] = [];
-            if (OY_BLOCK_COMMAND_KEY[oy_data_payload[2][2]].length>=OY_BLOCK_KEY_LIMIT||OY_BLOCK_COMMAND_KEY[oy_data_payload[2][2]].indexOf(oy_command_hash)!==-1) return false;
-            OY_BLOCK_COMMAND_KEY[oy_data_payload[2][2]].push(oy_command_hash);
-
-            if (oy_block_command_verify([oy_data_payload[2], oy_data_payload[3]])) {
-                OY_BLOCK_COMMAND[oy_command_hash] = oy_data_payload;
-                oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_COMMAND", oy_data_payload);
+            if (OY_LIGHT_STATE===true) oy_data_route("OY_LOGIC_UPSTREAM", "OY_BLOCK_COMMAND", oy_data_payload);
+            else if (oy_block_command_verify([oy_data_payload[2], oy_data_payload[3]])) {
+                OY_BLOCK_COMMAND[oy_hash_gen(JSON.stringify(oy_data_payload[2]))] = [oy_data_payload[2], oy_data_payload[3]];
                 if (typeof(OY_BLOCK_MAP)==="function") OY_BLOCK_MAP(0, false);
             }
         }
@@ -669,21 +662,25 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                 let oy_sync_hash = oy_hash_gen(oy_data_payload[5]);
                 if (oy_key_verify(oy_data_payload[0][0], oy_data_payload[3], oy_data_payload[4]+oy_sync_hash+oy_data_payload[6])) {
                     let oy_command_pool = {};
-                    let oy_command_inherit = [];
+                    let oy_command_verify = [];
                     let oy_sync_command = JSON.parse(LZString.decompressFromUTF16(oy_data_payload[5]));
-                    for (let i in oy_sync_command) {
-                        let oy_command_hash = oy_hash_gen(JSON.stringify(oy_sync_command[i][0]));
-                        if (typeof(oy_command_pool[oy_command_hash])!=="undefined") return false;//node sent same command twice, so discard their entire sync broadcast
-                        oy_command_pool[oy_command_hash] = oy_sync_command[i][0];
-                        if (typeof(OY_BLOCK_COMMAND[oy_command_hash])==="undefined") oy_command_inherit.push(oy_sync_command[i]);
+                    for (let oy_command_hash in oy_sync_command) {
+                        if (oy_command_hash===oy_hash_gen(JSON.stringify(oy_sync_command[0]))) return false;
+                        oy_command_pool[oy_command_hash] = oy_sync_command[0];
+                        oy_command_verify.push(oy_sync_command);
                     }
-                    if (oy_block_sync_verify(oy_command_inherit)) {
-                        if (typeof(OY_BLOCK_SYNC[oy_data_payload[0][0]])==="undefined"&&oy_memory_work(oy_data_payload[0][0], OY_BLOCK_HASH, OY_BLOCK_DIFFICULTY)===oy_data_payload[6]) {//prevent concurrent thread overlap and check memory work
-                            OY_BLOCK_SYNC[oy_data_payload[0][0]] = oy_command_pool;
-                            oy_data_payload[2].push(oy_key_sign(OY_SELF_PRIVATE, oy_crypt_short));
-                            oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_SYNC", oy_data_payload);
-                            if (typeof(OY_BLOCK_MAP)==="function") OY_BLOCK_MAP(1, false);
+                    if (oy_block_sync_verify(oy_command_verify)&&oy_memory_work(oy_data_payload[0][0], OY_BLOCK_HASH, OY_BLOCK_DIFFICULTY)===oy_data_payload[6]) {
+                        oy_data_payload[2].push(oy_key_sign(OY_SELF_PRIVATE, oy_crypt_short));
+                        let oy_route_pass = true;
+                        if (typeof(OY_BLOCK_SYNC[oy_data_payload[0][0]])==="undefined") OY_BLOCK_SYNC[oy_data_payload[0][0]] = [oy_data_payload[3], oy_command_pool];
+                        else if (OY_BLOCK_SYNC[oy_data_payload[0][0]][0]!==oy_data_payload[3]) {
+                            let oy_sort = [OY_BLOCK_SYNC[oy_data_payload[0][0]][0], oy_data_payload[3]];
+                            oy_sort.sort();
+                            if (oy_sort[0]!==OY_BLOCK_SYNC[oy_data_payload[0][0]][0]) OY_BLOCK_SYNC[oy_data_payload[0][0]] = [oy_data_payload[3], oy_command_pool];
                         }
+                        else oy_route_pass = false;
+                        if (oy_route_pass===true) oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_SYNC", oy_data_payload);
+                        if (typeof(OY_BLOCK_MAP)==="function") OY_BLOCK_MAP(1, false);
                     }
                 }
             }
@@ -2282,11 +2279,9 @@ function oy_block_reset(oy_reset_flag) {
     OY_BLOCK_UPTIME = null;
     OY_BLOCK_WEIGHT = null;
     OY_BLOCK_STABILITY = 0;
-    OY_BLOCK_STABILITY_ROSTER = parseInt(OY_BLOCK_STABILITY_START+"");
     OY_BLOCK_STABILITY_KEEP = [OY_BLOCK_RANGE_MIN];
     OY_BLOCK_DYNAMIC = [null, null, null, null];
     OY_BLOCK_COMMAND = {};
-    OY_BLOCK_COMMAND_KEY = {};
     OY_BLOCK_SYNC = {};
     OY_BLOCK_DIVE = {};
     OY_BLOCK_CHALLENGE = {};
@@ -2329,11 +2324,6 @@ function oy_block_loop() {
 
         OY_BLOCK_DIFF = false;
         OY_LIGHT_PENDING = false;
-        let oy_dive_reward = "OY_NULL";
-        let oy_sync_command = [];
-        let oy_sync_keep = {};
-        let oy_command_execute = [];
-        let oy_dive_pool = [];
         let oy_block_continue = true;
 
         //BLOCK SEED--------------------------------------------------
@@ -2352,8 +2342,6 @@ function oy_block_loop() {
             document.dispatchEvent(OY_STATE_FULL);
         }
         //BLOCK SEED--------------------------------------------------
-
-        if (OY_BLOCK_UPTIME!==null&&OY_BLOCK_TIME-OY_BLOCK_UPTIME>=OY_BLOCK_DIVE_BUFFER) oy_dive_reward = (" "+OY_BLOCK_DIVE_REWARD).slice(1);
 
         if (OY_BLOCK_HASH!==null) {
             oy_chrono(function() {
@@ -2529,24 +2517,21 @@ function oy_block_loop() {
                 return false;
             }
 
-            OY_BLOCK_COMMAND_KEY = {};
-            for (let oy_command_hash in OY_BLOCK_COMMAND) {
-                oy_sync_command.push([OY_BLOCK_COMMAND[oy_command_hash][2], OY_BLOCK_COMMAND[oy_command_hash][3]]);//[oy_command_array, oy_command_crypt]
-                oy_sync_keep[oy_command_hash] = OY_BLOCK_COMMAND[oy_command_hash][2];
-            }
-
-            oy_sync_command.sort(function(a, b) {//TODO this might need to be random instead to increase hash diversity/security
+            /*
+            oy_sync_command.sort(function(a, b) {
                 return a[0] - b[0];
             });
+            */
 
             //oy_log_debug("COMMAND: "+JSON.stringify(OY_BLOCK_COMMAND)+"\nSYNC COMMAND: "+JSON.stringify(oy_sync_command));
-            oy_sync_command = LZString.compressToUTF16(JSON.stringify(oy_sync_command));
+            let oy_sync_command = LZString.compressToUTF16(JSON.stringify(OY_BLOCK_COMMAND));
+            OY_BLOCK_COMMAND = {};
             OY_BLOCK_SYNC = {};
-            OY_BLOCK_SYNC_HASH = oy_hash_gen(oy_sync_command);
+            let oy_block_sync_hash = oy_hash_gen(oy_sync_command);
             oy_chrono(function() {
                 let oy_sync_time = Date.now()/1000;
                 if (OY_PEER_COUNT<OY_BLOCK_PEERS_MIN||oy_sync_time-OY_BLOCK_TIME<OY_BLOCK_SECTORS[0][0]||OY_WORK_HASH===null) return false;
-                let oy_sync_crypt = oy_key_sign(OY_SELF_PRIVATE, oy_sync_time+OY_BLOCK_SYNC_HASH+OY_WORK_HASH);
+                let oy_sync_crypt = oy_key_sign(OY_SELF_PRIVATE, oy_sync_time+oy_block_sync_hash+OY_WORK_HASH);
                 oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_SYNC", [[], oy_rand_gen(), [oy_key_sign(OY_SELF_PRIVATE, oy_short(oy_sync_crypt))], oy_sync_crypt, oy_sync_time, oy_sync_command, OY_WORK_HASH]);
                 oy_sync_command = null;
                 if (typeof(OY_BLOCK_MAP)==="function") OY_BLOCK_MAP(1, true);
@@ -2597,7 +2582,7 @@ function oy_block_loop() {
                 }
                 return a[1][1] - b[1][1];
             });
-            if (oy_dive_reward!=="OY_NULL"&&typeof(OY_BLOCK[4][oy_dive_reward])!=="undefined") oy_dive_pool.push([oy_dive_reward, OY_SELF_PUBLIC]);
+
             for (let oy_key_public in OY_BLOCK_SYNC) {
                 if (OY_BLOCK_SYNC[oy_key_public][0]===true&&OY_BLOCK_SYNC[oy_key_public][2][7]!=="OY_NULL"&&typeof(OY_BLOCK[4][OY_BLOCK_SYNC[oy_key_public][2][7]])!=="undefined") oy_dive_pool.push([OY_BLOCK_SYNC[oy_key_public][2][7], oy_key_public]);//TODO review security
             }
@@ -2615,7 +2600,7 @@ function oy_block_loop() {
 
             let oy_time_local = Date.now()/1000;
 
-            OY_BLOCK[1] = [];
+            let oy_dive_ledger = {};
             for (let oy_key_public in OY_BLOCK_SYNC) {
 
             }
@@ -2624,7 +2609,6 @@ function oy_block_loop() {
             OY_BLOCK_STABILITY_KEEP.push(OY_MESH_RANGE);
             while (OY_BLOCK_STABILITY_KEEP.length>OY_BLOCK_STABILITY_LIMIT) OY_BLOCK_STABILITY_KEEP.shift();
             OY_BLOCK_STABILITY = (OY_BLOCK_STABILITY_KEEP.length<OY_BLOCK_STABILITY_TRIGGER)?0:oy_block_stability(OY_BLOCK_STABILITY_KEEP);
-            OY_BLOCK_STABILITY_ROSTER = (OY_BLOCK_STABILITY_KEEP.length<OY_BLOCK_STABILITY_TRIGGER)?OY_BLOCK_STABILITY_START:Math.max(OY_BLOCK_STABILITY_MIN, OY_BLOCK_STABILITY);
 
             if (OY_MESH_RANGE<OY_BLOCK_RANGE_MIN&&oy_time_local-OY_BLOCK_BOOTTIME>OY_BLOCK_BOOT_BUFFER) {
                 oy_block_reset("OY_FLAG_DROP_RANGE");
