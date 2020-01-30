@@ -120,7 +120,7 @@ let OY_BLOCK = JSON.parse(JSON.stringify(OY_BLOCK_TEMPLATE));
 
 // SECURITY CHECK FUNCTIONS
 const OY_BLOCK_COMMANDS = {
-    //["OY_AKOYA_SEND", oy_protocol_auto, oy_key_public, oy_transfer_amount, oy_receive_public]
+    //["OY_AKOYA_SEND", oy_protocol_assign, oy_key_public, oy_transfer_amount, oy_receive_public]
     "OY_AKOYA_SEND":[function(oy_command_array) {
         return (oy_command_array.length===5&&//check the element count in the command
             oy_command_array[3]>0&&//check that the sending amount is greater than zero
@@ -132,16 +132,16 @@ const OY_BLOCK_COMMANDS = {
             oy_command_array[2]!==oy_command_array[4]);//check that the sender and the receiver are different
         //TODO - either one wallet transaction per block or need additional checks
     }],
-    //["OY_AKOYA_SINK", -1, oy_key_public, oy_sink_amount]
+    //["OY_AKOYA_SINK", oy_protocol_assign, oy_key_public, oy_sink_amount]
     "OY_AKOYA_SINK":[function(oy_command_array) {
         return (oy_command_array.length===4);//check the element count in the command
     }],
-    //["OY_AKOYA_BURN", -1, oy_key_public, oy_burn_amount]
+    //["OY_AKOYA_BURN", oy_protocol_assign, oy_key_public, oy_burn_amount]
     "OY_AKOYA_BURN":[function(oy_command_array) {
         return (oy_command_array.length===4);//check the element count in the command
         //TODO
     }],
-    //["OY_DNS_MODIFY", -1, oy_key_public, oy_dns_name, oy_nav_data]
+    //["OY_DNS_MODIFY", oy_protocol_assign, oy_key_public, oy_dns_name, oy_nav_data]
     "OY_DNS_MODIFY":[function(oy_command_array) {
         return (oy_command_array.length===5&&//check the element count in the command
             oy_command_array[3].length<=OY_DNS_NAME_LIMIT&&//check that the domain name's length is compliant
@@ -151,7 +151,7 @@ const OY_BLOCK_COMMANDS = {
             typeof(oy_command_array[4])==="object"&&//check that oy_nav_set is an object
             oy_command_array[4]!==null);//further ensure that oy_nav_data is an object
     }],
-    //["OY_DNS_BID", -1, oy_key_public, oy_dns_name, oy_bid_amount]
+    //["OY_DNS_BID", oy_protocol_assign, oy_key_public, oy_dns_name, oy_bid_amount]
     "OY_DNS_BID":[function(oy_command_array) {
         return (oy_command_array.length===5&&//check the element count in the command
             oy_command_array[3].length<=OY_DNS_NAME_LIMIT&&//check that the domain name's length is compliant
@@ -162,7 +162,7 @@ const OY_BLOCK_COMMANDS = {
             (typeof(OY_BLOCK[5][oy_command_array[3]])==="undefined"||OY_BLOCK[5][oy_command_array[3]][0]==="A")&&//check that oy_dns_name doesn't exist as a domain, or is in auction mode
             (typeof(OY_BLOCK[5][oy_command_array[3]])==="undefined"||oy_command_array[4]>=OY_BLOCK[6][oy_command_array[3]][1]*2));//check that oy_dns_name doesn't exist as a domain, or the bid amount is at least double the previous bid
     }],
-    //["OY_DNS_TRANSFER", -1, oy_key_public, oy_dns_name, oy_receive_public]
+    //["OY_DNS_TRANSFER", oy_protocol_assign, oy_key_public, oy_dns_name, oy_receive_public]
     "OY_DNS_TRANSFER":[function(oy_command_array) {
         return (oy_command_array.length===5&&//check the element count in the command
             oy_command_array[3].length<=OY_DNS_NAME_LIMIT&&//check that the domain name's length is compliant
@@ -171,7 +171,7 @@ const OY_BLOCK_COMMANDS = {
             OY_BLOCK[5][oy_command_array[3]][0]===oy_command_array[2]&&//check that oy_key_public owns oy_dns_name
             typeof(OY_BLOCK[4][oy_command_array[4]])!=="undefined");//check that oy_receive_public has a positive balance in the akoya ledger
     }],
-    //["OY_DNS_RELEASE", -1, oy_key_public, oy_dns_name]
+    //["OY_DNS_RELEASE", oy_protocol_assign, oy_key_public, oy_dns_name]
     "OY_DNS_RELEASE":[function(oy_command_array) {
         return (oy_command_array.length===4&&//check the element count in the command
             oy_command_array[3].length<=OY_DNS_NAME_LIMIT&&//check that the domain name's length is compliant
@@ -179,7 +179,7 @@ const OY_BLOCK_COMMANDS = {
             typeof(OY_BLOCK[5][oy_command_array[3]])!=="undefined"&&//check that oy_dns_name exists in the dns_sector of the meshblock
             OY_BLOCK[5][oy_command_array[3]][0]===oy_command_array[2]);//check that oy_key_public owns oy_dns_name
     }],
-    //["OY_DNS_NULLING", -1, oy_key_public, oy_dns_name, oy_nulling_amount]
+    //["OY_DNS_NULLING", oy_protocol_assign, oy_key_public, oy_dns_name, oy_nulling_amount]
     "OY_DNS_NULLING":[function(oy_command_array) {
         return (oy_command_array.length===5&&//check the element count in the command
             oy_command_array[3].length<=OY_DNS_NAME_LIMIT&&//check that the domain name's length is compliant
@@ -190,7 +190,7 @@ const OY_BLOCK_COMMANDS = {
             typeof(OY_BLOCK[4][oy_command_array[2]])!=="undefined"&&//check that oy_key_public has a positive balance in the akoya ledger
             OY_BLOCK[4][oy_command_array[2]]>=oy_command_array[4]+OY_NULLING_BUFFER);//check that oy_key_public has sufficient akoya to execute the nulling event
     }],
-    //["OY_META_SET", -1, oy_key_public, oy_entropy_id, oy_meta_dapp, oy_meta_data]
+    //["OY_META_SET", oy_protocol_assign, oy_key_public, oy_entropy_id, oy_meta_dapp, oy_meta_data]
     "OY_META_SET":[function(oy_command_array) {
         return (oy_command_array.length===6&&
             (oy_command_array[3]===""||oy_hash_check(oy_command_array[3]))&&//check that the input for oy_entropy_id is valid
@@ -198,13 +198,15 @@ const OY_BLOCK_COMMANDS = {
             oy_command_array[4]>=0&&
             oy_command_array[4]<=OY_META_DAPP_RANGE);
     }],
+    //["OY_META_REVOKE", oy_protocol_assign, oy_key_public, oy_entropy_id]
     "OY_META_REVOKE":[function(oy_command_array) {
         if (oy_command_array.length===4) return true;//check the element count in the command
         return false;
         //TODO
     }],
+    //["OY_META_NULLING", oy_protocol_assign, oy_key_public, oy_entropy_id, oy_nulling_amount]
     "OY_META_NULLING":[function(oy_command_array) {
-        if (oy_command_array.length===4) return true;//check the element count in the command
+        if (oy_command_array.length===5) return true;//check the element count in the command
         return false;
         //TODO
     }]
@@ -313,7 +315,7 @@ let OY_BLOCK_DIVE = {};
 let OY_BLOCK_CHALLENGE = {};
 let OY_BLOCK_DIVE_SET = [];
 let OY_BLOCK_DIVE_TRACK = 0;
-let OY_BLOCK_DIVE_REWARD = "OY_NULL";
+let OY_BLOCK_DIVE_PAYOUT = null;
 let OY_BLOCK_NEW = {};
 let OY_BLOCK_CONFIRM = {};
 let OY_BLOCK_HALT = null;
@@ -637,7 +639,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             else {
                 let oy_command_hash = oy_hash_gen(JSON.stringify(oy_data_payload[1]));
                 if (oy_block_command_verify(oy_data_payload[1], oy_data_payload[2], oy_command_hash)) {
-                    OY_BLOCK_COMMAND[oy_command_hash] = [oy_data_payload[1], oy_data_payload[2]];//TODO make sure meshblock cycle does not erase commands
+                    OY_BLOCK_COMMAND[oy_command_hash] = [oy_data_payload[1], oy_data_payload[2]];
                     if (typeof(OY_BLOCK_MAP)==="function") OY_BLOCK_MAP(0, false);
                 }
             }
@@ -2316,7 +2318,6 @@ function oy_block_loop() {
         OY_BLOCK_TIME = oy_block_time_local;
         OY_BLOCK_NEXT = oy_block_time_local+20;
         OY_BLOCK_DYNAMIC = [[], null, null, null];
-        OY_BLOCK_COMMAND = {};
         OY_DIFF_CONSTRUCT = {};
 
         document.dispatchEvent(OY_BLOCK_INIT);
@@ -2523,8 +2524,21 @@ function oy_block_loop() {
             */
 
             //oy_log_debug("COMMAND: "+JSON.stringify(OY_BLOCK_COMMAND)+"\nSYNC COMMAND: "+JSON.stringify(oy_sync_command));
-            let oy_sync_command = LZString.compressToUTF16(JSON.stringify(OY_BLOCK_COMMAND));
+            let oy_command_sort = [];
+            for (let oy_command_hash in OY_BLOCK_COMMAND) {
+                if (OY_BLOCK_COMMAND[oy_command_hash][0][1][0]<OY_BLOCK_TIME+OY_BLOCK_SECTORS[0][0]&&OY_BLOCK_COMMAND[oy_command_hash][0][1][0]>=OY_BLOCK_TIME-20) oy_command_sort.push([oy_command_hash, OY_BLOCK_COMMAND[oy_command_hash][0], OY_BLOCK_COMMAND[oy_command_hash][1]]);
+            }
             OY_BLOCK_COMMAND = {};
+            oy_command_sort.sort(function(a, b) {
+                if (a[1][1][0]===b[1][1][0]) {
+                    let x = a[0].toLowerCase();
+                    let y = b[0].toLowerCase();
+
+                    return x < y ? -1 : x > y ? 1 : 0;
+                }
+                return a[1][1][0] - b[1][1][0];
+            });
+            let oy_sync_command = LZString.compressToUTF16(JSON.stringify(OY_BLOCK_COMMAND));//TODO sync broadcast for commands might be in array since hash needs to be verified anyways
             OY_BLOCK_SYNC = {};
             let oy_block_sync_hash = oy_hash_gen(oy_sync_command);
             oy_chrono(function() {
@@ -2573,13 +2587,13 @@ function oy_block_loop() {
                 }
             }
             oy_command_execute.sort(function(a, b) {
-                if (a[1][1]===b[1][1]) {
+                if (a[1][1][0]===b[1][1][0]) {
                     let x = a[0].toLowerCase();
                     let y = b[0].toLowerCase();
 
                     return x < y ? -1 : x > y ? 1 : 0;
                 }
-                return a[1][1] - b[1][1];
+                return a[1][1][0] - b[1][1][0];
             });
 
             for (let oy_key_public in OY_BLOCK_SYNC) {
@@ -3201,9 +3215,9 @@ if (!!oy_call_detect) {
     let oy_dive_detect = oy_call_detect.getAttribute("payout");
     if (oy_key_check(oy_dive_detect)) {
         OY_PASSIVE_MODE = true;
-        OY_BLOCK_DIVE_REWARD = oy_dive_detect;
+        OY_BLOCK_DIVE_PAYOUT = oy_dive_detect;
         oy_init(function() {
-            console.log("Oyster is diving for address "+OY_BLOCK_DIVE_REWARD)
+            console.log("Oyster is diving for address "+OY_BLOCK_DIVE_PAYOUT);
         });
     }
 }
