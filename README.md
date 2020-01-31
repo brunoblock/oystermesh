@@ -9,7 +9,7 @@ NOTICE: The mesh is currently offline or inaccessible whilst V6 development is u
 The Oyster Mesh Protocol provides:
 
 - Decentralized and immutable data storage, hosting, retrieval and sharing.
-- Akoya: a peer-to-peer decentralized, deflationary currency with a 20-40 second confirmation time, sustainable low-energy consumption, no mining, and no transaction fees. 
+- Akoya: a peer-to-peer decentralized, currency with a 20-40 second confirmation time, sustainable low-energy consumption. 
 - Automated geolocation-aware load balancing of data.
 - Proof of Latency (PoL) anti-spam mechanism has low and sustainable CPU/energy requirements.
 - Implicitly DDOS-proof data hosting; service denial requires physical proximity to the data’s location whilst the location is obfuscated.
@@ -30,11 +30,11 @@ Akoya testnet faucet: https://top.oyster.org/oy_akoya_faucet.html
 
 Akoya characteristics:
 - 20-40 second confirmation time.
-- Capable of extremely high transaction throughput (TPS).
-- Transactions cost nothing, no currency and no PoW.
-- Microfee is deducted per wallet address per 20 seconds, fees are paid out to nodes that are currently online and securing the Akoya ledger.
-- Extremely low energy consumption required to secure the network.
-- Transaction history is retained actively for 2.7 hrs and passively for 6 months.
+- Capable of high transaction throughput (TPS).
+- Transactions cost nothing, no currency and no PoW. If you're light node has weak connectivity you can pay a fee to increase the chance that your transaction is processed.
+- Microfee is deducted per wallet address per 20 seconds, fees are paid out to full nodes that are currently online and securing the Akoya ledger.
+- Low energy consumption required to secure the network.
+- Transaction history is retained actively for 3 hrs and can be validated 
 
 Coin information:
 
@@ -55,7 +55,7 @@ Akoya for IoT Infrastructure:
 - Nodes consume a negligible amount of electricity, hard disk space, and computer resources in general.
 - The network is tolerant of nodes constantly going offline and online.
 - Nodes that boot from a blank state can synchronize with the Akoya ledger in a matter of seconds (unlike Bitcoin/Ethereum which takes days).
-- Zero transaction fees, including PoW.
+- Zero transaction fees as a full node.
 - High transaction throughput capabilities, will report on TPS results after more testing is performed.
 - IoT companies will seek to monetize their infrastructure since connecting to the network earns Akoya.
 
