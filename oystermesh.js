@@ -2564,7 +2564,7 @@ function oy_block_loop() {
             let oy_command_check = {};
             let oy_dive_ledger = {};
             for (let oy_key_public in OY_BLOCK_SYNC) {
-                oy_dive_ledger[oy_key_public] = [(typeof(OY_BLOCK[1][oy_key_public])!=="undefined")?OY_BLOCK[1][oy_key_public][0]++:1, 0];
+                oy_dive_ledger[oy_key_public] = [(typeof(OY_BLOCK[1][oy_key_public])!=="undefined")?OY_BLOCK[1][oy_key_public][0]++:1, 0, []];
             }
             for (let oy_key_public in OY_BLOCK_SYNC) {
                 for (let i in OY_BLOCK_SYNC[oy_key_public][1]) {
@@ -2573,13 +2573,15 @@ function oy_block_loop() {
                         oy_key_public<oy_command_check[OY_BLOCK_SYNC[oy_key_public][1][i][2]][0]) oy_command_check[OY_BLOCK_SYNC[oy_key_public][1][i][2]] = [oy_key_public, OY_BLOCK_SYNC[oy_key_public][1][i][0]];
                 }
             }
-            OY_BLOCK[1] = oy_dive_ledger;
-            oy_dive_ledger = null;
-
             let oy_command_execute = [];
             for (let oy_command_hash in oy_command_check) {
+                oy_dive_ledger[oy_command_check[oy_command_hash][0]][1] += oy_command_check[oy_command_hash][1][1][1][1];
+                oy_dive_ledger[oy_command_check[oy_command_hash][0]][2].push();
                 if (oy_command_check[oy_command_hash][0][1][0]<OY_BLOCK_TIME+OY_BLOCK_SECTORS[0][0]&&oy_command_check[oy_command_hash][0][1][0]>=OY_BLOCK_TIME-20) oy_command_execute.push([oy_command_hash, oy_command_check[oy_command_hash][1]]);
             }
+
+            OY_BLOCK[1] = oy_dive_ledger;
+            oy_dive_ledger = null;
 
             oy_command_execute.sort(function(a, b) {
                 if (a[1][1][0]===b[1][1][0]) {
@@ -2603,35 +2605,32 @@ function oy_block_loop() {
                 return false;
             }
 
-            let oy_node_consensus = Math.ceil(OY_MESH_RANGE*OY_BLOCK_CONSENSUS);
-            let oy_dive_reward_pool = [];
-            for (let oy_key_dive in OY_BLOCK_DIVE) {
-                for (let oy_key_public in OY_BLOCK_DIVE[oy_key_dive]) {
-                    if (OY_BLOCK_DIVE[oy_key_dive][oy_key_public]>=oy_node_consensus&&typeof(OY_BLOCK[4][oy_key_dive])!=="undefined") oy_dive_reward_pool.push(oy_key_dive);
-                }
-            }
-
             OY_BLOCK_NEW = {};
             OY_BLOCK_DIVE = {};
             OY_BLOCK_DIVE_SET = [];
-            OY_DIFF_TRACK = [[], [], []];
+            OY_DIFF_TRACK = [[0], {}, {}];
             //OY_DIFF_TRACK breakdown:
-            //[0] is metadata like mesh range
-            //[1] is dive reward
+            //[0] is metadata like dive_share
+            //[1] is dive ledger
             //[2] is command transactions
-
-            OY_DIFF_TRACK[0][0] = OY_MESH_RANGE;
 
             let [oy_supply_fail, oy_dive_bounty] = oy_block_process(oy_command_execute, true);
 
             if (oy_supply_fail===true) return false;
 
-            if (oy_dive_bounty>0&&oy_dive_reward_pool.length>0) {
-                let oy_dive_share = Math.floor(oy_dive_bounty/oy_dive_reward_pool.length);//TODO verify math to make sure odd balances don't cause a gradual decrease of the entire supply
+            if (oy_dive_bounty>0) {
+                let oy_dive_share = Math.floor(oy_dive_bounty/OY_MESH_RANGE);
                 if (oy_dive_share>0) {
-                    OY_DIFF_TRACK[1].push(oy_dive_share);
+                    OY_DIFF_TRACK[0][0] = oy_dive_share;
+                    for (let oy_key_public in OY_BLOCK[1]) {
+                        //if (oy_dive_reward===oy_dive_reward_pool[i]) OY_BLOCK_DIVE_TRACK += oy_dive_share;TODO track self dive earnings
+                        OY_BLOCK[4][oy_key_public] += oy_dive_share;
+
+
+                        OY_BLOCK[4][oy_key_public] += OY_BLOCK[1][oy_key_public][1];
+                    }
                     for (let i in oy_dive_reward_pool) {
-                        if (oy_dive_reward===oy_dive_reward_pool[i]) OY_BLOCK_DIVE_TRACK += oy_dive_share;
+
                         OY_BLOCK[4][oy_dive_reward_pool[i]] += oy_dive_share;
                         OY_DIFF_TRACK[1].push(oy_dive_reward_pool[i]);
                     }
