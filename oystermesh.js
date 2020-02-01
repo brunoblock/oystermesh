@@ -244,6 +244,7 @@ const OY_BLOCK_TRANSACTS = {
 // INIT
 let OY_LIGHT_MODE = true;//seek to stay permanently connected to the mesh as a light node/latch, manipulable by the user
 let OY_LIGHT_STATE = true;//immediate status of being a light node/latch, not manipulable by the user
+let OY_LIGHT_LEAN = false;
 let OY_LIGHT_PENDING = false;//defines if node is transitioning into a light node from blank or full status
 let OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inputs are expected
 let OY_SIMULATOR_MODE = false;//run in node.js simulator, requires oystersimulate.js
@@ -668,7 +669,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                         oy_sync_command[i][2] = oy_command_hash;
                     }
                     oy_command_pool = null;
-                    if (oy_block_sync_verify(oy_sync_command)&&oy_memory_work(oy_data_payload[0][0], OY_BLOCK_HASH, OY_BLOCK_DIFFICULTY)===oy_data_payload[6]) {
+                    if (oy_block_command_scan(oy_sync_command)&&oy_memory_work(oy_data_payload[0][0], OY_BLOCK_HASH, OY_BLOCK_DIFFICULTY)===oy_data_payload[6]) {
                         oy_data_payload[2].push(oy_key_sign(OY_SELF_PRIVATE, oy_crypt_short));
                         let oy_route_pass = true;
                         if (typeof(OY_BLOCK_SYNC[oy_data_payload[0][0]])==="undefined") OY_BLOCK_SYNC[oy_data_payload[0][0]] = [oy_data_payload[3], oy_sync_command];
@@ -1034,6 +1035,27 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         if (OY_MESH_RANGE<OY_BLOCK_RANGE_MIN) {
             oy_block_reset("OY_FLAG_DROP_RANGE_LIGHT");
             oy_log("MESHBLOCK DROP [RANGE_MIN_LIGHT]");
+            return false;
+        }
+
+        for (let i in oy_diff_track[1]) {
+            oy_diff_track[1][i][2] = oy_hash_gen(JSON.stringify(oy_diff_track[1][i][0]));
+        }
+        /*
+        for (let i in oy_sync_command) {
+                        if (oy_sync_command[i].length!==2) return false;
+
+                        let oy_command_hash = oy_hash_gen(JSON.stringify(oy_sync_command[i][0]));
+                        if (typeof(oy_command_pool[oy_command_hash])!=="undefined") return false;
+                        oy_command_pool[oy_command_hash] = true;
+                        oy_sync_command[i][2] = oy_command_hash;
+                    }
+                    TODO overlap with OY_BLOCK_SYNC
+         */
+
+        if (OY_LIGHT_LEAN===false&&!oy_block_command_scan(oy_diff_track[1])) {
+            oy_block_reset("OY_FLAG_COMMAND_SCAN_LIGHT");
+            oy_log("MESHBLOCK DROP [COMMAND_SCAN_LIGHT]");
             return false;
         }
 
@@ -2215,10 +2237,10 @@ function oy_block_command_verify(oy_command_array, oy_command_crypt, oy_command_
     else return false;
 }
 
-function oy_block_sync_verify(oy_command_verify) {
+function oy_block_command_scan(oy_command_verify) {
     if (oy_command_verify.length===0) return true;
     let [oy_command_array, oy_command_crypt, oy_command_hash] = oy_command_verify.pop();
-    if (oy_block_command_verify(oy_command_array, oy_command_crypt, oy_command_hash)) return oy_block_sync_verify(oy_command_verify);
+    if (oy_block_command_verify(oy_command_array, oy_command_crypt, oy_command_hash)) return oy_block_command_scan(oy_command_verify);
     else return false;
 }
 
@@ -2895,7 +2917,7 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
 
         OY_BLOCK[3][oy_command_execute[i][2]] = oy_command_execute[i][0];
         OY_BLOCK_NEW[oy_command_execute[i][2]] = oy_command_execute[i][0];
-        if (oy_full_flag===true) OY_DIFF_TRACK[1].push(oy_command_execute[i]);
+        if (oy_full_flag===true) OY_DIFF_TRACK[1].push([oy_command_execute[i][0], oy_command_execute[i][1]]);
     }
     //TRANSACT--------------------------------
 
