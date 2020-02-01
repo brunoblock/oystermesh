@@ -282,11 +282,9 @@ let OY_PUSH_TALLY = {};//tracks data push nonces that were deposited on the mesh
 let OY_BASE_BUILD = [];
 let OY_LOGIC_ALL_TYPE = ["OY_BLOCK_COMMAND", "OY_BLOCK_SYNC", "OY_BLOCK_SYNC_CHALLENGE", "OY_DATA_PULL", "OY_CHANNEL_BROADCAST"];//OY_LOGIC_ALL definitions
 let OY_LOGIC_EXCEPT_TYPE = ["OY_BLOCK_SYNC", "OY_BLOCK_SYNC_CHALLENGE_RESPONSE", "OY_CHANNEL_BROADCAST"];
-let OY_MESH_RANGE = 0;
 let OY_WORK_HASH = null;
 let OY_BLOCK_SECTORS = [[4, 4000], [12, 12000], [20, 20000]];//timing definitions for the meshblock
 let OY_BLOCK_DYNAMIC = [null, null, null, null];
-let OY_BLOCK_DIFFICULTY = null;
 let OY_BLOCK_ROSTER = {};
 let OY_BLOCK_ROSTER_AVG = null;
 let OY_BLOCK_HASH = null;//hash of the most current block
@@ -647,7 +645,6 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
         if (OY_LIGHT_STATE===false&&//check that self is running block_sync as a full node
             OY_BLOCK_HASH!==null&&//check that there is a known meshblock hash
-            OY_BLOCK_DIFFICULTY!==null&&//check that there is a known meshblock memory difficulty
             typeof(OY_BLOCK_SYNC[oy_data_payload[0][0]])==="undefined"&&//check that this is the only sync processed from this node for this block
             oy_data_payload[3]<oy_time_local+OY_MESH_BUFFER[0]&&//check that the broadcast timestamp is not in the future, with buffer leniency
             oy_data_payload[3]-OY_BLOCK_TIME>=OY_BLOCK_SECTORS[0][0]&&//check that the broadcast timestamp is in the sync processing zone
@@ -658,18 +655,10 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             if (oy_block_sync_hop(oy_data_payload[0].slice(), oy_data_payload[2].slice(), oy_crypt_short, true)) {
                 let oy_sync_hash = oy_hash_gen(oy_data_payload[5]);
                 if (oy_key_verify(oy_data_payload[0][0], oy_data_payload[3], oy_data_payload[4]+oy_sync_hash+oy_data_payload[6])) {
-                    let oy_command_pool = {};
-                    let oy_sync_command = JSON.parse(LZString.decompressFromUTF16(oy_data_payload[5]));
-                    for (let i in oy_sync_command) {
-                        if (oy_sync_command[i].length!==2) return false;
+                    let oy_sync_command = oy_block_command_hash(JSON.parse(LZString.decompressFromUTF16(oy_data_payload[5])));
+                    if (oy_sync_command===false) return false;
 
-                        let oy_command_hash = oy_hash_gen(JSON.stringify(oy_sync_command[i][0]));
-                        if (typeof(oy_command_pool[oy_command_hash])!=="undefined") return false;
-                        oy_command_pool[oy_command_hash] = true;
-                        oy_sync_command[i][2] = oy_command_hash;
-                    }
-                    oy_command_pool = null;
-                    if (oy_block_command_scan(oy_sync_command)&&oy_memory_work(oy_data_payload[0][0], OY_BLOCK_HASH, OY_BLOCK_DIFFICULTY)===oy_data_payload[6]) {
+                    if (oy_block_command_scan(oy_sync_command)&&oy_block_work(oy_data_payload[0][0], OY_BLOCK_HASH)===oy_data_payload[6]) {
                         oy_data_payload[2].push(oy_key_sign(OY_SELF_PRIVATE, oy_crypt_short));
                         let oy_route_pass = true;
                         if (typeof(OY_BLOCK_SYNC[oy_data_payload[0][0]])==="undefined") OY_BLOCK_SYNC[oy_data_payload[0][0]] = [oy_data_payload[3], oy_sync_command];
@@ -1030,28 +1019,14 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         let oy_diff_track = JSON.parse(LZString.decompressFromUTF16(oy_data_payload));//join the diff instructions together into the diff construct
         oy_data_payload = null;
 
-        OY_MESH_RANGE = Object.keys(oy_diff_track[0]).length;
+        if (!oy_block_range(Object.keys(oy_diff_track[0]).length)) return false;
 
-        if (OY_MESH_RANGE<OY_BLOCK_RANGE_MIN) {
-            oy_block_reset("OY_FLAG_DROP_RANGE_LIGHT");
-            oy_log("MESHBLOCK DROP [RANGE_MIN_LIGHT]");
+        oy_diff_track[1] = oy_block_command_hash(oy_diff_track[1]);
+        if (oy_diff_track[1]===false) {
+            oy_block_reset("OY_FLAG_COMMAND_HASH_LIGHT");
+            oy_log("MESHBLOCK DROP [COMMAND_HASH_LIGHT]");
             return false;
         }
-
-        for (let i in oy_diff_track[1]) {
-            oy_diff_track[1][i][2] = oy_hash_gen(JSON.stringify(oy_diff_track[1][i][0]));
-        }
-        /*
-        for (let i in oy_sync_command) {
-                        if (oy_sync_command[i].length!==2) return false;
-
-                        let oy_command_hash = oy_hash_gen(JSON.stringify(oy_sync_command[i][0]));
-                        if (typeof(oy_command_pool[oy_command_hash])!=="undefined") return false;
-                        oy_command_pool[oy_command_hash] = true;
-                        oy_sync_command[i][2] = oy_command_hash;
-                    }
-                    TODO overlap with OY_BLOCK_SYNC
-         */
 
         if (OY_LIGHT_LEAN===false&&!oy_block_command_scan(oy_diff_track[1])) {
             oy_block_reset("OY_FLAG_COMMAND_SCAN_LIGHT");
@@ -2192,8 +2167,27 @@ function oy_hivemind_post(oy_key_private, oy_key_public, oy_transact_fee, oy_clu
     return oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm);
 }
 
-function oy_memory_work(oy_key_public, oy_block_hash, oy_work_difficulty) {
-    return oy_hash_gen((oy_key_public+oy_block_hash).repeat(oy_work_difficulty));
+function oy_block_work(oy_key_public, oy_block_hash) {
+    return oy_hash_gen((oy_key_public+oy_block_hash).repeat(OY_BLOCK[0][3]));
+}
+
+function oy_block_range(oy_mesh_range_new) {
+    if (oy_mesh_range_new>=OY_BLOCK[0][2]) OY_BLOCK[0][3] += OY_WORK_INCREMENT;
+    else OY_BLOCK[0][3] -= OY_WORK_DECREMENT;
+
+    if (OY_BLOCK[0][3]<OY_WORK_MIN) OY_BLOCK[0][3] = OY_WORK_MIN;
+
+    OY_BLOCK[0][2] = oy_mesh_range_new;
+    OY_BLOCK_STABILITY_KEEP.push(OY_BLOCK[0][2]);
+    while (OY_BLOCK_STABILITY_KEEP.length>OY_BLOCK_STABILITY_LIMIT) OY_BLOCK_STABILITY_KEEP.shift();
+    OY_BLOCK_STABILITY = (OY_BLOCK_STABILITY_KEEP.length<OY_BLOCK_STABILITY_TRIGGER)?0:oy_block_stability(OY_BLOCK_STABILITY_KEEP);
+
+    if (OY_BLOCK[0][2]<OY_BLOCK_RANGE_MIN&&Date.now()/1000-OY_BLOCK_BOOTTIME>OY_BLOCK_BOOT_BUFFER) {
+        oy_block_reset("OY_FLAG_DROP_RANGE");
+        oy_log("MESHBLOCK DROP [RANGE_MIN]");
+        return false;
+    }
+    return true;
 }
 
 function oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm) {
@@ -2222,6 +2216,19 @@ function oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm)
     }
 
     return true;
+}
+
+function oy_block_command_hash(oy_sync_command) {
+    let oy_command_pool = {};
+    for (let i in oy_sync_command) {
+        if (oy_sync_command[i].length!==2) return false;
+
+        let oy_command_hash = oy_hash_gen(JSON.stringify(oy_sync_command[i][0]));
+        if (typeof(oy_command_pool[oy_command_hash])!=="undefined") return false;
+        oy_command_pool[oy_command_hash] = true;
+        oy_sync_command[i][2] = oy_command_hash;
+    }
+    return oy_sync_command;
 }
 
 function oy_block_command_verify(oy_command_array, oy_command_crypt, oy_command_hash) {
@@ -2307,7 +2314,6 @@ function oy_block_reset(oy_reset_flag) {
     OY_BLOCK = oy_clone_object(OY_BLOCK_TEMPLATE);
     OY_DIFF_TRACK = [[], [], []];
     OY_BASE_BUILD = [];
-    OY_MESH_RANGE = 0;
     OY_CHALLENGE_TRIGGER = null;
     OY_BLACKLIST = {};
 
@@ -2343,9 +2349,9 @@ function oy_block_loop() {
         //BLOCK SEED--------------------------------------------------
         if (OY_LIGHT_MODE===false&&OY_BLOCK_TIME===OY_BLOCK_BOOTTIME) {
             OY_BLOCK = oy_clone_object(OY_BLOCK_TEMPLATE);
-            OY_BLOCK[0][0] = OY_MESH_DYNASTY;
-            OY_BLOCK[0][2] = 0;
-            OY_BLOCK[0][3] = OY_WORK_MIN;
+            OY_BLOCK[0][0] = OY_MESH_DYNASTY;//dynasty
+            OY_BLOCK[0][2] = 0;//mesh range
+            OY_BLOCK[0][3] = OY_WORK_MIN;//memory difficulty
             OY_BLOCK[4]["oy_escrow_dns"] = 0;
 
             //SEED DEFINITION------------------------------------
@@ -2455,7 +2461,6 @@ function oy_block_loop() {
             //latency routine test
 
             if (OY_BLOCK_HASH===null) {
-                OY_MESH_RANGE = 0;
                 OY_CHALLENGE_TRIGGER = null;
                 OY_BLOCK_CHALLENGE = {};
                 oy_log("MESHBLOCK SKIP: "+oy_block_time_local);
@@ -2572,8 +2577,6 @@ function oy_block_loop() {
                 return false;
             }
 
-            let oy_time_local = Date.now()/1000;
-
             let oy_command_check = {};
             let oy_dive_ledger = {};
             for (let oy_key_public in OY_BLOCK_SYNC) {
@@ -2607,17 +2610,7 @@ function oy_block_loop() {
                 return a[0][1][0] - b[0][1][0];
             });
 
-            OY_MESH_RANGE = Object.keys(OY_BLOCK[1]).length;
-            OY_BLOCK_STABILITY_KEEP.push(OY_MESH_RANGE);
-            while (OY_BLOCK_STABILITY_KEEP.length>OY_BLOCK_STABILITY_LIMIT) OY_BLOCK_STABILITY_KEEP.shift();
-            OY_BLOCK_STABILITY = (OY_BLOCK_STABILITY_KEEP.length<OY_BLOCK_STABILITY_TRIGGER)?0:oy_block_stability(OY_BLOCK_STABILITY_KEEP);
-
-            if (OY_MESH_RANGE<OY_BLOCK_RANGE_MIN&&oy_time_local-OY_BLOCK_BOOTTIME>OY_BLOCK_BOOT_BUFFER) {
-                oy_block_reset("OY_FLAG_DROP_RANGE");
-                oy_log("MESHBLOCK DROP [RANGE_MIN]");
-                oy_block_continue = false;
-                return false;
-            }
+            if (!oy_block_range(Object.keys(OY_BLOCK[1]).length)) return false;
 
             OY_BLOCK_NEW = {};
             OY_DIFF_TRACK = [{}, {}];
@@ -2631,7 +2624,7 @@ function oy_block_loop() {
 
             oy_dive_bounty += OY_AKOYA_ISSUANCE;
 
-            let oy_dive_share = Math.floor(oy_dive_bounty/OY_MESH_RANGE);
+            let oy_dive_share = Math.floor(oy_dive_bounty/OY_BLOCK[0][2]);
             for (let oy_key_public in OY_BLOCK[1]) {
                 //if (oy_dive_reward===oy_dive_reward_pool[i]) OY_BLOCK_DIVE_TRACK += oy_dive_share;TODO track self dive earnings
                 OY_BLOCK[4][oy_key_public] += oy_dive_share;//payout from meshblock maintenance fees and issuance
@@ -2674,7 +2667,7 @@ function oy_block_loop() {
                 }
             }
 
-            OY_WORK_HASH = oy_memory_work(OY_SELF_PUBLIC, OY_BLOCK_HASH, OY_BLOCK_DIFFICULTY);
+            OY_WORK_HASH = oy_block_work(OY_SELF_PUBLIC, OY_BLOCK_HASH);
 
             oy_block_finish();
         }, OY_BLOCK_SECTORS[2][1]);
