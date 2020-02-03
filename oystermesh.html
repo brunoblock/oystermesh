@@ -1619,9 +1619,9 @@
 
         let oy_state_local = oy_state_current();
 
-        if (oy_state_local==="OY_STATE_BLANK") oy_mode_state_blank();
-        else if (oy_state_local==="OY_STATE_LIGHT") oy_mode_state_light();
-        else if (oy_state_local==="OY_STATE_FULL") oy_mode_state_full();
+        if (oy_state_local===0) oy_mode_state_blank();
+        else if (oy_state_local===1) oy_mode_state_light();
+        else if (oy_state_local===2) oy_mode_state_full();
     }
 
     function oy_low_power_toggle() {
