@@ -27,9 +27,9 @@ const OY_BLOCK_PEERS_MIN = 3;//minimum peer count to be become a source for latc
 const OY_BLOCK_PACKET_MAX = 8000;//maximum size for a packet that is routed via OY_BLOCK_SYNC (OY_LOGIC_ALL)
 const OY_BLOCK_JUDGE_BUFFER = 1.2;
 const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
-const OY_BLOCK_BOOT_BUFFER = 120;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_RANGE_MIN = 8;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOTTIME = 1580686500;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_BUFFER = 120;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
+const OY_BLOCK_BOOTTIME = 1580725500;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[16, 16000], [19, 19000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER = 3000;//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
 const OY_WORK_MAX = 10000000;
@@ -296,6 +296,7 @@ let OY_BLOCK_DIFF = false;
 let OY_BLOCK_SIGN = null;
 let OY_BLOCK_TIME = oy_block_time_first(false);//the most recent block timestamp
 let OY_BLOCK_NEXT = oy_block_time_first(true);//the next block timestamp
+let OY_BLOCK_BOOT = false;
 let OY_BLOCK_UPTIME = null;
 let OY_BLOCK_WEIGHT = null;
 let OY_BLOCK_STABILITY = 0;
@@ -314,7 +315,6 @@ let OY_STATE_BLANK = new Event('oy_state_blank');//trigger-able event for when s
 let OY_STATE_LIGHT = new Event('oy_state_light');//trigger-able event for when self becomes a light node
 let OY_STATE_FULL = new Event('oy_state_full');//trigger-able event for when self becomes a full node
 let OY_DIFF_TRACK = [{}, []];
-let OY_DIFF_CONSTRUCT = {};
 let OY_CHANNEL_DYNAMIC = {};//track channel broadcasts to ensure allowance compliance
 let OY_CHANNEL_LISTEN = {};//track channels to listen for
 let OY_CHANNEL_KEEP = {};//stored broadcasts that are re-shared
@@ -645,6 +645,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             return false;
         }
 
+        console.log(JSON.stringify(oy_data_payload));
+
         let oy_payload_size;
         let oy_sync_pass = 0;
 
@@ -652,6 +654,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             if (OY_BLOCK_SYNC[oy_data_payload[0][0]][0]!==oy_data_payload[2]) oy_sync_pass = 1;
             else oy_sync_pass = 2;
         }
+        console.log("PASS:"+oy_sync_pass);
         if (oy_sync_pass!==2&&
             OY_LIGHT_STATE===false&&//check that self is running block_sync as a full node
             OY_BLOCK_HASH!==null&&//check that there is a known meshblock hash
@@ -661,26 +664,31 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_time_local-OY_BLOCK_TIME<OY_BLOCK_SECTORS[1][0]+OY_MESH_BUFFER[0]&&//check that the current timestamp is in the sync processing zone
             typeof(OY_BLOCK_JUDGE[oy_data_payload[0].length])!=="undefined"&&
             (oy_time_local-OY_BLOCK_TIME)/(oy_payload_size = JSON.stringify(oy_data_payload).length)<OY_BLOCK_JUDGE[oy_data_payload[0].length]) {
-
+            console.log(1);
             let oy_crypt_short;
             if (oy_sync_pass===1) {
                 OY_BLOCK_SYNC[oy_data_payload[0][0]] = false;
                 oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_SYNC", oy_data_payload);
+                console.log(2);
             }
             else if (oy_block_sync_hop(oy_data_payload[0].slice(), oy_data_payload[1].slice(), (oy_crypt_short = oy_short(oy_data_payload[3])), true)) {
+                console.log(3);
                 let oy_sync_hash = oy_hash_gen(oy_data_payload[4]);
                 if (oy_key_verify(oy_data_payload[0][0], oy_data_payload[2], oy_data_payload[3]+oy_sync_hash+oy_data_payload[5])) {
+                    console.log(4);
                     let oy_sync_command = oy_block_command_hash(JSON.parse(LZString.decompressFromUTF16(oy_data_payload[4])));
                     if (oy_sync_command===false) return false;
-
+                    console.log(5);
                     if (oy_block_command_scan(oy_sync_command)&&oy_block_work(oy_data_payload[0][0], OY_BLOCK_HASH)===oy_data_payload[5]) {
                         oy_data_payload[1].push(oy_key_sign(OY_SELF_PRIVATE, oy_crypt_short));
-                        OY_BLOCK_SYNC[oy_data_payload[0][0]] = [oy_data_payload[2], oy_sync_command];
                         oy_data_route("OY_LOGIC_ALL", "OY_BLOCK_SYNC", oy_data_payload);
 
-                        let oy_time_offset = (Date.now()/1000)-OY_BLOCK_TIME;
-                        if (oy_time_offset>OY_SYNC_LAST[1]) OY_SYNC_LAST[1] = oy_time_offset;
-                        if (oy_data_payload[0].length<=OY_BLOCK_LEARN.length) OY_BLOCK_LEARN[oy_data_payload[0].length][oy_data_payload[0][0]] = oy_time_offset/oy_payload_size;
+                        if (OY_BLOCK_BOOT===false) {
+                            OY_BLOCK_SYNC[oy_data_payload[0][0]] = [oy_data_payload[2], oy_sync_command];
+                            let oy_time_offset = (Date.now()/1000)-OY_BLOCK_TIME;
+                            if (oy_time_offset>OY_SYNC_LAST[1]) OY_SYNC_LAST[1] = oy_time_offset;
+                            if (oy_data_payload[0].length<=OY_BLOCK_LEARN.length) OY_BLOCK_LEARN[oy_data_payload[0].length][oy_data_payload[0][0]] = oy_time_offset/oy_payload_size;
+                        }
 
                         if (typeof(OY_BLOCK_MAP)==="function") OY_BLOCK_MAP(1, false);
                     }
@@ -1362,7 +1370,7 @@ function oy_node_initiate(oy_node_id) {
         oy_log("Halted initiation whilst peer list is saturated");
         return false;
     }
-    else if (oy_time_local<=OY_BLOCK_BOOTTIME||(OY_LIGHT_MODE===true&&oy_time_local-OY_BLOCK_BOOTTIME<OY_BLOCK_BOOT_BUFFER)) {
+    else if (OY_BLOCK_BOOT===null||(OY_LIGHT_MODE===true&&OY_BLOCK_BOOT===true)) {
         oy_log("Halted initiation for pending meshblock boot-up sequence");
         return false;
     }
@@ -1376,7 +1384,7 @@ function oy_node_initiate(oy_node_id) {
 
 //retrieves nodes from and submit self id to top.oyster.org
 function oy_node_assign() {
-    if (Date.now()/1000<=OY_BLOCK_BOOTTIME) return false;
+    if (OY_BLOCK_BOOT===null) return false;
     let oy_xhttp = new XMLHttpRequest();
     oy_xhttp.onreadystatechange = function() {
         if (this.readyState===4&&this.status===200) {
@@ -1436,7 +1444,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_PEER_REQUEST") {
         let oy_callback_local;
-        if (OY_BLOCK_HASH===null||oy_time_local<=OY_BLOCK_BOOTTIME) {
+        if (OY_BLOCK_HASH===null||OY_BLOCK_BOOT===null) {
             oy_callback_local = function() {
                 oy_data_beam(oy_node_id, "OY_PEER_UNREADY", null);
             };
@@ -1884,7 +1892,7 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_push_def
         //oy_data_payload[0] is oy_route_passport_passive
         oy_data_payload[0].push(OY_SELF_PUBLIC);
         for (let oy_peer_select in OY_PEERS) {
-            if (OY_PEERS[oy_peer_select][9]===0||(oy_data_flag==="OY_BLOCK_SYNC"&&OY_PEERS[oy_peer_select][9]!==2)||oy_peer_select==="oy_aggregate_node"||oy_data_payload[0].indexOf(oy_short(oy_peer_select))!==-1) continue;
+            if (OY_PEERS[oy_peer_select][9]===0||(oy_data_flag==="OY_BLOCK_SYNC"&&OY_PEERS[oy_peer_select][9]!==2)||oy_peer_select==="oy_aggregate_node"||oy_data_payload[0].indexOf(oy_peer_select)!==-1) continue;
             //oy_log("Routing data via peer "+oy_short(oy_peer_select)+" with flag "+oy_data_flag);
             oy_data_beam(oy_peer_select, oy_data_flag, oy_data_payload);
         }
@@ -1933,10 +1941,6 @@ function oy_data_direct(oy_data_flag) {
     return !(oy_data_flag.indexOf("OY_PEER")===-1&&oy_data_flag.indexOf("OY_LATENCY")===-1);
 }
 
-function oy_data_block(oy_data_flag) {
-    return (oy_data_flag==="OY_BLOCK_SYNC");
-}
-
 //send data
 function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
     if (OY_CONN===null) {
@@ -1967,7 +1971,7 @@ function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
             return true;
         }
         OY_NODES[oy_node_id][0].send(oy_data_raw);//send the JSON-converted data array to the destination node
-        if (!oy_data_block(oy_data_flag)) oy_log("BEAM["+oy_data_flag+"]["+oy_short(oy_node_id)+"]");
+        if (oy_data_flag!=="OY_BLOCK_SYNC") oy_log("BEAM["+oy_data_flag+"]["+oy_short(oy_node_id)+"]");
     };
     oy_node_connect(oy_node_id, oy_callback_local);
     return true;
@@ -1991,12 +1995,12 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
                    return false;
                }
                let oy_peer_last = oy_data[1][0][oy_data[1][0].length-1];
-               if (oy_peer_last!==oy_short(oy_node_id)) {
+               if (oy_peer_last!==oy_node_id) {
                    oy_log("Peer "+oy_short(oy_node_id)+" lied on the passport, will remove and punish");
                    oy_peer_remove(oy_peer_last, "OY_PUNISH_PASSPORT_MISMATCH");
                    return false;
                }
-               if (oy_data[1][0].indexOf(OY_SELF_SHORT)!==-1) {
+               if (oy_data[1][0].indexOf(OY_SELF_PUBLIC)!==-1) {
                    oy_log("Peer "+oy_short(oy_node_id)+" sent a data sequence we already processed, will remove and punish");
                    oy_peer_remove(oy_node_id, "OY_PUNISH_PASSPORT_ALREADY");
                    return false;
@@ -2240,7 +2244,7 @@ function oy_block_range(oy_mesh_range_new) {
     while (OY_BLOCK_STABILITY_KEEP.length>OY_BLOCK_STABILITY_LIMIT) OY_BLOCK_STABILITY_KEEP.shift();
     OY_BLOCK_STABILITY = (OY_BLOCK_STABILITY_KEEP.length<OY_BLOCK_STABILITY_TRIGGER)?0:oy_block_stability(OY_BLOCK_STABILITY_KEEP);
 
-    if (OY_BLOCK[0][2]<OY_BLOCK_RANGE_MIN&&Date.now()/1000-OY_BLOCK_BOOTTIME>OY_BLOCK_BOOT_BUFFER) {
+    if (OY_BLOCK[0][2]<OY_BLOCK_RANGE_MIN&&OY_BLOCK_BOOT===false) {
         oy_block_reset("OY_FLAG_DROP_RANGE");
         oy_log("MESHBLOCK DROP [RANGE_MIN]");
         return false;
@@ -2397,7 +2401,8 @@ function oy_block_loop() {
     if (oy_block_time_local!==OY_BLOCK_TIME&&(oy_block_time_local/10)%2===0) {
         OY_BLOCK_TIME = oy_block_time_local;
         OY_BLOCK_NEXT = oy_block_time_local+20;
-        OY_DIFF_CONSTRUCT = {};
+        if (oy_block_time_local<OY_BLOCK_BOOTTIME) OY_BLOCK_BOOT = null;
+        else OY_BLOCK_BOOT = oy_block_time_local-OY_BLOCK_BOOTTIME<OY_BLOCK_BOOT_BUFFER;
 
         document.dispatchEvent(OY_BLOCK_INIT);
 
@@ -2471,12 +2476,12 @@ function oy_block_loop() {
             OY_DIFF_BUILD = [];
             OY_UPSTREAM_KEEP = {};
 
-            if (oy_time_local-OY_BLOCK_BOOTTIME<OY_BLOCK_BOOT_BUFFER) {
+            if (OY_BLOCK_BOOT===true) {
                 if (OY_LIGHT_MODE===true) {//if self elects to be a light node they cannot participate in the initial boot-up sequence of the mesh
                     oy_block_continue = false;
                     return false;
                 }
-                if (OY_LIGHT_STATE===true) OY_LIGHT_STATE = false;//since node has elected to being a full node, switch light state flag to false
+                OY_LIGHT_STATE = false;//since node has elected to being a full node, set light state flag to false
             }
 
             //latency routine test
@@ -2515,7 +2520,7 @@ function oy_block_loop() {
                 return false;
             }
 
-            if (OY_PEER_COUNT===0&&oy_time_local-OY_BLOCK_BOOTTIME>OY_BLOCK_BOOT_BUFFER) {
+            if (OY_PEER_COUNT===0&&OY_BLOCK_BOOT===false) {
                 oy_block_reset("OY_FLAG_DROP_PEER");
                 oy_log("MESHBLOCK DROP");
                 oy_block_continue = false;
@@ -2698,7 +2703,7 @@ function oy_block_loop() {
 
             OY_BLOCK_JUDGE = [null];
             for (let i in OY_BLOCK_LEARN) {
-                if (i===0) continue;
+                if (i===0||OY_BLOCK_LEARN[i]===null||typeof(OY_BLOCK_LEARN[i])==="undefined") continue;
                 let oy_judge_calc = 0;
                 for (let oy_key_public in OY_BLOCK_LEARN[i]) {
                     if (typeof(OY_BLOCK[1][oy_key_public])==="undefined") delete OY_BLOCK[1][oy_key_public];
@@ -2735,7 +2740,7 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
     let oy_supply_pre = 0;
     let oy_dive_bounty = 0;
 
-    if (OY_BLOCK_TIME-OY_BLOCK_BOOTTIME<=OY_BLOCK_BOOT_BUFFER) return [true, oy_dive_bounty];//transactions and fees are paused whilst the mesh calibrates its initial topology
+    if (OY_BLOCK_BOOT!==false) return [true, oy_dive_bounty];//transactions and fees are paused whilst the mesh calibrates its initial topology
 
     //AMEND-----------------------------------
     for (let oy_key_public in OY_BLOCK[4]) {
@@ -3273,6 +3278,11 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
     oy_chrono(function() {
         if (OY_READY===true) {
             oy_log("Connection is now ready, sparking engine");
+
+            let oy_time_local = Date.now()/1000;
+            if (oy_time_local<OY_BLOCK_BOOTTIME) OY_BLOCK_BOOT = null;
+            else OY_BLOCK_BOOT = oy_time_local-OY_BLOCK_BOOTTIME<OY_BLOCK_BOOT_BUFFER;
+
             oy_chrono(oy_engine, 50);
             setTimeout(oy_block_loop, 1);
             document.dispatchEvent(OY_STATE_BLANK);
