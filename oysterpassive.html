@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Oyster Mesh Passive</title>
-    <script src="oystermesh.js"></script>
     <script src="oysterdepend.js"></script>
+    <script src="oystermesh.js"></script>
 </head>
 <body>
 OYSTER MESH PASSIVE
@@ -14,15 +14,8 @@ OYSTER MESH PASSIVE
 
     OY_PASSIVE_MODE = true;
     OY_LIGHT_MODE = false;
-    oy_init(function() {
-        OY_BLOCK_DIVE_REWARD = "OY_NULL";
-
-        let oy_channel_id = null;
-        OY_WALLET_PRIVATE = null;
-        OY_WALLET_PUBLIC = null;
-
-        if (oy_channel_id!==null) oy_channel_listen(oy_channel_id, function(oy_broadcast_hash, oy_render_payload) {}, OY_WALLET_PRIVATE, OY_WALLET_PUBLIC);
-    });
+    OY_DIVE_PAYOUT = null;
+    oy_init();
 </script>
 </body>
 </html>
