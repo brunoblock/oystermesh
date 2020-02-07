@@ -28,7 +28,7 @@ const OY_BLOCK_JUDGE_BUFFER = 3;
 const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
 const OY_BLOCK_RANGE_MIN = 3;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 80;//120seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOTTIME = 1581077300;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOTTIME = 1581101400;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[10, 10000], [19, 19000], [19.5, 19500]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER = 5000;//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
 const OY_WORK_MAX = 10000000;
@@ -595,19 +595,7 @@ function oy_key_sign(oy_key_private, oy_key_data) {
 }
 
 function oy_key_verify(oy_key_public, oy_key_signature, oy_key_data) {//DUPLICATED IN WEB WORKER BLOCK
-    try {
-        let x = nacl.sign.detached.verify(nacl.util.decodeUTF8(oy_key_data), nacl.util.decodeBase64(oy_key_signature), nacl.util.decodeBase64(oy_key_public.substr(1)+"="));
-        if (!x) {
-            console.log("SUPER SIGN ERROR");
-            console.log(JSON.stringify([oy_key_public, oy_key_signature, oy_key_data]));
-            console.trace();
-        }
-        return x;
-    }
-    catch {
-        console.log("SIGN ERROR");
-        return false;
-    }
+    return nacl.sign.detached.verify(nacl.util.decodeUTF8(oy_key_data), nacl.util.decodeBase64(oy_key_signature), nacl.util.decodeBase64(oy_key_public.substr(1)+"="));
 }
 
 function oy_key_hash(oy_key_public_raw) {
@@ -1244,7 +1232,6 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     else if (oy_data_flag==="OY_PEER_CHALLENGE") {
         if (OY_BLOCK_HASH===null) return false;
         if (typeof(OY_BLOCK_CHALLENGE[oy_peer_id])!=="undefined"&&oy_key_verify(oy_peer_id, oy_data_payload, OY_MESH_DYNASTY+OY_BLOCK_HASH)) delete OY_BLOCK_CHALLENGE[oy_peer_id];
-        //else oy_log_debug("MISMATCH HASH: "+OY_BLOCK_HASH);
         return true;
     }
     else if (oy_data_flag==="OY_PEER_LATENCY") {
@@ -1382,7 +1369,7 @@ function oy_node_proposed(oy_node_id) {
 
 //checks if node is in blacklist
 function oy_node_blocked(oy_node_id) {
-    if (typeof(OY_BLACKLIST[oy_node_id])==="undefined"||OY_BLACKLIST[oy_node_id][1]<(Date.now()/1000)) {
+    if (typeof(OY_BLACKLIST[oy_node_id])==="undefined"||OY_BLACKLIST[oy_node_id][1]<Date.now()/1000) {
         delete OY_BLACKLIST[oy_node_id];//remove node from blacklist if block expiration was reached
         return false;
     }
@@ -1532,10 +1519,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_node_proposed(oy_node_id)) {//check if this node had previously proposed to peer with self
         if (oy_data_flag==="OY_PEER_ACCEPT") oy_latency_test(oy_node_id, "OY_PEER_ACCEPT", true, oy_data_payload);
-        else {
-            oy_log("Node "+oy_short(oy_node_id)+" rejected peer request ["+oy_data_flag+"]: "+oy_data_payload);
-            if (oy_data_flag!=="OY_PEER_UNREADY") oy_node_punish(oy_node_id, "OY_PUNISH_PEER_REJECT");//we need to prevent nodes with far distances/long latencies from repeatedly communicating
-        }
+        else if (OY_BLOCK_BOOT===false) oy_node_punish(oy_node_id, "OY_PUNISH_PEER_REJECT");//we need to prevent nodes with far distances/long latencies from repeatedly communicating
         return true;
     }
     else {
@@ -1552,7 +1536,6 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
     }
     let oy_time_local = Date.now()/1000;
     if (!oy_key_verify(oy_node_id, oy_data_payload[1], OY_MESH_DYNASTY+((OY_LATENCY[oy_node_id][6]===0)?"0000000000000000000000000000000000000000":OY_BLOCK_HASH)+OY_LATENCY[oy_node_id][0])) {
-        console.log("BERRY");
         delete OY_LATENCY[oy_node_id];
         oy_node_punish(oy_node_id, "OY_PUNISH_SIGN_FAIL");
         return false;
@@ -2550,10 +2533,7 @@ function oy_block_loop() {
                         if (oy_latency_test(oy_peer_local, "OY_PEER_ROUTINE", true, OY_PEERS[oy_peer_local][9])) OY_ENGINE[0][oy_peer_local] = oy_time_local;
                         else oy_log("Latency test with peer "+oy_short(oy_peer_local)+" was unable to launch");
                     }
-                    else if (oy_time_local-OY_ENGINE[0][oy_peer_local]>OY_LATENCY_MAX) {
-                        oy_node_punish(oy_peer_local, "OY_PUNISH_LATENCY_LAG");
-                        oy_log("Found non-responsive peer "+oy_short(oy_peer_local)+" with latency lag: "+(oy_time_local-OY_ENGINE[0][oy_peer_local]).toFixed(4));
-                    }
+                    else if (oy_time_local-OY_ENGINE[0][oy_peer_local]>OY_LATENCY_MAX) oy_node_punish(oy_peer_local, "OY_PUNISH_LATENCY_LAG");
                 }
                 else delete OY_ENGINE[0][oy_peer_local];
             }
