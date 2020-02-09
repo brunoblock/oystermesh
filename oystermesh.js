@@ -28,7 +28,7 @@ const OY_BLOCK_JUDGE_BUFFER = 3;
 const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
 const OY_BLOCK_RANGE_MIN = 3;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 80;//120seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOTTIME = 1581212800;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOTTIME = 1581240900;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[10, 10000], [18, 18000], [19, 19000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_SPACE = 3000;//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
 const OY_BLOCK_BUFFER_MIN = 800;
@@ -65,7 +65,7 @@ const OY_PEER_KEEPTIME = 20;//peers are expected to communicate with each other 
 const OY_PEER_REPORTTIME = 10;//interval to report peer list to top
 const OY_PEER_PRETIME = 20;//seconds which a node is waiting as a 'pre-peer'
 const OY_PEER_MAX = 5;//maximum mutual peers
-const OY_PEER_SYNC_CHANCE = 0.1;//chance of initiation with a peer from their block_sync packet whilst peer_count is greater than block_peers_min
+const OY_PEER_FULL_MIN = 3;
 const OY_WORKER_CORES_FALLBACK = 4;
 const OY_ROUTE_DYNAMIC_KEEP = 200;//how many dynamic identifiers for a routed data sequence to remember and block
 const OY_LATENCY_SIZE = 80;//size of latency ping payload, larger is more accurate yet more taxing, vice-versa applies
@@ -1494,7 +1494,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_PEER_REQUEST") {
         let oy_callback_local;
-        if (OY_BLOCK_HASH===null||OY_BLOCK_BOOT===null||(oy_data_payload!==2&&OY_BLOCK_BOOT===true)||(oy_data_payload===0&&oy_state_current()===0)) {
+        if (OY_BLOCK_HASH===null||OY_PEER_COUNT>=OY_PEER_MAX||OY_BLOCK_BOOT===null||(OY_BLOCK_BOOT===true&&oy_data_payload!==2)||(oy_state_current()===0&&oy_data_payload===0)) {
             oy_callback_local = function() {
                 oy_data_beam(oy_node_id, "OY_PEER_UNREADY", null);
             };
@@ -1552,7 +1552,13 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
                 oy_node_punish(oy_node_id, "OY_PUNISH_LATENCY_BREACH");
             }
             else if (OY_LATENCY[oy_node_id][5]==="OY_PEER_REQUEST"||OY_LATENCY[oy_node_id][5]==="OY_PEER_ACCEPT") {
-                if (OY_PEER_COUNT<OY_PEER_MAX) {
+                let oy_full_count = 0;
+                if (oy_state_current()===2) {
+                    for (let oy_peer_select in OY_PEERS) {
+                        if (oy_peer_select!=="oy_aggregate_node"&&OY_PEERS[oy_peer_select][9]===2&&typeof(OY_BLOCK[1][oy_peer_select])!=="undefined") oy_full_count++;
+                    }
+                }
+                if (OY_PEER_COUNT<OY_PEER_MAX&&(oy_state_current()!==2||OY_LATENCY[oy_node_id][7]===2||OY_PEER_COUNT-oy_full_count<OY_PEER_MAX-OY_PEER_FULL_MIN)) {
                     if (OY_LATENCY[oy_node_id][5]==="OY_PEER_ACCEPT") {
                         oy_peer_add(oy_node_id, OY_LATENCY[oy_node_id][7]);
                         oy_data_beam(oy_node_id, "OY_PEER_AFFIRM", oy_state_current());
@@ -1565,11 +1571,10 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
                     }
                     oy_peer_latency(oy_node_id, oy_latency_result);
                 }
-                else if (OY_PEER_COUNT===OY_PEER_MAX) {
+                else {
                     let oy_peer_weak = [false, -1];
-                    let oy_peer_local;
-                    for (oy_peer_local in OY_PEERS) {
-                        if (oy_peer_local==="oy_aggregate_node") continue;
+                    for (let oy_peer_local in OY_PEERS) {
+                        if (oy_peer_local==="oy_aggregate_node"||(oy_state_current()===2&&OY_LATENCY[oy_node_id][7]!==2&&OY_PEERS[oy_peer_local][9]===2&&typeof(OY_BLOCK[1][oy_peer_local])!=="undefined")) continue;
                         if (OY_PEERS[oy_peer_local][3]>oy_peer_weak[1]) oy_peer_weak = [oy_peer_local, OY_PEERS[oy_peer_local][3]];
                     }
                     oy_log("Current weakest peer is "+oy_short(oy_peer_weak[0])+" with latency of "+oy_peer_weak[1].toFixed(4));
