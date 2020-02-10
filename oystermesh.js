@@ -28,10 +28,11 @@ const OY_BLOCK_JUDGE_BUFFER = 3;
 const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
 const OY_BLOCK_RANGE_MIN = 3;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 120;//120seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOTTIME = 1581333400;//timestamp to boot the mesh, node remains offline before this timestamp
-const OY_BLOCK_SECTORS = [[10, 10000], [18, 18000], [19, 19000]];//timing definitions for the meshblock
+const OY_BLOCK_BOOTTIME = 1581335900;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_SECTORS = [[10, 10000], [18, 18000], [19, 19000], [20, 20000]];//timing definitions for the meshblock
+const OY_BLOCK_BUFFER_CHALLENGE = 500;
+const OY_BLOCK_BUFFER_MIN = 2000;
 const OY_BLOCK_BUFFER_SPACE = 3000;//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
-const OY_BLOCK_BUFFER_MIN = 800;
 const OY_WORK_MAX = 10000000;
 const OY_WORK_MIN = 200;
 const OY_WORK_INCREMENT = 10;
@@ -1163,14 +1164,14 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         console.log(OY_BLOCK_DIFF===true);
         console.log(OY_LIGHT_STATE===false);
         console.log(OY_BLOCK_HASH===null);
-        console.log(oy_time_local-OY_BLOCK_TIME<OY_BLOCK_SECTORS[0][0]-OY_MESH_BUFFER[0]);
+        console.log(oy_time_local-OY_BLOCK_TIME<(OY_BLOCK_SECTORS[0][0]+OY_BLOCK_BUFFER_MIN)-OY_MESH_BUFFER[0]);
         console.log(oy_diff_count>1&&typeof(OY_BLOCK[1][oy_data_payload[0]])==="undefined");
 
         let oy_diff_reference = oy_data_payload[2]+oy_data_payload[3];
         if (OY_BLOCK_DIFF===true||
             OY_LIGHT_STATE===false||
             OY_BLOCK_HASH===null||
-            oy_time_local-OY_BLOCK_TIME<OY_BLOCK_SECTORS[0][0]-OY_MESH_BUFFER[0]||
+            oy_time_local-OY_BLOCK_TIME<(OY_BLOCK_SECTORS[0][0]+OY_BLOCK_BUFFER_MIN)-OY_MESH_BUFFER[0]||
             (oy_diff_count>1&&typeof(OY_BLOCK[1][oy_data_payload[0]])==="undefined")||
             (typeof(OY_LIGHT_BUILD[oy_diff_reference])!=="undefined"&&typeof(OY_LIGHT_BUILD[oy_diff_reference][3][oy_data_payload[4]])!=="undefined"&&typeof(OY_LIGHT_BUILD[oy_diff_reference][3][oy_data_payload[4]][0][oy_data_payload[0]])!=="undefined")) return false;//verify meshblock zone
 
@@ -2548,7 +2549,7 @@ function oy_block_loop() {
                     }
                     else delete OY_ENGINE[0][oy_peer_local];
                 }
-            }, OY_BLOCK_BUFFER_MIN/2);
+            }, OY_BLOCK_BUFFER_CHALLENGE);
 
             oy_boost();
         }, OY_BLOCK_SECTORS[0][1]);//mid meshblock challenges + checks to verify previous meshblock
