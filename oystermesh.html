@@ -1276,7 +1276,7 @@
                 <div align="right" style="position:absolute;left:-2.5%;top:0;width:50%;height:100%;">
                     PEER&nbsp;COUNT<br>
                     MESH&nbsp;RANGE<br>
-                    LATENCY&nbsp;AVG<br>
+                    DIFFICULTY<br>
                     BEAM&nbsp;FLOW<br>
                     SOAK&nbsp;FLOW<br>
                     MB&nbsp;UPTIME<br>
@@ -1289,7 +1289,7 @@
                 <div style="position:absolute;right:-2.5%;top:0;width:50%;height:100%;font-weight:bold;">
                     <span id="oy_peer_count_cont"><span id="oy_peer_count">null</span>&nbsp;peer(s)</span><br>
                     <span id="oy_mesh_range">null</span>&nbsp;node(s)<br>
-                    <span id="oy_latency_avg">null</span>&nbsp;sec<br>
+                    <span id="oy_difficulty">null</span>&nbsp;hashes<br>
                     <span id="oy_beam_flow">null</span>&nbsp;kbps<br>
                     <span id="oy_soak_flow">null</span>&nbsp;kbps<br>
                     <span id="oy_block_uptime">null</span>&nbsp;min<br>
@@ -1399,7 +1399,7 @@
     let OY_MESH_MAP_FUNC = null;
     let OY_LOW_POWER = false;
     let OY_LOW_POWER_THREAD = {};
-    let OY_BLOCK_GRAPH = "<div id='oy_graph_block_inner' style='position:absolute;bottom:0.5%;left:2%;width:96%;height:0;background-color: #565656;transition:height 20s linear;overflow:hidden;z-index: 10;'></div><div class='oy_center_both' style='width:120%;height:60%;border:0.2vh dashed #000000;z-index: 60;'></div>";
+    let OY_BLOCK_GRAPH = "<div id='oy_graph_block_inner' style='position:absolute;bottom:0.5%;left:2%;width:96%;height:0;background-color: #565656;transition:height 20s linear;overflow:hidden;z-index: 10;'></div><div class='oy_center_both' style='transform: translate(-50%, -100%);width:120%;height:40%;border:0.2vh dashed #000000;z-index: 60;'></div>";
 
     let oy_local_init = function() {
         document.getElementById("oy_graph_block").innerHTML = OY_BLOCK_GRAPH;
@@ -1694,8 +1694,7 @@
 
         let oy_blank = "---";
         document.getElementById("oy_mesh_range").innerHTML = OY_BLOCK[0][2];
-        if (oy_avg_latency.length>0) document.getElementById("oy_latency_avg").innerHTML = (oy_avg_latency.reduce(oy_reduce_sum)/oy_avg_latency.length).toFixed(3);
-        else document.getElementById("oy_latency_avg").innerHTML = 0;
+        document.getElementById("oy_difficulty").innerHTML = OY_BLOCK[0][3];
         if (oy_avg_beam.length>0) document.getElementById("oy_beam_flow").innerHTML = (oy_avg_beam.reduce(oy_reduce_sum)/1000).toFixed(2);
         else document.getElementById("oy_beam_flow").innerHTML = "0";
         if (oy_avg_soak.length>0) document.getElementById("oy_soak_flow").innerHTML = (oy_avg_soak.reduce(oy_reduce_sum)/1000).toFixed(2);
