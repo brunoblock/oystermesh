@@ -23,19 +23,18 @@ const OY_BLOCK_LOOP = 100;//a lower value means increased accuracy for detecting
 const OY_BLOCK_STABILITY_TRIGGER = 3;//mesh range history minimum to trigger reliance on real stability value
 const OY_BLOCK_STABILITY_LIMIT = 12;//mesh range history to keep to calculate meshblock stability, time is effectively value x 20 seconds
 const OY_BLOCK_SNAPSHOT_KEEP = 240;//how many hashes of previous blocks to keep in the current meshblock, value is for 1 month's worth (3 hrs x 8 = 24 hrs x 30 = 30 days, 8 x 30 = 240)
-const OY_BLOCK_SYNC_PEERS = 2;//minimum full peer count to submit your own SYNC broadcast, value should only be 2
 const OY_BLOCK_JUDGE_BUFFER = 3;
 const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
 const OY_BLOCK_RANGE_MIN = 3;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 120;//120seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOTTIME = 1581369800;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOTTIME = 1581375700;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[10, 10000], [18, 18000], [19, 19000], [20, 20000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CHALLENGE = [0.5, 500];
 const OY_BLOCK_BUFFER_MIN = [2, 2000];
 const OY_BLOCK_BUFFER_SPACE = [3, 3000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
 const OY_WORK_MAX = 10000000;
-const OY_WORK_MIN = 200;
-const OY_WORK_INCREMENT = 10;
+const OY_WORK_MIN = 5000;
+const OY_WORK_INCREMENT = 300;
 const OY_WORK_DECREMENT = 1;
 const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
 const OY_AKOYA_LIQUID = 10000000*OY_AKOYA_DECIMALS;//akoya liquidity restrictions to prevent integer overflow
@@ -1569,7 +1568,6 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
                         if (oy_peer_local==="oy_aggregate_node"||(oy_state_current()===2&&OY_LATENCY[oy_node_id][7]!==2&&OY_PEERS[oy_peer_local][9]===2&&typeof(OY_BLOCK[1][oy_peer_local])!=="undefined")) continue;
                         if (OY_PEERS[oy_peer_local][3]>oy_peer_weak[1]) oy_peer_weak = [oy_peer_local, OY_PEERS[oy_peer_local][3]];
                     }
-                    oy_log("Current weakest peer is "+oy_short(oy_peer_weak[0])+" with latency of "+oy_peer_weak[1].toFixed(4));
                     if ((oy_latency_result*(1+OY_LATENCY_GEO_SENS))<oy_peer_weak[1]) {
                         oy_log("New peer request has better latency than current weakest peer");
                         oy_peer_remove(oy_peer_weak[0], "OY_REASON_LATENCY_DROP");
@@ -2451,14 +2449,17 @@ function oy_block_loop() {
             }
         }
 
-        let oy_full_count = 0;
+        let oy_full_pass = false;
         if (OY_BLOCK_HASH!==null) {
             for (let oy_peer_select in OY_PEERS) {
-                if (oy_peer_select!=="oy_aggregate_node"&&OY_PEERS[oy_peer_select][9]===2&&typeof(OY_BLOCK[1][oy_peer_select])!=="undefined") oy_full_count++;
+                if (oy_peer_select!=="oy_aggregate_node"&&OY_PEERS[oy_peer_select][9]===2&&typeof(OY_BLOCK[1][oy_peer_select])!=="undefined") {
+                    oy_full_pass = true;
+                    break;
+                }
             }
         }
-        if (OY_LIGHT_STATE===false) oy_log_debug("HASH: "+OY_BLOCK_HASH+" FULL COUNT: "+oy_full_count+" WORK HASH: "+JSON.stringify(OY_WORK_HASH));
-        if (OY_LIGHT_STATE===false&&OY_BLOCK_HASH!==null&&OY_WORK_HASH!==null&&(oy_full_count>=OY_BLOCK_SYNC_PEERS||OY_BLOCK_BOOT===true)) {
+        if (OY_LIGHT_STATE===false) oy_log_debug("HASH: "+OY_BLOCK_HASH+" FULL PASS: "+oy_full_pass+" WORK HASH: "+JSON.stringify(OY_WORK_HASH));
+        if (OY_LIGHT_STATE===false&&OY_BLOCK_HASH!==null&&OY_WORK_HASH!==null&&(oy_full_pass===true||OY_BLOCK_BOOT===true)) {
             //oy_log_debug("COMMAND: "+JSON.stringify(OY_BLOCK_COMMAND));
             let oy_command_sort = [];
             for (let oy_command_hash in OY_BLOCK_COMMAND) {
