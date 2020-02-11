@@ -27,13 +27,13 @@ const OY_BLOCK_JUDGE_BUFFER = 3;
 const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
 const OY_BLOCK_RANGE_MIN = 3;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 120;//120seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOTTIME = 1581375700;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOTTIME = 1581382000;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[10, 10000], [18, 18000], [19, 19000], [20, 20000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CHALLENGE = [0.5, 500];
 const OY_BLOCK_BUFFER_MIN = [2, 2000];
 const OY_BLOCK_BUFFER_SPACE = [3, 3000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
 const OY_WORK_MAX = 10000000;
-const OY_WORK_MIN = 5000;
+const OY_WORK_MIN = 50000;
 const OY_WORK_INCREMENT = 300;
 const OY_WORK_DECREMENT = 1;
 const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
@@ -51,18 +51,15 @@ const OY_META_FEE = 0.0001*OY_AKOYA_DECIMALS;//meta fee per block per 99 charact
 const OY_NULLING_BUFFER = 0.001*OY_AKOYA_DECIMALS;
 const OY_NODE_BLACKTIME = 40;//seconds to blacklist a punished node for
 const OY_NODE_PROPOSETIME = 12;//seconds for peer proposal session duration
-const OY_NODE_ASSIGNTTIME = 4;//minimum interval between node_assign instances to/from top
-const OY_NODE_ASSIGN_DELAY = 500;//ms delay per node_initiate from node_assign
+const OY_NODE_ASSIGN_DELAY = 300;//ms delay per node_initiate from node_assign
 const OY_NODE_DELAYTIME = 6;//minimum expected time to connect or transmit data to a node
 const OY_NODE_EXPIRETIME = 600;//seconds of non-interaction until a node's connection session is deleted
 const OY_BOOST_KEEP = 12;//node IDs to retain in boost memory, higher means more nodes retained but less average node quality
-const OY_BOOST_DELAY = 250;//ms delay per boost node initiation
 const OY_BOOST_EXPIRETIME = 600;//seconds until boost indexedDB retention is discarded
 const OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 const OY_LIGHT_COMMIT = 0.4;
 const OY_PEER_LATENCYTIME = 60;//peers are expected to establish latency timing with each other within this interval in seconds
 const OY_PEER_KEEPTIME = 20;//peers are expected to communicate with each other within this interval in seconds
-const OY_PEER_REPORTTIME = 10;//interval to report peer list to top
 const OY_PEER_PRETIME = 20;//seconds which a node is waiting as a 'pre-peer'
 const OY_PEER_MAX = 5;//maximum mutual peers
 const OY_PEER_FULL_MIN = 3;
@@ -73,7 +70,7 @@ const OY_LATENCY_LENGTH = 8;//length of rand sequence which is repeated for payl
 const OY_LATENCY_REPEAT = 2;//how many ping round trips should be performed to conclude the latency test
 const OY_LATENCY_MAX = 20;//max amount of seconds for latency test before peership is refused or starts breaking down
 const OY_LATENCY_TRACK = 200;//how many latency measurements to keep at a time per peer
-const OY_LATENCY_GEO_SENS = 32;//percentage buffer for comparing latency with peers, higher means less likely weakest peer will get dropped and mesh is less geo-sensitive
+const OY_LATENCY_GEO_SENS = 22;//percentage buffer for comparing latency with peers, higher means less likely weakest peer will get dropped and mesh is less geo-sensitive
 const OY_DATA_MAX = 64000;//max size of data that can be sent to another node
 const OY_DATA_CHUNK = 48000;//chunk size by which data is split up and sent per transmission
 const OY_DATA_PURGE = 10;//how many handles to delete if indexedDB limit is reached
@@ -81,7 +78,7 @@ const OY_DATA_PUSH_INTERVAL = 200;//ms per chunk per push loop iteration
 const OY_DATA_PUSH_NONCE_MAX = 16;//maximum amount of nonces to push per push loop iteration
 const OY_DATA_PULL_INTERVAL = 800;//ms per pull loop iteration
 const OY_DATA_PULL_NONCE_MAX = 3;//maximum amount of nonces to request per pull beam, if too high fulfill will overrun soak limits and cause time/resource waste
-const OY_ENGINE_INTERVAL = 2000;//ms interval for core mesh engine to run, the time must clear a reasonable latency round-about
+const OY_ENGINE_INTERVAL = 30000;//ms interval for core mesh engine to run, the time must clear a reasonable latency round-about
 const OY_CHRONO_ACCURACY = 10;//ms accuracy for chrono function, lower means more accurate meshblock timing yet more CPU usage
 const OY_READY_RETRY = 2000;//ms interval to retry connection if READY is still false
 const OY_CHANNEL_BROADCAST_PACKET_MAX = 3000;//maximum size for a packet that is routed via OY_CHANNEL_BROADCAST (OY_LOGIC_ALL)
@@ -1304,7 +1301,7 @@ function oy_boost() {
 
     //console.log("BOOST: "+OY_BOOST_RESERVE[0]);
     oy_node_initiate(OY_BOOST_RESERVE.shift());
-    oy_chrono(oy_boost, OY_BOOST_DELAY);
+    oy_chrono(oy_boost, OY_NODE_ASSIGN_DELAY);
 }
 
 function oy_node_reset(oy_node_id) {
@@ -1489,7 +1486,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_PEER_REQUEST") {
         let oy_callback_local;
-        if (OY_BLOCK_HASH===null||OY_PEER_COUNT>=OY_PEER_MAX||OY_BLOCK_BOOT===null||(OY_BLOCK_BOOT===true&&oy_data_payload!==2)||(oy_state_current()===0&&oy_data_payload===0)) {
+        if (OY_BLOCK_HASH===null||OY_PEER_COUNT>OY_PEER_MAX||OY_BLOCK_BOOT===null||(OY_BLOCK_BOOT===true&&oy_data_payload!==2)||(oy_state_current()===0&&oy_data_payload===0)) {
             oy_callback_local = function() {
                 oy_data_beam(oy_node_id, "OY_PEER_UNREADY", null);
             };
@@ -2507,6 +2504,9 @@ function oy_block_loop() {
         oy_chrono(function() {
             OY_BLOCK_DIFF = false;
 
+            if (OY_PEER_COUNT<=OY_PEER_MAX) oy_node_assign();
+            if (OY_PEER_COUNT>0) oy_peer_report();
+
             let oy_time_local = Date.now()/1000;
             if (OY_BLOCK_HASH===null) {
                 OY_BLOCK_CHALLENGE = {};
@@ -2814,17 +2814,16 @@ function oy_block_light() {
 
     //LIGHT NODE -> FULL NODE
     if (OY_LIGHT_MODE===false) {//TODO disable to test full node resilience
-        let oy_full_count = 0;
+        let oy_full_pass = false;
         let oy_light_weakest = [null, 0];
         for (let oy_peer_select in OY_PEERS) {
             if (oy_peer_select==="oy_aggregate_node") continue;
             if (OY_PEERS[oy_peer_select][9]===1&&oy_light_weakest[1]<OY_PEERS[oy_peer_select][3]) oy_light_weakest = [oy_peer_select, OY_PEERS[oy_peer_select][3]];
-            else if (OY_PEERS[oy_peer_select][9]===2&&typeof(OY_BLOCK[1][oy_peer_select])!=="undefined") oy_full_count++;
+            else if (OY_PEERS[oy_peer_select][9]===2&&typeof(OY_BLOCK[1][oy_peer_select])!=="undefined") oy_full_pass = true;
         }
-        console.log("FULL COUNT: "+oy_full_count);
-        if (oy_full_count===0) {//self is not ready to unlatch, find more full node peers first
+
+        if (oy_full_pass===false) {//self is not ready to unlatch, find more full node peers first
             if (OY_PEER_COUNT===OY_PEER_MAX&&oy_light_weakest[0]!==null) oy_peer_remove(oy_light_weakest[0], "OY_REASON_UNLATCH_DROP");
-            oy_node_assign();
         }
         else {//unlatch sequence
             OY_LIGHT_STATE = false;
@@ -3206,18 +3205,6 @@ function oy_engine(oy_thread_track) {
     }
 
     let oy_time_local = Date.now()/1000;
-    if (typeof(oy_thread_track)==="undefined") oy_thread_track = [0, oy_time_local];
-
-    if (OY_PEER_COUNT<OY_PEER_MAX&&(oy_time_local-oy_thread_track[0])>OY_NODE_ASSIGNTTIME+Math.round(Math.random())) {
-        oy_thread_track[0] = oy_time_local;
-        oy_node_assign();
-    }
-
-    if (OY_PEER_COUNT>0&&(oy_time_local-oy_thread_track[1])>OY_PEER_REPORTTIME) {
-        oy_thread_track[1] = oy_time_local;
-        oy_peer_report();
-    }
-
     for (let oy_node_select in OY_NODES) {
         if (oy_time_local-OY_NODES[oy_node_select][1]>OY_NODE_EXPIRETIME) oy_node_disconnect(oy_node_select);
     }
