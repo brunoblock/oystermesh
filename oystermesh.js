@@ -25,15 +25,15 @@ const OY_BLOCK_STABILITY_LIMIT = 12;//mesh range history to keep to calculate me
 const OY_BLOCK_SNAPSHOT_KEEP = 240;//how many hashes of previous blocks to keep in the current meshblock, value is for 1 month's worth (3 hrs x 8 = 24 hrs x 30 = 30 days, 8 x 30 = 240)
 const OY_BLOCK_JUDGE_BUFFER = 3;
 const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
-const OY_BLOCK_RANGE_MIN = 3;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
+const OY_BLOCK_RANGE_MIN = 8;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 120;//120seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOTTIME = 1581382000;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOTTIME = 1581424500;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[10, 10000], [18, 18000], [19, 19000], [20, 20000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CHALLENGE = [0.5, 500];
 const OY_BLOCK_BUFFER_MIN = [2, 2000];
 const OY_BLOCK_BUFFER_SPACE = [3, 3000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
 const OY_WORK_MAX = 10000000;
-const OY_WORK_MIN = 50000;
+const OY_WORK_MIN = 5000;
 const OY_WORK_INCREMENT = 300;
 const OY_WORK_DECREMENT = 1;
 const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
@@ -329,7 +329,7 @@ const parentPort  = require('worker_threads');
 
 //WEB WORKER BLOCK
 function oy_worker_cores() {
-    if (window.navigator.hardwareConcurrency) return Math.max(1, Math.floor(window.navigator.hardwareConcurrency/2)-1);
+    if (window.navigator.hardwareConcurrency) return Math.max(OY_WORKER_CORES_FALLBACK, Math.floor(window.navigator.hardwareConcurrency/2)-1);
     else return OY_WORKER_CORES_FALLBACK;
 }
 
@@ -789,6 +789,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     else if (oy_data_flag==="OY_BLOCK_SYNC") {
         //oy_data_payload = [oy_route_passport_passive, oy_route_passport_crypt, oy_sync_crypt, oy_sync_time, oy_sync_command, oy_work_hash]
         if (oy_data_payload.length!==6||typeof(oy_data_payload[0])!=="object"||typeof(oy_data_payload[1])!=="object"||oy_data_payload[0].length===0||oy_data_payload[0].length!==oy_data_payload[1].length||!oy_key_check(oy_data_payload[0][0])) {
+            oy_log_debug("SYNC_INVALID: "+JSON.stringify(oy_data_payload));
             oy_node_punish(oy_peer_id, "OY_PUNISH_SYNC_INVALID");
             return false;
         }
@@ -2504,7 +2505,7 @@ function oy_block_loop() {
         oy_chrono(function() {
             OY_BLOCK_DIFF = false;
 
-            if (OY_PEER_COUNT<=OY_PEER_MAX) oy_node_assign();
+            if (OY_PEER_COUNT<OY_PEER_MAX) oy_node_assign();
             if (OY_PEER_COUNT>0) oy_peer_report();
 
             let oy_time_local = Date.now()/1000;
