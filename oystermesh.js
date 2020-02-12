@@ -27,7 +27,7 @@ const OY_BLOCK_JUDGE_BUFFER = 3;
 const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
 const OY_BLOCK_RANGE_MIN = 8;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 120;//120seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOTTIME = 1581521800;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOTTIME = 1581522800;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[10, 10000], [18, 18000], [19, 19000], [20, 20000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CHALLENGE = [0.5, 500];
 const OY_BLOCK_BUFFER_MIN = [2, 2000];
@@ -2495,7 +2495,7 @@ function oy_block_loop() {
                 }
 
                 //FULL NODE -> LIGHT NODE
-                if (OY_LIGHT_STATE===false&&(OY_LIGHT_MODE===true||!oy_full_pass()||Object.keys(OY_BLOCK_SYNC).length<=1)) {
+                if (OY_LIGHT_STATE===false&&(OY_LIGHT_MODE===true||!oy_full_pass()||Object.keys(OY_BLOCK_SYNC).length<=1)&&OY_BLOCK_BOOT===false) {
                     OY_LIGHT_STATE = true;
                     document.dispatchEvent(OY_STATE_LIGHT);
                     for (let oy_peer_select in OY_PEERS) {
