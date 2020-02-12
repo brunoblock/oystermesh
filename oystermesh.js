@@ -27,7 +27,7 @@ const OY_BLOCK_JUDGE_BUFFER = 3;
 const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
 const OY_BLOCK_RANGE_MIN = 8;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 120;//120seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOTTIME = 1581467100;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOTTIME = 1581468400;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[10, 10000], [18, 18000], [19, 19000], [20, 20000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CHALLENGE = [0.5, 500];
 const OY_BLOCK_BUFFER_MIN = [2, 2000];
@@ -53,7 +53,7 @@ const OY_NODE_PROPOSETIME = 12;//seconds for peer proposal session duration
 const OY_NODE_ASSIGN_DELAY = 300;//ms delay per node_initiate from node_assign
 const OY_NODE_DELAYTIME = 6;//minimum expected time to connect or transmit data to a node
 const OY_NODE_EXPIRETIME = 600;//seconds of non-interaction until a node's connection session is deleted
-const OY_BOOST_KEEP = 12;//node IDs to retain in boost memory, higher means more nodes retained but less average node quality
+const OY_BOOST_KEEP = 32;//node IDs to retain in boost memory, higher means more nodes retained but less average node quality
 const OY_BOOST_EXPIRETIME = 600;//seconds until boost indexedDB retention is discarded
 const OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 const OY_LIGHT_COMMIT = 0.4;
@@ -1271,7 +1271,6 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
 //reports peership data to top, leads to seeing mesh big picture, mesh stability development, not required for mesh operation
 function oy_peer_report() {
-    console.log("REPORT "+((Date.now()/1000)-OY_BLOCK_TIME));
     let oy_xhttp = new XMLHttpRequest();
     oy_xhttp.onreadystatechange = function() {
         if (this.readyState===4&&this.status===200) {
@@ -2202,9 +2201,8 @@ function oy_hivemind_post(oy_key_private, oy_key_public, oy_transact_fee, oy_clu
 }
 
 function oy_block_range(oy_mesh_range_new) {
-    let oy_range_diff = oy_mesh_range_new - OY_BLOCK[0][2];
-    if (oy_range_diff>0&&OY_BLOCK_BOOT===false) OY_BLOCK[0][3] += oy_range_diff*OY_WORK_INCREMENT;
-    else OY_BLOCK[0][3] += (oy_range_diff-1)*OY_WORK_DECREMENT;
+    if (oy_mesh_range_new-OY_BLOCK[0][2]>0&&OY_BLOCK_BOOT===false) OY_BLOCK[0][3] += OY_WORK_INCREMENT;
+    else OY_BLOCK[0][3] += OY_WORK_DECREMENT;
 
     if (OY_BLOCK[0][3]>OY_WORK_MAX) OY_BLOCK[0][3] = OY_WORK_MAX;
     if (OY_BLOCK[0][3]<OY_WORK_MIN) OY_BLOCK[0][3] = OY_WORK_MIN;
@@ -2505,6 +2503,8 @@ function oy_block_loop() {
                     }
                     else delete OY_ENGINE[0][oy_peer_local];
                 }
+
+                oy_peer_report();//TODO block_latch
             }, OY_BLOCK_BUFFER_CHALLENGE[1]);
 
             oy_boost();
@@ -3140,13 +3140,8 @@ function oy_block_finish() {
     OY_BOOST_RESERVE = OY_BOOST_BUILD.slice();
     OY_BOOST_BUILD = [];
 
-    if (OY_PEER_COUNT>0) oy_peer_report();
-
-    console.log("BOOST"+OY_BOOST_RESERVE.length);
-    let record = performance.now();
     oy_local_set("oy_boost_reserve", OY_BOOST_RESERVE);
     oy_local_set("oy_boost_expire", (Date.now()/1000|0)+OY_BOOST_EXPIRETIME);
-    console.log(performance.now() - record);
 }
 
 //core loop that runs critical functions and checks
