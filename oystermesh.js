@@ -2397,17 +2397,15 @@ function oy_block_loop() {
         }
         //BLOCK SEED--------------------------------------------------
 
-        let oy_full_pass = false;
-        if (OY_BLOCK_HASH!==null) {
+        let oy_full_pass = function() {
             for (let oy_peer_select in OY_PEERS) {
-                if (OY_PEERS[oy_peer_select][9]===2&&typeof(OY_BLOCK[1][oy_peer_select])!=="undefined") {
-                    oy_full_pass = true;
-                    break;
-                }
+                if (OY_PEERS[oy_peer_select][9]===2&&typeof(OY_BLOCK[1][oy_peer_select])!=="undefined") return true;
             }
-        }
+            return false;
+        };
+
         if (OY_LIGHT_STATE===false) oy_log_debug("HASH: "+OY_BLOCK_HASH+" FULL PASS: "+oy_full_pass+" WORK HASH: "+JSON.stringify(OY_WORK_HASH));
-        if (OY_LIGHT_STATE===false&&OY_BLOCK_HASH!==null&&OY_WORK_HASH!==null&&(oy_full_pass===true||OY_BLOCK_BOOT===true)) {
+        if (OY_LIGHT_STATE===false&&OY_BLOCK_HASH!==null&&OY_WORK_HASH!==null&&(oy_full_pass()||OY_BLOCK_BOOT===true)) {
             //oy_log_debug("COMMAND: "+JSON.stringify(OY_BLOCK_COMMAND));
             let oy_command_sort = [];
             for (let oy_command_hash in OY_BLOCK_COMMAND) {
@@ -2475,15 +2473,6 @@ function oy_block_loop() {
                 return false;
             }
 
-            //FULL NODE -> LIGHT NODE
-            if (OY_LIGHT_STATE===false&&(OY_LIGHT_MODE===true||oy_full_pass===false||Object.keys(OY_BLOCK_SYNC).length===0)) {
-                OY_LIGHT_STATE = true;
-                document.dispatchEvent(OY_STATE_LIGHT);
-                for (let oy_peer_select in OY_PEERS) {
-                    oy_data_beam(oy_peer_select, "OY_PEER_LIGHT", oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH));
-                }
-            }
-
             if (OY_BLOCK_UPTIME===null&&OY_PEER_COUNT>0) OY_BLOCK_UPTIME = oy_time_local;
 
             oy_chrono(function() {
@@ -2491,6 +2480,15 @@ function oy_block_loop() {
                     if (!oy_peer_check(oy_peer_select)||OY_PEERS[oy_peer_select][9]===0) continue;
                     oy_peer_remove(oy_peer_select, "OY_REASON_BLOCK_HASH");
                     delete OY_BLOCK_CHALLENGE[oy_peer_select];
+                }
+
+                //FULL NODE -> LIGHT NODE
+                if (OY_LIGHT_STATE===false&&(OY_LIGHT_MODE===true||!oy_full_pass()||Object.keys(OY_BLOCK_SYNC).length<=1)) {
+                    OY_LIGHT_STATE = true;
+                    document.dispatchEvent(OY_STATE_LIGHT);
+                    for (let oy_peer_select in OY_PEERS) {
+                        oy_data_beam(oy_peer_select, "OY_PEER_LIGHT", oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH));
+                    }
                 }
 
                 for (let oy_peer_local in OY_PEERS) {
