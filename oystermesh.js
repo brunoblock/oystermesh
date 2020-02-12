@@ -27,7 +27,7 @@ const OY_BLOCK_JUDGE_BUFFER = 3;
 const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
 const OY_BLOCK_RANGE_MIN = 8;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 120;//120seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOTTIME = 1581463800;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOTTIME = 1581467100;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[10, 10000], [18, 18000], [19, 19000], [20, 20000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CHALLENGE = [0.5, 500];
 const OY_BLOCK_BUFFER_MIN = [2, 2000];
@@ -1124,6 +1124,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
             OY_BLOCK_WEIGHT = new Blob([OY_BLOCK_FLAT]).size;
 
+            oy_log("BASE MESHBLOCK HASH "+OY_BLOCK_HASH, true);
             console.log("BASE MESHBLOCK HASH "+OY_BLOCK_HASH);//TODO temp
 
             OY_LIGHT_STATE = true;
@@ -1135,7 +1136,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                 for (let oy_peer_select in OY_PEERS) {
                     oy_data_beam(oy_peer_select, "OY_PEER_LIGHT", oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH));
                 }
-            }, OY_BLOCK_SECTORS[0][1]+OY_MESH_BUFFER[1]);
+            }, OY_MESH_BUFFER[1]);
         }
         return true;
     }
@@ -1220,6 +1221,9 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_node_punish(oy_peer_id, "OY_PUNISH_LIGHT_FAIL");
             return false;
         }
+
+        delete OY_BLOCK_CHALLENGE[oy_peer_id];
+
         if (OY_PEERS[oy_peer_id][9]===0||OY_PEERS[oy_peer_id][9]===2) {
             OY_PEERS[oy_peer_id][9] = 1;
             OY_LATCH_COUNT++;
@@ -1231,6 +1235,9 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_node_punish(oy_peer_id, "OY_PUNISH_FULL_FAIL");
             return false;
         }
+
+        delete OY_BLOCK_CHALLENGE[oy_peer_id];
+
         if (OY_PEERS[oy_peer_id][9]===1) {
             OY_PEERS[oy_peer_id][9] = 2;
             OY_LATCH_COUNT--;
@@ -1264,6 +1271,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
 //reports peership data to top, leads to seeing mesh big picture, mesh stability development, not required for mesh operation
 function oy_peer_report() {
+    console.log("REPORT "+((Date.now()/1000)-OY_BLOCK_TIME));
     let oy_xhttp = new XMLHttpRequest();
     oy_xhttp.onreadystatechange = function() {
         if (this.readyState===4&&this.status===200) {
@@ -2612,9 +2620,10 @@ function oy_block_loop() {
 
             OY_BLOCK_WEIGHT = new Blob([OY_BLOCK_FLAT]).size;
 
+            oy_log("FULL MESHBLOCK HASH "+OY_BLOCK_HASH, true);
             console.log("FULL MESHBLOCK HASH "+OY_BLOCK_HASH);
-
-            oy_log_debug("HASH: "+OY_BLOCK_HASH+"\nBLOCK: "+OY_BLOCK_FLAT);
+            oy_log_debug("FULL MESHBLOCK HASH "+OY_BLOCK_HASH);
+            //oy_log_debug("HASH: "+OY_BLOCK_HASH+"\nBLOCK: "+OY_BLOCK_FLAT);
 
             document.dispatchEvent(OY_BLOCK_TRIGGER);
 
@@ -3133,8 +3142,11 @@ function oy_block_finish() {
 
     if (OY_PEER_COUNT>0) oy_peer_report();
 
+    console.log("BOOST"+OY_BOOST_RESERVE.length);
+    let record = performance.now();
     oy_local_set("oy_boost_reserve", OY_BOOST_RESERVE);
     oy_local_set("oy_boost_expire", (Date.now()/1000|0)+OY_BOOST_EXPIRETIME);
+    console.log(performance.now() - record);
 }
 
 //core loop that runs critical functions and checks
