@@ -22,19 +22,20 @@ const OY_MESH_SOURCE = 3;//node in route passport (from destination) that is ass
 const OY_BLOCK_LOOP = 100;//a lower value means increased accuracy for detecting the start of the next meshblock
 const OY_BLOCK_STABILITY_TRIGGER = 3;//mesh range history minimum to trigger reliance on real stability value
 const OY_BLOCK_STABILITY_LIMIT = 12;//mesh range history to keep to calculate meshblock stability, time is effectively value x 20 seconds
-const OY_BLOCK_SNAPSHOT_KEEP = 240;//how many hashes of previous blocks to keep in the current meshblock, value is for 1 month's worth (3 hrs x 8 = 24 hrs x 30 = 30 days, 8 x 30 = 240)
+const OY_BLOCK_EPOCH = 1080;//cadence in blocks to perform epoch processing - 6 hr interval
+const OY_BLOCK_SNAPSHOT_KEEP = 120;//how many hashes of previous blocks to keep in the current meshblock, value is for 1 month's worth (6 hrs x 4 = 24 hrs x 30 = 30 days, 4 x 30 = 120)
 const OY_BLOCK_JUDGE_BUFFER = 3;
 const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
 const OY_BLOCK_RANGE_MIN = 8;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 120;//120seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOTTIME = 1581522800;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOTTIME = 1581545200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[10, 10000], [18, 18000], [19, 19000], [20, 20000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CHALLENGE = [0.5, 500];
 const OY_BLOCK_BUFFER_MIN = [2, 2000];
 const OY_BLOCK_BUFFER_SPACE = [6, 6000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
 const OY_WORK_MAX = 10000000;
 const OY_WORK_MIN = 1000;
-const OY_WORK_INCREMENT = 10;
+const OY_WORK_INCREMENT = 100;
 const OY_WORK_DECREMENT = 1;
 const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
 const OY_AKOYA_LIQUID = 10000000*OY_AKOYA_DECIMALS;//akoya liquidity restrictions to prevent integer overflow
@@ -50,7 +51,7 @@ const OY_META_DAPP_RANGE = 9;//max amount of meshblock amendable dapps including
 const OY_META_FEE = 0.0001*OY_AKOYA_DECIMALS;//meta fee per block per 99 characters - 99 used instead of 100 for space savings on the meshblock
 const OY_NULLING_BUFFER = 0.001*OY_AKOYA_DECIMALS;
 const OY_NODE_PROPOSETIME = 12;//seconds for peer proposal session duration
-const OY_NODE_ASSIGN_DELAY = 300;//ms delay per node_initiate from node_assign
+const OY_NODE_ASSIGN_DELAY = 50;//ms delay per node_initiate from node_assign and boost
 const OY_NODE_DELAYTIME = 6;//minimum expected time to connect or transmit data to a node
 const OY_NODE_EXPIRETIME = 600;//seconds of non-interaction until a node's connection session is deleted
 const OY_BOOST_KEEP = 32;//node IDs to retain in boost memory, higher means more nodes retained but less average node quality
@@ -98,9 +99,9 @@ const OY_DNS_OWNER_MIN = (OY_AKOYA_FEE+OY_DNS_FEE)*OY_DNS_AUCTION_MIN+(OY_AKOYA_
 //const OY_META_OWNER_MIN
 
 // TEMPLATE VARS
-//the current meshblock - [[0]:[oy_mesh_dynasty, oy_block_timestamp, oy_mesh_range, oy_work_difficulty, oy_genesis_timestamp, [oy_count_work, oy_count_snapshot], oy_range_diff, oy_range_prev, oy_range_keep],
+//the current meshblock - [[0]:[oy_mesh_dynasty, oy_block_timestamp, oy_mesh_range, oy_work_difficulty, oy_genesis_timestamp, oy_epoch_count, oy_range_diff, oy_range_prev, oy_range_keep],
 // [1]:oy_dive_sector, [2]:oy_snapshot_sector, [3]:oy_command_sector, [4]:oy_akoya_sector, [5]:oy_dns_sector, [6]:oy_auction_sector, [7]:oy_meta_sector]
-const OY_BLOCK_TEMPLATE = Object.freeze([[null, null, null, null, null, [0, 0], null, null, []], {}, [], {}, {}, {}, {}, {}, {}, {}]);//TODO figure out channel sector
+const OY_BLOCK_TEMPLATE = Object.freeze([[null, null, null, null, null, null, null, null, []], {}, [], {}, {}, {}, {}, {}, {}, {}]);//TODO figure out channel sector
 let OY_BLOCK = oy_clone_object(OY_BLOCK_TEMPLATE);
 
 // SECURITY CHECK FUNCTIONS
@@ -1399,10 +1400,10 @@ function oy_node_punish(oy_node_id, oy_punish_reason) {
 function oy_node_initiate(oy_node_id) {
     let oy_time_local = Date.now()/1000;
 
-    if (oy_peer_check(oy_node_id)||oy_peer_pre_check(oy_node_id)||oy_node_proposed(oy_node_id)||oy_latency_check(oy_node_id)||OY_PEER_COUNT>=OY_PEER_MAX||OY_BLOCK_BOOT===null||(OY_LIGHT_MODE===true&&OY_BLOCK_BOOT===true)) return false;
+    if (oy_peer_check(oy_node_id)||oy_peer_pre_check(oy_node_id)||oy_node_proposed(oy_node_id)||oy_latency_check(oy_node_id)||OY_PEER_COUNT>OY_PEER_MAX||OY_BLOCK_BOOT===null||(OY_LIGHT_MODE===true&&OY_BLOCK_BOOT===true)||(oy_state_current()!==0&&oy_time_local-OY_BLOCK_TIME>OY_BLOCK_SECTORS[0][0])) return false;
     let oy_callback_peer = function() {
         oy_data_beam(oy_node_id, "OY_PEER_REQUEST", oy_state_current());
-        OY_PROPOSED[oy_node_id] = oy_time_local+OY_NODE_PROPOSETIME;//set proposal session with expiration timestamp and type flag
+        OY_PROPOSED[oy_node_id] = oy_time_local+OY_NODE_PROPOSETIME;//set proposal session with expiration timestamp
     };
     oy_node_connect(oy_node_id, oy_callback_peer);
     return true;
@@ -2388,6 +2389,7 @@ function oy_block_loop() {
             OY_BLOCK[0][2] = OY_BLOCK_RANGE_MIN;//mesh range
             OY_BLOCK[0][3] = OY_WORK_MIN;//memory difficulty
             OY_BLOCK[0][4] = OY_BLOCK_BOOTTIME;//genesis timestamp
+            OY_BLOCK[0][5] = 0;//epoch counter
             OY_BLOCK[0][6] = 0;//range diff
             OY_BLOCK[0][7] = OY_BLOCK_RANGE_MIN;//range prev
             OY_BLOCK[4]["oy_escrow_dns"] = 0;
@@ -2625,7 +2627,7 @@ function oy_block_loop() {
             }
 
             OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK);
-            //console.log(OY_BLOCK_FLAT);//TODO temp
+            console.log(OY_BLOCK_FLAT);//TODO temp
 
             OY_BLOCK_HASH = oy_hash_gen(OY_BLOCK_FLAT);
 
@@ -2834,18 +2836,20 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
     //MAINTAIN--------------------------------
     OY_BLOCK[0][0] = OY_MESH_DYNASTY;
     OY_BLOCK[0][1] = OY_BLOCK_TIME;
-    OY_BLOCK[0][5][0]++;
-    OY_BLOCK[0][5][1]++;
+    OY_BLOCK[0][5]++;
     OY_BLOCK[0][8].push(OY_BLOCK[0][2]);
 
-    //work difficulty alternate
-    if (OY_BLOCK[0][5][0]===120) {//4 day interval - 17280 blocks
-        OY_BLOCK[0][5][0] = 0;
+    //epoch processing - 6 hr interval - 1080 blocks
+    if (OY_BLOCK[0][5]===OY_BLOCK_EPOCH) {
+        OY_BLOCK[0][5] = 0;
+
+        //work difficulty alternate
         for (let i in OY_BLOCK[0][8]) {
             OY_BLOCK[0][8][i] *= OY_AKOYA_DECIMALS;
             OY_BLOCK[0][8][i] = parseInt(OY_BLOCK[0][8][i]);
         }
         let oy_range_avg = Math.floor(Math.floor(oy_calc_avg(OY_BLOCK[0][8]))/OY_AKOYA_DECIMALS);
+        OY_BLOCK[0][8] = [];
         OY_BLOCK[0][6] = oy_range_avg-OY_BLOCK[0][7];
         OY_BLOCK[0][7] = oy_range_avg;
 
@@ -2854,11 +2858,8 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
 
         if (OY_BLOCK[0][3]>OY_WORK_MAX) OY_BLOCK[0][3] = OY_WORK_MAX;
         if (OY_BLOCK[0][3]<OY_WORK_MIN) OY_BLOCK[0][3] = OY_WORK_MIN;
-    }
 
-    //snapshot alternate
-    if (OY_BLOCK[0][5][1]===720) {//4 hr interval - 720 blocks
-        OY_BLOCK[0][5][1] = 0;
+        //snapshot alternate
         OY_BLOCK[3] = {};
         OY_BLOCK[2].push(OY_BLOCK_HASH);
 
