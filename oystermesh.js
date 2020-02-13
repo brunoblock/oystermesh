@@ -27,13 +27,13 @@ const OY_BLOCK_SNAPSHOT_KEEP = 120;//how many hashes of previous blocks to keep 
 const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
 const OY_BLOCK_RANGE_MIN = 8;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 120;//120seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOTTIME = 1581612800;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOTTIME = 1581637900;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[10, 10000], [18, 18000], [19, 19000], [20, 20000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CHALLENGE = [0.5, 500];
 const OY_BLOCK_BUFFER_MIN = [2, 2000];
 const OY_BLOCK_BUFFER_SPACE = [6, 6000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
-const OY_JUDGE_BUFFER_MIN = 0.01;//before payload size is applied
-const OY_JUDGE_BUFFER_MULTI = 1.5;
+const OY_JUDGE_BUFFER_BASE = 2.5;
+const OY_JUDGE_BUFFER_CURVE = 12;//allocation for curve
 const OY_WORK_MAX = 10000000;
 const OY_WORK_MIN = 10000;
 const OY_WORK_INCREMENT = 1;
@@ -2437,11 +2437,12 @@ function oy_block_loop() {
 
             let oy_sync_command = LZString.compressToUTF16(JSON.stringify(oy_command_sort));
             let oy_block_sync_hash = oy_hash_gen(oy_sync_command);
-            let oy_sync_time = Date.now()/1000;
+            let oy_sync_time = Date.now()/1000;console.log("SYNC_LOAD");
 
             //oy_log_debug("SYNC WORK HASH: "+JSON.stringify(OY_WORK_HASH));
             let oy_sync_crypt = oy_key_sign(OY_SELF_PRIVATE, oy_sync_time+oy_block_sync_hash+OY_WORK_HASH);
             oy_chrono(function() {
+                console.log("SYNC_PUSH");
                 oy_data_route("OY_LOGIC_SYNC", "OY_BLOCK_SYNC", [[], [oy_key_sign(OY_SELF_PRIVATE, oy_short(oy_sync_crypt))], oy_sync_crypt, oy_sync_time, oy_sync_command, OY_WORK_HASH]);
                 OY_WORK_HASH = null;
             }, OY_MESH_BUFFER[1]);
@@ -2655,9 +2656,9 @@ function oy_block_loop() {
             for (let i in OY_BLOCK_LEARN) {
                 if (i===0||OY_BLOCK_LEARN[i]===null||typeof(OY_BLOCK_LEARN[i])==="undefined") continue;
                 if (OY_BLOCK_LEARN[i].length===0) OY_BLOCK_JUDGE.push(true);
-                else OY_BLOCK_JUDGE.push(Math.max(i*OY_JUDGE_BUFFER_MIN, oy_calc_avg(OY_BLOCK_LEARN[i])*OY_JUDGE_BUFFER_MULTI));
+                else OY_BLOCK_JUDGE.push(oy_calc_avg(OY_BLOCK_LEARN[i])*OY_JUDGE_BUFFER_BASE*Math.pow(1+(OY_JUDGE_BUFFER_CURVE/(OY_BLOCK_LEARN.length-1)), parseInt(i)));
             }
-            OY_BLOCK_LEARN = [null];
+            OY_BLOCK_LEARN = [null];console.log("JUDGE: "+JSON.stringify(OY_BLOCK_JUDGE));
 
             if (OY_BLOCK_BOOT===true) OY_SYNC_LAST = [0, 0];
             else {
