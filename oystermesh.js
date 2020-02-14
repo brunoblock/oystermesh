@@ -1493,16 +1493,14 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
                     if (OY_PEERS[oy_peer_select][1]===2&&typeof(OY_BLOCK[1][oy_peer_select])!=="undefined") oy_full_count++;
                 }
             }
-            if (Object.keys(OY_PEERS).length<OY_PEER_MAX&&(oy_state_current()!==2||OY_LATENCY[oy_node_id][4]===2||Object.keys(OY_PEERS).length-oy_full_count<OY_PEER_MAX-OY_PEER_FULL_MIN)) {
+            if ((((OY_LIGHT_MODE===OY_LIGHT_STATE||(OY_LIGHT_MODE===true&&OY_LIGHT_STATE===false))&&Object.keys(OY_PEERS).length<OY_PEER_MAX)||(OY_LIGHT_MODE===false&&OY_LIGHT_STATE===true&&Object.keys(OY_PEERS).length<OY_PEER_MAX-1))&&(oy_state_current()!==2||OY_LATENCY[oy_node_id][4]===2||Object.keys(OY_PEERS).length-oy_full_count<OY_PEER_MAX-OY_PEER_FULL_MIN)) {
                 if (OY_LATENCY[oy_node_id][2]==="OY_PEER_ACCEPT") {
                     oy_peer_add(oy_node_id, OY_LATENCY[oy_node_id][4]);
                     oy_data_beam(oy_node_id, "OY_PEER_AFFIRM", oy_state_current());
-                    oy_log("Added node "+oy_short(oy_node_id)+" as a peer");
                 }
                 else {
                     oy_peer_pre_add(oy_node_id);
                     oy_data_beam(oy_node_id, "OY_PEER_ACCEPT", oy_state_current());
-                    oy_log("Added node "+oy_short(oy_node_id)+" to pre peer list");
                 }
                 oy_peer_latency(oy_node_id, oy_latency_result);
             }
