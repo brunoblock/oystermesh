@@ -26,7 +26,7 @@ const OY_BLOCK_SNAPSHOT_KEEP = 120;//how many hashes of previous blocks to keep 
 const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
 const OY_BLOCK_RANGE_MIN = 8;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 120;//120seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOTTIME = 1581671900;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOTTIME = 1581688200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[10, 10000], [18, 18000], [19, 19000], [20, 20000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_LATCH = [0.5, 500];
 const OY_BLOCK_BUFFER_REPORT = [4, 4000];
@@ -2363,12 +2363,14 @@ function oy_block_engine() {
         }
         //BLOCK SEED--------------------------------------------------
 
-        let oy_full_pass = function() {
-            for (let oy_peer_select in OY_PEERS) {
-                if (OY_PEERS[oy_peer_select][1]===2&&typeof(OY_BLOCK[1][oy_peer_select])!=="undefined") return true;
+        let oy_full_pass = false;
+        for (let oy_peer_select in OY_PEERS) {
+            if (OY_PEERS[oy_peer_select][1]===2&&typeof(OY_BLOCK[1][oy_peer_select])!=="undefined") {
+                OY_PEERS[oy_peer_select][2] = false;
+                oy_full_pass = true;
+                break;
             }
-            return false;
-        };
+        }
 
         if (OY_LIGHT_STATE===false) {
             let oy_array_length = (OY_BLOCK_BOOT===true||OY_BLOCK[0][2]===null)?OY_MESH_HOP_MAX:OY_BLOCK[0][2];
@@ -2376,9 +2378,9 @@ function oy_block_engine() {
             for (let i = 0;i<oy_array_length;i++) {
                 OY_BLOCK_LEARN.push([]);
             }
-            oy_log_debug("HASH: "+OY_BLOCK_HASH+" FULL PASS: "+oy_full_pass()+" WORK HASH: "+JSON.stringify(OY_WORK_HASH));
+            oy_log_debug("HASH: "+OY_BLOCK_HASH+" FULL PASS: "+oy_full_pass+" WORK HASH: "+JSON.stringify(OY_WORK_HASH));
         }
-        if (OY_LIGHT_STATE===false&&OY_BLOCK_HASH!==null&&OY_WORK_HASH!==null&&(oy_full_pass()||OY_BLOCK_BOOT===true)) {
+        if (OY_LIGHT_STATE===false&&OY_BLOCK_HASH!==null&&OY_WORK_HASH!==null&&(oy_full_pass===true||OY_BLOCK_BOOT===true)) {
             //oy_log_debug("COMMAND: "+JSON.stringify(OY_BLOCK_COMMAND));
             let oy_command_sort = [];
             for (let oy_command_hash in OY_BLOCK_COMMAND) {

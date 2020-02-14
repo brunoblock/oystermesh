@@ -1683,18 +1683,17 @@
         let oy_avg_soak = [];
         let oy_peer_keep = [];
         for (let oy_peer_local in OY_PEERS) {
-            if (oy_peer_local==="oy_aggregate_node") continue;
             oy_data_measure(true, oy_peer_local, null);
             oy_data_measure(false, oy_peer_local, null);
-            oy_peer_keep.push([oy_short(oy_peer_local), OY_PEERS[oy_peer_local][3], OY_PEERS[oy_peer_local][5], OY_PEERS[oy_peer_local][7], OY_PEERS[oy_peer_local][9]]);
+            oy_peer_keep.push([oy_short(oy_peer_local), OY_PEERS[oy_peer_local][3], OY_PEERS[oy_peer_local][5], OY_PEERS[oy_peer_local][7], OY_PEERS[oy_peer_local][1]]);
             oy_avg_latency.push(OY_PEERS[oy_peer_local][3]);
             oy_avg_beam.push(OY_PEERS[oy_peer_local][5]);
             oy_avg_soak.push(OY_PEERS[oy_peer_local][7]);
         }
 
         let oy_blank = "---";
-        document.getElementById("oy_mesh_range").innerHTML = OY_BLOCK[0][2];
-        document.getElementById("oy_difficulty").innerHTML = OY_BLOCK[0][3];
+        document.getElementById("oy_mesh_range").innerHTML = (OY_BLOCK[0][2]===null)?oy_blank:OY_BLOCK[0][2];
+        document.getElementById("oy_difficulty").innerHTML = (OY_BLOCK[0][3]===null)?oy_blank:OY_BLOCK[0][3];
         if (oy_avg_beam.length>0) document.getElementById("oy_beam_flow").innerHTML = (oy_avg_beam.reduce(oy_reduce_sum)/1000).toFixed(2);
         else document.getElementById("oy_beam_flow").innerHTML = "0";
         if (oy_avg_soak.length>0) document.getElementById("oy_soak_flow").innerHTML = (oy_avg_soak.reduce(oy_reduce_sum)/1000).toFixed(2);
