@@ -26,8 +26,8 @@ const OY_BLOCK_SNAPSHOT_KEEP = 120;//how many hashes of previous blocks to keep 
 const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
 const OY_BLOCK_RANGE_MIN = 10;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 120;//120seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOTTIME = 1581860400;//timestamp to boot the mesh, node remains offline before this timestamp
-const OY_BLOCK_SECTORS = [[10, 10000], [18, 18000], [19, 19000], [20, 20000]];//timing definitions for the meshblock
+const OY_BLOCK_BOOTTIME = 1581882600;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_SECTORS = [[10, 10000], [17, 18000], [18, 18000], [19, 19000], [20, 20000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_LATCH = [0.5, 500];
 const OY_BLOCK_BUFFER_REPORT = [4, 4000];
 const OY_BLOCK_BUFFER_MIN = [2, 2000];
@@ -91,8 +91,8 @@ const OY_KEY_BRUNO = "JSJqmlzAxwuINY2FCpWPJYvKIK1AjavBgkIwIm139k4M";//prevent im
 const OY_SHORT_LENGTH = 6;//various data value such as nonce IDs, data handles, data values are shortened for efficiency
 
 // PRE-CALCULATED VARS
-const OY_DNS_AUCTION_MIN = (OY_AKOYA_FEE+OY_DNS_FEE)*(OY_DNS_AUCTION_DURATION/OY_BLOCK_SECTORS[3][0]);
-const OY_DNS_OWNER_MIN = (OY_AKOYA_FEE+OY_DNS_FEE)*OY_DNS_AUCTION_MIN+(OY_AKOYA_FEE*(OY_DNS_OWNER_DURATION/OY_BLOCK_SECTORS[3][0]));
+const OY_DNS_AUCTION_MIN = (OY_AKOYA_FEE+OY_DNS_FEE)*(OY_DNS_AUCTION_DURATION/OY_BLOCK_SECTORS[4][0]);
+const OY_DNS_OWNER_MIN = (OY_AKOYA_FEE+OY_DNS_FEE)*OY_DNS_AUCTION_MIN+(OY_AKOYA_FEE*(OY_DNS_OWNER_DURATION/OY_BLOCK_SECTORS[4][0]));
 //const OY_META_OWNER_MIN
 
 // TEMPLATE VARS
@@ -197,7 +197,7 @@ const OY_BLOCK_COMMANDS = {
 const OY_BLOCK_TRANSACTS = {
     "OY_HIVEMIND_CLUSTER":[function(oy_command_array) {
         let oy_hold_check = function([oy_hold_hash, oy_hold_expire]) {
-            return (oy_hash_check(oy_hold_hash)&&typeof(OY_BLOCK[7][oy_hold_hash])!=="undefined"&&Number.isInteger(oy_hold_expire)&&oy_hold_expire<=OY_BLOCK_TIME+(oy_command_array[5][0][4]*3600)+OY_BLOCK_SECTORS[3][0]);
+            return (oy_hash_check(oy_hold_hash)&&typeof(OY_BLOCK[7][oy_hold_hash])!=="undefined"&&Number.isInteger(oy_hold_expire)&&oy_hold_expire<=OY_BLOCK_TIME+(oy_command_array[5][0][4]*3600)+OY_BLOCK_SECTORS[4][0]);
         };
         return (oy_command_array[5].length===2&&//verify dual sectors of oy_meta_data
             Number.isInteger(oy_command_array[5][0][1])&&//check author_rights is an integer
@@ -225,7 +225,7 @@ const OY_BLOCK_TRANSACTS = {
             typeof(OY_BLOCK[7][oy_command_array[5][0][1]])!=="undefined"&&//check that the master thread exists in the meta section of the meshblock
             OY_BLOCK[7][oy_command_array[5][0][1]][3][0][0]===0&&//check that the master thread is structured as a master thread in the meta section of the meshblock
             oy_command_array[5][0][2]===-1&&//check that author_public is set to -1, to be assigned by the meshblock
-            oy_command_array[5][0][3]>=OY_BLOCK[7][oy_command_array[5][0][1]][3][0][2]+((((OY_BLOCK[7][oy_command_array[5][0][1]][3][0][4]*3600)/OY_BLOCK_SECTORS[3][0]))*OY_AKOYA_FEE)&&//check that the submission_payment is large enough to cover the submission fee defined in the master thread, and enough akoya to host the data for the original intended amount of time
+            oy_command_array[5][0][3]>=OY_BLOCK[7][oy_command_array[5][0][1]][3][0][2]+((((OY_BLOCK[7][oy_command_array[5][0][1]][3][0][4]*3600)/OY_BLOCK_SECTORS[4][0]))*OY_AKOYA_FEE)&&//check that the submission_payment is large enough to cover the submission fee defined in the master thread, and enough akoya to host the data for the original intended amount of time
             typeof(OY_BLOCK[4][oy_command_array[2]])!=="undefined"&&//check that the author of the transaction has a positive akoya balance
             OY_BLOCK[4][oy_command_array[2]]>=oy_command_array[5][0][3]&&//check that the author of the transaction has sufficient akoya to fund the submission payment
             typeof(OY_BLOCK[7][oy_command_array[5][0][1]])!=="undefined"&&//check that the master thread exists in the meta sector of the meshblock
@@ -450,7 +450,7 @@ function oy_worker(oy_worker_status) {
                     let [oy_response_flag, oy_data_payload, oy_sync_command, oy_payload_size] = oy_work_data;
 
                     let oy_time_offset = oy_time_local-OY_BLOCK_TIME;
-                    if (oy_response_flag===true&&OY_BLOCK_SYNC[oy_data_payload[0][0]]!==false&&oy_time_offset<OY_BLOCK_SECTORS[1][0]+OY_MESH_BUFFER[0]) {
+                    if (oy_response_flag===true&&OY_BLOCK_SYNC[oy_data_payload[0][0]]!==false&&OY_BLOCK_SYNC[oy_data_payload[0][0]][1]===false&&oy_time_offset<OY_BLOCK_SECTORS[1][0]+OY_MESH_BUFFER[0]) {
                         OY_BLOCK_SYNC[oy_data_payload[0][0]] = [oy_data_payload[2], oy_sync_command];
                         if (typeof(OY_SYNC_TALLY[oy_data_payload[0][0]])==="undefined") OY_SYNC_TALLY[oy_data_payload[0][0]] = oy_data_payload[0][oy_data_payload[0].length-1];
 
@@ -735,7 +735,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_data_payload[1][1][1]!==-1&&//check that transact priority isn't set to full node override
             oy_data_payload[1][1][0]<oy_time_local+OY_MESH_BUFFER[0]&&//check that the broadcast timestamp is not in the future, with buffer leniency
             oy_data_payload[1][1][0]<OY_BLOCK_TIME&&//check that the broadcast timestamp is in the first sector of the current block
-            oy_data_payload[1][1][0]>=OY_BLOCK_TIME-OY_BLOCK_SECTORS[3][0]) {//check that the broadcast timestamp is in the first sector of the current block
+            oy_data_payload[1][1][0]>=OY_BLOCK_TIME-OY_BLOCK_SECTORS[4][0]) {//check that the broadcast timestamp is in the first sector of the current block
 
             if (OY_LIGHT_STATE===true) oy_data_route("OY_LOGIC_UPSTREAM", "OY_BLOCK_COMMAND", oy_data_payload);
             else {
@@ -903,7 +903,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         return true;
     }
     else if (oy_data_flag==="OY_PEER_FULL") {//peer as a light node is converting into a full node
-        if (OY_BLOCK_HASH!==null&&!oy_key_verify(oy_peer_id, oy_data_payload, OY_MESH_DYNASTY+OY_BLOCK_HASH)) {
+        if (OY_BLOCK_HASH!==null&&!oy_key_verify(oy_peer_id, oy_data_payload[0], OY_MESH_DYNASTY+OY_BLOCK_HASH)) {
+            oy_log_debug("FULL_FAIL_DEBUG SELF: "+OY_BLOCK_HASH+" OPPOSITE: "+oy_data_payload[1]);
             oy_node_deny(oy_peer_id, "OY_DENY_FULL_FAIL");
             return false;
         }
@@ -2194,7 +2195,7 @@ function oy_block_time_first(oy_next) {
     let oy_block_time_local = oy_block_time();
     let oy_offset = 10;
     if ((oy_block_time_local/10)%2===0) oy_offset = 0;
-    if (oy_next===true) return (oy_block_time_local+OY_BLOCK_SECTORS[3][0])-oy_offset;
+    if (oy_next===true) return (oy_block_time_local+OY_BLOCK_SECTORS[4][0])-oy_offset;
     return oy_block_time_local-oy_offset;
 }
 
@@ -2246,7 +2247,7 @@ function oy_block_engine() {
     oy_chrono(oy_block_engine, OY_BLOCK_LOOP);
     if (oy_block_time_local!==OY_BLOCK_TIME&&(oy_block_time_local/10)%2===0) {
         OY_BLOCK_TIME = oy_block_time_local;
-        OY_BLOCK_NEXT = oy_block_time_local+OY_BLOCK_SECTORS[3][0];
+        OY_BLOCK_NEXT = oy_block_time_local+OY_BLOCK_SECTORS[4][0];
         if (oy_block_time_local<OY_BLOCK_BOOTTIME) OY_BLOCK_BOOT = null;
         else OY_BLOCK_BOOT = oy_block_time_local-OY_BLOCK_BOOTTIME<OY_BLOCK_BOOT_BUFFER;
 
@@ -2322,7 +2323,7 @@ function oy_block_engine() {
             //oy_log_debug("COMMAND: "+JSON.stringify(OY_BLOCK_COMMAND));
             let oy_command_sort = [];
             for (let oy_command_hash in OY_BLOCK_COMMAND) {
-                if (OY_BLOCK_COMMAND[oy_command_hash][0][1][0]<OY_BLOCK_TIME&&OY_BLOCK_COMMAND[oy_command_hash][0][1][0]>=OY_BLOCK_TIME-OY_BLOCK_SECTORS[3][0]) oy_command_sort.push([OY_BLOCK_COMMAND[oy_command_hash][0], OY_BLOCK_COMMAND[oy_command_hash][1], oy_command_hash]);//oy_command_hash is third because it is removed for efficiency
+                if (OY_BLOCK_COMMAND[oy_command_hash][0][1][0]<OY_BLOCK_TIME&&OY_BLOCK_COMMAND[oy_command_hash][0][1][0]>=OY_BLOCK_TIME-OY_BLOCK_SECTORS[4][0]) oy_command_sort.push([OY_BLOCK_COMMAND[oy_command_hash][0], OY_BLOCK_COMMAND[oy_command_hash][1], oy_command_hash]);//oy_command_hash is third because it is removed for efficiency
             }
             OY_BLOCK_COMMAND = {};
 
@@ -2371,7 +2372,7 @@ function oy_block_engine() {
                 oy_block_continue = false;
                 return false;
             }
-            if (OY_BLOCK[0][1]!==null&&OY_BLOCK[0][1]!==oy_block_time_local-OY_BLOCK_SECTORS[3][0]) {
+            if (OY_BLOCK[0][1]!==null&&OY_BLOCK[0][1]!==oy_block_time_local-OY_BLOCK_SECTORS[4][0]) {
                 oy_block_reset("OY_FLAG_MISSTEP");
                 oy_log("MESHBLOCK MISSTEP", true);
                 oy_block_continue = false;
@@ -2489,7 +2490,7 @@ function oy_block_engine() {
                     if (typeof(OY_BLOCK[4][oy_command_check[oy_command_hash][1][1][2]])==="undefined"||OY_BLOCK[4][oy_command_check[oy_command_hash][1][1][2]]<oy_command_check[oy_command_hash][1][1][1][1]+OY_AKOYA_FEE) continue;//TODO check if fee buffer needs to be strict or not
                     OY_BLOCK[4][oy_command_check[oy_command_hash][1][1][2]] -= oy_command_check[oy_command_hash][1][1][1][1];
                     oy_dive_ledger[oy_command_check[oy_command_hash][0]][1] += oy_command_check[oy_command_hash][1][1][1][1];
-                    if (oy_command_check[oy_command_hash][0][1][0]<OY_BLOCK_TIME&&oy_command_check[oy_command_hash][0][1][0]>=OY_BLOCK_TIME-OY_BLOCK_SECTORS[3][0]) oy_command_execute.push([oy_command_check[oy_command_hash][1][0], oy_command_check[oy_command_hash][1][1], oy_command_hash]);
+                    if (oy_command_check[oy_command_hash][0][1][0]<OY_BLOCK_TIME&&oy_command_check[oy_command_hash][0][1][0]>=OY_BLOCK_TIME-OY_BLOCK_SECTORS[4][0]) oy_command_execute.push([oy_command_check[oy_command_hash][1][0], oy_command_check[oy_command_hash][1][1], oy_command_hash]);
                 }
 
                 OY_BLOCK[1] = oy_clone_object(oy_dive_ledger);
@@ -2751,7 +2752,7 @@ function oy_block_light() {
                 for (let oy_peer_select in OY_PEERS) {
                     oy_log_debug("PEER_FULL: "+oy_peer_select);
                     console.log("PEER_FULL: "+oy_peer_select);
-                    oy_data_beam(oy_peer_select, "OY_PEER_FULL", oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH));
+                    oy_data_beam(oy_peer_select, "OY_PEER_FULL", [oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH), OY_BLOCK_HASH]);
                 }
             }, ((oy_time_offset>OY_BLOCK_SECTORS[0][0])?(OY_BLOCK_SECTORS[3][0]-oy_time_offset)*1000:0)+OY_MESH_BUFFER[1]);
         }
@@ -3095,7 +3096,7 @@ function oy_block_finish() {
         }
 
         oy_boost();
-    }, ((oy_time_offset>OY_BLOCK_SECTORS[0][0])?(OY_BLOCK_SECTORS[3][0]-oy_time_offset)*1000:0)+OY_MESH_BUFFER[1]);
+    }, ((oy_time_offset>OY_BLOCK_SECTORS[0][0])?(OY_BLOCK_SECTORS[4][0]-oy_time_offset)*1000:0)+OY_MESH_BUFFER[1]);
 }
 
 //core loop that runs critical functions and checks
