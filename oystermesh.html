@@ -1399,7 +1399,7 @@
     let OY_MESH_MAP_FUNC = null;
     let OY_LOW_POWER = false;
     let OY_LOW_POWER_THREAD = {};
-    let OY_BLOCK_GRAPH = "<div id='oy_graph_block_inner' style='position:absolute;bottom:0.5%;left:2%;width:96%;height:0;background-color: #565656;transition:height 60s linear;overflow:hidden;z-index: 10;'></div><div class='oy_center_both' style='transform: translate(-50%, -100%);width:120%;height:10%;border:0.2vh dashed #000000;z-index: 60;'></div>";
+    let OY_BLOCK_GRAPH = "<div id='oy_graph_block_inner' style='position:absolute;bottom:0.5%;left:2%;width:96%;height:0;background-color: #565656;transition:height 60s linear;overflow:hidden;z-index: 10;'></div><div class='oy_center_both' style='transform: translate(-50%, -100%);width:120%;height:9%;border:0.2vh dashed #000000;z-index: 60;'></div>";
     //TODO meshblock cadence needs manual updating in OY_BLOCK_GRAPH
 
     let oy_local_init = function() {
@@ -1452,20 +1452,15 @@
 
         document.getElementById(OY_DEST_RADIO).checked = true;
 
-        /*
-        window.onblur = function() {
-            oy_low_power_on("OY_THREAD_BLUR");
-        };
+        document.addEventListener("visibilitychange", function() {
+            if (document.visibilityState==="visible") oy_low_power_off("OY_THREAD_BLUR");
+            else oy_low_power_on("OY_THREAD_BLUR");
+        });
 
-        window.onfocus = function() {
-            oy_low_power_off("OY_THREAD_BLUR");
-        };
-        */
-
-        oy_console_local("Loading console...");
+        oy_console_local("LOADING CONSOLE...");
 
         oy_init(function() {
-            OY_BLOCK_MAP_FUNC = function(oy_sector, oy_self) {
+            OY_BLOCK_MAP_FUNC = function(oy_type) {
                 if (OY_BLOCK_RENDER_ACTIVE===false) return false;
                 let oy_block_diff = Date.now()/1000 - OY_BLOCK_TIME;
                 let oy_element = document.createElement("div");
@@ -1476,14 +1471,13 @@
                 oy_element.style.height = "0.22vh";
                 oy_element.style.opacity = "0.3";
                 oy_element.style.zIndex = "30";
-                if (oy_self===true) {
+                if (oy_type===0) {
                     oy_element.style.backgroundColor = "#24ab26";
                     oy_element.style.opacity = "0.9";
                     oy_element.style.zIndex = "40";
                 }
-                else if (oy_sector===0) oy_element.style.backgroundColor = "#964bab";
-                else if (oy_sector===1) oy_element.style.backgroundColor = "#348fab";
-                else if (oy_sector===2) oy_element.style.backgroundColor = "#2063bd";
+                else if (oy_type===1) oy_element.style.backgroundColor = "#348fab";
+                else if (oy_type===2) oy_element.style.backgroundColor = "#964bab";
                 document.getElementById("oy_graph_block").appendChild(oy_element);
             };
             OY_MESH_MAP_FUNC = function(oy_passport_passive) {
@@ -1711,7 +1705,7 @@
         // noinspection JSUnusedAssignment
         let oy_count = 0;
         for (oy_count in oy_peer_keep) {
-            oy_graph_peer(oy_count, oy_short(oy_peer_keep[oy_count][0]), oy_peer_keep[oy_count][0], "<span style='font-family:geo_med, Fallback, sans-serif;font-size:1.8vh;'>"+oy_peer_keep[oy_count][1].toFixed(2)+"s</span>", "<span style='font-family:geo_med, Fallback, sans-serif;font-size:1.8vh;'>"+oy_peer_keep[oy_count][5]+"%</span>", oy_peer_keep[oy_count][4], Math.round((oy_peer_keep[oy_count][2]/(oy_peer_keep[oy_count][2]+oy_peer_keep[oy_count][3]))*100));
+            oy_graph_peer(oy_count, oy_short(oy_peer_keep[oy_count][0]), oy_peer_keep[oy_count][0], "<span style='font-family:geo_med, Fallback, sans-serif;font-size:1.8vh;'>"+oy_peer_keep[oy_count][1].toFixed(2)+"s</span>", "<span style='font-family:geo_med, Fallback, sans-serif;font-size:1.8vh;"+((oy_peer_keep[oy_count][5]/100<OY_PEER_CUT)?"opacity:0.7;":"")+"'>"+((oy_peer_keep[oy_count][5]===0)?oy_blank:oy_peer_keep[oy_count][5])+"%</span>", oy_peer_keep[oy_count][4], Math.round((oy_peer_keep[oy_count][2]/(oy_peer_keep[oy_count][2]+oy_peer_keep[oy_count][3]))*100));
             oy_count++;
         }
         while (oy_count <= OY_PEER_MAX-1) {
