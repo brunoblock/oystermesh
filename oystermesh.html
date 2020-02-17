@@ -1399,7 +1399,8 @@
     let OY_MESH_MAP_FUNC = null;
     let OY_LOW_POWER = false;
     let OY_LOW_POWER_THREAD = {};
-    let OY_BLOCK_GRAPH = "<div id='oy_graph_block_inner' style='position:absolute;bottom:0.5%;left:2%;width:96%;height:0;background-color: #565656;transition:height 20s linear;overflow:hidden;z-index: 10;'></div><div class='oy_center_both' style='transform: translate(-50%, -100%);width:120%;height:40%;border:0.2vh dashed #000000;z-index: 60;'></div><div class='oy_center_both' style='transform: translate(-50%, -127.5%);width:120%;height:35%;border:0.2vh dashed #000000;z-index: 60;'></div>";
+    let OY_BLOCK_GRAPH = "<div id='oy_graph_block_inner' style='position:absolute;bottom:0.5%;left:2%;width:96%;height:0;background-color: #565656;transition:height 60s linear;overflow:hidden;z-index: 10;'></div><div class='oy_center_both' style='transform: translate(-50%, -100%);width:120%;height:10%;border:0.2vh dashed #000000;z-index: 60;'></div>";
+    //TODO meshblock cadence needs manual updating in OY_BLOCK_GRAPH
 
     let oy_local_init = function() {
         document.getElementById("oy_graph_block").innerHTML = OY_BLOCK_GRAPH;
@@ -1469,7 +1470,7 @@
                 let oy_block_diff = Date.now()/1000 - OY_BLOCK_TIME;
                 let oy_element = document.createElement("div");
                 oy_element.style.position = "absolute";
-                oy_element.style.bottom = "calc("+(1+((oy_block_diff/20)*98))+"% - 0.28vh)";
+                oy_element.style.bottom = "calc("+(1+((oy_block_diff/OY_BLOCK_SECTORS[4][0])*98))+"% - 0.28vh)";
                 oy_element.style.left = "2%";
                 oy_element.style.width = "96%";
                 oy_element.style.height = "0.22vh";
@@ -1860,15 +1861,15 @@
         let oy_block_diff = Date.now()/1000 - OY_BLOCK_TIME;
         let oy_element = document.createElement("div");
         oy_element.style.position = "absolute";
-        oy_element.style.bottom = "calc("+(1+((oy_block_diff/20)*98))+"% - 0.3vh)";
+        oy_element.style.bottom = "calc("+(1+((oy_block_diff/OY_BLOCK_SECTORS[4][0])*98))+"% - 0.3vh)";
         oy_element.style.left = "2%";
         oy_element.style.width = "96%";
         oy_element.style.height = "0.3vh";
         oy_element.style.backgroundColor = "#aba531";
         oy_element.style.zIndex = "45";
         document.getElementById("oy_graph_block").appendChild(oy_element);
-        let oy_block_remain = OY_BLOCK_NEXT - (Date.now()/1000);
-        document.getElementById("oy_graph_block_inner").style.height = (99*((20-oy_block_remain)/20))+"%";
+        let oy_block_remain = (OY_BLOCK_TIME+OY_BLOCK_SECTORS[4][0]) - (Date.now()/1000);
+        document.getElementById("oy_graph_block_inner").style.height = (99*((OY_BLOCK_SECTORS[4][0]-oy_block_remain)/OY_BLOCK_SECTORS[4][0]))+"%";
         document.getElementById("oy_graph_block_inner").style.transition = "height "+(oy_block_remain*0.99).toFixed(3)+"s linear";
 
         setTimeout(function() {
@@ -2566,7 +2567,7 @@
             document.getElementById("oy_graph_akoya_progress_inner").style.backgroundColor = "#46C9F4";
             document.getElementById("oy_graph_akoya_progress_inner").style.transition = null;
             document.getElementById("oy_graph_akoya_progress_inner").style.width = "0";
-            document.getElementById("oy_graph_akoya_progress_inner").style.transition = "width "+((OY_BLOCK_NEXT-Date.now()/1000)+20).toFixed(3)+"s linear";
+            document.getElementById("oy_graph_akoya_progress_inner").style.transition = "width "+(((OY_BLOCK_TIME+OY_BLOCK_SECTORS[4][0])-Date.now()/1000)+OY_BLOCK_SECTORS[4][0]).toFixed(3)+"s linear";
             setTimeout(function() {
                 document.getElementById("oy_graph_akoya_progress_inner").style.width = "100%";
             }, 100);
