@@ -24,6 +24,7 @@ const OY_BLOCK_STABILITY_LIMIT = 12;//mesh range history to keep to calculate me
 const OY_BLOCK_EPOCH = 360;//cadence in blocks to perform epoch processing - 6 hr interval
 const OY_BLOCK_SNAPSHOT_KEEP = 120;//how many hashes of previous blocks to keep in the current meshblock, value is for 1 month's worth (6 hrs x 4 = 24 hrs x 30 = 30 days, 4 x 30 = 120)
 const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
+const OY_BLOCK_COMMAND_QUOTA = 4000;
 const OY_BLOCK_RANGE_MIN = 10;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_BOOT_SEED = 1581920900;//timestamp to boot the mesh, node remains offline before this timestamp
@@ -730,24 +731,22 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         }
 
         if (OY_BLOCK_HASH!==null&&//check that there is a known meshblock hash
+            Number.isInteger(oy_data_payload[1][1][1])&&
             oy_data_payload[1][1][1]!==-1&&//check that transact priority isn't set to full node override
+            oy_data_payload[1][1][1]>=0&&//check that transact priority isn't set to full node override
             oy_data_payload[1][1][0]<oy_time_local+OY_MESH_BUFFER[0]&&//check that the broadcast timestamp is not in the future, with buffer leniency
             oy_data_payload[1][1][0]<OY_BLOCK_TIME&&//check that the broadcast timestamp is in the first sector of the current block
             oy_data_payload[1][1][0]>=OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]) {//check that the broadcast timestamp is in the first sector of the current block
 
             if (OY_LIGHT_STATE===true) oy_data_route("OY_LOGIC_UPSTREAM", "OY_BLOCK_COMMAND", oy_data_payload);
-            else {
-                let oy_command_hash = oy_hash_gen(JSON.stringify(oy_data_payload[1]));
-                if (oy_block_command_verify(oy_data_payload[1], oy_data_payload[2], oy_command_hash)) {
-                    OY_BLOCK_COMMAND[oy_command_hash] = [oy_data_payload[1], oy_data_payload[2]];
-                    if (typeof(OY_BLOCK_MAP)==="function") OY_BLOCK_MAP(0, false);
-                }
-            }
+            else oy_block_absorb(oy_data_payload[1], oy_data_payload[2]);
         }
         return true;
     }
-    else if (oy_data_flag==="OY_BLOCK_DIVERT") {
-
+    else if (oy_data_flag==="OY_BLOCK_ABSORB") {
+        //oy_data_payload = [oy_command_array, oy_command_crypt, oy_absorb_crypt]
+        //TODO payload validation
+        //if (oy_state_current()!==2||)
     }
     else if (oy_data_flag==="OY_BLOCK_SYNC") {
         //oy_data_payload = [oy_route_passport_passive, oy_route_passport_crypt, oy_sync_crypt, oy_sync_time, oy_sync_command, oy_work_hash]
@@ -1805,7 +1804,7 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_push_def
             if (OY_PEERS[oy_peer_select][1]===2&&oy_data_payload[0].indexOf(oy_peer_select)===-1) oy_data_beam(oy_peer_select, oy_data_flag, oy_data_payload);
         }
     }
-    else if (oy_data_logic==="OY_LOGIC_DIVERT") {
+    else if (oy_data_logic==="OY_LOGIC_ABSORB") {
         if (oy_state_current()!==2) return false;
 
         for (let oy_peer_select in OY_PEERS) {
@@ -2136,10 +2135,49 @@ function oy_block_range(oy_mesh_range_new) {
     return true;
 }
 
+function oy_block_absorb(oy_command_array, oy_command_crypt) {
+    if ((Date.now()/1000)-OY_BLOCK_TIME>=OY_BLOCK_SECTORS[1][0]||oy_state_current()!==2||typeof(OY_BLOCK[1][OY_SELF_PUBLIC])==="undefined") return false;
+
+    let oy_command_hash = oy_hash_gen(JSON.stringify(oy_command_array));
+    if (typeof(OY_BLOCK_COMMAND[oy_command_hash])!=="undefined") return true;
+    if (oy_block_command_verify(oy_command_array, oy_command_crypt, oy_command_hash)) {
+        let oy_command_size = JSON.stringify([oy_command_hash, oy_command_array, oy_command_crypt]).length;
+        if (oy_command_size>OY_BLOCK_COMMAND_QUOTA) return false;
+        OY_BLOCK_COMMAND[oy_command_hash] = [oy_command_array, oy_command_crypt, oy_command_array[1][1]/oy_command_size];
+        if (JSON.stringify(OY_BLOCK_COMMAND).length>OY_BLOCK_COMMAND_QUOTA) {
+            let oy_command_sort = [];
+            for (let oy_command_hash in OY_BLOCK_COMMAND) {
+                if (OY_BLOCK_COMMAND[oy_command_hash][0][1][1]!==-1) oy_command_sort.push(oy_command_hash, OY_BLOCK_COMMAND[oy_command_hash][2]);
+            }
+            oy_command_sort.sort(function(a, b) {
+                if (a[0][1][1]===b[0][1][1]) return 0.5 - Math.random();
+                return b[1] - a[1];
+            });
+            let oy_pass_first = true;
+            while (oy_pass_first===true||JSON.stringify(OY_BLOCK_COMMAND).length>OY_BLOCK_COMMAND_QUOTA) {
+                oy_pass_first = false;
+                if (oy_command_sort.length===0) {
+                    delete OY_BLOCK_COMMAND[oy_command_hash];
+                    return false;
+                }
+                else {
+                    let oy_hash_select = oy_command_sort.pop()[0];
+                    oy_data_route("OY_LOGIC_ABSORB", "OY_BLOCK_ABSORB", [OY_BLOCK_COMMAND[oy_hash_select][0], OY_BLOCK_COMMAND[oy_hash_select][1], oy_key_sign(OY_SELF_PRIVATE, oy_short(OY_BLOCK_COMMAND[oy_hash_select][1]))]);
+                    delete OY_BLOCK_COMMAND[oy_hash_select];
+                }
+            }
+        }
+        //if (typeof(OY_BLOCK_MAP)==="function") OY_BLOCK_MAP(2);
+    }
+}
+
 function oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm) {
     if (OY_BLOCK_HASH===null) return false;
 
-    oy_command_array[1][0] = Date.now()/1000;
+    let oy_time_offset = (Date.now()/1000)-OY_BLOCK_TIME;
+
+    if (oy_time_offset>OY_BLOCK_SECTORS[0][0]) oy_command_array[1][0] = OY_BLOCK_TIME+OY_BLOCK_SECTORS[5][0];
+    else oy_command_array[1][0] = OY_BLOCK_TIME;
     if (OY_LIGHT_STATE===false) oy_command_array[1][1] = -1;
     let oy_command_flat = JSON.stringify(oy_command_array);
     let oy_command_hash = oy_hash_gen(oy_command_flat);
@@ -2147,20 +2185,12 @@ function oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm)
 
     if (!oy_block_command_verify(oy_command_array, oy_command_crypt, oy_command_hash)) return false;
 
-    if (typeof(oy_callback_confirm)!=="undefined") OY_BLOCK_CONFIRM[oy_command_hash] = oy_callback_confirm;
+    oy_chrono(function() {
+        if (typeof(oy_callback_confirm)!=="undefined") OY_BLOCK_CONFIRM[oy_command_hash] = oy_callback_confirm;
 
-    if (OY_LIGHT_STATE===false) {
-        OY_BLOCK_COMMAND[oy_command_hash] = [oy_command_array, oy_command_crypt];
-        //if (typeof(OY_BLOCK_MAP)==="function") OY_BLOCK_MAP(0, true);
-    }
-    else {
-        for (let oy_delay = 0;oy_delay <= 300;oy_delay += 50) {
-            oy_chrono(function() {
-                oy_data_route("OY_LOGIC_UPSTREAM", "OY_BLOCK_COMMAND", [[], oy_command_array, oy_command_crypt]);
-            }, oy_delay);
-        }
-    }
-
+        if (oy_command_array[1][1]===-1) oy_block_absorb(oy_command_array, oy_command_crypt);
+        else oy_data_route("OY_LOGIC_UPSTREAM", "OY_BLOCK_COMMAND", [[], oy_command_array, oy_command_crypt]);
+    }, (oy_time_offset>OY_BLOCK_SECTORS[0][0])?(OY_BLOCK_SECTORS[5][0]-oy_time_offset)*1000:0);
     return true;
 }
 
@@ -2253,6 +2283,7 @@ function oy_block_reset(oy_reset_flag) {
     OY_DIFF_TRACK = [{}, []];
     OY_BASE_BUILD = [];
     OY_LIGHT_BUILD = {};
+    OY_LIGHT_STATE = true;
     OY_LIGHT_UPSTREAM = null;
     OY_LIGHT_PROCESS = false;
     OY_SYNC_LAST = [0, 0];
@@ -2494,8 +2525,6 @@ function oy_block_engine() {
                     if (typeof(oy_tally_track[oy_peer_select])!=="undefined") OY_PEERS[oy_peer_select][9] = oy_tally_track[oy_peer_select];
                     else OY_PEERS[oy_peer_select][9] = 0;
                 }
-                console.log("SYNC_TALLY: "+JSON.stringify(oy_tally_track));
-                oy_log_debug("SYNC_TALLY: "+JSON.stringify(oy_tally_track));
 
                 let oy_dive_sort = [];
                 for (let oy_key_public in oy_dive_ledger) {
