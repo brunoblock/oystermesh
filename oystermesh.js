@@ -98,7 +98,7 @@ const OY_DNS_OWNER_MIN = (OY_AKOYA_FEE+OY_DNS_FEE)*OY_DNS_AUCTION_MIN+(OY_AKOYA_
 
 // TEMPLATE VARS
 //[[0]:peership timestamp, [1]:latch flag, [2]:base sent, [3]:latency avg, [4]:latency history, [5]:data beam, [6]:data beam history, [7]:data soak, [8]:data soak history, [9]:mesh core cut]
-const OY_PEER_TEMPLATE = [null, null, false, 0, [], 0, [], 0, [], 0];
+const OY_PEER_TEMPLATE = [null, null, false, 0, [], 0, [], 0, [], 0];//TODO put command counter in meshblock
 //the current meshblock - [[0]:[[0]:oy_mesh_dynasty, [1]:oy_block_timestamp, [2]:oy_mesh_range, [3]:oy_work_difficulty, [4]:oy_genesis_timestamp, [5]:oy_epoch_macro_count, [6]:oy_epoch_micro_count, [7]:oy_range_diff, [8]:oy_range_prev, [9]:oy_range_keep],
 // [1]:oy_dive_sector, [2]:oy_snapshot_sector, [3]:oy_command_sector, [4]:oy_akoya_sector, [5]:oy_dns_sector, [6]:oy_auction_sector, [7]:oy_meta_sector]
 const OY_BLOCK_TEMPLATE = Object.freeze([[null, null, null, null, null, null, null, null, null, []], {}, [[], []], {}, {}, {}, {}, {}, {}, {}]);//TODO figure out channel sector
@@ -267,7 +267,7 @@ let OY_WARM = {};//tracking connections to nodes that are warming up
 let OY_COLD = {};//tracking connection shutdowns to specific nodes
 let OY_ROUTE_DYNAMIC = [];//tracks dynamic identifier for a routed data sequence
 let OY_LATENCY = {};//handle latency sessions
-let OY_HEAL = {};//handle heal sessions
+let OY_HEAL_ASSIGN = null;//handle heal sessions
 let OY_PROPOSED = {};//nodes that have been recently proposed to for mutual peering
 let OY_PUSH_HOLD = {};//holds data contents ready for pushing to mesh
 let OY_PUSH_TALLY = {};//tracks data push nonces that were deposited on the mesh
@@ -1320,10 +1320,10 @@ function oy_node_disconnect(oy_node_id) {
 function oy_node_initiate(oy_node_id) {
     let oy_time_local = Date.now()/1000;
 
-    if (typeof(OY_PEERS[oy_node_id])!=="undefined"||typeof(OY_PROPOSED[oy_node_id])!=="undefined"||typeof(OY_PEERS_PRE[oy_node_id])!=="undefined"||typeof(OY_LATENCY[oy_node_id])!=="undefined"||Object.keys(OY_PEERS).length>OY_PEER_MAX||OY_BLOCK_BOOT===null||(OY_LIGHT_MODE===true&&OY_BLOCK_BOOT===true)||(oy_state_current()!==0&&oy_time_local-OY_BLOCK_TIME>OY_BLOCK_SECTORS[0][0])) return false;
+    if (typeof(OY_PEERS[oy_node_id])!=="undefined"||typeof(OY_PROPOSED[oy_node_id])!=="undefined"||typeof(OY_PEERS_PRE[oy_node_id])!=="undefined"||typeof(OY_LATENCY[oy_node_id])!=="undefined"||Object.keys(OY_PEERS).length>OY_PEER_MAX||OY_BLOCK_BOOT===null||(OY_LIGHT_MODE===true&&OY_BLOCK_BOOT===true)||(oy_state_current()!==0&&OY_HEAL_ASSIGN===null&&oy_time_local-OY_BLOCK_TIME>OY_BLOCK_SECTORS[0][0])) return false;
     let oy_callback_peer = function() {
         OY_PROPOSED[oy_node_id] = true;
-        oy_data_beam(oy_node_id, "OY_PEER_REQUEST", oy_state_current(true));
+        oy_data_beam(oy_node_id, "OY_PEER_REQUEST", (OY_HEAL_ASSIGN===oy_node_id)?0:oy_state_current(true));
     };
     oy_node_connect(oy_node_id, oy_callback_peer);
     return true;
@@ -1418,11 +1418,11 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_HEAL_REQUEST") {
         if (oy_state_current()===2&&OY_BLOCK_HEAL.size>1&&oy_time_local-OY_BLOCK_TIME<OY_BLOCK_SECTORS[1][0]) {
-            if (typeof(OY_HEAL[oy_node_id])==="undefined") {
-                OY_HEAL[oy_node_id] = true;
-                let oy_heal_response = [{}, OY_BLOCK_COMMAND_CRYPT];
+            if (OY_HEAL_ASSIGN===null) {
+                OY_HEAL_ASSIGN = oy_node_id;
+                let oy_heal_response = [OY_BLOCK[0][2], OY_BLOCK[0][3], {}, OY_BLOCK_COMMAND_CRYPT];//TODO command crypt might get sent after base is sent, since we need an updated one after new block is issued
                 for (let [oy_key, oy_value] in OY_BLOCK_HEAL) {
-                    oy_heal_response[0]["OY_"+oy_key] = oy_value[0];//TODO consider a check to prevent sending expired heal entries
+                    oy_heal_response[2]["OY_"+oy_key] = oy_value[2];//TODO consider a check to prevent sending expired heal entries
                 }
                 oy_data_beam(oy_node_id, "OY_HEAL_RESPONSE", oy_heal_response);
             }
@@ -1431,8 +1431,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
         else oy_data_beam(oy_node_id, "OY_HEAL_UNREADY", null);
     }
     else if (oy_data_flag==="OY_HEAL_RESPONSE") {
-        if (typeof(OY_HEAL[oy_node_id])!=="undefined"&&oy_state_current()===2&&OY_BLOCK_HEAL.size>1&&oy_time_local-OY_BLOCK_TIME<OY_BLOCK_SECTORS[1][0]) {
-            oy_data_payload[0].reverse();
+        if (OY_HEAL_ASSIGN===oy_node_id&&oy_state_current()===2&&OY_BLOCK_HEAL.size>1&&oy_time_local-OY_BLOCK_TIME<OY_BLOCK_SECTORS[1][0]) {
             let oy_heal_sort = [];
             for (let [oy_key, oy_value] in OY_BLOCK_HEAL) {
                 oy_heal_sort.push([oy_key, oy_value[0]]);
@@ -1440,12 +1439,23 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
             oy_heal_sort.reverse();
             let oy_heal_match = null;
             for (let i in oy_heal_sort) {
-                if (typeof(oy_data_payload[0]["OY_"+oy_heal_sort[i][0]])!=="undefined"&&oy_heal_sort[i][1]===oy_data_payload[0]["OY_"+oy_heal_sort[i][0]]) oy_heal_match = oy_heal_sort[i][0];
+                if (typeof(oy_data_payload[2]["OY_"+oy_heal_sort[i][0]])!=="undefined"&&oy_heal_sort[i][1]===oy_data_payload[2]["OY_"+oy_heal_sort[i][0]]) {
+                    oy_heal_match = oy_heal_sort[i][0];
+                    break;
+                }
             }
+            if (oy_heal_match===null||oy_data_payload[0]<OY_BLOCK[0][2]) {
+                OY_HEAL_ASSIGN = null;
+                oy_data_beam(oy_node_id, "OY_HEAL_REJECT", null);
+            }
+            else oy_node_initiate(oy_node_id);
         }
         else oy_data_beam(oy_node_id, "OY_HEAL_UNREADY", null);
     }
-    else if (oy_data_flag==="OY_HEAL_UNREADY"||oy_data_flag==="OY_HEAL_REJECT") return false;
+    else if (oy_data_flag==="OY_HEAL_UNREADY"||oy_data_flag==="OY_HEAL_REJECT") {
+        OY_HEAL_ASSIGN = null;
+        return false;
+    }
     else {
         oy_node_deny(oy_node_id, "OY_DENY_DATA_INCOHERENT");
         return false;
@@ -1486,11 +1496,9 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
     let oy_time_local = Date.now()/1000;
     if (!oy_key_verify(oy_node_id, oy_data_payload[1], OY_MESH_DYNASTY+((OY_LATENCY[oy_node_id][3]===0)?"0000000000000000000000000000000000000000":OY_BLOCK_HASH)+OY_LATENCY[oy_node_id][0])) {
         oy_node_deny(oy_node_id, "OY_DENY_SIGN_FAIL");
-        if (OY_LATENCY[oy_node_id][3]===2&&OY_BLOCK_HEAL.size>1&&oy_time_local-OY_BLOCK_TIME<OY_BLOCK_SECTORS[1][0]) {
-            if (OY_LATENCY[oy_node_id][2]==="OY_PEER_ROUTINE"||OY_SELF_PUBLIC.toLowerCase()<oy_node_id.toLowerCase()) {
-                OY_HEAL[oy_node_id] = true;
-                oy_data_beam(oy_node_id, "OY_HEAL_REQUEST", null);
-            }
+        if (OY_HEAL_ASSIGN===null&&OY_LATENCY[oy_node_id][3]===2&&OY_BLOCK_HEAL.size>1&&oy_time_local-OY_BLOCK_TIME<OY_BLOCK_SECTORS[1][0]&&(OY_LATENCY[oy_node_id][2]==="OY_PEER_ROUTINE"||OY_SELF_PUBLIC.toLowerCase()<oy_node_id.toLowerCase())) {
+            OY_HEAL_ASSIGN = oy_node_id;
+            oy_data_beam(oy_node_id, "OY_HEAL_REQUEST", null);
         }
         delete OY_LATENCY[oy_node_id];
         return false;
@@ -2159,19 +2167,6 @@ function oy_hivemind_post(oy_key_private, oy_key_public, oy_transact_fee, oy_clu
     return oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm);
 }
 
-function oy_block_range(oy_mesh_range_new) {
-    OY_BLOCK[0][2] = oy_mesh_range_new;
-    OY_BLOCK_STABILITY_KEEP.push(OY_BLOCK[0][2]);
-    while (OY_BLOCK_STABILITY_KEEP.length>OY_BLOCK_STABILITY_LIMIT) OY_BLOCK_STABILITY_KEEP.shift();
-    OY_BLOCK_STABILITY = (OY_BLOCK_STABILITY_KEEP.length<OY_BLOCK_STABILITY_TRIGGER)?0:oy_block_stability(OY_BLOCK_STABILITY_KEEP);
-
-    if (OY_BLOCK[0][2]<OY_BLOCK_RANGE_MIN&&OY_BLOCK_BOOT===false) {
-        oy_block_reset("OY_RESET_DROP_RANGE");
-        return false;
-    }
-    return true;
-}
-
 function oy_block_absorb(oy_command_array, oy_command_crypt) {
     if (oy_state_current()!==2||typeof(OY_BLOCK[1][OY_SELF_PUBLIC])==="undefined") return false;
 
@@ -2351,6 +2346,7 @@ function oy_block_engine() {
 
         OY_BLOCK_COMMAND_NONCE = 0;
         OY_LIGHT_PROCESS = false;
+        OY_HEAL_ASSIGN = null;
         OY_BASE_BUILD = [];
         OY_BOOST_BUILD = [];
         let oy_block_continue = true;
@@ -2443,8 +2439,6 @@ function oy_block_engine() {
             let oy_sync_command = LZString.compressToUTF16(JSON.stringify(oy_command_sort));
             let oy_block_sync_hash = oy_hash_gen(oy_sync_command);
             let oy_sync_time = Date.now()/1000;
-
-            //oy_log_debug("SYNC WORK HASH: "+JSON.stringify(OY_WORK_HASH));
             let oy_sync_crypt = oy_key_sign(OY_SELF_PRIVATE, oy_sync_time+oy_block_sync_hash+OY_WORK_HASH);
             oy_chrono(function() {
                 oy_data_route("OY_LOGIC_SYNC", "OY_BLOCK_SYNC", [[], [oy_key_sign(OY_SELF_PRIVATE, oy_short(oy_sync_crypt))], oy_sync_crypt, oy_sync_time, oy_sync_command, OY_WORK_HASH]);
@@ -2601,7 +2595,7 @@ function oy_block_engine() {
                     return b[0][1][2] - a[0][1][2];//sort by fee
                 });
 
-                if (!oy_block_range(Object.keys(OY_BLOCK[1]).length)) return false;
+                if (!oy_block_range(Object.keys(OY_BLOCK[1]).length)) return false;//block_range will invoke block_reset if necessary
             }
             else {
                 OY_BLOCK_SYNC = {};
@@ -2609,34 +2603,9 @@ function oy_block_engine() {
             }
 
             OY_BLOCK_NEW = {};
-            OY_DIFF_TRACK = [{}, []];
-            //OY_DIFF_TRACK breakdown:
-            //[0] is dive ledger
-            //[1] is command transactions
+            OY_DIFF_TRACK = [{}, []];//[0] is dive ledger, [1] is command transactions
 
-            let [oy_process_pass, oy_dive_bounty] = oy_block_process(oy_command_execute, true);
-            if (oy_process_pass===false) return false;//block_process will invoke block_reset if necessary
-
-            if (OY_BLOCK_BOOT===false) {
-                oy_dive_bounty += OY_AKOYA_ISSUANCE;
-
-                let oy_dive_share = Math.floor(oy_dive_bounty/OY_BLOCK[0][2]);
-                for (let oy_key_public in OY_BLOCK[1]) {
-                    //if (oy_dive_reward===oy_dive_reward_pool[i]) OY_BLOCK_DIVE_TRACK += oy_dive_share;TODO track self dive earnings
-                    if (typeof(OY_BLOCK[4][oy_key_public])==="undefined") OY_BLOCK[4][oy_key_public] = 0;
-                    OY_BLOCK[4][oy_key_public] += oy_dive_share;//payout from meshblock maintenance fees and issuance
-                    OY_BLOCK[4][oy_key_public] += OY_BLOCK[1][oy_key_public][1];//payout from command transact fees
-                    OY_BLOCK[1][oy_key_public][2] = OY_BLOCK[4][oy_key_public];//record final balance of diver for light node reference
-                }
-
-                OY_DIFF_TRACK[0] = oy_clone_object(OY_BLOCK[1]);
-
-                for (let oy_key_public in OY_BLOCK[1]) {
-                    OY_BLOCK[1][oy_key_public].pop();
-                }
-
-                //oy_log_debug("EXECUTE: "+JSON.stringify(oy_command_execute));
-            }
+            if (!oy_block_process(oy_command_execute, true)) return false;//block_process will invoke block_reset if necessary
 
             OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK);
             //console.log(OY_BLOCK_FLAT);//TODO temp
@@ -2770,8 +2739,7 @@ function oy_block_light() {
 
     OY_BLOCK_NEW = {};
 
-    let [oy_process_pass] = oy_block_process(oy_diff_track[1], false);
-    if (oy_process_pass===false) return false;//block_process will invoke block_reset if necessary
+    if (!oy_block_process(oy_diff_track[1], false)) return false;//block_process will invoke block_reset if necessary
 
     for (let oy_key_public in oy_diff_track[0]) {
         OY_BLOCK[4][oy_key_public] = oy_diff_track[0][oy_key_public][2];
@@ -2848,6 +2816,19 @@ function oy_block_light() {
     }
 }
 
+function oy_block_range(oy_mesh_range_new) {
+    OY_BLOCK[0][2] = oy_mesh_range_new;
+    OY_BLOCK_STABILITY_KEEP.push(OY_BLOCK[0][2]);
+    while (OY_BLOCK_STABILITY_KEEP.length>OY_BLOCK_STABILITY_LIMIT) OY_BLOCK_STABILITY_KEEP.shift();
+    OY_BLOCK_STABILITY = (OY_BLOCK_STABILITY_KEEP.length<OY_BLOCK_STABILITY_TRIGGER)?0:oy_block_stability(OY_BLOCK_STABILITY_KEEP);
+
+    if (OY_BLOCK[0][2]<OY_BLOCK_RANGE_MIN&&OY_BLOCK_BOOT===false) {
+        oy_block_reset("OY_RESET_DROP_RANGE");
+        return false;
+    }
+    return true;
+}
+
 function oy_block_process(oy_command_execute, oy_full_flag) {
     //MAINTAIN--------------------------------
     OY_BLOCK[0][0] = OY_MESH_DYNASTY;
@@ -2903,7 +2884,7 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
     let oy_supply_pre = 0;
     let oy_dive_bounty = 0;
 
-    if (OY_BLOCK_BOOT!==false) return [true, oy_dive_bounty];//transactions and fees are paused whilst the mesh calibrates its initial topology
+    if (OY_BLOCK_BOOT!==false) return true;//transactions and fees are paused whilst the mesh calibrates its initial topology
 
     //AMEND-----------------------------------
     for (let oy_key_public in OY_BLOCK[4]) {
@@ -3154,11 +3135,26 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
         }
         if (oy_supply_post>oy_supply_pre+OY_AKOYA_ISSUANCE) {//confirms that the supply has not increased more than AKOYA_ISSUANCE
             oy_block_reset("OY_RESET_AKOYA_OVERFLOW");
-            return [false, 0];
+            return false;
         }
-        return [true, oy_dive_bounty];
+
+        oy_dive_bounty += OY_AKOYA_ISSUANCE;
+        let oy_dive_share = Math.floor(oy_dive_bounty/OY_BLOCK[0][2]);
+        for (let oy_key_public in OY_BLOCK[1]) {
+            //if (oy_dive_reward===oy_dive_reward_pool[i]) OY_BLOCK_DIVE_TRACK += oy_dive_share;TODO track self dive earnings
+            if (typeof(OY_BLOCK[4][oy_key_public])==="undefined") OY_BLOCK[4][oy_key_public] = 0;
+            OY_BLOCK[4][oy_key_public] += oy_dive_share;//payout from meshblock maintenance fees and issuance
+            OY_BLOCK[4][oy_key_public] += OY_BLOCK[1][oy_key_public][1];//payout from command transact fees
+            OY_BLOCK[1][oy_key_public][2] = OY_BLOCK[4][oy_key_public];//record final balance of diver for light node reference
+        }
+
+        OY_DIFF_TRACK[0] = oy_clone_object(OY_BLOCK[1]);
+
+        for (let oy_key_public in OY_BLOCK[1]) {
+            OY_BLOCK[1][oy_key_public].pop();
+        }
     }
-    return [true, null];
+    return true;
 }
 
 function oy_block_finish() {
