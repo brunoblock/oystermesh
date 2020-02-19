@@ -21,7 +21,8 @@ const OY_MESH_SOURCE = 3;//node in route passport (from destination) that is ass
 const OY_BLOCK_LOOP = 100;//a lower value means increased accuracy for detecting the start of the next meshblock
 const OY_BLOCK_STABILITY_TRIGGER = 3;//mesh range history minimum to trigger reliance on real stability value
 const OY_BLOCK_STABILITY_LIMIT = 12;//mesh range history to keep to calculate meshblock stability, time is effectively value x 20 seconds
-const OY_BLOCK_EPOCH = 360;//cadence in blocks to perform epoch processing - 6 hr interval
+const OY_BLOCK_EPOCH_MACRO = 360;//cadence in blocks to perform epoch processing - 6 hr interval
+const OY_BLOCK_EPOCH_MICRO = 10;//cadence in blocks to perform heal retention, higher is less memory burden on full nodes, lower is less time to wait for transaction finality - 10 min interval
 const OY_BLOCK_SNAPSHOT_KEEP = 120;//how many hashes of previous blocks to keep in the current meshblock, value is for 1 month's worth (6 hrs x 4 = 24 hrs x 30 = 30 days, 4 x 30 = 120)
 const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
 const OY_BLOCK_COMMAND_QUOTA = 4000;
@@ -30,7 +31,7 @@ const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain clonin
 const OY_BLOCK_BOOT_SEED = 1581920900;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [36, 36000], [57, 57000], [58, 58000], [59, 59000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
-const OY_BLOCK_BUFFER_SPACE = [5, 5000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
+const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
 const OY_JUDGE_BUFFER_BASE = 1.4;
 const OY_JUDGE_BUFFER_CURVE = 1.2;//allocation for curve
 const OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
@@ -98,9 +99,9 @@ const OY_DNS_OWNER_MIN = (OY_AKOYA_FEE+OY_DNS_FEE)*OY_DNS_AUCTION_MIN+(OY_AKOYA_
 // TEMPLATE VARS
 //[[0]:peership timestamp, [1]:latch flag, [2]:base sent, [3]:latency avg, [4]:latency history, [5]:data beam, [6]:data beam history, [7]:data soak, [8]:data soak history, [9]:mesh core cut]
 const OY_PEER_TEMPLATE = [null, null, false, 0, [], 0, [], 0, [], 0];
-//the current meshblock - [[0]:[oy_mesh_dynasty, oy_block_timestamp, oy_mesh_range, oy_work_difficulty, oy_genesis_timestamp, oy_epoch_count, oy_range_diff, oy_range_prev, oy_range_keep],
+//the current meshblock - [[0]:[[0]:oy_mesh_dynasty, [1]:oy_block_timestamp, [2]:oy_mesh_range, [3]:oy_work_difficulty, [4]:oy_genesis_timestamp, [5]:oy_epoch_macro_count, [6]:oy_epoch_micro_count, [7]:oy_range_diff, [8]:oy_range_prev, [9]:oy_range_keep],
 // [1]:oy_dive_sector, [2]:oy_snapshot_sector, [3]:oy_command_sector, [4]:oy_akoya_sector, [5]:oy_dns_sector, [6]:oy_auction_sector, [7]:oy_meta_sector]
-const OY_BLOCK_TEMPLATE = Object.freeze([[null, null, null, null, null, null, null, null, []], {}, [], {}, {}, {}, {}, {}, {}, {}]);//TODO figure out channel sector
+const OY_BLOCK_TEMPLATE = Object.freeze([[null, null, null, null, null, null, null, null, null, []], {}, [[], []], {}, {}, {}, {}, {}, {}, {}]);//TODO figure out channel sector
 let OY_BLOCK = oy_clone_object(OY_BLOCK_TEMPLATE);
 
 // SECURITY CHECK FUNCTIONS
@@ -294,6 +295,7 @@ let OY_BLOCK_COMMAND_NONCE = 0;
 let OY_BLOCK_COMMAND = {};
 let OY_BLOCK_COMMAND_SELF = {};
 let OY_BLOCK_SYNC = {};
+let OY_BLOCK_HEAL = new Map();
 let OY_SYNC_TALLY = {};
 let OY_BLOCK_CHALLENGE = {};
 let OY_DIVE_PAYOUT = null;
@@ -2339,12 +2341,14 @@ function oy_block_engine() {
         if (OY_LIGHT_MODE===false&&OY_BLOCK_TIME===OY_BLOCK_BOOTTIME) {
             OY_BLOCK = oy_clone_object(OY_BLOCK_TEMPLATE);
             OY_BLOCK[0][0] = OY_MESH_DYNASTY;//dynasty
+            OY_BLOCK[0][1] = OY_BLOCK_TIME;
             OY_BLOCK[0][2] = OY_BLOCK_RANGE_MIN;//mesh range
             OY_BLOCK[0][3] = OY_WORK_MIN;//memory difficulty
             OY_BLOCK[0][4] = OY_BLOCK_BOOTTIME;//genesis timestamp
-            OY_BLOCK[0][5] = 0;//epoch counter
-            OY_BLOCK[0][6] = 0;//range diff
-            OY_BLOCK[0][7] = OY_BLOCK_RANGE_MIN;//range prev
+            OY_BLOCK[0][5] = 0;//epoch macro counter
+            OY_BLOCK[0][6] = 0;//epoch counter
+            OY_BLOCK[0][7] = 0;//range diff
+            OY_BLOCK[0][8] = OY_BLOCK_RANGE_MIN;//range prev
             OY_BLOCK[4]["oy_escrow_dns"] = 0;
 
             //SEED DEFINITION------------------------------------
@@ -2815,33 +2819,44 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
     OY_BLOCK[0][0] = OY_MESH_DYNASTY;
     OY_BLOCK[0][1] = OY_BLOCK_TIME;
     OY_BLOCK[0][5]++;
-    OY_BLOCK[0][8].push(OY_BLOCK[0][2]);
+    OY_BLOCK[0][6]++;
+    OY_BLOCK[0][9].push(OY_BLOCK[0][2]);
 
-    //epoch processing - 6 hr interval - 360 blocks
-    if (OY_BLOCK[0][5]===OY_BLOCK_EPOCH) {
+    let oy_command_expire = OY_BLOCK_TIME - (OY_BLOCK_EPOCH_MACRO*OY_BLOCK_SECTORS[5][1]);//TODO calibrate purge timing for snapshot precision
+    for (let oy_command_hash in OY_BLOCK[3]) {
+        if (OY_BLOCK[3][oy_command_hash][1][0]===oy_command_expire) delete OY_BLOCK[3][oy_command_hash];
+    }
+
+    //epoch macro processing - 6 hr interval - 360 blocks
+    if (OY_BLOCK[0][5]===OY_BLOCK_EPOCH_MACRO) {
         OY_BLOCK[0][5] = 0;
 
-        //work difficulty alternate
-        for (let i in OY_BLOCK[0][8]) {
-            OY_BLOCK[0][8][i] *= OY_AKOYA_DECIMALS;
-            OY_BLOCK[0][8][i] = parseInt(OY_BLOCK[0][8][i]);
+        for (let i in OY_BLOCK[0][9]) {
+            OY_BLOCK[0][9][i] *= OY_AKOYA_DECIMALS;
+            OY_BLOCK[0][9][i] = parseInt(OY_BLOCK[0][9][i]);
         }
-        let oy_range_avg = Math.floor(Math.floor(oy_calc_avg(OY_BLOCK[0][8]))/OY_AKOYA_DECIMALS);
-        OY_BLOCK[0][8] = [];
-        OY_BLOCK[0][6] = oy_range_avg-OY_BLOCK[0][7];
-        OY_BLOCK[0][7] = oy_range_avg;
+        let oy_range_avg = Math.floor(Math.floor(oy_calc_avg(OY_BLOCK[0][9]))/OY_AKOYA_DECIMALS);
+        OY_BLOCK[0][9] = [];
+        OY_BLOCK[0][7] = oy_range_avg-OY_BLOCK[0][8];
+        OY_BLOCK[0][8] = oy_range_avg;
 
-        if (OY_BLOCK[0][6]>=0) OY_BLOCK[0][3] += (OY_BLOCK[0][6]+1)*OY_WORK_INCREMENT;
-        else OY_BLOCK[0][3] += OY_BLOCK[0][6]*OY_WORK_DECREMENT;
+        if (OY_BLOCK[0][7]>=0) OY_BLOCK[0][3] += (OY_BLOCK[0][7]+1)*OY_WORK_INCREMENT;
+        else OY_BLOCK[0][3] += OY_BLOCK[0][7]*OY_WORK_DECREMENT;
 
         if (OY_BLOCK[0][3]>OY_WORK_MAX) OY_BLOCK[0][3] = OY_WORK_MAX;
         if (OY_BLOCK[0][3]<OY_WORK_MIN) OY_BLOCK[0][3] = OY_WORK_MIN;
 
-        //snapshot alternate
-        OY_BLOCK[3] = {};
-        OY_BLOCK[2].push(OY_BLOCK_HASH);
+        OY_BLOCK[2][0].push(OY_BLOCK_HASH);
+        while (OY_BLOCK[2][0].length>OY_BLOCK_SNAPSHOT_KEEP) OY_BLOCK[2][0].shift();
+    }
+    OY_BLOCK[2][1].push(OY_BLOCK_HASH);
+    while (OY_BLOCK[2][1].length>OY_BLOCK_EPOCH_MICRO) OY_BLOCK[2][1].shift();
+    //epoch micro processing - 10 min interval - 10 blocks
+    if (OY_BLOCK[0][6]===OY_BLOCK_EPOCH_MICRO) {
+        OY_BLOCK[0][6] = 0;
 
-        while (OY_BLOCK[2].length>OY_BLOCK_SNAPSHOT_KEEP) OY_BLOCK[2].shift();
+        OY_BLOCK_HEAL.set(OY_BLOCK_TIME, [OY_BLOCK[2][1], LZString.compressToUTF16(OY_BLOCK_FLAT)]);
+        OY_BLOCK_HEAL.delete(OY_BLOCK_TIME-(OY_BLOCK_EPOCH_MICRO*OY_BLOCK_SECTORS[5][1]))
     }
     //MAINTAIN--------------------------------
 
