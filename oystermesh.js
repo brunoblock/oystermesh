@@ -26,13 +26,14 @@ const OY_BLOCK_EPOCH_MICRO = 10;//cadence in blocks to perform heal retention, h
 const OY_BLOCK_SNAPSHOT_KEEP = 120;//how many hashes of previous blocks to keep in the current meshblock, value is for 1 month's worth (6 hrs x 4 = 24 hrs x 30 = 30 days, 4 x 30 = 120)
 const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
 const OY_BLOCK_COMMAND_QUOTA = 20000;
+const OY_BLOCK_RANGE_KILL = 0.65;
 const OY_BLOCK_RANGE_MIN = 10;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_BOOT_SEED = 1582277900;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [36, 36000], [57, 57000], [58, 58000], [59, 59000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
-const OY_JUDGE_BUFFER_BASE = 1.4;
+const OY_JUDGE_BUFFER_BASE = 1.5;
 const OY_JUDGE_BUFFER_CURVE = 1.2;//allocation for curve
 const OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 const OY_LIGHT_COMMIT = 0.4;
@@ -2630,6 +2631,8 @@ function oy_block_engine() {
                 });
 
                 if (!oy_block_range(Object.keys(OY_BLOCK[1]).length)) return false;//block_range will invoke block_reset if necessary
+
+                OY_BLOCK[0][7] = Math.round(OY_BLOCK[0][7]/OY_BLOCK[0][2]);
             }
             else {
                 OY_BLOCK_SYNC = {};
@@ -2779,6 +2782,7 @@ function oy_block_light() {
     for (let oy_key_public in oy_diff_track[0]) {
         OY_BLOCK[0][7] += oy_diff_track[0][oy_key_public][0];
     }
+    OY_BLOCK[0][7] = Math.round(OY_BLOCK[0][7]/OY_BLOCK[0][2]);
 
     if (!oy_block_process(oy_diff_track[1], false)) return false;//block_process will invoke block_reset if necessary
 
@@ -2861,13 +2865,18 @@ function oy_block_light() {
 }
 
 function oy_block_range(oy_mesh_range_new) {
+    if (OY_BLOCK[0][2]-oy_mesh_range_new>=OY_BLOCK[0][2]*OY_BLOCK_RANGE_KILL) {
+        oy_block_reset("OY_RESET_RANGE_KILL");
+        return false;
+    }
     OY_BLOCK[0][2] = oy_mesh_range_new;
+
     OY_BLOCK_STABILITY_KEEP.push(OY_BLOCK[0][2]);
     while (OY_BLOCK_STABILITY_KEEP.length>OY_BLOCK_STABILITY_LIMIT) OY_BLOCK_STABILITY_KEEP.shift();
     OY_BLOCK_STABILITY = (OY_BLOCK_STABILITY_KEEP.length<OY_BLOCK_STABILITY_TRIGGER)?0:oy_block_stability(OY_BLOCK_STABILITY_KEEP);
 
     if (OY_BLOCK[0][2]<OY_BLOCK_RANGE_MIN&&OY_BLOCK_BOOT===false) {
-        oy_block_reset("OY_RESET_DROP_RANGE");
+        oy_block_reset("OY_RESET_RANGE_DROP");
         return false;
     }
     return true;
