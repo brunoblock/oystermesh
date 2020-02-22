@@ -285,6 +285,7 @@ let OY_SYNC_LAST = [0, 0];
 let OY_BLOCK_JUDGE = [null];
 let OY_BLOCK_LEARN = [null];
 let OY_BLOCK_HASH = null;//hash of the most current block
+let OY_ENTROPY_HASH = null;
 let OY_BLOCK_FLAT = null;
 let OY_BLOCK_COMPRESS = null;
 let OY_BLOCK_DIFF = false;
@@ -868,16 +869,96 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                         }
                     }
 
+                    let oy_command_rollback = {};
                     for (let oy_command_hash in oy_heal_block[3]) {
                         if (oy_heal_block[3][oy_command_hash][1][0]>OY_HEAL_ASSIGN[1]) {
-                            if (typeof(OY_BLOCK_COMMAND_CRYPT[oy_command_hash])==="undefined"||!oy_block_command_verify(oy_heal_block[3][oy_command_hash], LZString.decompressFromUTF16(OY_BLOCK_COMMAND_CRYPT[oy_command_hash][1]), oy_command_hash)) {
+                            let oy_command_crypt = LZString.decompressFromUTF16(oy_block_command_crypt[oy_command_hash][1]);
+                            if (typeof(oy_block_command_crypt[oy_command_hash])==="undefined"||oy_heal_block[3][oy_command_hash][1][0]!==oy_block_command_crypt[oy_command_hash][0]||!oy_block_command_verify(oy_heal_block[3][oy_command_hash], oy_command_crypt, oy_command_hash)) {
                                 oy_node_deny(oy_peer_id, "OY_DENY_HEAL_FAIL_B");
                                 return false;
                             }
                             else {
-                                //TODO load command for block_process
+                                if (typeof(oy_command_rollback["OY_"+oy_heal_block[3][oy_command_hash][1][0]])==="undefined") oy_command_rollback["OY_"+oy_heal_block[3][oy_command_hash][1][0]] = [];
+                                oy_command_rollback["OY_"+oy_heal_block[3][oy_command_hash][1][0]].push([oy_heal_block[3][oy_command_hash], oy_command_crypt, oy_command_hash]);
                             }
                         }
+                    }
+
+                    for (let oy_block_time in oy_command_rollback) {
+                        oy_command_rollback[oy_block_time].sort(function(a, b) {
+                            if (a[0][2]===b[0][2]) return a[0][1][1] - b[0][1][1];//if signer is same, sort by transact nonce
+                            if (a[0][1][2]===b[0][1][2]) {//if fee is the same, sort by command_hash alphabetically
+                                let x = a[2].toLowerCase();
+                                let y = b[2].toLowerCase();
+
+                                return x < y ? -1 : x > y ? 1 : 0;
+                            }
+                            return b[0][1][2] - a[0][1][2];//sort by fee
+                        });
+                    }
+
+                    let oy_block_restore = JSON.stringify(OY_BLOCK);
+                    let oy_time_restore = oy_clone_object(OY_BLOCK_TIME);
+                    let oy_hash_restore = oy_clone_object(OY_BLOCK_HASH);
+                    let oy_weight_restore = oy_clone_object(OY_BLOCK_WEIGHT);
+
+                    let oy_block_recover = function() {
+                        OY_BLOCK = JSON.parse(oy_block_restore);
+                        OY_BLOCK_TIME = oy_clone_object(oy_time_restore);
+                        OY_BLOCK_HASH = oy_clone_object(oy_hash_restore);
+                        OY_BLOCK_WEIGHT = oy_clone_object(oy_weight_restore);
+                    };
+
+                    OY_BLOCK_HASH = null;
+                    OY_BLOCK_FLAT = null;
+                    OY_BLOCK_COMPRESS = null;
+                    OY_BLOCK_WEIGHT = null;
+                    OY_BLOCK = JSON.parse(LZString.decompressFromUTF16(OY_BLOCK_HEAL.get(OY_HEAL_ASSIGN[1])[2]));
+                    for (let oy_block_time in oy_command_rollback) {
+                        OY_BLOCK_TIME = parseInt(oy_block_time.substr(3));
+                        OY_BLOCK_NEXT = OY_BLOCK_TIME+OY_BLOCK_SECTORS[5][0];
+                        if (!oy_block_process(oy_command_rollback[oy_block_time], true)) {
+                            oy_block_recover();
+                            oy_node_deny(oy_peer_id, "OY_DENY_HEAL_FAIL_C");
+                            return false;
+                        }
+                    }
+
+                    if (OY_BLOCK_TIME!==oy_time_restore) {
+                        oy_block_recover();
+                        oy_node_deny(oy_peer_id, "OY_DENY_HEAL_FAIL_D");
+                        return false;
+                    }
+
+                    OY_BLOCK[0] = oy_heal_block[0];
+                    OY_BLOCK[1] = oy_heal_block[1];
+                    OY_BLOCK[2] = oy_heal_block[2];
+                    OY_BLOCK[0][0] = OY_MESH_DYNASTY;
+                    OY_BLOCK[0][1] = oy_time_restore;
+                    OY_BLOCK[0][4] = OY_BLOCK_BOOTTIME;
+
+                    let oy_hash_flat = JSON.stringify(OY_BLOCK);
+                    let oy_hash_calc = oy_hash_gen(oy_hash_flat);
+
+                    if (oy_hash_calc===oy_heal_hash) {
+                        OY_BLOCK_FLAT = oy_hash_flat;
+                        oy_hash_flat = null;
+                        OY_BLOCK_HASH = oy_hash_calc;
+                        OY_ENTROPY_HASH = oy_hash_gen(JSON.stringify([OY_BLOCK_NEXT, OY_BLOCK[3]]));
+                        OY_BLOCK_WEIGHT = new Blob([OY_BLOCK_FLAT]).size;
+
+                        oy_block_finish();
+
+                        oy_data_beam(oy_peer_id, "OY_PEER_FULL", oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH));
+
+                        for (let oy_peer_select in OY_PEERS) {
+                            if (oy_peer_select!==oy_peer_id&&OY_PEERS[oy_peer_select][1]!==0) oy_node_deny(oy_peer_select, "OY_DENY_HEAL_DROP");
+                        }
+                    }
+                    else {
+                        oy_block_recover();
+                        oy_node_deny(oy_peer_id, "OY_DENY_HEAL_FAIL_E");
+                        return false;
                     }
                 }
             }
@@ -886,11 +967,9 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
                 OY_BLOCK_FLAT = LZString.decompressFromUTF16(oy_base_payload);
                 oy_base_payload = null;
-
                 OY_BLOCK = JSON.parse(OY_BLOCK_FLAT);
-
                 OY_BLOCK_HASH = oy_hash_gen(OY_BLOCK_FLAT);
-
+                OY_ENTROPY_HASH = oy_hash_gen(JSON.stringify([OY_BLOCK_NEXT, OY_BLOCK[3]]));
                 OY_BLOCK_WEIGHT = new Blob([OY_BLOCK_FLAT]).size;
 
                 oy_log("BASE MESHBLOCK HASH "+OY_BLOCK_HASH, true);
@@ -2392,6 +2471,7 @@ function oy_block_reset(oy_reset_flag) {
 
     OY_BLOCK_HALT = oy_time_local;
     OY_BLOCK_HASH = null;
+    OY_ENTROPY_HASH = null;
     OY_BLOCK_FLAT = null;
     OY_BLOCK_COMPRESS = null;
     OY_BLOCK_DIFF = false;
@@ -2706,10 +2786,8 @@ function oy_block_engine() {
             if (!oy_block_process(oy_command_execute, true)) return false;//block_process will invoke block_reset if necessary
 
             OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK);
-            //console.log(OY_BLOCK_FLAT);//TODO temp
-
             OY_BLOCK_HASH = oy_hash_gen(OY_BLOCK_FLAT);
-
+            OY_ENTROPY_HASH = oy_hash_gen(JSON.stringify([OY_BLOCK_NEXT, OY_BLOCK[3]]));
             OY_BLOCK_WEIGHT = new Blob([OY_BLOCK_FLAT]).size;
 
             oy_log("FULL MESHBLOCK HASH "+OY_BLOCK_HASH, true);
@@ -2854,10 +2932,8 @@ function oy_block_light() {
     OY_BLOCK[1] = oy_diff_track[0];
 
     OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK);
-    //console.log(OY_BLOCK_FLAT);//TODO temp
-
     OY_BLOCK_HASH = oy_hash_gen(OY_BLOCK_FLAT);
-
+    OY_ENTROPY_HASH = oy_hash_gen(JSON.stringify([OY_BLOCK_NEXT, OY_BLOCK[3]]));
     OY_BLOCK_WEIGHT = new Blob([OY_BLOCK_FLAT]).size;
 
     oy_log("LIGHT MESHBLOCK HASH "+OY_BLOCK_HASH, true);
@@ -3163,7 +3239,7 @@ function oy_block_process(oy_command_execute, oy_full_flag) {
 
                 let oy_entropy_id;
                 if (oy_command_execute[i][0][3]==="") {//recycle meshblock entropy to ensure random meta handles are assigned in a decentralized manner
-                    oy_entropy_id = oy_hash_gen(OY_BLOCK_HASH+oy_command_execute[i][0]);
+                    oy_entropy_id = oy_hash_gen(OY_ENTROPY_HASH+oy_command_execute[i][0]);
                     if (typeof(OY_BLOCK[7][oy_entropy_id])!=="undefined") continue;//there is a nonzero chance that a legitimate META_SET transaction would get rejected and need to be tried again
                 }
                 else oy_entropy_id = oy_command_execute[i][0][3];
@@ -3272,7 +3348,7 @@ function oy_block_finish() {
     for (let oy_command_hash in OY_BLOCK_CONFIRM) {
         OY_BLOCK_CONFIRM[oy_command_hash](typeof(OY_BLOCK[3][oy_command_hash])!=="undefined");
     }
-    OY_BLOCK_CONFIRM = {};
+    OY_BLOCK_CONFIRM = {};//TODO reset according to timestamp
 
     OY_BOOST_RESERVE = OY_BOOST_BUILD.slice();
     OY_BOOST_BUILD = [];
