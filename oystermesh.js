@@ -29,7 +29,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.65;
 const OY_BLOCK_RANGE_MIN = 10;//minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1582299600;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1582487800;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [36, 36000], [57, 57000], [58, 58000], [59, 59000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -519,6 +519,7 @@ function oy_worker(oy_worker_status) {
 
                     if (oy_state_current()===2&&OY_BLOCK_SYNC[oy_data_payload[0][0]]!==false&&OY_BLOCK_SYNC[oy_data_payload[0][0]][1]===false&&oy_time_offset<OY_BLOCK_SECTORS[2][0]+OY_MESH_BUFFER[0]&&oy_block_command_scan(oy_sync_command, false)) {
                         OY_BLOCK_SYNC[oy_data_payload[0][0]] = [oy_data_payload[2], oy_sync_command];
+                        if (typeof(OY_BLOCK_WORK_SOLUTION[OY_BLOCK_TIME])==="undefined") OY_BLOCK_WORK_SOLUTION[OY_BLOCK_TIME] = {};
                         OY_BLOCK_WORK_SOLUTION[OY_BLOCK_TIME][oy_data_payload[0][0]] = [oy_data_payload[5], 0];
                         if (typeof(OY_SYNC_TALLY[oy_data_payload[0][0]])==="undefined") OY_SYNC_TALLY[oy_data_payload[0][0]] = oy_data_payload[0][oy_data_payload[0].length-1];
 
@@ -2625,6 +2626,8 @@ function oy_block_engine() {
             OY_BLOCK[0][7] = OY_BLOCK_RANGE_MIN;//continuity count
             OY_BLOCK[0][8] = OY_BLOCK_RANGE_MIN;//continuity avg
             OY_BLOCK[0][9].push(OY_BLOCK_RANGE_MIN);//continuity keep
+            OY_BLOCK[0][10] = OY_BLOCK_RANGE_MIN;//range rolling avg
+            OY_BLOCK[0][11].push(OY_BLOCK_RANGE_MIN);//range rolling keep
             OY_BLOCK[4]["oy_escrow_dns"] = 0;
 
             //SEED DEFINITION------------------------------------
@@ -2792,22 +2795,6 @@ function oy_block_engine() {
                     else OY_PEERS[oy_peer_select][9] = 0;
                 }
 
-                let oy_dive_sort = [];
-                for (let oy_key_public in oy_dive_ledger) {
-                    oy_dive_sort.push([oy_key_public, oy_dive_ledger[oy_key_public]]);
-                }
-                oy_dive_ledger = {};
-                oy_dive_sort.sort(function(a, b) {
-                    let x = a[0].toLowerCase();
-                    let y = b[0].toLowerCase();
-
-                    return x < y ? -1 : x > y ? 1 : 0;
-                });
-                for (let i in oy_dive_sort) {
-                    oy_dive_ledger[oy_dive_sort[i][0]] = oy_dive_sort[i][1];
-                }
-                oy_dive_sort = null;
-
                 for (let oy_command_hash in oy_command_check) {
                     if (typeof(OY_BLOCK[4][oy_command_check[oy_command_hash][1][0][2]])==="undefined"||OY_BLOCK[4][oy_command_check[oy_command_hash][1][0][2]]<oy_command_check[oy_command_hash][1][0][1][2]+OY_AKOYA_FEE) continue;//TODO check if fee buffer needs to be strict or not
                     OY_BLOCK[4][oy_command_check[oy_command_hash][1][0][2]] -= oy_command_check[oy_command_hash][1][0][1][2];
@@ -2815,6 +2802,25 @@ function oy_block_engine() {
                     OY_BLOCK_WORK_SOLUTION[OY_BLOCK_TIME][oy_command_check[oy_command_hash][0]][1] += oy_command_check[oy_command_hash][1][0][1][2];
                     oy_command_execute.push([oy_command_check[oy_command_hash][1][0], oy_command_check[oy_command_hash][1][1], oy_command_hash]);//[[0]:oy_command_array, [1]:oy_command_crypt, [2]:oy_command_hash]
                 }
+
+                let oy_dive_sort = [];
+                for (let oy_key_public in oy_dive_ledger) {
+                    oy_dive_sort.push([oy_key_public, oy_dive_ledger[oy_key_public]]);
+                }
+                oy_dive_ledger = {};
+                oy_dive_sort.sort(function(a, b) {
+                    if (a[1][0]===b[1][0]) {
+                        let x = a[0].toLowerCase();
+                        let y = b[0].toLowerCase();
+
+                        return x < y ? -1 : x > y ? 1 : 0;
+                    }
+                    return b[1][0] - a[1][0];
+                });
+                for (let i in oy_dive_sort) {
+                    oy_dive_ledger[oy_dive_sort[i][0]] = oy_dive_sort[i][1];
+                }
+                oy_dive_sort = null;
 
                 OY_BLOCK[1] = oy_clone_object(oy_dive_ledger);
                 oy_dive_ledger = null;
