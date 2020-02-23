@@ -22,7 +22,7 @@ const OY_BLOCK_LOOP = [20, 140];//a lower value means increased accuracy for det
 const OY_BLOCK_STABILITY_TRIGGER = 3;//mesh range history minimum to trigger reliance on real stability value
 const OY_BLOCK_STABILITY_LIMIT = 12;//mesh range history to keep to calculate meshblock stability, time is effectively value x 20 seconds
 const OY_BLOCK_EPOCH_MACRO = 20;//360, cadence in blocks to perform epoch processing - 6 hr interval
-const OY_BLOCK_EPOCH_MICRO = 10;//cadence in blocks to perform heal retention, higher is less memory burden on full nodes, lower is less time to wait for transaction finality - 10 min interval
+const OY_BLOCK_EPOCH_MICRO = 10;//cadence in blocks to perform recover retention, higher is less memory burden on full nodes, lower is less time to wait for transaction finality - 10 min interval
 const OY_BLOCK_SNAPSHOT_KEEP = 120;//how many hashes of previous blocks to keep in the current meshblock, value is for 1 month's worth (6 hrs x 4 = 24 hrs x 30 = 30 days, 4 x 30 = 120)
 const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
 const OY_BLOCK_COMMAND_QUOTA = 20000;
@@ -111,74 +111,99 @@ let OY_BLOCK = oy_clone_object(OY_BLOCK_TEMPLATE);
 const OY_BLOCK_COMMANDS = {
     //["OY_AKOYA_SEND", oy_protocol_assign, oy_key_public, oy_transfer_amount, oy_receive_public]
     "OY_AKOYA_SEND":[function(oy_command_array, oy_recover_flag) {
+        let oy_block;
+        if (oy_recover_flag===true) oy_block = OY_BLOCK_RECOVER;
+        else oy_block = OY_BLOCK;
         return (oy_command_array.length===5&&//check the element count in the command
             oy_command_array[3]>0&&//check that the sending amount is greater than zero
             oy_command_array[3]<OY_AKOYA_LIQUID&&//check that the sending amount smaller than the max supply
-            typeof(OY_BLOCK[4][oy_command_array[2]])!=="undefined"&&//check that the sending wallet exists
+            typeof(oy_block[4][oy_command_array[2]])!=="undefined"&&//check that the sending wallet exists
             oy_key_check(oy_command_array[4])&&//check that the receiving address is a valid address
-            OY_BLOCK[4][oy_command_array[2]]>=oy_command_array[3]&&//check that the sending wallet has sufficient akoya
+            oy_block[4][oy_command_array[2]]>=oy_command_array[3]&&//check that the sending wallet has sufficient akoya
             oy_command_array[2]!==oy_command_array[4]);//check that the sender and the receiver are different
     }],
     //["OY_AKOYA_SINK", oy_protocol_assign, oy_key_public, oy_sink_amount]
-    "OY_AKOYA_SINK":[function(oy_command_array) {
+    "OY_AKOYA_SINK":[function(oy_command_array, oy_recover_flag) {
+        let oy_block;
+        if (oy_recover_flag===true) oy_block = OY_BLOCK_RECOVER;
+        else oy_block = OY_BLOCK;
         return (oy_command_array.length===4);//check the element count in the command
     }],
     //["OY_AKOYA_BURN", oy_protocol_assign, oy_key_public, oy_burn_amount]
-    "OY_AKOYA_BURN":[function(oy_command_array) {
+    "OY_AKOYA_BURN":[function(oy_command_array, oy_recover_flag) {
+        let oy_block;
+        if (oy_recover_flag===true) oy_block = OY_BLOCK_RECOVER;
+        else oy_block = OY_BLOCK;
         return (oy_command_array.length===4);//check the element count in the command
         //TODO
     }],
     //["OY_DNS_MODIFY", oy_protocol_assign, oy_key_public, oy_dns_name, oy_nav_data]
-    "OY_DNS_MODIFY":[function(oy_command_array) {
+    "OY_DNS_MODIFY":[function(oy_command_array, oy_recover_flag) {
+        let oy_block;
+        if (oy_recover_flag===true) oy_block = OY_BLOCK_RECOVER;
+        else oy_block = OY_BLOCK;
         return (oy_command_array.length===5&&//check the element count in the command
             oy_command_array[3].length<=OY_DNS_NAME_LIMIT&&//check that the domain name's length is compliant
             oy_an_check(oy_command_array[3])&&//check that the domain name is fully alphanumeric
-            typeof(OY_BLOCK[5][oy_command_array[3]])!=="undefined"&&//check that oy_dns_name exists in the dns_sector of the meshblock
-            OY_BLOCK[5][oy_command_array[3]][0]===oy_command_array[2]&&//check that oy_key_public owns oy_dns_name
+            typeof(oy_block[5][oy_command_array[3]])!=="undefined"&&//check that oy_dns_name exists in the dns_sector of the meshblock
+            oy_block[5][oy_command_array[3]][0]===oy_command_array[2]&&//check that oy_key_public owns oy_dns_name
             typeof(oy_command_array[4])==="object"&&//check that oy_nav_set is an object
             oy_command_array[4]!==null);//further ensure that oy_nav_data is an object
     }],
     //["OY_DNS_BID", oy_protocol_assign, oy_key_public, oy_dns_name, oy_bid_amount]
-    "OY_DNS_BID":[function(oy_command_array) {
+    "OY_DNS_BID":[function(oy_command_array, oy_recover_flag) {
+        let oy_block;
+        if (oy_recover_flag===true) oy_block = OY_BLOCK_RECOVER;
+        else oy_block = OY_BLOCK;
         return (oy_command_array.length===5&&//check the element count in the command
             oy_command_array[3].length<=OY_DNS_NAME_LIMIT&&//check that the domain name's length is compliant
             oy_an_check(oy_command_array[3])&&//check that the domain name is fully alphanumeric
             oy_command_array[4]>=OY_DNS_AUCTION_MIN&&//check that the bid amount is at least the minimum required amount
-            typeof(OY_BLOCK[4][oy_command_array[2]])!=="undefined"&&//check that the sending wallet exists
-            OY_BLOCK[4][oy_command_array[2]]>=oy_command_array[4]+OY_DNS_OWNER_MIN&&//check that the sending wallet has sufficient akoya for the bid
-            (typeof(OY_BLOCK[5][oy_command_array[3]])==="undefined"||OY_BLOCK[5][oy_command_array[3]][0]==="A")&&//check that oy_dns_name doesn't exist as a domain, or is in auction mode
-            (typeof(OY_BLOCK[5][oy_command_array[3]])==="undefined"||oy_command_array[4]>=OY_BLOCK[6][oy_command_array[3]][1]*2));//check that oy_dns_name doesn't exist as a domain, or the bid amount is at least double the previous bid
+            typeof(oy_block[4][oy_command_array[2]])!=="undefined"&&//check that the sending wallet exists
+            oy_block[4][oy_command_array[2]]>=oy_command_array[4]+OY_DNS_OWNER_MIN&&//check that the sending wallet has sufficient akoya for the bid
+            (typeof(oy_block[5][oy_command_array[3]])==="undefined"||oy_block[5][oy_command_array[3]][0]==="A")&&//check that oy_dns_name doesn't exist as a domain, or is in auction mode
+            (typeof(oy_block[5][oy_command_array[3]])==="undefined"||oy_command_array[4]>=oy_block[6][oy_command_array[3]][1]*2));//check that oy_dns_name doesn't exist as a domain, or the bid amount is at least double the previous bid
     }],
     //["OY_DNS_TRANSFER", oy_protocol_assign, oy_key_public, oy_dns_name, oy_receive_public]
-    "OY_DNS_TRANSFER":[function(oy_command_array) {
+    "OY_DNS_TRANSFER":[function(oy_command_array, oy_recover_flag) {
+        let oy_block;
+        if (oy_recover_flag===true) oy_block = OY_BLOCK_RECOVER;
+        else oy_block = OY_BLOCK;
         return (oy_command_array.length===5&&//check the element count in the command
             oy_command_array[3].length<=OY_DNS_NAME_LIMIT&&//check that the domain name's length is compliant
             oy_an_check(oy_command_array[3])&&//check that the domain name is fully alphanumeric
-            typeof(OY_BLOCK[5][oy_command_array[3]])!=="undefined"&&//check that oy_dns_name exists in the dns_sector of the meshblock
-            OY_BLOCK[5][oy_command_array[3]][0]===oy_command_array[2]&&//check that oy_key_public owns oy_dns_name
-            typeof(OY_BLOCK[4][oy_command_array[4]])!=="undefined");//check that oy_receive_public has a positive balance in the akoya ledger
+            typeof(oy_block[5][oy_command_array[3]])!=="undefined"&&//check that oy_dns_name exists in the dns_sector of the meshblock
+            oy_block[5][oy_command_array[3]][0]===oy_command_array[2]&&//check that oy_key_public owns oy_dns_name
+            typeof(oy_block[4][oy_command_array[4]])!=="undefined");//check that oy_receive_public has a positive balance in the akoya ledger
     }],
     //["OY_DNS_RELEASE", oy_protocol_assign, oy_key_public, oy_dns_name]
-    "OY_DNS_RELEASE":[function(oy_command_array) {
+    "OY_DNS_RELEASE":[function(oy_command_array, oy_recover_flag) {
+        let oy_block;
+        if (oy_recover_flag===true) oy_block = OY_BLOCK_RECOVER;
+        else oy_block = OY_BLOCK;
         return (oy_command_array.length===4&&//check the element count in the command
             oy_command_array[3].length<=OY_DNS_NAME_LIMIT&&//check that the domain name's length is compliant
             oy_an_check(oy_command_array[3])&&//check that the domain name is fully alphanumeric
-            typeof(OY_BLOCK[5][oy_command_array[3]])!=="undefined"&&//check that oy_dns_name exists in the dns_sector of the meshblock
-            OY_BLOCK[5][oy_command_array[3]][0]===oy_command_array[2]);//check that oy_key_public owns oy_dns_name
+            typeof(oy_block[5][oy_command_array[3]])!=="undefined"&&//check that oy_dns_name exists in the dns_sector of the meshblock
+            oy_block[5][oy_command_array[3]][0]===oy_command_array[2]);//check that oy_key_public owns oy_dns_name
     }],
     //["OY_DNS_NULLING", oy_protocol_assign, oy_key_public, oy_dns_name, oy_nulling_amount]
-    "OY_DNS_NULLING":[function(oy_command_array) {
+    "OY_DNS_NULLING":[function(oy_command_array, oy_recover_flag) {
+        let oy_block;
+        if (oy_recover_flag===true) oy_block = OY_BLOCK_RECOVER;
+        else oy_block = OY_BLOCK;
         return (oy_command_array.length===5&&//check the element count in the command
             oy_command_array[3].length<=OY_DNS_NAME_LIMIT&&//check that the domain name's length is compliant
             oy_an_check(oy_command_array[3])&&//check that the domain name is fully alphanumeric
-            typeof(OY_BLOCK[5][oy_command_array[3]])!=="undefined"&&//check that oy_dns_name exists in the dns_sector of the meshblock
-            OY_BLOCK[5][oy_command_array[3]][0]===oy_command_array[2]&&//check that oy_key_public owns oy_dns_name
+            typeof(oy_block[5][oy_command_array[3]])!=="undefined"&&//check that oy_dns_name exists in the dns_sector of the meshblock
+            oy_block[5][oy_command_array[3]][0]===oy_command_array[2]&&//check that oy_key_public owns oy_dns_name
             oy_command_array[4]>=OY_DNS_OWNER_MIN&&//check that the nulling amount complies with DNS_OWNER_MIN funding requirement
-            typeof(OY_BLOCK[4][oy_command_array[2]])!=="undefined"&&//check that oy_key_public has a positive balance in the akoya ledger
-            OY_BLOCK[4][oy_command_array[2]]>=oy_command_array[4]+OY_NULLING_BUFFER);//check that oy_key_public has sufficient akoya to execute the nulling event
+            typeof(oy_block[4][oy_command_array[2]])!=="undefined"&&//check that oy_key_public has a positive balance in the akoya ledger
+            oy_block[4][oy_command_array[2]]>=oy_command_array[4]+OY_NULLING_BUFFER);//check that oy_key_public has sufficient akoya to execute the nulling event
     }],
     //["OY_META_SET", oy_protocol_assign, oy_key_public, oy_entropy_id, oy_meta_dapp, oy_meta_data]
-    "OY_META_SET":[function(oy_command_array) {
+    "OY_META_SET":[function(oy_command_array, oy_recover_flag) {
+        oy_recover_flag = null;//TODO shouldn't there be a check for the signing wallet?
         return (oy_command_array.length===6&&
             (oy_command_array[3]===""||oy_hash_check(oy_command_array[3]))&&//check that the input for oy_entropy_id is valid
             parseInt(oy_command_array[4])===oy_command_array[4]&&
@@ -186,13 +211,19 @@ const OY_BLOCK_COMMANDS = {
             oy_command_array[4]<=OY_META_DAPP_RANGE);
     }],
     //["OY_META_REVOKE", oy_protocol_assign, oy_key_public, oy_entropy_id]
-    "OY_META_REVOKE":[function(oy_command_array) {
+    "OY_META_REVOKE":[function(oy_command_array, oy_recover_flag) {
+        let oy_block;
+        if (oy_recover_flag===true) oy_block = OY_BLOCK_RECOVER;
+        else oy_block = OY_BLOCK;
         if (oy_command_array.length===4) return true;//check the element count in the command
         return false;
         //TODO
     }],
     //["OY_META_NULLING", oy_protocol_assign, oy_key_public, oy_entropy_id, oy_nulling_amount]
-    "OY_META_NULLING":[function(oy_command_array) {
+    "OY_META_NULLING":[function(oy_command_array, oy_recover_flag) {
+        let oy_block;
+        if (oy_recover_flag===true) oy_block = OY_BLOCK_RECOVER;
+        else oy_block = OY_BLOCK;
         if (oy_command_array.length===5) return true;//check the element count in the command
         return false;
         //TODO
@@ -200,8 +231,18 @@ const OY_BLOCK_COMMANDS = {
 };
 const OY_BLOCK_TRANSACTS = {
     "OY_HIVEMIND_CLUSTER":[function(oy_command_array, oy_recover_flag) {
+        let oy_block;
+        let oy_block_time;
+        if (oy_recover_flag===true) {
+            oy_block = OY_BLOCK_RECOVER;
+            oy_block_time = OY_BLOCK_TIME_RECOVER;
+        }
+        else {
+            oy_block = OY_BLOCK;
+            oy_block_time = OY_BLOCK_TIME;
+        }
         let oy_hold_check = function([oy_hold_hash, oy_hold_expire]) {
-            return (oy_hash_check(oy_hold_hash)&&typeof(OY_BLOCK[7][oy_hold_hash])!=="undefined"&&Number.isInteger(oy_hold_expire)&&oy_hold_expire<=OY_BLOCK_TIME+(oy_command_array[5][0][4]*3600)+OY_BLOCK_SECTORS[5][0]);
+            return (oy_hash_check(oy_hold_hash)&&typeof(oy_block[7][oy_hold_hash])!=="undefined"&&Number.isInteger(oy_hold_expire)&&oy_hold_expire<=oy_block_time+(oy_command_array[5][0][4]*3600)+OY_BLOCK_SECTORS[5][0]);
         };
         return (oy_command_array[5].length===2&&//verify dual sectors of oy_meta_data
             Number.isInteger(oy_command_array[5][0][1])&&//check author_rights is an integer
@@ -221,19 +262,22 @@ const OY_BLOCK_TRANSACTS = {
         //TODO timestamps in holding object must be adjusted to respect post_expiration_quota
     }],
     "OY_HIVEMIND_POST":[function(oy_command_array, oy_recover_flag) {
+        let oy_block;
+        if (oy_recover_flag===true) oy_block = OY_BLOCK_RECOVER;
+        else oy_block = OY_BLOCK;
         return (oy_command_array[3]===""&&//verify that oy_entropy_id was set as null, further preventing changes to already existing hivemind posts
             oy_command_array[5].length===2&&//verify dual sectors of oy_meta_data
             oy_hash_check(oy_command_array[5][0][1])&&//check that master_entropy_id is a valid hash
             Number.isInteger(oy_command_array[5][0][2])&&//check that author_public is an integer, must be -1 TODO unnecessary?
             Number.isInteger(oy_command_array[5][0][3])&&//check that submission_payment is an integer
-            typeof(OY_BLOCK[7][oy_command_array[5][0][1]])!=="undefined"&&//check that the master thread exists in the meta section of the meshblock
-            OY_BLOCK[7][oy_command_array[5][0][1]][3][0][0]===0&&//check that the master thread is structured as a master thread in the meta section of the meshblock
+            typeof(oy_block[7][oy_command_array[5][0][1]])!=="undefined"&&//check that the master thread exists in the meta section of the meshblock
+            oy_block[7][oy_command_array[5][0][1]][3][0][0]===0&&//check that the master thread is structured as a master thread in the meta section of the meshblock
             oy_command_array[5][0][2]===-1&&//check that author_public is set to -1, to be assigned by the meshblock
-            oy_command_array[5][0][3]>=OY_BLOCK[7][oy_command_array[5][0][1]][3][0][2]+((((OY_BLOCK[7][oy_command_array[5][0][1]][3][0][4]*3600)/OY_BLOCK_SECTORS[5][0]))*OY_AKOYA_FEE)&&//check that the submission_payment is large enough to cover the submission fee defined in the master thread, and enough akoya to host the data for the original intended amount of time
-            typeof(OY_BLOCK[4][oy_command_array[2]])!=="undefined"&&//check that the author of the transaction has a positive akoya balance
-            OY_BLOCK[4][oy_command_array[2]]>=oy_command_array[5][0][3]&&//check that the author of the transaction has sufficient akoya to fund the submission payment
-            typeof(OY_BLOCK[7][oy_command_array[5][0][1]])!=="undefined"&&//check that the master thread exists in the meta sector of the meshblock
-            ((OY_BLOCK[7][oy_command_array[5][0][1]][0]===""&&typeof(OY_BLOCK[4][oy_command_array[5][0][1]])!=="undefined")||(OY_BLOCK[7][oy_command_array[5][0][1]][0]!==""&&typeof(OY_BLOCK[4][OY_BLOCK[7][oy_command_array[5][0][1]][0]])!=="undefined"))&&//check that there is a funding wallet with a positive akoya balance for the master thread
+            oy_command_array[5][0][3]>=oy_block[7][oy_command_array[5][0][1]][3][0][2]+((((oy_block[7][oy_command_array[5][0][1]][3][0][4]*3600)/OY_BLOCK_SECTORS[5][0]))*OY_AKOYA_FEE)&&//check that the submission_payment is large enough to cover the submission fee defined in the master thread, and enough akoya to host the data for the original intended amount of time
+            typeof(oy_block[4][oy_command_array[2]])!=="undefined"&&//check that the author of the transaction has a positive akoya balance
+            oy_block[4][oy_command_array[2]]>=oy_command_array[5][0][3]&&//check that the author of the transaction has sufficient akoya to fund the submission payment
+            typeof(oy_block[7][oy_command_array[5][0][1]])!=="undefined"&&//check that the master thread exists in the meta sector of the meshblock
+            ((oy_block[7][oy_command_array[5][0][1]][0]===""&&typeof(oy_block[4][oy_command_array[5][0][1]])!=="undefined")||(oy_block[7][oy_command_array[5][0][1]][0]!==""&&typeof(oy_block[4][oy_block[7][oy_command_array[5][0][1]][0]])!=="undefined"))&&//check that there is a funding wallet with a positive akoya balance for the master thread
             oy_an_check(oy_command_array[5][1][0].replace(/[=]/g, ""))&&//check that the post title is in valid base64
             oy_handle_check(oy_command_array[5][1][1]));//check that the post content is a mesh handle
     }]
@@ -270,7 +314,6 @@ let OY_WARM = {};//tracking connections to nodes that are warming up
 let OY_COLD = {};//tracking connection shutdowns to specific nodes
 let OY_ROUTE_DYNAMIC = [];//tracks dynamic identifier for a routed data sequence
 let OY_LATENCY = {};//handle latency sessions
-let OY_RECOVER_ASSIGN = [null, null, false];//handle heal sessions
 let OY_PROPOSED = {};//nodes that have been recently proposed to for mutual peering
 let OY_PUSH_HOLD = {};//holds data contents ready for pushing to mesh
 let OY_PUSH_TALLY = {};//tracks data push nonces that were deposited on the mesh
@@ -303,6 +346,11 @@ let OY_BLOCK_COMMAND_CRYPT = {};
 let OY_BLOCK_WORK_SOLUTION = {};
 let OY_BLOCK_SYNC = {};
 let OY_BLOCK_RECOVER_MAP = new Map();
+let OY_RECOVER_ASSIGN = [null, null, false];//handle recover sessions
+let OY_BLOCK_RECOVER = null;
+let OY_BLOCK_HASH_RECOVER = null;
+let OY_BLOCK_TIME_RECOVER = null;
+let OY_BLOCK_NEXT_RECOVER = null;
 let OY_SYNC_TALLY = {};
 let OY_BLOCK_CHALLENGE = {};
 let OY_DIVE_PAYOUT = null;
@@ -841,29 +889,29 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         }
 
         if (oy_nonce_count===oy_data_payload[0]&&oy_base_pass===true) {//check if block_nonce equals block_nonce_max
-            let [oy_base_payload, oy_heal_payload] = JSON.parse(OY_BASE_BUILD.join(""));
+            let [oy_base_payload, oy_recover_payload] = JSON.parse(OY_BASE_BUILD.join(""));
             OY_BASE_BUILD = [];
 
-            if (OY_RECOVER_ASSIGN[0]===oy_peer_id&&OY_RECOVER_ASSIGN[1]!==null&&oy_heal_payload!==null&&(oy_time_local-OY_BLOCK_TIME<OY_BLOCK_SECTORS[4][0]||oy_time_local-OY_BLOCK_TIME<OY_BLOCK_SECTORS[0][0])) {
+            if (OY_RECOVER_ASSIGN[0]===oy_peer_id&&OY_RECOVER_ASSIGN[1]!==null&&oy_recover_payload!==null&&(oy_time_local-OY_BLOCK_TIME<OY_BLOCK_SECTORS[4][0]||oy_time_local-OY_BLOCK_TIME<OY_BLOCK_SECTORS[0][0])) {
                 if (oy_state_current()!==2) {//TODO prevent calculations longer than a second if less than [4][0]
                     oy_node_deny(oy_peer_id, "OY_DENY_RECOVER_MISALIGN");
                     return false;
                 }
                 else {
-                    let oy_heal_flat = LZString.decompressFromUTF16(oy_base_payload);
+                    let oy_recover_flat = LZString.decompressFromUTF16(oy_base_payload);
                     oy_base_payload = null;
 
-                    let [oy_block_work_solution, oy_block_command_crypt] = oy_heal_payload;
-                    oy_heal_payload = null;
+                    let [oy_block_work_solution, oy_block_command_crypt] = oy_recover_payload;
+                    oy_recover_payload = null;
 
-                    let oy_heal_block = JSON.parse(oy_heal_flat);
-                    let oy_heal_hash = oy_hash_gen(oy_heal_flat);
+                    let oy_recover_block = JSON.parse(oy_recover_flat);
+                    let oy_recover_hash = oy_hash_gen(oy_recover_flat);
 
-                    //TODO validate mesh range and work difficulty from heal_block
+                    //TODO validate mesh range and work difficulty from recover_block
 
                     for (let oy_block_time in oy_block_work_solution) {
                         for (let oy_key_public in oy_block_work_solution[oy_block_time]) {
-                            if (typeof(oy_block_work_solution[oy_block_time][oy_key_public])==="undefined"||!oy_work_verify(oy_hash_gen(parseInt(oy_block_time)+oy_key_public+oy_heal_hash), oy_block_work_solution[oy_block_time][oy_key_public][0], oy_heal_block[0][3])) {
+                            if (typeof(oy_block_work_solution[oy_block_time][oy_key_public])==="undefined"||!oy_work_verify(oy_hash_gen(parseInt(oy_block_time)+oy_key_public+oy_recover_hash), oy_block_work_solution[oy_block_time][oy_key_public][0], oy_recover_block[0][3])) {
                                 oy_node_deny(oy_peer_id, "OY_DENY_RECOVER_FAIL_A");
                                 return false;
                             }
@@ -871,20 +919,20 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                     }
 
                     let oy_command_rollback = {};
-                    for (let oy_command_hash in oy_heal_block[3]) {
-                        if (oy_heal_block[3][oy_command_hash][1][0]>OY_RECOVER_ASSIGN[1]) {
+                    for (let oy_command_hash in oy_recover_block[3]) {
+                        if (oy_recover_block[3][oy_command_hash][1][0]>OY_RECOVER_ASSIGN[1]) {
                             let oy_command_crypt;
                             if (typeof(oy_block_command_crypt[oy_command_hash])==="undefined"||!(oy_command_crypt = LZString.decompressFromUTF16(oy_block_command_crypt[oy_command_hash][1]))) {
                                 oy_node_deny(oy_peer_id, "OY_DENY_RECOVER_FAIL_B");
                                 return false;
                             }
-                            if (oy_heal_block[3][oy_command_hash][1][0]!==oy_block_command_crypt[oy_command_hash][0]) {
+                            if (oy_recover_block[3][oy_command_hash][1][0]!==oy_block_command_crypt[oy_command_hash][0]) {
                                 oy_node_deny(oy_peer_id, "OY_DENY_RECOVER_FAIL_C");
                                 return false;
                             }
                             else {
-                                if (typeof(oy_command_rollback[oy_heal_block[3][oy_command_hash][1][0]])==="undefined") oy_command_rollback[oy_heal_block[3][oy_command_hash][1][0]] = [];
-                                oy_command_rollback[oy_heal_block[3][oy_command_hash][1][0]].push([oy_heal_block[3][oy_command_hash], oy_command_crypt, oy_command_hash]);
+                                if (typeof(oy_command_rollback[oy_recover_block[3][oy_command_hash][1][0]])==="undefined") oy_command_rollback[oy_recover_block[3][oy_command_hash][1][0]] = [];
+                                oy_command_rollback[oy_recover_block[3][oy_command_hash][1][0]].push([oy_recover_block[3][oy_command_hash], oy_command_crypt, oy_command_hash]);
                             }
                         }
                     }
@@ -933,22 +981,9 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                         OY_BLOCK_HASH_RECOVER = oy_hash_gen(JSON.stringify(OY_BLOCK_RECOVER));
                     }
 
-                    if (OY_BLOCK_TIME_RECOVER!==oy_time_restore) {
-                        oy_node_deny(oy_peer_id, "OY_DENY_RECOVER_FAIL_F");
-                        return false;
-                    }
-
-                    OY_BLOCK_RECOVER[0][0] = OY_MESH_DYNASTY;
-                    OY_BLOCK_RECOVER[0][1] = oy_time_restore;
-                    OY_BLOCK_RECOVER[0][4] = OY_BLOCK_BOOTTIME;
-
-                    let oy_hash_flat = JSON.stringify(OY_BLOCK_RECOVER);
-                    let oy_hash_calc = oy_hash_gen(oy_hash_flat);
-
-                    if (oy_hash_calc===oy_heal_hash) {
-                        OY_BLOCK_FLAT = oy_hash_flat;
-                        oy_hash_flat = null;
-                        OY_BLOCK_HASH = oy_hash_calc;
+                    if (OY_BLOCK_HASH_RECOVER===oy_recover_hash) {
+                        OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK_RECOVER);
+                        OY_BLOCK_HASH = oy_clone_object(OY_BLOCK_HASH_RECOVER);
                         OY_BLOCK_WEIGHT = new Blob([OY_BLOCK_FLAT]).size;
 
                         oy_block_finish();
@@ -963,10 +998,11 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                         oy_node_deny(oy_peer_id, "OY_DENY_RECOVER_FAIL_G");
                         return false;
                     }
+
                     oy_block_recover_reset();
                 }
             }
-            else if (oy_heal_payload===null) {
+            else if (oy_recover_payload===null) {
                 OY_BLOCK_DIFF = true;
 
                 OY_BLOCK_FLAT = LZString.decompressFromUTF16(oy_base_payload);
@@ -1089,7 +1125,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         return true;
     }
     else if (oy_data_flag==="OY_PEER_TERMINATE") {
-        if (oy_peer_id===OY_RECOVER_ASSIGN[0]) OY_RECOVER_ASSIGN = [null, null, false];
+        if (oy_peer_id===OY_RECOVER_ASSIGN[0]) oy_block_recover_reset();
         oy_log_debug("TERMINATED: "+JSON.stringify(oy_data_payload)+" - "+oy_peer_id+" - "+((Date.now()/1000)-OY_BLOCK_TIME));
         console.log("TERMINATED: "+JSON.stringify(oy_data_payload)+" - "+oy_peer_id+" - "+((Date.now()/1000)-OY_BLOCK_TIME));
         oy_node_deny(oy_peer_id, "OY_DENY_TERMINATE_RETURN");//return the favour
@@ -1420,7 +1456,7 @@ function oy_node_deny(oy_node_id, oy_deny_reason) {
         delete OY_PEERS[oy_node_id];
         if (Object.keys(OY_PEERS).length===0) document.dispatchEvent(OY_PEERS_NULL);
     }
-    if (OY_RECOVER_ASSIGN[0]===oy_node_id) OY_RECOVER_ASSIGN = [null, null, false];
+    if (OY_RECOVER_ASSIGN[0]===oy_node_id) oy_block_recover_reset();
     oy_data_beam(oy_node_id, "OY_PEER_TERMINATE", oy_deny_reason);
     oy_log("DENY["+oy_deny_reason+"]["+oy_short(oy_node_id)+"]");
     return true;
@@ -1583,11 +1619,11 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
         if (OY_RECOVER_ASSIGN[0]===null&&oy_state_current()===2&&OY_BLOCK_RECOVER_MAP.size>1&&oy_time_local-OY_BLOCK_TIME<OY_BLOCK_SECTORS[1][0]) {
             OY_RECOVER_ASSIGN[0] = oy_node_id;
             OY_RECOVER_ASSIGN[2] = true;
-            let oy_heal_response = [OY_BLOCK[0][2], OY_BLOCK[0][3], {}];
+            let oy_recover_response = [OY_BLOCK[0][2], OY_BLOCK[0][3], {}];
             for (let [oy_key, oy_value] in OY_BLOCK_RECOVER_MAP) {
-                oy_heal_response[2][oy_key] = oy_value[2];//TODO consider a check to prevent sending expired heal entries
+                oy_recover_response[2][oy_key] = oy_value[2];//TODO consider a check to prevent sending expired recover entries
             }
-            oy_data_beam(oy_node_id, "OY_RECOVER_RESPONSE", oy_heal_response);
+            oy_data_beam(oy_node_id, "OY_RECOVER_RESPONSE", oy_recover_response);
         }
         else oy_data_beam(oy_node_id, "OY_RECOVER_UNREADY", null);
     }
@@ -1595,31 +1631,31 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
         if (OY_RECOVER_ASSIGN[0]===oy_node_id&&OY_RECOVER_ASSIGN[1]===null&&oy_state_current()===2&&OY_BLOCK_RECOVER_MAP.size>1&&oy_time_local-OY_BLOCK_TIME<OY_BLOCK_SECTORS[1][0]) {
             if (OY_RECOVER_ASSIGN[2]===false&&oy_data_payload[0]<OY_BLOCK[0][2]) {//TODO add check for difficulty proximity
                 OY_RECOVER_ASSIGN[2] = true;
-                let oy_heal_response = [OY_BLOCK[0][2], OY_BLOCK[0][3], {}];
+                let oy_recover_response = [OY_BLOCK[0][2], OY_BLOCK[0][3], {}];
                 for (let [oy_key, oy_value] in OY_BLOCK_RECOVER_MAP) {
-                    oy_heal_response[2][oy_key] = oy_value[2];//TODO consider a check to prevent sending expired heal entries
+                    oy_recover_response[2][oy_key] = oy_value[2];//TODO consider a check to prevent sending expired recover entries
                 }
-                oy_data_beam(oy_node_id, "OY_RECOVER_RESPONSE", oy_heal_response);
+                oy_data_beam(oy_node_id, "OY_RECOVER_RESPONSE", oy_recover_response);
                 return true;
             }
-            let oy_heal_sort = [];
+            let oy_recover_sort = [];
             for (let [oy_key, oy_value] in OY_BLOCK_RECOVER_MAP) {
-                oy_heal_sort.push([oy_key, oy_value[0]]);
+                oy_recover_sort.push([oy_key, oy_value[0]]);
             }
-            oy_heal_sort.reverse();
-            let oy_heal_match = null;
-            for (let i in oy_heal_sort) {
-                if (typeof(oy_data_payload[2][oy_heal_sort[i][0]])!=="undefined"&&oy_heal_sort[i][1]===oy_data_payload[2][oy_heal_sort[i][0]]) {
-                    oy_heal_match = oy_heal_sort[i][0];
+            oy_recover_sort.reverse();
+            let oy_recover_match = null;
+            for (let i in oy_recover_sort) {
+                if (typeof(oy_data_payload[2][oy_recover_sort[i][0]])!=="undefined"&&oy_recover_sort[i][1]===oy_data_payload[2][oy_recover_sort[i][0]]) {
+                    oy_recover_match = oy_recover_sort[i][0];
                     break;
                 }
             }
-            if (oy_heal_match===null) {
-                OY_RECOVER_ASSIGN = [null, null, false];
+            if (oy_recover_match===null) {
+                oy_block_recover_reset();
                 oy_data_beam(oy_node_id, "OY_RECOVER_REJECT", null);
             }
             else {
-                OY_RECOVER_ASSIGN[1] = oy_heal_match;
+                OY_RECOVER_ASSIGN[1] = oy_recover_match;
                 oy_data_beam(oy_node_id, "OY_RECOVER_CONTINUE", OY_BLOCK[0][2]);
                 oy_node_initiate(oy_node_id);
             }
@@ -1632,7 +1668,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_PEER_TERMINATE"||oy_data_flag==="OY_PEER_UNREADY"||oy_data_flag==="OY_RECOVER_UNREADY"||oy_data_flag==="OY_RECOVER_REJECT") {
         if (oy_node_id===OY_RECOVER_ASSIGN[0]) {
-            OY_RECOVER_ASSIGN = [null, null, false];
+            oy_block_recover_reset();
             oy_node_deny(oy_node_id, "OY_DENY_RECOVER_REJECT");
         }
         return false;
@@ -2320,7 +2356,7 @@ function oy_akoya_transfer(oy_key_private, oy_key_public, oy_transact_fee, oy_tr
     if (OY_BLOCK_HASH===null||oy_key_private===null||oy_key_public===null) return false;
 
     let oy_command_array = ["OY_AKOYA_SEND", [-1, -1, oy_transact_fee], oy_key_public, Math.floor(oy_transfer_amount*OY_AKOYA_DECIMALS), oy_receive_public];
-    if (!OY_BLOCK_COMMANDS[oy_command_array[0]][0](oy_command_array)) return false;
+    if (!OY_BLOCK_COMMANDS[oy_command_array[0]][0](oy_command_array, false)) return false;
 
     return oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm);
 }
@@ -2329,7 +2365,7 @@ function oy_dns_transfer(oy_key_private, oy_key_public, oy_transact_fee, oy_dns_
     if (OY_BLOCK_HASH===null||oy_key_private===null||oy_key_public===null) return false;
 
     let oy_command_array = ["OY_DNS_TRANSFER", [-1, -1, oy_transact_fee], oy_key_public, oy_dns_name, oy_receive_public];
-    if (!OY_BLOCK_COMMANDS[oy_command_array[0]][0](oy_command_array)) return false;
+    if (!OY_BLOCK_COMMANDS[oy_command_array[0]][0](oy_command_array, false)) return false;
 
     return oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm);
 }
@@ -2338,7 +2374,7 @@ function oy_hivemind_cluster(oy_key_private, oy_key_public, oy_transact_fee, oy_
     if (OY_BLOCK_HASH===null||oy_key_private===null||oy_key_public===null) return false;
 
     let oy_command_array = ["OY_META_SET", [-1, -1, oy_transact_fee], oy_key_public, oy_entropy_id, 1, [[0, oy_author_revoke, Math.floor(oy_submission_price*OY_AKOYA_DECIMALS), oy_vote_limit, oy_expire_quota, oy_capacity_active, oy_capacity_inactive], oy_post_holder]];
-    if (!OY_BLOCK_COMMANDS[oy_command_array[0]][0](oy_command_array)||!OY_BLOCK_TRANSACTS["OY_HIVEMIND_CLUSTER"][0](oy_command_array)) return false;
+    if (!OY_BLOCK_COMMANDS[oy_command_array[0]][0](oy_command_array, false)||!OY_BLOCK_TRANSACTS["OY_HIVEMIND_CLUSTER"][0](oy_command_array, false)) return false;
 
     return oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm);
 }
@@ -2347,7 +2383,7 @@ function oy_hivemind_post(oy_key_private, oy_key_public, oy_transact_fee, oy_clu
     if (OY_BLOCK_HASH===null||oy_key_private===null||oy_key_public===null) return false;
 
     let oy_command_array = ["OY_META_SET", [-1, -1, oy_transact_fee], oy_key_public, "", 1, [[1, oy_cluster_id, -1, Math.floor(oy_submission_payment*OY_AKOYA_DECIMALS)], [LZString.compressToBase64(oy_post_title), oy_post_handle]]];
-    if (!OY_BLOCK_COMMANDS[oy_command_array[0]][0](oy_command_array)||!OY_BLOCK_TRANSACTS["OY_HIVEMIND_POST"][0](oy_command_array)) return false;
+    if (!OY_BLOCK_COMMANDS[oy_command_array[0]][0](oy_command_array, false)||!OY_BLOCK_TRANSACTS["OY_HIVEMIND_POST"][0](oy_command_array, false)) return false;
 
     return oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm);
 }
@@ -2445,6 +2481,14 @@ function oy_block_command_scan(oy_command_verify, oy_recover_flag, oy_command_po
     else return false;
 }
 
+function oy_block_recover_reset() {
+    OY_RECOVER_ASSIGN = [null, null, false];
+    OY_BLOCK_RECOVER = null;
+    OY_BLOCK_HASH_RECOVER = null;
+    OY_BLOCK_TIME_RECOVER = null;
+    OY_BLOCK_NEXT_RECOVER = null;
+}
+
 function oy_block_stability(oy_list) {
     let oy_stability_avg = function(oy_data){
         let oy_sum = oy_data.reduce(function(oy_sum, oy_value){
@@ -2533,9 +2577,9 @@ function oy_block_engine() {
         OY_BLOCK_SYNC = {};
         OY_SYNC_TALLY = {};
         OY_LIGHT_PROCESS = false;
-        OY_RECOVER_ASSIGN = [null, null, false];
         OY_BASE_BUILD = [];
         OY_BOOST_BUILD = [];
+        oy_block_recover_reset();
         let oy_block_continue = true;
 
         for (let i in OY_WORKER_THREADS) {
@@ -3027,20 +3071,27 @@ function oy_block_range(oy_mesh_range_new) {
 
 function oy_block_process(oy_command_execute, oy_full_flag, oy_recover_flag) {
     let oy_block;
+    let oy_block_hash;
+    let oy_block_time;
     if (oy_recover_flag===true) {
         oy_block = OY_BLOCK_RECOVER;
+        oy_block_hash = OY_BLOCK_HASH_RECOVER;
+        oy_block_time = OY_BLOCK_TIME_RECOVER;
     }
     else {
         oy_block = OY_BLOCK;
+        oy_block_hash = OY_BLOCK_HASH;
+        oy_block_time = OY_BLOCK_TIME;
     }
     //MAINTAIN--------------------------------
     oy_block[0][0] = OY_MESH_DYNASTY;
     oy_block[0][1] = OY_BLOCK_TIME;
+    oy_block[0][4] = OY_BLOCK_BOOTTIME;
     oy_block[0][5]++;
     oy_block[0][6]++;
     oy_block[0][9].push(oy_block[0][7]);
 
-    let oy_command_expire = OY_BLOCK_TIME - (OY_BLOCK_EPOCH_MACRO*OY_BLOCK_SECTORS[5][1]);//TODO calibrate purge timing for snapshot precision
+    let oy_command_expire = oy_block_time - (OY_BLOCK_EPOCH_MACRO*OY_BLOCK_SECTORS[5][1]);//TODO calibrate purge timing for snapshot precision
     for (let oy_command_hash in oy_block[3]) {
         if (oy_block[3][oy_command_hash][1][0]===oy_command_expire) delete oy_block[3][oy_command_hash];
     }
@@ -3059,25 +3110,27 @@ function oy_block_process(oy_command_execute, oy_full_flag, oy_recover_flag) {
         if (oy_block[0][3]>OY_WORK_MAX) oy_block[0][3] = OY_WORK_MAX;
         if (oy_block[0][3]<OY_WORK_MIN) oy_block[0][3] = OY_WORK_MIN;
 
-        oy_block[2][0].push(OY_BLOCK_HASH);
+        oy_block[2][0].push(oy_block_hash);
         while (oy_block[2][0].length>OY_BLOCK_SNAPSHOT_KEEP) oy_block[2][0].shift();
     }
 
-    oy_block[2][1].push(OY_BLOCK_HASH);
+    oy_block[2][1].push(oy_block_hash);
     while (oy_block[2][1].length>OY_BLOCK_EPOCH_MICRO) oy_block[2][1].shift();
 
     //epoch micro processing - 10 min interval - 10 blocks
     if (oy_block[0][6]===OY_BLOCK_EPOCH_MICRO) {
         oy_block[0][6] = 0;
 
-        if (oy_full_flag===true||OY_LIGHT_LEAN===false) {
-            let oy_block_reference = OY_BLOCK_TIME-(OY_BLOCK_EPOCH_MICRO*OY_BLOCK_SECTORS[5][1]);
-            for (let oy_block_timestamp in OY_BLOCK_RECOVER_MAP.keys()) {
-                if (oy_block_timestamp<=oy_block_reference) OY_BLOCK_RECOVER_MAP.delete(oy_block_timestamp);//TODO calibrate purge timing for snapshot precision
+        if (oy_recover_flag===false) {
+            if (oy_full_flag===true||OY_LIGHT_LEAN===false) {
+                let oy_block_reference = OY_BLOCK_TIME-(OY_BLOCK_EPOCH_MICRO*OY_BLOCK_SECTORS[5][1]);
+                for (let oy_block_timestamp in OY_BLOCK_RECOVER_MAP.keys()) {
+                    if (oy_block_timestamp<=oy_block_reference) OY_BLOCK_RECOVER_MAP.delete(oy_block_timestamp);//TODO calibrate purge timing for snapshot precision
+                }
+                if (OY_BLOCK_COMPRESS!==null) OY_BLOCK_RECOVER_MAP.set(OY_BLOCK_TIME, [OY_BLOCK_HASH, oy_block[2][1], OY_BLOCK_COMPRESS]);
             }
-            if (OY_BLOCK_COMPRESS!==null) OY_BLOCK_RECOVER_MAP.set(OY_BLOCK_TIME, [OY_BLOCK_HASH, oy_block[2][1], OY_BLOCK_COMPRESS]);
+            else OY_BLOCK_RECOVER_MAP = new Map();
         }
-        else OY_BLOCK_RECOVER_MAP = new Map();
     }
     //MAINTAIN--------------------------------
 
@@ -3113,7 +3166,7 @@ function oy_block_process(oy_command_execute, oy_full_flag, oy_recover_flag) {
     }
 
     for (let oy_dns_name in oy_block[6]) {
-        if (oy_block[6][oy_dns_name][2]<=OY_BLOCK_TIME) {
+        if (oy_block[6][oy_dns_name][2]<=oy_block_time) {
             oy_block[4]["oy_escrow_dns"] -= oy_block[6][oy_dns_name][1];
             if (oy_full_flag===true) oy_dive_bounty += oy_block[6][oy_dns_name][1];
             oy_block[5][oy_dns_name][0] = oy_block[6][oy_dns_name][0];
@@ -3146,7 +3199,7 @@ function oy_block_process(oy_command_execute, oy_full_flag, oy_recover_flag) {
         else if (oy_block[7][oy_entropy_id][1]===1) {
             if (oy_block[7][oy_entropy_id][3][0][0]===0) {
                 for (let oy_entropy_id_sub in oy_block[7][oy_entropy_id][3][1]) {
-                    if (OY_BLOCK_TIME>=oy_block[7][oy_entropy_id][3][1][oy_entropy_id_sub]||typeof(oy_block[7][oy_entropy_id_sub])==="undefined") delete oy_block[7][oy_entropy_id][3][1][oy_entropy_id_sub];
+                    if (oy_block_time>=oy_block[7][oy_entropy_id][3][1][oy_entropy_id_sub]||typeof(oy_block[7][oy_entropy_id_sub])==="undefined") delete oy_block[7][oy_entropy_id][3][1][oy_entropy_id_sub];
                 }
             }
         }
@@ -3221,7 +3274,7 @@ function oy_block_process(oy_command_execute, oy_full_flag, oy_recover_flag) {
 
                 if (oy_bid_pass===true) {
                     if (typeof(oy_block[5][oy_command_execute[i][0][3]])==="undefined") oy_block[5][oy_command_execute[i][0][3]] = ["A", 99, ""];//[owner, nav_size, nav_data]
-                    oy_block[6][oy_command_execute[i][0][3]] = [oy_command_execute[i][0][2], oy_command_execute[i][0][4], OY_BLOCK_TIME+OY_DNS_AUCTION_DURATION];//[bid holder, bid amount, auction expire]
+                    oy_block[6][oy_command_execute[i][0][3]] = [oy_command_execute[i][0][2], oy_command_execute[i][0][4], oy_block_time+OY_DNS_AUCTION_DURATION];//[bid holder, bid amount, auction expire]
                 }
             }
         }
@@ -3243,7 +3296,7 @@ function oy_block_process(oy_command_execute, oy_full_flag, oy_recover_flag) {
                 delete oy_block[4][oy_command_execute[i][0][3]];
                 continue;
             }
-            else OY_BLOCK[5][oy_command_execute[i][0][3]][0] = "";
+            else oy_block[5][oy_command_execute[i][0][3]][0] = "";
         }
         //["OY_META_SET", oy_protocol_assign, oy_key_public, oy_entropy_id, oy_meta_dapp, oy_meta_data]
         else if (oy_command_execute[i][0][0]==="OY_META_SET") {
@@ -3254,7 +3307,7 @@ function oy_block_process(oy_command_execute, oy_full_flag, oy_recover_flag) {
 
                 let oy_entropy_id;
                 if (oy_command_execute[i][0][3]==="") {//recycle meshblock entropy to ensure random meta handles are assigned in a decentralized manner
-                    oy_entropy_id = oy_hash_gen(OY_BLOCK_HASH+oy_command_execute[i][0]);
+                    oy_entropy_id = oy_hash_gen(oy_block_hash+oy_command_execute[i][0]);
                     if (typeof(oy_block[7][oy_entropy_id])!=="undefined") continue;//there is a nonzero chance that a legitimate META_SET transaction would get rejected and need to be tried again
                 }
                 else oy_entropy_id = oy_command_execute[i][0][3];
@@ -3272,12 +3325,12 @@ function oy_block_process(oy_command_execute, oy_full_flag, oy_recover_flag) {
                     //MASTER[0] = [0, author_revoke, submission_price, vote_limit, expire_quota, capacity_active, capacity_inactive]
                     //MASTER[1] = {} - holding object for posts
                     if (oy_command_execute[i][0][5][0][0]===0) {
-                        if (!OY_BLOCK_TRANSACTS["OY_HIVEMIND_CLUSTER"][0](oy_command_execute[i][0])) continue;
+                        if (!OY_BLOCK_TRANSACTS["OY_HIVEMIND_CLUSTER"][0](oy_command_execute[i][0], oy_recover_flag)) continue;
                     }
                     //POST[0] = [1, master_entropy_id, author_public, submission_payment]
                     //POST[1] = [] - rendering object for post content
                     else if (oy_command_execute[i][0][5][0][0]===1) {
-                        if (!OY_BLOCK_TRANSACTS["OY_HIVEMIND_POST"][0](oy_command_execute[i][0])) continue;
+                        if (!OY_BLOCK_TRANSACTS["OY_HIVEMIND_POST"][0](oy_command_execute[i][0], oy_recover_flag)) continue;
 
                         oy_meta_owner = "";
                         oy_meta_data[0][2] = oy_command_execute[i][0][2];
@@ -3300,7 +3353,7 @@ function oy_block_process(oy_command_execute, oy_full_flag, oy_recover_flag) {
                         else {
                             if (Object.keys(oy_block[7][oy_command_execute[i][0][5][0][1]][1]).length<oy_block[7][oy_command_execute[i][0][5][0][1]][3][0][5]+oy_block[7][oy_command_execute[i][0][5][0][1]][3][0][6]&&
                                 typeof(oy_block[7][oy_command_execute[i][0][5][0][1]][3][1][oy_entropy_id])==="undefined") {
-                                oy_block[7][oy_command_execute[i][0][5][0][1]][3][1][oy_entropy_id] = OY_BLOCK_TIME+(oy_block[7][oy_command_execute[i][0][5][0][1]][3][0][4]*3600);
+                                oy_block[7][oy_command_execute[i][0][5][0][1]][3][1][oy_entropy_id] = oy_block_time+(oy_block[7][oy_command_execute[i][0][5][0][1]][3][0][4]*3600);
                             }
                             else continue;
                         }
@@ -3452,7 +3505,8 @@ function oy_block_finish() {
             }
             OY_PEERS[oy_peer_select][2] = true;
         }
-        OY_RECOVER_ASSIGN = [null, null, false];
+
+        oy_block_recover_reset();//TODO verify if applicable
     }
 }
 
