@@ -29,7 +29,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.68;
 const OY_BLOCK_RANGE_MIN = 5;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1582661400;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1582695500;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [36, 36000], [57, 57000], [58, 58000], [59, 59000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -976,8 +976,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                         let oy_dive_ledger = {};
                         for (let oy_key_public in oy_block_work_solution[OY_BLOCK_TIME_RECOVER]) {
                             if (!oy_work_verify(oy_hash_gen(OY_BLOCK_TIME_RECOVER+oy_key_public+OY_BLOCK_HASH_RECOVER), oy_block_work_solution[OY_BLOCK_TIME_RECOVER][oy_key_public][0], OY_BLOCK_RECOVER[0][3])) {
-                                oy_node_deny(oy_peer_id, "OY_DENY_RECOVER_FAIL_G");
                                 oy_log_debug("SILVER2: "+JSON.stringify([LZString.decompressFromUTF16(OY_BLOCK_RECOVER_MAP.get(OY_RECOVER_ASSIGN[1])[2]), oy_recover_flat, oy_recover_payload]));
+                                oy_node_deny(oy_peer_id, "OY_DENY_RECOVER_FAIL_G");
                                 return false;
                             }
                             oy_dive_ledger[oy_key_public] = [(typeof(OY_BLOCK_RECOVER[1][oy_key_public])!=="undefined")?OY_BLOCK_RECOVER[1][oy_key_public][0]+1:1, (typeof(OY_BLOCK_RECOVER[1][oy_key_public])!=="undefined")?OY_BLOCK_RECOVER[1][oy_key_public][1]:0];//[continuity_count, transact_fee_payout]
@@ -1133,6 +1133,11 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
         delete OY_BLOCK_CHALLENGE[oy_peer_id];
         OY_PEERS[oy_peer_id][1] = 2;
+
+        if (oy_peer_id===OY_RECOVER_ASSIGN[0]) {
+            oy_log_debug("FULL_PASS: "+oy_peer_id);//TODO reset reservetime of node
+            oy_block_recover_reset();
+        }
         return true;
     }
     else if (oy_data_flag==="OY_PEER_LATENCY") {
@@ -1145,7 +1150,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         return true;
     }
     else if (oy_data_flag==="OY_PEER_TERMINATE") {
-        //if (oy_peer_id===OY_RECOVER_ASSIGN[0]) oy_block_recover_reset();TODO re-enable
+        if (oy_peer_id===OY_RECOVER_ASSIGN[0]) oy_block_recover_reset();
         oy_log_debug("TERMINATED: "+JSON.stringify(oy_data_payload)+" - "+oy_peer_id+" - "+((Date.now()/1000)-OY_BLOCK_TIME));
         console.log("TERMINATED: "+JSON.stringify(oy_data_payload)+" - "+oy_peer_id+" - "+((Date.now()/1000)-OY_BLOCK_TIME));
         oy_node_deny(oy_peer_id, "OY_DENY_TERMINATE_RETURN");//return the favour
@@ -1475,7 +1480,10 @@ function oy_node_deny(oy_node_id, oy_deny_reason, oy_node_preserve) {
         delete OY_PEERS[oy_node_id];
         if (Object.keys(OY_PEERS).length===0) document.dispatchEvent(OY_PEERS_NULL);
     }
-    if (OY_RECOVER_ASSIGN[0]===oy_node_id) oy_block_recover_reset();
+    if (OY_RECOVER_ASSIGN[0]===oy_node_id) {
+        oy_log_debug("BLUE["+oy_deny_reason+"]["+JSON.stringify(OY_RECOVER_ASSIGN)+"]");
+        oy_block_recover_reset();
+    }
     oy_data_beam(oy_node_id, "OY_PEER_TERMINATE", oy_deny_reason);
     if (typeof(oy_node_preserve)==="undefined"||oy_node_preserve!==true) oy_node_disconnect(oy_node_id);
     oy_node_reset(oy_node_id);
@@ -1598,33 +1606,22 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
 
     if (oy_data_flag==="OY_PEER_ACCEPT") {//check if this node had previously proposed to peer with self
         oy_log_debug("BERRY: "+JSON.stringify([typeof(OY_PROPOSED[oy_node_id])!=="undefined", OY_RECOVER_ASSIGN[0]===oy_node_id, oy_node_id, OY_RECOVER_ASSIGN]));
-        if (typeof(OY_PROPOSED[oy_node_id])!=="undefined") oy_latency_test(oy_node_id, "OY_PEER_ACCEPT", oy_data_payload);
-        return true;
+        if (typeof(OY_PROPOSED[oy_node_id])!=="undefined"&&(OY_RECOVER_ASSIGN[0]!==oy_node_id||(OY_RECOVER_ASSIGN[0]===oy_node_id&&oy_data_payload===2))) oy_latency_test(oy_node_id, "OY_PEER_ACCEPT", oy_data_payload);
+        else oy_node_deny(oy_node_id, "OY_DENY_FALSE_ACCEPT");
     }
     else if (oy_data_flag==="OY_PEER_AFFIRM") {
-        if (typeof(OY_PEERS_PRE[oy_node_id])!=="undefined") {
-            oy_peer_add(oy_node_id, OY_PEERS_PRE[oy_node_id]);
-            return true;
-        }
-        else {
-            oy_node_deny(oy_node_id, "OY_DENY_FALSE_AFFIRM");
-            return false;
-        }
+        if (typeof(OY_PEERS_PRE[oy_node_id])!=="undefined") oy_peer_add(oy_node_id, OY_PEERS_PRE[oy_node_id]);
+        else oy_node_deny(oy_node_id, "OY_DENY_FALSE_AFFIRM");
     }
     else if (oy_data_flag==="OY_PEER_LATENCY") {//respond to latency ping from node with peer proposal arrangement
         if (typeof(OY_PROPOSED[oy_node_id])!=="undefined"||typeof(OY_PEERS_PRE[oy_node_id])!=="undefined") {
-            if (oy_data_payload[0]!==0&&OY_BLOCK_HASH===null) {
-                oy_node_deny(oy_node_id, "OY_DENY_BLOCK_NULL_B");
-                return false;
+            if (oy_data_payload[0]!==0&&OY_BLOCK_HASH===null) oy_node_deny(oy_node_id, "OY_DENY_BLOCK_NULL_B");
+            else {
+                oy_data_payload[1] = oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+((oy_data_payload[0]===0)?"0000000000000000000000000000000000000000":OY_BLOCK_HASH)+oy_data_payload[1]);
+                oy_data_beam(oy_node_id, "OY_LATENCY_RESPONSE", oy_data_payload);
             }
-            oy_data_payload[1] = oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+((oy_data_payload[0]===0)?"0000000000000000000000000000000000000000":OY_BLOCK_HASH)+oy_data_payload[1]);
-            oy_data_beam(oy_node_id, "OY_LATENCY_RESPONSE", oy_data_payload);
-            return true;
         }
-        else {
-            oy_data_beam(oy_node_id, "OY_LATENCY_DECLINE", null);
-            return false;
-        }
+        else oy_data_beam(oy_node_id, "OY_LATENCY_DECLINE", null);
     }
     else if (oy_data_flag==="OY_PEER_REQUEST") {
         let oy_callback_local;//TODO timing validation
@@ -1640,12 +1637,8 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
             };
         }
         oy_node_connect(oy_node_id, oy_callback_local);
-        return true;
     }
-    else if (oy_data_flag==="OY_LATENCY_DECLINE") {
-        oy_node_deny(oy_node_id, "OY_DENY_LATENCY_DECLINE");
-        return false;
-    }
+    else if (oy_data_flag==="OY_LATENCY_DECLINE") oy_node_deny(oy_node_id, "OY_DENY_LATENCY_DECLINE");
     else if (oy_data_flag==="OY_RECOVER_REQUEST") {
         oy_log_debug("RECOVER_DEBUG_A: "+oy_node_id);
         if (OY_RECOVER_ASSIGN[0]===null&&oy_state_current()===2&&OY_BLOCK_RECOVER_MAP.size>1&&oy_time_local-OY_BLOCK_TIME<OY_BLOCK_SECTORS[1][0]) {
@@ -1694,8 +1687,8 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
             oy_log_debug("RECOVER_DEBUG_J: "+oy_node_id);
             if (oy_recover_match===null) {
                 oy_log_debug("RECOVER_DEBUG_K: "+oy_node_id);
-                //oy_block_recover_reset();TODO re-enable
-                oy_data_beam(oy_node_id, "OY_RECOVER_REJECT_A", null);
+                oy_block_recover_reset();
+                oy_data_beam(oy_node_id, "OY_RECOVER_REJECT", null);
             }
             else {
                 OY_RECOVER_ASSIGN[1] = oy_recover_match;
@@ -1722,20 +1715,19 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_PEER_TERMINATE"||oy_data_flag==="OY_PEER_UNREADY"||oy_data_flag==="OY_RECOVER_UNREADY"||oy_data_flag==="OY_RECOVER_REJECT") {
         if (oy_node_id===OY_RECOVER_ASSIGN[0]) {
-            //oy_block_recover_reset();TODO re-enable
-            oy_node_deny(oy_node_id, "OY_DENY_RECOVER_REJECT_B");
+            oy_block_recover_reset();
+            oy_node_deny(oy_node_id, "OY_DENY_RECOVER_REJECT");
             oy_log_debug("TREE: "+JSON.stringify([OY_RECOVER_ASSIGN, oy_data_payload]));
         }
         else {
             //oy_node_disconnect(oy_node_id);
             oy_node_reset(oy_node_id);
         }
-        return false;
     }
     else {
         oy_node_deny(oy_node_id, "OY_DENY_DATA_INCOHERENT");
+        oy_log_debug("INCOHERENT: "+oy_data_flag);
         console.log("INCOHERENT: "+oy_data_flag);
-        return false;
     }
 }
 
@@ -2803,7 +2795,7 @@ function oy_block_engine() {
 
             OY_BLOCK_CHALLENGE = {};
             for (let oy_peer_select in OY_PEERS) {
-                if (OY_PEERS[oy_peer_select][1]!==0) OY_BLOCK_CHALLENGE[oy_peer_select] = true;
+                if (OY_PEERS[oy_peer_select][1]!==0&&oy_peer_select!==OY_RECOVER_ASSIGN[0]) OY_BLOCK_CHALLENGE[oy_peer_select] = true;
             }
             for (let oy_peer_select in OY_PEERS) {
                 oy_latency_test(oy_peer_select, "OY_PEER_ROUTINE", OY_PEERS[oy_peer_select][1]);
@@ -2823,7 +2815,7 @@ function oy_block_engine() {
 
         oy_chrono(function() {
             for (let oy_peer_select in OY_BLOCK_CHALLENGE) {
-                if (typeof(OY_PEERS[oy_peer_select])!=="undefined"&&OY_PEERS[oy_peer_select][1]!==0) oy_node_deny(oy_peer_select, "OY_DENY_BLOCK_CHALLENGE");
+                if (typeof(OY_PEERS[oy_peer_select])!=="undefined"&&OY_PEERS[oy_peer_select][1]!==0&&oy_peer_select!==OY_RECOVER_ASSIGN[0]) oy_node_deny(oy_peer_select, "OY_DENY_BLOCK_CHALLENGE");
             }
             OY_BLOCK_CHALLENGE = {};
 
@@ -3608,7 +3600,7 @@ function oy_block_finish() {
             OY_PEERS[oy_peer_select][2] = true;
         }
 
-        //oy_block_recover_reset();//TODO verify if applicable TODO re-enable
+        oy_block_recover_reset();//TODO verify if applicable
     }
 }
 

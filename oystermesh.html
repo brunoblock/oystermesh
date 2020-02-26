@@ -1677,13 +1677,15 @@
         let oy_avg_beam = [];
         let oy_avg_soak = [];
         let oy_peer_keep = [];
-        for (let oy_peer_local in OY_PEERS) {
-            oy_data_measure(true, oy_peer_local, null);
-            oy_data_measure(false, oy_peer_local, null);
-            oy_peer_keep.push([oy_peer_local, OY_PEERS[oy_peer_local][3], OY_PEERS[oy_peer_local][5], OY_PEERS[oy_peer_local][7], OY_PEERS[oy_peer_local][1], Math.floor(OY_PEERS[oy_peer_local][9]*100)]);
-            oy_avg_latency.push(OY_PEERS[oy_peer_local][3]);
-            oy_avg_beam.push(OY_PEERS[oy_peer_local][5]);
-            oy_avg_soak.push(OY_PEERS[oy_peer_local][7]);
+        for (let oy_peer_select in OY_PEERS) {
+            if (oy_peer_select===OY_RECOVER_ASSIGN[0]) continue;
+
+            oy_data_measure(true, oy_peer_select, null);
+            oy_data_measure(false, oy_peer_select, null);
+            oy_peer_keep.push([oy_peer_select, OY_PEERS[oy_peer_select][3], OY_PEERS[oy_peer_select][5], OY_PEERS[oy_peer_select][7], OY_PEERS[oy_peer_select][1], Math.floor(OY_PEERS[oy_peer_select][9]*100)]);
+            oy_avg_latency.push(OY_PEERS[oy_peer_select][3]);
+            oy_avg_beam.push(OY_PEERS[oy_peer_select][5]);
+            oy_avg_soak.push(OY_PEERS[oy_peer_select][7]);
         }
 
         let oy_blank = "---";
