@@ -29,7 +29,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.68;
 const OY_BLOCK_RANGE_MIN = 5;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1582713800;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1582738800;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [36, 36000], [57, 57000], [58, 58000], [59, 59000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -913,10 +913,10 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                     let oy_recover_block = JSON.parse(oy_recover_flat);
                     let oy_recover_hash = oy_hash_gen(oy_recover_flat);
 
-                    oy_log_debug("YELLOW: "+oy_recover_block[0][10]+" < "+OY_BLOCK[0][10]);
+                    oy_log_debug("YELLOW: ["+OY_SELF_SHORT+"] "+oy_recover_block[0][10]+" < "+OY_BLOCK[0][10]);
 
-                    if (oy_recover_block[0][10]<OY_BLOCK[0][10]||(oy_recover_block[0][10]===OY_BLOCK[0][10]&&Object.keys(oy_recover_block[3]).length<Object.keys(OY_BLOCK[3]).length)||typeof(oy_block_work_solution[oy_recover_block[0][1]])==="undefined") {
-                        oy_log_debug("YELLOW2: "+oy_recover_block[0][10]+" < "+OY_BLOCK[0][10]+" - "+typeof(oy_block_work_solution[oy_recover_block[0][1]]));
+                    if (oy_recover_block[0][10]<OY_BLOCK[0][10]||(oy_recover_block[0][10]===OY_BLOCK[0][10]&&Object.keys(oy_recover_block[3]).length<=Object.keys(OY_BLOCK[3]).length)||typeof(oy_block_work_solution[oy_recover_block[0][1]])==="undefined") {
+                        //oy_log_debug("YELLOW2: "+oy_recover_block[0][10]+" < "+OY_BLOCK[0][10]+" - "+typeof(oy_block_work_solution[oy_recover_block[0][1]]));
                         oy_node_deny(oy_peer_id, "OY_DENY_RECOVER_FAIL_A");
                         return false;
                     }
@@ -1009,13 +1009,21 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
                         oy_log_debug("RECOVER_PASS: "+OY_BLOCK_HASH);
 
+                        OY_WORK_SOLUTION = null;
+                        for (let i in OY_WORKER_THREADS) {
+                            OY_WORKER_THREADS[i].postMessage([1, [OY_SELF_PUBLIC, OY_BLOCK_NEXT, OY_BLOCK_HASH, OY_BLOCK[0][3]]]);
+                        }//TODO consider integrating into block_finish
+
                         oy_block_finish();
 
                         oy_data_beam(oy_peer_id, "OY_PEER_FULL", oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH));
 
-                        for (let oy_peer_select in OY_PEERS) {
-                            if (oy_peer_select!==oy_peer_id&&OY_PEERS[oy_peer_select][1]!==0) oy_node_deny(oy_peer_select, "OY_DENY_RECOVER_DROP");
-                        }
+                        let oy_time_offset = (Date.now()/1000)-OY_BLOCK_TIME;
+                        oy_chrono(function() {
+                            for (let oy_peer_select in OY_PEERS) {
+                                if (oy_peer_select!==oy_peer_id&&OY_PEERS[oy_peer_select][1]!==0) oy_node_deny(oy_peer_select, "OY_DENY_RECOVER_DROP");
+                            }
+                        }, ((oy_time_offset>OY_BLOCK_SECTORS[0][0])?(OY_BLOCK_SECTORS[4][0]-oy_time_offset)*1000:0)+OY_MESH_BUFFER[1]);
                     }
                     else {
                         oy_node_deny(oy_peer_id, "OY_DENY_RECOVER_FAIL_I");
@@ -1043,18 +1051,18 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                 if (typeof(OY_BLOCK_MAP)==="function") OY_BLOCK_MAP(0);
                 document.dispatchEvent(OY_BLOCK_TRIGGER);
                 document.dispatchEvent(OY_STATE_LIGHT);
+
+                let oy_time_offset = (Date.now()/1000)-OY_BLOCK_TIME;
+                oy_chrono(function() {
+                    for (let oy_peer_select in OY_PEERS) {
+                        oy_data_beam(oy_peer_select, "OY_PEER_LIGHT", oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH));
+                    }
+                }, (oy_time_offset>OY_BLOCK_SECTORS[0][0])?(((OY_BLOCK_SECTORS[5][0]-oy_time_offset)*1000)+OY_BLOCK_SECTORS[0][1])-OY_BLOCK_BUFFER_CLEAR[1]:((OY_BLOCK_SECTORS[0][0]-oy_time_offset)*1000)-OY_BLOCK_BUFFER_CLEAR[1]);
             }
             else {
                 oy_node_deny(oy_peer_id, "OY_DENY_BASE_MISALIGN");
                 return false;
             }
-
-            let oy_time_offset = (Date.now()/1000)-OY_BLOCK_TIME;
-            oy_chrono(function() {
-                for (let oy_peer_select in OY_PEERS) {
-                    oy_data_beam(oy_peer_select, "OY_PEER_LIGHT", oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH));
-                }
-            }, (oy_time_offset>OY_BLOCK_SECTORS[0][0])?(((OY_BLOCK_SECTORS[5][0]-oy_time_offset)*1000)+OY_BLOCK_SECTORS[0][1])-OY_BLOCK_BUFFER_CLEAR[1]:((OY_BLOCK_SECTORS[0][0]-oy_time_offset)*1000)-OY_BLOCK_BUFFER_CLEAR[1]);
         }
         return true;
     }
@@ -1602,7 +1610,7 @@ function oy_node_assign() {
 function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
     let oy_time_local = Date.now()/1000;
 
-    if (oy_data_flag==="OY_PEER_ACCEPT") {//check if this node had previously proposed to peer with self
+    if (oy_data_flag==="OY_PEER_ACCEPT") {
         oy_log_debug("BERRY: "+JSON.stringify([typeof(OY_PROPOSED[oy_node_id])!=="undefined", OY_RECOVER_ASSIGN[0]===oy_node_id, oy_node_id, OY_RECOVER_ASSIGN]));
         if (typeof(OY_PROPOSED[oy_node_id])!=="undefined"&&(OY_RECOVER_ASSIGN[0]!==oy_node_id||(OY_RECOVER_ASSIGN[0]===oy_node_id&&oy_data_payload===2))) oy_latency_test(oy_node_id, "OY_PEER_ACCEPT", oy_data_payload);
         else oy_node_deny(oy_node_id, "OY_DENY_FALSE_ACCEPT");
@@ -1647,7 +1655,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
             for (let [oy_key, oy_value] of OY_BLOCK_RECOVER_MAP) {
                 oy_recover_response[2][oy_key] = oy_value[0];//TODO consider a check to prevent sending expired recover entries
             }
-            oy_log_debug("RECOVER_DEBUG_C: "+oy_node_id);
+            oy_log_debug("ALPHA: "+oy_short(oy_node_id)+" "+JSON.stringify([OY_BLOCK[0], OY_BLOCK[1], OY_BLOCK[2]]));
             oy_data_beam(oy_node_id, "OY_RECOVER_RESPONSE", oy_recover_response);
         }
         else {
@@ -1659,14 +1667,19 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
         oy_log_debug("RECOVER_DEBUG_E: "+oy_node_id);
         if (OY_RECOVER_ASSIGN[0]===oy_node_id&&OY_RECOVER_ASSIGN[1]===null&&oy_state_current()===2&&OY_BLOCK_RECOVER_MAP.size>1&&oy_time_local-OY_BLOCK_TIME<OY_BLOCK_SECTORS[1][0]) {
             oy_log_debug("RECOVER_DEBUG_F: "+oy_node_id);
-            if (OY_RECOVER_ASSIGN[2]===false&&(oy_data_payload[0]<OY_BLOCK[0][10]||(oy_data_payload[0]===OY_BLOCK[0][10]&&oy_data_payload[1]<Object.keys(OY_BLOCK[3]).length))) {
+            if (OY_RECOVER_ASSIGN[2]===false) oy_log_debug("ALPHABETA: "+OY_SELF_SHORT+" "+oy_data_payload[0]+"<"+OY_BLOCK[0][10]+" - "+(oy_data_payload[0]<=OY_BLOCK[0][10])+" "+JSON.stringify([OY_BLOCK[0], OY_BLOCK[1], OY_BLOCK[2]]));
+            //oy_log_debug("PREYELLOW: ["+OY_SELF_SHORT+"] "+oy_data_payload[0]+" < "+OY_BLOCK[0][10]);
+            if (OY_RECOVER_ASSIGN[2]===false&&oy_data_payload[0]<=OY_BLOCK[0][10]) {
                 oy_log_debug("RECOVER_DEBUG_H: "+oy_node_id);
-                OY_RECOVER_ASSIGN[2] = true;
-                let oy_recover_response = [OY_BLOCK[0][10], Object.keys(OY_BLOCK[3]).length, {}];
-                for (let [oy_key, oy_value] of OY_BLOCK_RECOVER_MAP) {
-                    oy_recover_response[2][oy_key] = oy_value[0];//TODO consider a check to prevent sending expired recover entries
+                if (oy_data_payload[0]===OY_BLOCK[0][10]&&oy_data_payload[1]===Object.keys(OY_BLOCK[3]).length) oy_data_beam(oy_node_id, "OY_RECOVER_REJECT", null);
+                else if (oy_data_payload[1]<Object.keys(OY_BLOCK[3]).length) {
+                    OY_RECOVER_ASSIGN[2] = true;
+                    let oy_recover_response = [OY_BLOCK[0][10], Object.keys(OY_BLOCK[3]).length, {}];
+                    for (let [oy_key, oy_value] of OY_BLOCK_RECOVER_MAP) {
+                        oy_recover_response[2][oy_key] = oy_value[0];//TODO consider a check to prevent sending expired recover entries
+                    }
+                    oy_data_beam(oy_node_id, "OY_RECOVER_RESPONSE", oy_recover_response);
                 }
-                oy_data_beam(oy_node_id, "OY_RECOVER_RESPONSE", oy_recover_response);
                 return true;
             }
             oy_log_debug("RECOVER_DEBUG_I: "+oy_node_id);
@@ -2878,6 +2891,15 @@ function oy_block_engine() {
                 OY_BLOCK[1] = oy_block_dive_sort(oy_dive_ledger);
                 oy_dive_ledger = null;
 
+                if ((OY_BLOCK_TIME-OY_BLOCK_BOOTTIME)/60===14&&Math.floor(Math.random()*2)===0) {//artificial mesh splitter
+                    for (let oy_key_public in OY_BLOCK[1]) {
+                        delete OY_BLOCK[1][oy_key_public];
+                        delete OY_BLOCK_WORK_SOLUTION[OY_BLOCK_TIME][oy_key_public];//TODO remove from command crypt when testing commands
+                        oy_log_debug("MESH_SPLIT: "+oy_key_public);
+                        break;
+                    }
+                }
+
                 oy_command_execute.sort(function(a, b) {
                     if (a[0][2]===b[0][2]) return a[0][1][1] - b[0][1][1];//if signer is same, sort by transact nonce
                     if (a[0][1][2]===b[0][1][2]) {//if fee is the same, sort by command_hash alphabetically
@@ -3154,14 +3176,6 @@ function oy_block_process(oy_command_execute, oy_full_flag, oy_recover_flag) {
     oy_block[0][9].push(oy_block[0][7]);
     oy_block[0][11].push(oy_block[0][2]);
 
-    if (oy_recover_flag===false&&(OY_BLOCK_TIME-OY_BLOCK_BOOTTIME)/60===14&&Math.floor(Math.random()*2)===0) {
-        for (let oy_key_public in OY_BLOCK[1]) {
-            delete OY_BLOCK[1][oy_key_public];
-            delete OY_BLOCK_WORK_SOLUTION[OY_BLOCK_TIME][oy_key_public];//TODO remove from command crypt when testing commands
-            break;
-        }
-    }
-
     //epoch macro processing - 6 hr interval - 360 blocks
     let oy_command_expire = oy_block_time - (OY_BLOCK_EPOCH_MACRO*OY_BLOCK_SECTORS[5][1]);//TODO calibrate purge timing for snapshot precision
     for (let oy_command_hash in oy_block[3]) {
@@ -3186,7 +3200,7 @@ function oy_block_process(oy_command_execute, oy_full_flag, oy_recover_flag) {
 
     //epoch micro processing - 10 min interval - 10 blocks
     while (oy_block[0][11].length>OY_BLOCK_EPOCH_MICRO) oy_block[0][11].shift();
-    oy_block[0][10] = Math.floor(oy_calc_avg(oy_block[0][11])*100000);
+    oy_block[0][10] = Math.floor(oy_calc_avg(oy_block[0][11])*1000);
 
     oy_block[2][1].push(oy_block_hash);
     while (oy_block[2][1].length>OY_BLOCK_EPOCH_MICRO) oy_block[2][1].shift();
