@@ -29,7 +29,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 5;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1582854300;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1582983800;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -803,7 +803,7 @@ function oy_peer_full() {
 
 //process data sequence received from mutual peer oy_peer_id
 function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
-    if (typeof(OY_PEERS[oy_peer_id])==="undefined"||(OY_PEERS[oy_peer_id][1]===0&&oy_data_flag!=="OY_PEER_LIGHT")) return false;
+    if (typeof(OY_PEERS[oy_peer_id])==="undefined"||(OY_PEERS[oy_peer_id][1]===0&&oy_data_flag!=="OY_PEER_LATENCY"&&oy_data_flag!=="OY_PEER_LIGHT")) return false;//TODO add deny
 
     let oy_time_local = Date.now()/1000;
     if (oy_data_flag==="OY_BLOCK_COMMAND") {
@@ -1341,7 +1341,7 @@ function oy_peer_report() {
 
 function oy_node_deny(oy_node_id, oy_deny_reason, oy_node_preserve) {
     if (typeof(OY_PEERS[oy_node_id])!=="undefined") {
-        console.log("REMOVE: "+oy_deny_reason+" - "+oy_node_id+" - "+OY_PEERS[oy_node_id][1]+" - "+((Date.now()/1000)-OY_BLOCK_TIME));
+        console.log("%cREMOVE: "+(Date.now()/1000)+" "+oy_deny_reason+" - "+oy_node_id+" - "+OY_PEERS[oy_node_id][1]+" - "+((Date.now()/1000)-OY_BLOCK_TIME), "color: red");
         delete OY_PEERS[oy_node_id];
         if (Object.keys(OY_PEERS).length===0) document.dispatchEvent(OY_PEERS_NULL);
     }
@@ -1437,7 +1437,7 @@ function oy_node_boost() {
     if (OY_BOOST_RESERVE.length===0) return true;
 
     while (OY_BOOST_RESERVE.length>0&&typeof(OY_PEERS[OY_BOOST_RESERVE[0]])!=="undefined") OY_BOOST_RESERVE.shift();
-    console.log("BOOST: "+OY_BOOST_RESERVE[0]);
+    //console.log("BOOST: "+OY_BOOST_RESERVE[0]);
     oy_node_initiate(OY_BOOST_RESERVE.shift());
     oy_chrono(oy_node_boost, OY_NODE_ASSIGN_DELAY);
 }
@@ -1722,7 +1722,6 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
 
 //test latency performance between self and node
 function oy_latency_test(oy_node_id, oy_latency_followup, oy_status_flag) {
-    console.log(1);
     if (typeof(OY_LATENCY[oy_node_id])==="undefined") {
         //[0] is pending payload unique string
         //[1] is start time for latency test timer
@@ -1732,15 +1731,10 @@ function oy_latency_test(oy_node_id, oy_latency_followup, oy_status_flag) {
         OY_LATENCY[oy_node_id] = [null, 0, oy_latency_followup, Math.min(oy_status_flag, oy_state_current()), oy_status_flag];
     }
     if (oy_latency_followup!==OY_LATENCY[oy_node_id][2]) return false;
-    console.log(2);
     //ping a unique payload string that is repeated OY_LATENCY_SIZE amount of times
     OY_LATENCY[oy_node_id][0] = oy_rand_gen(OY_LATENCY_LENGTH);
-    if (oy_data_beam(oy_node_id, "OY_PEER_LATENCY", [OY_LATENCY[oy_node_id][3], OY_LATENCY[oy_node_id][0], OY_LATENCY[oy_node_id][0].repeat(OY_LATENCY_SIZE)])) {
-        console.log(3);
-        OY_LATENCY[oy_node_id][1] = Date.now()/1000;
-    }
+    if (oy_data_beam(oy_node_id, "OY_PEER_LATENCY", [OY_LATENCY[oy_node_id][3], OY_LATENCY[oy_node_id][0], OY_LATENCY[oy_node_id][0].repeat(OY_LATENCY_SIZE)])) OY_LATENCY[oy_node_id][1] = Date.now()/1000;
     else {
-        console.log(4);
         oy_node_deny(oy_node_id, "OY_DENY_LATENCY_FAIL");
         return false;
     }
@@ -3200,31 +3194,18 @@ function oy_block_process(oy_command_execute, oy_full_flag, oy_recover_flag) {
 
     oy_block[2][1].push(oy_block_hash);
     while (oy_block[2][1].length>OY_BLOCK_EPOCH_MICRO) oy_block[2][1].shift();
-    console.log(oy_block[0][6]+"<->"+OY_BLOCK_EPOCH_MICRO);
     if (oy_block[0][6]===OY_BLOCK_EPOCH_MICRO) {
         oy_block[0][6] = 0;
 
         if (oy_recover_flag===false) {
-            console.log(1);
             if (oy_full_flag===true||OY_LIGHT_LEAN===false) {
-                console.log(2);
                 let oy_block_reference = OY_BLOCK_TIME-(OY_BLOCK_EPOCH_MACRO*OY_BLOCK_SECTORS[5][0]);
                 for (let oy_block_timestamp of OY_BLOCK_RECOVER_MAP.keys()) {
-                    console.log(3);
-                    console.log(oy_block_timestamp+" <= "+oy_block_reference);
                     if (oy_block_timestamp<=oy_block_reference) OY_BLOCK_RECOVER_MAP.delete(oy_block_timestamp);//TODO calibrate purge timing for snapshot precision
                 }
-                if (OY_BLOCK_COMPRESS!==null) {
-                    console.log(4);
-                    OY_BLOCK_RECOVER_MAP.set(OY_BLOCK_TIME, [OY_BLOCK_HASH, oy_block[2][1], OY_BLOCK_COMPRESS]);
-                }
+                if (OY_BLOCK_COMPRESS!==null) OY_BLOCK_RECOVER_MAP.set(OY_BLOCK_TIME, [OY_BLOCK_HASH, oy_block[2][1], OY_BLOCK_COMPRESS]);
             }
-            else {
-                console.log(5);
-                OY_BLOCK_RECOVER_MAP = new Map();
-            }
-            console.log(OY_BLOCK_RECOVER_MAP.size);
-            console.log(OY_BLOCK_RECOVER_MAP);
+            else OY_BLOCK_RECOVER_MAP = new Map();
         }
     }
     //MAINTAIN--------------------------------
