@@ -29,7 +29,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 5;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1583071100;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1583086400;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -1606,8 +1606,6 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
             for (let i in oy_block_juggle) {
                 oy_data_beam(oy_node_id, "OY_RECOVER_FULFILL", [oy_block_nonce_max, oy_block_juggle[i], oy_block_split[oy_block_juggle[i]]]);
             }
-            OY_PEERS[oy_node_id][0] = Date.now()/1000|0;
-            OY_PEERS[oy_node_id][2] = true;
             oy_log_debug("RECOVER_DEBUG_N: "+oy_node_id);
         }
         else {
@@ -1656,18 +1654,20 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
 
                 if (typeof(oy_block_command_rollback[OY_BLOCK_TIME_RECOVER])==="undefined") {
                     oy_node_deny(oy_node_id, "OY_DENY_RECOVER_FAIL_E");
+                    oy_log_debug("RED1: "+JSON.stringify([OY_RECOVER_ASSIGN[1], OY_BLOCK_TIME_RECOVER, OY_BLOCK_TIME, oy_block_command_rollback]));
                     return false;
                 }
 
                 if (typeof(oy_block_work_solution[OY_BLOCK_TIME_RECOVER])==="undefined") {
                     oy_node_deny(oy_node_id, "OY_DENY_RECOVER_FAIL_F");
+                    oy_log_debug("RED2: "+JSON.stringify([OY_RECOVER_ASSIGN[1], OY_BLOCK_TIME_RECOVER, OY_BLOCK_TIME, oy_block_work_solution]));
                     return false;
                 }
 
                 let oy_command_execute = oy_block_command_hash(JSON.parse(LZString.decompressFromUTF16(oy_block_command_rollback[OY_BLOCK_TIME_RECOVER])));
 
                 if (!oy_block_command_scan(oy_command_execute, true)) {
-                    oy_node_deny(oy_node_id, "OY_DENY_RECOVER_FAIL_F");
+                    oy_node_deny(oy_node_id, "OY_DENY_RECOVER_FAIL_G");
                     return false;
                 }
 
@@ -1676,7 +1676,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
                 for (let oy_key_public in oy_block_work_solution[OY_BLOCK_TIME_RECOVER]) {
                     if (!oy_work_verify(oy_hash_gen(OY_BLOCK_TIME_RECOVER+oy_key_public+OY_BLOCK_HASH_RECOVER), oy_block_work_solution[OY_BLOCK_TIME_RECOVER][oy_key_public][0], OY_BLOCK_RECOVER[0][3])) {
                         oy_log_debug("SILVER2: "+JSON.stringify([LZString.decompressFromUTF16(OY_BLOCK_RECOVER_MAP.get(OY_RECOVER_ASSIGN[1])[2]), oy_data_payload]));
-                        oy_node_deny(oy_node_id, "OY_DENY_RECOVER_FAIL_G");
+                        oy_node_deny(oy_node_id, "OY_DENY_RECOVER_FAIL_H");
                         return false;
                     }
                     oy_dive_ledger[oy_key_public] = [(typeof(OY_BLOCK_RECOVER[1][oy_key_public])!=="undefined")?OY_BLOCK_RECOVER[1][oy_key_public][0]+1:1, (typeof(OY_BLOCK_RECOVER[1][oy_key_public])!=="undefined")?OY_BLOCK_RECOVER[1][oy_key_public][1]:0];//[continuity_count, transact_fee_payout]
@@ -1691,7 +1691,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
                 OY_BLOCK_RECOVER[0][7] = Math.round(OY_BLOCK_RECOVER[0][7]/OY_BLOCK_RECOVER[0][2]);
 
                 if (!oy_block_process(oy_command_execute, true, true)) {
-                    oy_node_deny(oy_node_id, "OY_DENY_RECOVER_FAIL_H");
+                    oy_node_deny(oy_node_id, "OY_DENY_RECOVER_FAIL_I");
                     return false;
                 }
 
@@ -1722,7 +1722,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
 
                 oy_block_finish();
 
-                oy_log_debug("RECOVER_DEBUG_L: "+oy_node_id+" "+JSON.stringify([oy_node_initiate(oy_node_id, true)]));
+                oy_node_initiate(oy_node_id, true);
 
                 oy_chrono(function() {
                     oy_block_challenge(0);
@@ -3563,9 +3563,11 @@ function oy_block_finish() {
 
     let oy_map_first = null;
     if (OY_BLOCK_RECOVER_MAP.size>1) oy_map_first = OY_BLOCK_RECOVER_MAP.keys()[0];
+    console.log("LEMON2: "+JSON.stringify([oy_map_first, OY_BLOCK_RECOVER_MAP.keys()]));
     if (oy_map_first!==null) {
         let oy_boost_count = 0;
         for (let oy_key_public in OY_BOOST_RECOVER) {
+            console.log(oy_boost_count+" - "+OY_BOOST_RECOVER[oy_key_public]);
             if (OY_BOOST_RECOVER[oy_key_public]>=oy_map_first&&typeof(OY_PEERS[oy_key_public])==="undefined") {
                 OY_BOOST_RESERVE.unshift(oy_key_public);
                 oy_boost_count++;

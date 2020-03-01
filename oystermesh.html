@@ -2632,6 +2632,8 @@
     }
 
     function oy_graph_peer(oy_graph_slot, oy_peer_short, oy_peer_long, oy_peer_info_alpha, oy_peer_info_beta, oy_peer_state, oy_beam_ratio) {
+        if (oy_graph_slot>OY_PEER_MAX-1) return false;
+
         let oy_data_construct = "<div class='oy_center_both' style='left:10%;transform: translate(0, -50%);'>"+oy_peer_info_alpha+"</div><div id='oy_graph_slot_"+oy_graph_slot+"_name_avatar' class='oy_center_both' style='width:2.2vh;height:2.2vh;'></div><div class='oy_center_both' style='left:unset;right:10%;transform: translate(0, -50%);'>"+oy_peer_info_beta+"</div>";
         if (OY_GRAPH_PEERS[oy_graph_slot]===false&&oy_peer_short!==null) {
             OY_GRAPH_PEERS[oy_graph_slot] = oy_peer_short;
