@@ -29,7 +29,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 5;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1583050600;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1583071100;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -1355,7 +1355,7 @@ function oy_node_deny(oy_node_id, oy_deny_reason, oy_node_preserve) {
     if (oy_deny_reason!=="OY_DENY_TERMINATE_RETURN") oy_data_beam(oy_node_id, "OY_PEER_TERMINATE", oy_deny_reason);
     oy_node_reset(oy_node_id);
     oy_log("DENY["+oy_deny_reason+"]["+oy_short(oy_node_id)+"]");
-    oy_log_debug("DENY["+oy_deny_reason+"]["+oy_short(oy_node_id)+"]");
+    if (oy_deny_reason!=="OY_DENY_LATENCY_WEAK") oy_log_debug("DENY["+oy_deny_reason+"]["+oy_short(oy_node_id)+"]");
     return true;
 }
 
@@ -1714,8 +1714,8 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
                 OY_BLOCK_NEXT_RECOVER = null;
 
                 for (let i in oy_block_keep) {
-                    OY_BLOCK_WORK_SOLUTION[oy_block_keep[i]] = oy_block_work_solution[oy_block_keep[i]];
-                    OY_BLOCK_COMMAND_ROLLBACK[oy_block_keep[i]] = oy_block_command_rollback[oy_block_keep[i]];
+                    OY_BLOCK_WORK_SOLUTION[oy_block_keep[i]] = oy_clone_object(oy_block_work_solution[oy_block_keep[i]]);
+                    OY_BLOCK_COMMAND_ROLLBACK[oy_block_keep[i]] = oy_clone_object(oy_block_command_rollback[oy_block_keep[i]]);
                 }
 
                 oy_log_debug("RECOVER_PASS: "+OY_SELF_SHORT+" - "+OY_BLOCK_HASH);
@@ -2839,10 +2839,13 @@ function oy_block_engine() {
                     if (OY_BLOCK_SYNC[oy_key_public]===false||OY_BLOCK_SYNC[oy_key_public][1]===false) delete OY_BLOCK_SYNC[oy_key_public];
                 }
 
-                OY_BLOCK[0][7] = 0;
                 let oy_dive_ledger = {};
                 for (let oy_key_public in OY_BLOCK_SYNC) {
-                    oy_dive_ledger[oy_key_public] = [(typeof(OY_BLOCK[1][oy_key_public])!=="undefined")?OY_BLOCK[1][oy_key_public][0]+1:1, (typeof(OY_BLOCK[1][oy_key_public])!=="undefined")?OY_BLOCK[1][oy_key_public][1]:0, 0];//[continuity_count, transact_fee_payout, dive_final_balance]
+                    if (typeof(oy_dive_ledger[oy_key_public])==="undefined") oy_dive_ledger[oy_key_public] = [(typeof(OY_BLOCK[1][oy_key_public])!=="undefined")?OY_BLOCK[1][oy_key_public][0]+1:1, (typeof(OY_BLOCK[1][oy_key_public])!=="undefined")?OY_BLOCK[1][oy_key_public][1]:0, 0];//[continuity_count, transact_fee_payout, dive_final_balance]
+                }
+
+                OY_BLOCK[0][7] = 0;
+                for (let oy_key_public in oy_dive_ledger) {
                     OY_BLOCK[0][7] += oy_dive_ledger[oy_key_public][0];
                 }
 
@@ -2886,7 +2889,7 @@ function oy_block_engine() {
                 OY_BLOCK[1] = oy_block_dive_sort(oy_dive_ledger);
                 oy_dive_ledger = null;
 
-                if ((OY_BLOCK_TIME-OY_BLOCK_BOOTTIME)/60===30&&Math.floor(Math.random()*2)===0) {//artificial mesh splitter
+                if (((OY_BLOCK_TIME-OY_BLOCK_BOOTTIME)/60)%15===0&&Math.floor(Math.random()*2)===0) {//artificial mesh splitter
                     for (let oy_key_public in OY_BLOCK[1]) {
                         delete OY_BLOCK[1][oy_key_public];
                         delete OY_BLOCK_WORK_SOLUTION[OY_BLOCK_TIME][oy_key_public];//TODO remove from command crypt when testing commands
@@ -2908,7 +2911,6 @@ function oy_block_engine() {
 
                 if (!oy_block_range(Object.keys(OY_BLOCK[1]).length)) return false;//block_range will invoke block_reset if necessary
 
-                oy_log_debug("RED: "+Math.round(OY_BLOCK[0][7]/OY_BLOCK[0][2])+" = "+OY_BLOCK[0][7]+" / "+OY_BLOCK[0][2]);
                 OY_BLOCK[0][7] = Math.round(OY_BLOCK[0][7]/OY_BLOCK[0][2]);
             }
             else {
