@@ -29,7 +29,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 5;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1583038400;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1583050600;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -1640,6 +1640,8 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
             OY_RECOVER_BUILD = [];
             oy_log_debug("RECOVER_DEBUG_U1 "+JSON.stringify([oy_hash_hash, oy_block_work_solution, oy_block_command_rollback]));
 
+            let oy_block_keep = [];
+
             OY_BLOCK_RECOVER = JSON.parse(LZString.decompressFromUTF16(OY_BLOCK_RECOVER_MAP.get(OY_RECOVER_ASSIGN[1])[2]));oy_log_debug("RECOVER_DEBUG_U2");
             OY_BLOCK_HASH_RECOVER = OY_BLOCK_RECOVER_MAP.get(OY_RECOVER_ASSIGN[1])[0];
             for (OY_BLOCK_TIME_RECOVER = OY_BLOCK_RECOVER[0][1]+OY_BLOCK_SECTORS[5][0]; OY_BLOCK_TIME_RECOVER<=OY_BLOCK_TIME; OY_BLOCK_TIME_RECOVER+=OY_BLOCK_SECTORS[5][0]) {
@@ -1694,6 +1696,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
                 }
 
                 OY_BLOCK_HASH_RECOVER = oy_hash_gen(JSON.stringify(OY_BLOCK_RECOVER));
+                oy_block_keep.push(OY_BLOCK_TIME_RECOVER);
             }
 
             oy_log_debug("RECOVER_DEBUG_U5");
@@ -1709,6 +1712,11 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
                 OY_BLOCK_HASH_RECOVER = null;
                 OY_BLOCK_TIME_RECOVER = null;
                 OY_BLOCK_NEXT_RECOVER = null;
+
+                for (let i in oy_block_keep) {
+                    OY_BLOCK_WORK_SOLUTION[oy_block_keep[i]] = oy_block_work_solution[oy_block_keep[i]];
+                    OY_BLOCK_COMMAND_ROLLBACK[oy_block_keep[i]] = oy_block_command_rollback[oy_block_keep[i]];
+                }
 
                 oy_log_debug("RECOVER_PASS: "+OY_SELF_SHORT+" - "+OY_BLOCK_HASH);
 
@@ -2878,7 +2886,7 @@ function oy_block_engine() {
                 OY_BLOCK[1] = oy_block_dive_sort(oy_dive_ledger);
                 oy_dive_ledger = null;
 
-                if ((OY_BLOCK_TIME-OY_BLOCK_BOOTTIME)/60===14&&Math.floor(Math.random()*2)===0) {//artificial mesh splitter
+                if ((OY_BLOCK_TIME-OY_BLOCK_BOOTTIME)/60===30&&Math.floor(Math.random()*2)===0) {//artificial mesh splitter
                     for (let oy_key_public in OY_BLOCK[1]) {
                         delete OY_BLOCK[1][oy_key_public];
                         delete OY_BLOCK_WORK_SOLUTION[OY_BLOCK_TIME][oy_key_public];//TODO remove from command crypt when testing commands
