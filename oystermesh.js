@@ -29,7 +29,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 5;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1583030900;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1583036400;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -1701,8 +1701,14 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
             let oy_time_offset = (Date.now()/1000)-OY_BLOCK_TIME;
             if (oy_hash_gen(OY_BLOCK_HASH_RECOVER)===oy_hash_hash&&oy_time_offset>OY_BLOCK_SECTORS[3][0]-OY_MESH_BUFFER[0]&&oy_time_offset<OY_BLOCK_SECTORS[4][0]+OY_MESH_BUFFER[0]) {
                 OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK_RECOVER);
+                OY_BLOCK = JSON.parse(OY_BLOCK_FLAT);
                 OY_BLOCK_HASH = oy_clone_object(OY_BLOCK_HASH_RECOVER);
                 OY_BLOCK_WEIGHT = new Blob([OY_BLOCK_FLAT]).size;
+
+                OY_BLOCK_RECOVER = null;
+                OY_BLOCK_HASH_RECOVER = null;
+                OY_BLOCK_TIME_RECOVER = null;
+                OY_BLOCK_NEXT_RECOVER = null;
 
                 oy_log_debug("RECOVER_PASS: "+OY_SELF_SHORT+" - "+OY_BLOCK_HASH);
 
@@ -2972,17 +2978,6 @@ function oy_block_engine() {
 
         oy_chrono(function() {
             oy_block_challenge(0);
-
-            oy_chrono(function() {
-                //FULL NODE -> LIGHT NODE
-                if (OY_LIGHT_STATE===false&&(OY_LIGHT_MODE===true||!oy_peer_full()||Object.keys(OY_BLOCK[1]).length<OY_BLOCK_RANGE_MIN)&&OY_BLOCK_BOOT===false) {//TODO range_kill
-                    OY_LIGHT_STATE = true;
-                    document.dispatchEvent(OY_STATE_LIGHT);
-                    for (let oy_peer_select in OY_PEERS) {//TODO terminate any recover session
-                        if (oy_peer_select!==OY_RECOVER_ASSIGN[0]) oy_data_beam(oy_peer_select, "OY_PEER_LIGHT", oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH));
-                    }
-                }
-            }, OY_BLOCK_BUFFER_CLEAR[1]);
         }, OY_BLOCK_SECTORS[3][1]);
 
         oy_chrono(function() {
@@ -3608,6 +3603,17 @@ function oy_block_finish() {
             OY_PEERS[oy_peer_select][2] = true;
         }
     }
+
+    oy_chrono(function() {
+        //FULL NODE -> LIGHT NODE
+        if (OY_LIGHT_STATE===false&&(OY_LIGHT_MODE===true||!oy_peer_full()||Object.keys(OY_BLOCK[1]).length<OY_BLOCK_RANGE_MIN)&&OY_BLOCK_BOOT===false) {//TODO range_kill
+            OY_LIGHT_STATE = true;
+            document.dispatchEvent(OY_STATE_LIGHT);
+            for (let oy_peer_select in OY_PEERS) {//TODO terminate any recover session
+                if (oy_peer_select!==OY_RECOVER_ASSIGN[0]) oy_data_beam(oy_peer_select, "OY_PEER_LIGHT", oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH));
+            }
+        }
+    }, OY_BLOCK_BUFFER_CLEAR[1]);
 }
 
 //core loop that runs critical functions and checks
