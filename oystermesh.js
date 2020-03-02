@@ -29,7 +29,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 5;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1583113500;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1583115400;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -1642,11 +1642,10 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
             oy_data_payload = null;
             let [oy_hash_hash, oy_block_work_solution, oy_block_command_rollback] = JSON.parse(OY_JUMP_BUILD.join(""));
             OY_JUMP_BUILD = [];
-            oy_log_debug("JUMP_DEBUG_U1 "+JSON.stringify([oy_hash_hash, oy_block_work_solution, oy_block_command_rollback]));
 
             let oy_block_keep = [];
 
-            OY_BLOCK_JUMP = JSON.parse(LZString.decompressFromUTF16(OY_BLOCK_JUMP_MAP[OY_JUMP_ASSIGN[1]][2]));oy_log_debug("JUMP_DEBUG_U2");
+            OY_BLOCK_JUMP = JSON.parse(LZString.decompressFromUTF16(OY_BLOCK_JUMP_MAP[OY_JUMP_ASSIGN[1]][2]));
             OY_BLOCK_HASH_JUMP = OY_BLOCK_JUMP_MAP[OY_JUMP_ASSIGN[1]][0];
             for (OY_BLOCK_TIME_JUMP = OY_BLOCK_JUMP[0][1]+OY_BLOCK_SECTORS[5][0]; OY_BLOCK_TIME_JUMP<=OY_BLOCK_TIME; OY_BLOCK_TIME_JUMP+=OY_BLOCK_SECTORS[5][0]) {
                 OY_BLOCK_NEXT_JUMP = OY_BLOCK_TIME_JUMP+OY_BLOCK_SECTORS[5][0];
@@ -1679,7 +1678,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
                 let oy_dive_ledger = {};
                 for (let oy_key_public in oy_block_work_solution[OY_BLOCK_TIME_JUMP]) {
                     if (!oy_work_verify(oy_hash_gen(OY_BLOCK_TIME_JUMP+oy_key_public+OY_BLOCK_HASH_JUMP), oy_block_work_solution[OY_BLOCK_TIME_JUMP][oy_key_public][0], OY_BLOCK_JUMP[0][3])) {
-                        oy_log_debug("SILVER2: "+JSON.stringify([LZString.decompressFromUTF16(OY_BLOCK_JUMP_MAP[OY_JUMP_ASSIGN[1]][2]), oy_data_payload]));
+                        oy_log_debug("SILVER2: "+JSON.stringify([LZString.decompressFromUTF16(OY_BLOCK_JUMP_MAP[OY_JUMP_ASSIGN[1]][2]), [oy_hash_hash, oy_block_work_solution, oy_block_command_rollback]]));
                         oy_node_deny(oy_node_id, "OY_DENY_JUMP_FAIL_H");
                         return false;
                     }
@@ -1793,7 +1792,7 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
     if (!oy_key_verify(oy_node_id, oy_data_payload[1], OY_MESH_DYNASTY+((OY_LATENCY[oy_node_id][3]===0)?"0000000000000000000000000000000000000000":OY_BLOCK_HASH)+OY_LATENCY[oy_node_id][0])) {
         let oy_latency_hold = oy_clone_object(OY_LATENCY[oy_node_id]);
         oy_node_deny(oy_node_id, "OY_DENY_SIGN_FAIL");
-        if (OY_JUMP_ASSIGN[0]===null&&oy_latency_hold[3]===2&&Object.keys(OY_BLOCK_JUMP_MAP).length>1&&(oy_latency_hold[2]==="OY_PEER_REQUEST"||(oy_latency_hold[2]==="OY_PEER_ROUTINE"&&OY_SELF_PUBLIC.toLowerCase()<oy_node_id.toLowerCase()))) {
+        if (OY_JUMP_ASSIGN[0]===null&&typeof(OY_JUMP_PRE[oy_node_id])==="undefined"&&oy_latency_hold[3]===2&&Object.keys(OY_BLOCK_JUMP_MAP).length>1&&(oy_latency_hold[2]==="OY_PEER_REQUEST"||(oy_latency_hold[2]==="OY_PEER_ROUTINE"&&OY_SELF_PUBLIC.toLowerCase()<oy_node_id.toLowerCase()))) {
             OY_JUMP_PRE[oy_node_id] = false;
             oy_log_debug("JUMP_DEBUG: "+Object.keys(OY_BLOCK_JUMP_MAP).length);
             oy_chrono(function() {
@@ -2844,7 +2843,7 @@ function oy_block_engine() {
                     if (OY_BLOCK_SYNC[oy_key_public]===false||OY_BLOCK_SYNC[oy_key_public][1]===false) delete OY_BLOCK_SYNC[oy_key_public];
                 }
 
-                if (((OY_BLOCK_TIME-OY_BLOCK_BOOTTIME)/60)%15===0&&Math.floor(Math.random()*2)===0) {//artificial mesh splitter
+                if (((OY_BLOCK_TIME-OY_BLOCK_BOOTTIME)/60)%30===0&&Math.floor(Math.random()*2)===0) {//artificial mesh splitter
                     let oy_split_sort = [];
                     for (let oy_key_public in OY_BLOCK_SYNC) {
                         oy_split_sort.push(oy_key_public);
