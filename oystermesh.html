@@ -1678,7 +1678,7 @@
         let oy_avg_soak = [];
         let oy_peer_keep = [];
         for (let oy_peer_select in OY_PEERS) {
-            if (oy_peer_select===OY_RECOVER_ASSIGN[0]) continue;
+            if (oy_peer_select===OY_JUMP_ASSIGN[0]) continue;
 
             oy_data_measure(true, oy_peer_select, null);
             oy_data_measure(false, oy_peer_select, null);
