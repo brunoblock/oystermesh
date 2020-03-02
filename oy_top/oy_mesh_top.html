@@ -91,14 +91,13 @@
 </div>
 <script type="text/javascript">
     window.OY_BLOCK_TIME = null;
-    function oy_block_time(oy_next) {
-        if (oy_next===true) return (Math.ceil(Date.now()/10000)*10)+10;
-        return (Math.floor(Date.now()/10000)*10);
+    function oy_block_time() {
+        return Math.floor(Date.now()/10000)*10;
     }
 
     function oy_top_data() {
-        let oy_block_time_local = oy_block_time(false);
-        if (window.OY_BLOCK_TIME===null||(oy_block_time_local!==window.OY_BLOCK_TIME&&(oy_block_time_local/10)%2===0)) {
+        let oy_block_time_local = oy_block_time();
+        if (window.OY_BLOCK_TIME===null||oy_block_time_local!==window.OY_BLOCK_TIME) {
             window.OY_BLOCK_TIME = oy_block_time_local;
             let oy_xhttp = new XMLHttpRequest();
             oy_xhttp.onreadystatechange = function () {
