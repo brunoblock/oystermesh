@@ -29,7 +29,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 5;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1583273300;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1583277600;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -531,7 +531,7 @@ function oy_worker(oy_worker_status) {
                         if (typeof(OY_SYNC_TALLY[oy_data_payload[0][0]])==="undefined") OY_SYNC_TALLY[oy_data_payload[0][0]] = oy_data_payload[0][oy_data_payload[0].length-1];
 
                         if (oy_time_offset>OY_SYNC_LAST[1]) OY_SYNC_LAST[1] = oy_time_offset;
-                        if (OY_BOOST_BUILD.length<OY_BOOST_KEEP&&OY_BOOST_BUILD.indexOf(oy_data_payload[0])===-1&&typeof(OY_PEERS[oy_data_payload[0][0]])==="undefined") OY_BOOST_BUILD.push(oy_data_payload[0][0]);
+                        if (OY_BOOST_BUILD.length<OY_BOOST_KEEP&&OY_BOOST_BUILD.indexOf(oy_data_payload[0])===-1&&typeof(OY_PEERS[oy_data_payload[0][0]])==="undefined"&&typeof(OY_NODES[oy_data_payload[0][0]])==="undefined") OY_BOOST_BUILD.push(oy_data_payload[0][0]);
 
                         if (oy_payload_size===null) oy_payload_size = JSON.stringify(oy_data_payload).length;
                         if (typeof(OY_BLOCK_LEARN[oy_data_payload[0].length])!=="undefined") OY_BLOCK_LEARN[oy_data_payload[0].length].push(oy_time_offset/oy_payload_size);//TODO consider restricting to top 50% nodes for security
@@ -751,9 +751,8 @@ function oy_local_set(oy_local_name, oy_local_data) {
 
 //oy_state_flag
 function oy_peer_add(oy_peer_id, oy_state_flag) {
-    if (oy_state_flag===null) return false;
+    if (oy_state_flag===null||typeof(OY_PEERS[oy_peer_id])!=="undefined"||oy_peer_id===OY_SELF_PUBLIC) return false;
 
-    if (typeof(OY_PEERS[oy_peer_id])!=="undefined") return false;
     let oy_callback_local = function() {
         if (Object.keys(OY_PEERS).length>=OY_PEER_MAX&&OY_JUMP_ASSIGN[0]!==oy_peer_id) {//prevent overflow on peer_count
             oy_node_deny(oy_peer_id, "OY_DENY_PEER_OVERFLOW");
@@ -763,6 +762,7 @@ function oy_peer_add(oy_peer_id, oy_state_flag) {
         OY_PEERS[oy_peer_id][0] = OY_BLOCK_TIME;
         OY_PEERS[oy_peer_id][1] = oy_state_flag;
         if (Object.keys(OY_PEERS).length===1) document.dispatchEvent(OY_PEERS_RECOVER);
+        oy_log_debug("PEER_ADD: "+OY_SELF_SHORT+" - "+oy_short(oy_peer_id)+" - "+OY_PEERS[oy_peer_id][0]+" - "+OY_PEERS[oy_peer_id][1]);
     };
     oy_node_connect(oy_peer_id, oy_callback_local);
     return true;
@@ -979,7 +979,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             if (OY_PEERS[oy_peer_select][1]===1&&oy_peer_select!==oy_peer_id) oy_data_beam(oy_peer_select, "OY_PEER_DIFF", oy_data_payload);
         }
 
-        if (OY_LIGHT_MODE===true&&OY_BOOST_BUILD.length<OY_BOOST_KEEP&&OY_BOOST_BUILD.indexOf(oy_data_payload[0])===-1&&typeof(OY_PEERS[oy_data_payload[0]])==="undefined") OY_BOOST_BUILD.push(oy_data_payload[0]);
+        if (OY_LIGHT_MODE===true&&OY_BOOST_BUILD.length<OY_BOOST_KEEP&&OY_BOOST_BUILD.indexOf(oy_data_payload[0])===-1&&typeof(OY_PEERS[oy_data_payload[0]])==="undefined"&&typeof(OY_NODES[oy_data_payload[0]])==="undefined") OY_BOOST_BUILD.push(oy_data_payload[0]);
 
         if (oy_dive_count>=OY_BLOCK[0][2]*OY_LIGHT_COMMIT) oy_block_light();
     }
@@ -1442,7 +1442,7 @@ function oy_node_initiate(oy_node_id, lemon) {
     let oy_time_local = Date.now()/1000;
 
     if (typeof(lemon)!=="undefined") oy_log_debug("JUMP_DEBUG_INIT: "+JSON.stringify([typeof(OY_PEERS[oy_node_id])!=="undefined", typeof(OY_PROPOSED[oy_node_id])!=="undefined", typeof(OY_PEERS_PRE[oy_node_id])!=="undefined", typeof(OY_LATENCY[oy_node_id])!=="undefined", Object.keys(OY_PEERS).length>OY_PEER_MAX, OY_BLOCK_BOOT===null, (OY_LIGHT_MODE===true&&OY_BLOCK_BOOT===true), (oy_state_current()!==0&&OY_JUMP_ASSIGN[0]===null&&oy_time_local-OY_BLOCK_TIME>OY_BLOCK_SECTORS[0][0]), OY_JUMP_ASSIGN, oy_time_local-OY_BLOCK_TIME, oy_state_current()]));
-    if (typeof(OY_PEERS[oy_node_id])!=="undefined"||typeof(OY_PROPOSED[oy_node_id])!=="undefined"||typeof(OY_PEERS_PRE[oy_node_id])!=="undefined"||typeof(OY_LATENCY[oy_node_id])!=="undefined"||Object.keys(OY_PEERS).length>OY_PEER_MAX||OY_BLOCK_BOOT===null||(OY_LIGHT_MODE===true&&OY_BLOCK_BOOT===true)||(oy_state_current()!==0&&OY_JUMP_ASSIGN[0]===null&&oy_time_local-OY_BLOCK_TIME>OY_BLOCK_SECTORS[0][0])) return false;
+    if (typeof(OY_PEERS[oy_node_id])!=="undefined"||typeof(OY_PROPOSED[oy_node_id])!=="undefined"||typeof(OY_PEERS_PRE[oy_node_id])!=="undefined"||typeof(OY_LATENCY[oy_node_id])!=="undefined"||Object.keys(OY_PEERS).length>OY_PEER_MAX||oy_node_id===OY_SELF_PUBLIC||OY_BLOCK_BOOT===null||(OY_LIGHT_MODE===true&&OY_BLOCK_BOOT===true)||(oy_state_current()!==0&&OY_JUMP_ASSIGN[0]===null&&oy_time_local-OY_BLOCK_TIME>OY_BLOCK_SECTORS[0][0])) return false;
     let oy_callback_peer = function() {
         OY_PROPOSED[oy_node_id] = true;
         oy_data_beam(oy_node_id, "OY_PEER_REQUEST", oy_state_current(true));
@@ -2923,7 +2923,7 @@ function oy_block_engine() {
                 }
 
                 for (let oy_key_public in OY_BLOCK[1]) {
-                    if (OY_BOOST_BUILD.length<OY_BOOST_KEEP*OY_BOOST_BIAS&&typeof(oy_dive_ledger[oy_key_public])==="undefined"&&OY_BOOST_BUILD.indexOf(oy_key_public)===-1&&typeof(OY_PEERS[oy_key_public])==="undefined") OY_BOOST_BUILD.push(oy_key_public);
+                    if (OY_BOOST_BUILD.length<OY_BOOST_KEEP*OY_BOOST_BIAS&&typeof(oy_dive_ledger[oy_key_public])==="undefined"&&OY_BOOST_BUILD.indexOf(oy_key_public)===-1&&typeof(OY_PEERS[oy_key_public])==="undefined"&&typeof(OY_NODES[oy_key_public])==="undefined"&&oy_key_public!==OY_SELF_PUBLIC) OY_BOOST_BUILD.push(oy_key_public);
                 }
                 OY_BLOCK[1] = oy_block_dive_sort(oy_dive_ledger);
                 oy_dive_ledger = null;
@@ -2967,7 +2967,7 @@ function oy_block_engine() {
 
             if (OY_DIVE_STATE!==null) {
                 for (let oy_peer_select in OY_PEERS) {
-                    if (OY_PEERS[oy_peer_select][1]===2&&OY_PEERS[oy_peer_select][0]!==OY_BLOCK_TIME&&typeof(OY_BLOCK[1][oy_peer_select])==="undefined") oy_node_deny(oy_peer_select, "OY_DENY_FULL_DIVE");
+                    if (OY_PEERS[oy_peer_select][1]===2&&OY_PEERS[oy_peer_select][0]!==OY_BLOCK_TIME&&typeof(OY_BLOCK[1][oy_peer_select])==="undefined") oy_node_deny(oy_peer_select, "OY_DENY_FULL_DIVE_"+OY_PEERS[oy_peer_select][0]+"_"+OY_BLOCK_TIME);
                 }
             }
             if (typeof(OY_BLOCK[1][OY_SELF_PUBLIC])==="undefined") OY_DIVE_STATE = null;
@@ -3134,7 +3134,7 @@ function oy_block_light() {
     }
 
     for (let oy_key_public in OY_BLOCK[1]) {
-        if (OY_BOOST_BUILD.length<OY_BOOST_KEEP*OY_BOOST_BIAS&&typeof(oy_diff_track[0][oy_key_public])==="undefined"&&OY_BOOST_BUILD.indexOf(oy_key_public)===-1&&typeof(OY_PEERS[oy_key_public])==="undefined") OY_BOOST_BUILD.push(oy_key_public);
+        if (OY_BOOST_BUILD.length<OY_BOOST_KEEP*OY_BOOST_BIAS&&typeof(oy_diff_track[0][oy_key_public])==="undefined"&&OY_BOOST_BUILD.indexOf(oy_key_public)===-1&&typeof(OY_PEERS[oy_key_public])==="undefined"&&typeof(OY_NODES[oy_key_public])==="undefined") OY_BOOST_BUILD.push(oy_key_public);
     }
     OY_BLOCK[1] = oy_diff_track[0];
 
@@ -3152,7 +3152,7 @@ function oy_block_light() {
 
     let oy_dive_array = [];
     for (let oy_key_public in OY_BLOCK[1]) {
-        oy_dive_array.push(oy_key_public);
+        if (typeof(OY_PEERS[oy_key_public])==="undefined"&&typeof(OY_NODES[oy_key_public])==="undefined"&&oy_key_public!==OY_SELF_PUBLIC) oy_dive_array.push(oy_key_public);
     }
     oy_calc_shuffle(oy_dive_array);
     for (let i in oy_dive_array) {
