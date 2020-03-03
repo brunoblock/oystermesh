@@ -1277,12 +1277,13 @@
                     PEER&nbsp;COUNT<br>
                     MESH&nbsp;RANGE<br>
                     DIFFICULTY<br>
-                    BEAM&nbsp;FLOW<br>
-                    SOAK&nbsp;FLOW<br>
                     MB&nbsp;UPTIME<br>
                     MB&nbsp;WEIGHT<br>
                     MB&nbsp;STABILITY<br>
                     AKOYA&nbsp;DIVE<br>
+                    BEAM&nbsp;FLOW<br>
+                    SOAK&nbsp;FLOW<br>
+                    CONNS<br>
                 </div>
                 <div class="oy_center_hor" style="top:2%;width:0.7%;height:90%;background-color: #2a2a2a;">
                 </div>
@@ -1290,12 +1291,13 @@
                     <span id="oy_peer_count_cont"><span id="oy_peer_count">null</span>&nbsp;peer(s)</span><br>
                     <span id="oy_mesh_range">null</span>&nbsp;node(s)<br>
                     <span id="oy_difficulty">null</span>&nbsp;hashes<br>
-                    <span id="oy_beam_flow">null</span>&nbsp;kbps<br>
-                    <span id="oy_soak_flow">null</span>&nbsp;kbps<br>
                     <span id="oy_block_uptime">null</span>&nbsp;min<br>
                     <span id="oy_block_weight">null</span>&nbsp;KB<br>
                     <span id="oy_block_stability">null</span>&nbsp;SD<br>
                     <span id="oy_akoya_dive_track">null</span>&nbsp;AKYT<br>
+                    <span id="oy_beam_flow">null</span>&nbsp;kbps<br>
+                    <span id="oy_soak_flow">null</span>&nbsp;kbps<br>
+                    <span id="oy_conns">null</span>&nbsp;node(s)<br>
                 </div>
                 <div id="oy_light_mode" align="center" class="oy_button oy_button_all_active" style="position:absolute;bottom:-12%;left:29%;transform:translateX(-50%);width:38%;height:10%;" onclick="oy_mode_push(true)">
                     <div style="position:relative;">
@@ -1336,7 +1338,6 @@
 </div>
 <script type="text/javascript">
     const OY_CONSOLE_SIZE = 1000;
-    const OY_NODE_MAX = 30;
     const OY_NODE_ADDTIME = 40;
     const OY_NODE_ACTIVETIME = 150;
     const OY_LINK_ADDTIME = 60;
@@ -1691,14 +1692,15 @@
         let oy_blank = "---";
         document.getElementById("oy_mesh_range").innerHTML = (OY_BLOCK[0][2]===null)?oy_blank:OY_BLOCK[0][2];
         document.getElementById("oy_difficulty").innerHTML = (OY_BLOCK[0][3]===null)?oy_blank:OY_BLOCK[0][3];
-        if (oy_avg_beam.length>0) document.getElementById("oy_beam_flow").innerHTML = (oy_avg_beam.reduce(oy_reduce_sum)/1000).toFixed(2);
-        else document.getElementById("oy_beam_flow").innerHTML = "0";
-        if (oy_avg_soak.length>0) document.getElementById("oy_soak_flow").innerHTML = (oy_avg_soak.reduce(oy_reduce_sum)/1000).toFixed(2);
-        else document.getElementById("oy_soak_flow").innerHTML = "0";
         document.getElementById("oy_block_uptime").innerHTML = (OY_BLOCK_UPTIME===null)?oy_blank:((oy_time_local - OY_BLOCK_UPTIME)/60).toFixed(2);
         document.getElementById("oy_block_weight").innerHTML = (OY_BLOCK_WEIGHT===null)?oy_blank:(OY_BLOCK_WEIGHT/1024).toFixed(2);
         document.getElementById("oy_block_stability").innerHTML = (OY_BLOCK_STABILITY_KEEP.length<OY_BLOCK_STABILITY_TRIGGER)?oy_blank:OY_BLOCK_STABILITY.toFixed(4);
         //document.getElementById("oy_akoya_dive_track").innerHTML = (OY_BLOCK_DIVE_TRACK===0)?oy_blank:OY_BLOCK_DIVE_TRACK/OY_AKOYA_DECIMALS;TODO restore
+        if (oy_avg_beam.length>0) document.getElementById("oy_beam_flow").innerHTML = (oy_avg_beam.reduce(oy_reduce_sum)/1000).toFixed(2);
+        else document.getElementById("oy_beam_flow").innerHTML = "0";
+        if (oy_avg_soak.length>0) document.getElementById("oy_soak_flow").innerHTML = (oy_avg_soak.reduce(oy_reduce_sum)/1000).toFixed(2);
+        else document.getElementById("oy_soak_flow").innerHTML = "0";
+        document.getElementById("oy_conns").innerHTML = Object.keys(OY_NODES).length;
 
         oy_peer_keep.sort(function(a, b) {
             return b[1] - a[1];

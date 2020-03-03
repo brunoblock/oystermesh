@@ -29,7 +29,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 5;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1583269200;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1583273300;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -61,7 +61,8 @@ const OY_META_DAPP_RANGE = 9;//max amount of meshblock amendable dapps including
 const OY_META_FEE = 0.0001*OY_AKOYA_DECIMALS;//meta fee per block per 99 characters - 99 used instead of 100 for space savings on the meshblock
 const OY_NULLING_BUFFER = 0.001*OY_AKOYA_DECIMALS;
 const OY_NODE_ASSIGN_DELAY = 250;//ms delay per node_initiate from node_assign and boost
-const OY_BOOST_KEEP = 18;//node IDs to retain in boost memory, higher means more nodes retained but less average node quality, keep is applied twice, once each for boost_build and boost_jump
+const OY_NODE_MAX = 128;
+const OY_BOOST_KEEP = 12;//node IDs to retain in boost memory, higher means more nodes retained but less average node quality, keep is applied twice, once each for boost_build and boost_jump
 const OY_BOOST_BIAS = 3;
 const OY_BOOST_EXPIRETIME = 1200;//seconds until boost indexedDB retention is discarded
 const OY_WORKER_CORES_FALLBACK = 4;
@@ -1020,6 +1021,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         if (oy_peer_id===OY_JUMP_ASSIGN[0]) oy_block_jump_reset();
         oy_log_debug("TERMINATED: "+JSON.stringify(oy_data_payload)+" - "+oy_peer_id+" - "+((Date.now()/1000)-OY_BLOCK_TIME));
         console.log("TERMINATED: "+JSON.stringify(oy_data_payload)+" - "+oy_peer_id+" - "+((Date.now()/1000)-OY_BLOCK_TIME));
+        oy_log("END["+oy_short(oy_peer_id)+"]["+oy_data_payload+"]", true);
         oy_node_deny(oy_peer_id, "OY_DENY_TERMINATE_RETURN");//return the favour
         return true;
     }
@@ -1360,7 +1362,7 @@ function oy_node_deny(oy_node_id, oy_deny_reason) {
     }
     if (oy_deny_reason!=="OY_DENY_TERMINATE_RETURN") oy_data_beam(oy_node_id, "OY_PEER_TERMINATE", oy_deny_reason);
     oy_node_reset(oy_node_id);
-    oy_log("DENY["+oy_short(oy_node_id)+"]["+oy_deny_reason+"]");
+    oy_log("DENY["+oy_short(oy_node_id)+"]["+oy_deny_reason+"]", true);
     if (oy_deny_reason!=="OY_DENY_LATENCY_WEAK") oy_log_debug("DENY["+oy_deny_reason+"]["+oy_short(oy_node_id)+"]");
     return true;
 }
@@ -1380,7 +1382,13 @@ function oy_node_connect(oy_node_id, oy_callback) {
     if (typeof(OY_WARM[oy_node_id])!=="undefined") return false;
     else if (typeof(OY_COLD[oy_node_id])!=="undefined") return false;
     else if (typeof(OY_NODES[oy_node_id])==="undefined"||OY_NODES[oy_node_id][0].open===false) {
-        if (typeof(OY_NODES[oy_node_id])!=="undefined") OY_NODES[oy_node_id][0].close();
+        if (typeof(OY_NODES[oy_node_id])==="undefined") {
+            if (Object.keys(OY_NODES).length>=OY_NODE_MAX) {
+                oy_node_deny(oy_node_id, "OY_DENY_CONNECT_OVERFLOW");
+                return false;
+            }
+        }
+        else OY_NODES[oy_node_id][0].close();
 
         let oy_conn_param = {};
         oy_conn_param.serialization = "json";
@@ -2681,6 +2689,8 @@ function oy_block_reset(oy_reset_flag) {
 
     document.dispatchEvent(OY_BLOCK_RESET);
     document.dispatchEvent(OY_STATE_BLANK);
+
+    oy_node_assign();
 }
 
 function oy_block_engine() {
@@ -3609,7 +3619,11 @@ function oy_block_finish() {
     OY_BOOST_RESERVE = OY_BOOST_BUILD.slice(0, OY_BOOST_KEEP);
     OY_BOOST_BUILD = [];
 
-    oy_log_debug("BOOST_RESERVE: "+JSON.stringify(OY_BOOST_RESERVE.length));
+    //oy_log_debug("BOOST_RESERVE: "+JSON.stringify(OY_BOOST_RESERVE.length));
+
+    for (let i in OY_BOOST_RESERVE) {
+        console.log("BOOST:"+(typeof(OY_BLOCK[1][OY_BOOST_RESERVE[i]])!=="undefined")+" - "+OY_BOOST_RESERVE[i]);
+    }
 
     oy_local_set("oy_boost_reserve", OY_BOOST_RESERVE);
     oy_local_set("oy_boost_expire", (Date.now()/1000|0)+OY_BOOST_EXPIRETIME);
