@@ -29,7 +29,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 5;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1583263800;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1583269200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -61,7 +61,8 @@ const OY_META_DAPP_RANGE = 9;//max amount of meshblock amendable dapps including
 const OY_META_FEE = 0.0001*OY_AKOYA_DECIMALS;//meta fee per block per 99 characters - 99 used instead of 100 for space savings on the meshblock
 const OY_NULLING_BUFFER = 0.001*OY_AKOYA_DECIMALS;
 const OY_NODE_ASSIGN_DELAY = 250;//ms delay per node_initiate from node_assign and boost
-const OY_BOOST_KEEP = 8;//node IDs to retain in boost memory, higher means more nodes retained but less average node quality, keep is applied twice, once each for boost_build and boost_jump
+const OY_BOOST_KEEP = 18;//node IDs to retain in boost memory, higher means more nodes retained but less average node quality, keep is applied twice, once each for boost_build and boost_jump
+const OY_BOOST_BIAS = 3;
 const OY_BOOST_EXPIRETIME = 1200;//seconds until boost indexedDB retention is discarded
 const OY_WORKER_CORES_FALLBACK = 4;
 const OY_ROUTE_DYNAMIC_KEEP = 200;//how many dynamic identifiers for a routed data sequence to remember and block
@@ -311,7 +312,6 @@ let OY_PEERS_RECOVER = new Event('oy_peers_recover');//trigger-able event for wh
 let OY_NODES = {};//P2P connection handling for individual nodes
 let OY_BOOST_BUILD = [];//store all node IDs from the most recent meshblock and use to find new peers in-case of peers_null/meshblock reset event
 let OY_BOOST_RESERVE = [];
-let OY_BOOST_JUMP = {};
 let OY_WARM = {};//tracking connections to nodes that are warming up
 let OY_COLD = {};//tracking connection shutdowns to specific nodes
 let OY_ROUTE_DYNAMIC = [];//tracks dynamic identifier for a routed data sequence
@@ -978,7 +978,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             if (OY_PEERS[oy_peer_select][1]===1&&oy_peer_select!==oy_peer_id) oy_data_beam(oy_peer_select, "OY_PEER_DIFF", oy_data_payload);
         }
 
-        if (OY_BOOST_BUILD.length<OY_BOOST_KEEP&&OY_BOOST_BUILD.indexOf(oy_data_payload[0])===-1&&typeof(OY_PEERS[oy_data_payload[0]])==="undefined") OY_BOOST_BUILD.push(oy_data_payload[0]);
+        if (OY_LIGHT_MODE===true&&OY_BOOST_BUILD.length<OY_BOOST_KEEP&&OY_BOOST_BUILD.indexOf(oy_data_payload[0])===-1&&typeof(OY_PEERS[oy_data_payload[0]])==="undefined") OY_BOOST_BUILD.push(oy_data_payload[0]);
 
         if (oy_dive_count>=OY_BLOCK[0][2]*OY_LIGHT_COMMIT) oy_block_light();
     }
@@ -2913,7 +2913,7 @@ function oy_block_engine() {
                 }
 
                 for (let oy_key_public in OY_BLOCK[1]) {
-                    if (typeof(oy_dive_ledger[oy_key_public])==="undefined"&&typeof(OY_BOOST_JUMP[oy_key_public])==="undefined"&&typeof(OY_PEERS[oy_key_public])==="undefined") OY_BOOST_JUMP[oy_key_public] = OY_BLOCK_TIME;
+                    if (OY_BOOST_BUILD.length<OY_BOOST_KEEP*OY_BOOST_BIAS&&typeof(oy_dive_ledger[oy_key_public])==="undefined"&&OY_BOOST_BUILD.indexOf(oy_key_public)===-1&&typeof(OY_PEERS[oy_key_public])==="undefined") OY_BOOST_BUILD.push(oy_key_public);
                 }
                 OY_BLOCK[1] = oy_block_dive_sort(oy_dive_ledger);
                 oy_dive_ledger = null;
@@ -3122,6 +3122,10 @@ function oy_block_light() {
         OY_BLOCK[4][oy_key_public] = oy_diff_track[0][oy_key_public][2];
         oy_diff_track[0][oy_key_public].pop();
     }
+
+    for (let oy_key_public in OY_BLOCK[1]) {
+        if (OY_BOOST_BUILD.length<OY_BOOST_KEEP*OY_BOOST_BIAS&&typeof(oy_diff_track[0][oy_key_public])==="undefined"&&OY_BOOST_BUILD.indexOf(oy_key_public)===-1&&typeof(OY_PEERS[oy_key_public])==="undefined") OY_BOOST_BUILD.push(oy_key_public);
+    }
     OY_BLOCK[1] = oy_diff_track[0];
 
     OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK);
@@ -3135,6 +3139,16 @@ function oy_block_light() {
 
     if (typeof(OY_BLOCK_MAP)==="function") OY_BLOCK_MAP(0);
     document.dispatchEvent(OY_BLOCK_TRIGGER);
+
+    let oy_dive_array = [];
+    for (let oy_key_public in OY_BLOCK[1]) {
+        oy_dive_array.push(oy_key_public);
+    }
+    oy_calc_shuffle(oy_dive_array);
+    for (let i in oy_dive_array) {
+        if (OY_BOOST_BUILD.length>=OY_BOOST_KEEP*OY_BOOST_BIAS) break;
+        OY_BOOST_BUILD.push(oy_dive_array[i]);
+    }
 
     oy_block_finish();
 
@@ -3591,33 +3605,11 @@ function oy_block_finish() {
     }
     OY_BLOCK_CONFIRM = {};//TODO reset according to timestamp
 
-    OY_BOOST_RESERVE = oy_clone_object(OY_BOOST_BUILD);
+    oy_calc_shuffle(OY_BOOST_BUILD);
+    OY_BOOST_RESERVE = OY_BOOST_BUILD.slice(0, OY_BOOST_KEEP);
     OY_BOOST_BUILD = [];
 
-    let oy_map_first = null;
-    if (Object.keys(OY_BLOCK_JUMP_MAP).length>1) {
-        for (let oy_block_time in OY_BLOCK_JUMP_MAP) {
-            oy_block_time = parseInt(oy_block_time);
-            if (oy_map_first===null||oy_block_time<oy_map_first) oy_map_first = oy_block_time;
-        }
-    }
-    console.log("LEMON2: "+JSON.stringify([oy_map_first]));
-    if (oy_map_first!==null) {
-        let oy_boost_count = 0;
-        for (let oy_key_public in OY_BOOST_JUMP) {
-            console.log(oy_boost_count+" - "+OY_BOOST_JUMP[oy_key_public]);
-            if (OY_BOOST_JUMP[oy_key_public]>=oy_map_first&&typeof(OY_PEERS[oy_key_public])==="undefined") {
-                OY_BOOST_RESERVE.unshift(oy_key_public);
-                oy_boost_count++;
-                if (oy_boost_count>OY_BOOST_KEEP) {
-                    break;
-                }
-            }
-            delete OY_BOOST_JUMP[oy_key_public];
-        }
-    }
-
-    oy_log_debug("BOOST_RESERVE: "+JSON.stringify(Object.keys(OY_BOOST_RESERVE).length));
+    oy_log_debug("BOOST_RESERVE: "+JSON.stringify(OY_BOOST_RESERVE.length));
 
     oy_local_set("oy_boost_reserve", OY_BOOST_RESERVE);
     oy_local_set("oy_boost_expire", (Date.now()/1000|0)+OY_BOOST_EXPIRETIME);
