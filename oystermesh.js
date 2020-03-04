@@ -29,7 +29,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 5;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1583277600;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1583293100;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -37,7 +37,7 @@ const OY_JUDGE_BUFFER_BASE = 1.8;
 const OY_JUDGE_BUFFER_CURVE = 1.2;//allocation for curve
 const OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 const OY_LIGHT_COMMIT = 0.4;
-const OY_PEER_RESERVETIME = 240;//peers are expected to establish latency timing with each other within this interval in seconds
+const OY_PEER_RESERVETIME = 300;//peers are expected to establish latency timing with each other within this interval in seconds
 const OY_PEER_MAX = 6;//maximum mutual peers
 const OY_PEER_FULL_MIN = 4;
 const OY_PEER_CUT = 0.3;//minimum percentage threshold to be safe from being selected as a potential weakest peer, higher is less peers safe
@@ -70,7 +70,7 @@ const OY_ROUTE_DYNAMIC_KEEP = 200;//how many dynamic identifiers for a routed da
 const OY_LATENCY_SIZE = 80;//size of latency ping payload, larger is more accurate yet more taxing
 const OY_LATENCY_LENGTH = 8;//length of rand sequence which is repeated for payload and signed for ID verification
 const OY_LATENCY_TRACK = 200;//how many latency measurements to keep at a time per peer
-const OY_LATENCY_GEO_SENS = 22;//percentage buffer for comparing latency with peers, higher means less likely weakest peer will get dropped and mesh is less geo-sensitive
+const OY_LATENCY_GEO_SENS = 2.5;//percentage buffer for comparing latency with peers, higher means less likely weakest peer will get dropped and mesh is less geo-sensitive
 const OY_DATA_MAX = 250000;//max size of data that can be sent to another node
 const OY_DATA_CHUNK = 125000;//chunk size by which data is split up and sent per transmission
 const OY_DATA_PURGE = 10;//how many handles to delete if indexedDB limit is reached
@@ -1868,7 +1868,7 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
                         OY_PEERS[oy_peer_select][9]<OY_PEER_CUT&&
                         (oy_state_current()!==2||OY_LATENCY[oy_node_id][4]===2||OY_PEERS[oy_peer_select][1]!==2||typeof(OY_BLOCK[1][oy_peer_select])==="undefined")||OY_JUMP_ASSIGN[0]===oy_node_id) oy_peer_weak = [oy_peer_select, OY_PEERS[oy_peer_select][3]];
                 }
-                if (oy_peer_weak[0]!==null&&oy_latency_result*(1+OY_LATENCY_GEO_SENS)<oy_peer_weak[1]&&OY_BLOCK_BOOT===false) {
+                if (oy_peer_weak[0]!==null&&oy_latency_result*OY_LATENCY_GEO_SENS<oy_peer_weak[1]&&OY_BLOCK_BOOT===false) {
                     if (OY_JUMP_ASSIGN[0]===oy_node_id) oy_log_debug("JUMP_DEBUG_LATENCY_D: "+oy_node_id);
                     oy_node_deny(oy_peer_weak[0], "OY_DENY_LATENCY_DROP");
                     oy_accept_response();
@@ -3160,8 +3160,6 @@ function oy_block_light() {
         OY_BOOST_BUILD.push(oy_dive_array[i]);
     }
 
-    oy_block_finish();
-
     //LIGHT NODE -> FULL NODE
     if (OY_LIGHT_MODE===false) {
         let oy_time_local = Date.now()/1000;
@@ -3214,6 +3212,8 @@ function oy_block_light() {
         }
         else if (Object.keys(OY_PEERS).length===OY_PEER_MAX&&oy_light_weak[0]!==null) oy_node_deny(oy_light_weak[0], "OY_DENY_UNLATCH_DROP");
     }
+
+    oy_block_finish();
 }
 
 function oy_block_range(oy_mesh_range_new) {
