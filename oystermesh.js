@@ -29,7 +29,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 5;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1583335900;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1583340100;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -925,6 +925,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             console.log("BASE MESHBLOCK HASH "+OY_BLOCK_HASH);//TODO temp
 
             OY_LIGHT_STATE = true;
+            OY_DIVE_STATE = null;
 
             if (typeof(OY_BLOCK_MAP)==="function") OY_BLOCK_MAP(0);
             document.dispatchEvent(OY_BLOCK_TRIGGER);
@@ -1748,6 +1749,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
                 OY_BLOCK_HASH = oy_clone_object(OY_BLOCK_HASH_JUMP);
                 OY_BLOCK_WEIGHT = new Blob([OY_BLOCK_FLAT]).size;
                 OY_BLOCK_FLAT = null;
+                OY_DIVE_STATE = null;
 
                 OY_BLOCK_JUMP = null;
                 OY_BLOCK_FLAT_JUMP = null;
@@ -2288,10 +2290,15 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
                }
 
                if (oy_data[0]==="OY_BLOCK_SYNC") {
-                   if (oy_peer_flag===false||oy_state_current()!==2) {
-                       if (oy_state_current(true)!==2) oy_node_deny(oy_node_id, "OY_DENY_SYNC_MISALIGN");
+                   if (oy_peer_flag===false) {
+                       oy_node_deny(oy_node_id, "OY_DENY_SYNC_PEER");
                        return false;
                    }
+                   else if (oy_state_current(true)!==2) {
+                       oy_node_deny(oy_node_id, "OY_DENY_SYNC_MISALIGN");
+                       return false;
+                   }
+                   else if (oy_state_current()!==2) return true;
 
                    let oy_peer_last = oy_data[1][0][oy_data[1][0].length-1];
                    if (oy_peer_last!==oy_node_id) {
@@ -2882,7 +2889,7 @@ function oy_block_engine() {
                     if (OY_BLOCK_SYNC[oy_key_public]===false||OY_BLOCK_SYNC[oy_key_public][1]===false) delete OY_BLOCK_SYNC[oy_key_public];
                 }
 
-                if (((OY_BLOCK_TIME-OY_BLOCK_BOOTTIME)/60)%40===0&&Math.floor(Math.random()*2)===0) {//artificial mesh splitter
+                if (((OY_BLOCK_TIME-OY_BLOCK_BOOTTIME)/60)%20===0&&Math.floor(Math.random()*2)===0) {//artificial mesh splitter
                     let oy_split_sort = [];
                     for (let oy_key_public in OY_BLOCK_SYNC) {
                         oy_split_sort.push(oy_key_public);
