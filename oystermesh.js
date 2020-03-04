@@ -1769,6 +1769,10 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
 
                 oy_log_debug("JUMP_PASS: "+OY_SELF_SHORT+" - "+OY_BLOCK_HASH);
 
+                for (let oy_peer_select in OY_PEERS) {
+                    if (OY_PEERS[oy_peer_select][1]===0) OY_PEERS[oy_peer_select][2] = false;
+                }
+
                 oy_block_finish();
 
                 oy_node_initiate(oy_node_id, true);
@@ -3046,7 +3050,7 @@ function oy_block_engine() {
                         if (oy_peer_select!==OY_JUMP_ASSIGN[0]) oy_data_beam(oy_peer_select, "OY_PEER_LIGHT", oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH));
                     }
                 }
-            }, OY_BLOCK_BUFFER_CLEAR[1]);
+            }, (OY_BLOCK_SECTORS[4][0]-((Date.now()/1000)-OY_BLOCK_TIME))*1000);
         }, (OY_SYNC_LAST[0]>0)?Math.max(OY_BLOCK_SECTORS[0][1], Math.min(OY_BLOCK_SECTORS[1][1], OY_SYNC_LAST[0]+OY_BLOCK_BUFFER_SPACE[1])):OY_BLOCK_SECTORS[1][1]);
 
         oy_chrono(function() {
