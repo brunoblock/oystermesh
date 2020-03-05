@@ -996,12 +996,12 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
         if (oy_dive_count>=OY_BLOCK[0][2]*OY_LIGHT_COMMIT) oy_block_light();
     }
-    else if (oy_data_flag==="OY_PEER_BLANK") {//peer as a full or light node is resetting to a blank node
-        OY_PEERS[oy_peer_id][1] = 0;
-        if (oy_state_current()===0) oy_node_deny(oy_peer_id, "OY_DENY_DOUBLE_BLANK");//double blank prohibition
-        return true;
-    }
     else if (oy_data_flag==="OY_PEER_LIGHT") {//peer as a blank or full node is converting into a light node
+        if (OY_PEERS[oy_peer_id][1]===1) {
+            oy_node_deny(oy_peer_id, "OY_DENY_LIGHT_MISALIGN");
+            return false;
+        }
+
         if (OY_BLOCK_HASH!==null&&!oy_key_verify(oy_peer_id, oy_data_payload, OY_MESH_DYNASTY+OY_BLOCK_HASH)) {
             oy_node_deny(oy_peer_id, "OY_DENY_LIGHT_FAIL");
             return false;
@@ -1012,6 +1012,11 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         return true;
     }
     else if (oy_data_flag==="OY_PEER_FULL") {//peer as a light node is converting into a full node
+        if (OY_PEERS[oy_peer_id][1]===2) {
+            oy_node_deny(oy_peer_id, "OY_DENY_FULL_MISALIGN");
+            return false;
+        }
+
         if (OY_BLOCK_HASH!==null&&!oy_key_verify(oy_peer_id, oy_data_payload, OY_MESH_DYNASTY+OY_BLOCK_HASH)) {
             oy_node_deny(oy_peer_id, "OY_DENY_FULL_FAIL");
             return false;
@@ -2678,6 +2683,9 @@ function oy_block_reset(oy_reset_flag) {
 
     if (OY_BLOCK_HALT!==null&&oy_time_local-OY_BLOCK_HALT<OY_BLOCK_HALT_BUFFER) return false;//prevents duplicate calls of block_reset()
 
+    if (typeof(oy_reset_flag)==="undefined") oy_reset_flag = "OY_RESET_UNKNOWN";
+    else if (oy_reset_flag.toString()==="[object Event]"&&typeof(oy_reset_flag.type)==="string") oy_reset_flag = "OY_RESET_"+(oy_reset_flag.type.toUpperCase().substr(3));
+
     OY_BLOCK_HALT = oy_time_local;
     OY_BLOCK_HASH = null;
     OY_BLOCK_FLAT = null;
@@ -2706,12 +2714,12 @@ function oy_block_reset(oy_reset_flag) {
     OY_REPORT_HASH = null;
 
     for (let oy_peer_select in OY_PEERS) {
-        oy_data_beam(oy_peer_select, "OY_PEER_BLANK", null);
-        if (OY_PEERS[oy_peer_select][1]===0) oy_node_deny(oy_peer_select, "OY_DENY_DOUBLE_BLANK");//double blank prohibition
+        oy_node_deny(oy_peer_select, "OY_DENY_SELF_"+oy_reset_flag.substr(3));
     }
 
     oy_log("BLOCK[RESET]["+oy_reset_flag+"]", true);
-    oy_log_debug("MESHBLOCK RESET["+OY_SELF_PUBLIC+"]["+oy_reset_flag+"]");
+
+    oy_log_debug("MESHBLOCK RESET["+OY_SELF_PUBLIC+"]["+oy_reset_flag+"]");//TODO temp
     console.log("MESHBLOCK RESET ["+oy_reset_flag+"]");//TODO temp
 
     document.dispatchEvent(OY_BLOCK_RESET);
@@ -2893,7 +2901,7 @@ function oy_block_engine() {
                     if (OY_BLOCK_SYNC[oy_key_public]===false||OY_BLOCK_SYNC[oy_key_public][1]===false) delete OY_BLOCK_SYNC[oy_key_public];
                 }
 
-                if (((OY_BLOCK_TIME-OY_BLOCK_BOOTTIME)/60)%20===0&&Math.floor(Math.random()*2)===0) {//artificial mesh splitter
+                if (((OY_BLOCK_TIME-OY_BLOCK_BOOTTIME)/60)%240===0&&Math.floor(Math.random()*2)===0) {//artificial mesh splitter
                     let oy_split_sort = [];
                     for (let oy_key_public in OY_BLOCK_SYNC) {
                         oy_split_sort.push(oy_key_public);
