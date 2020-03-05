@@ -35,6 +35,7 @@ const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
 const OY_JUDGE_BUFFER_BASE = 1.8;
 const OY_JUDGE_BUFFER_CURVE = 1.2;//allocation for curve
+const OY_SYNC_LAST_BUFFER = 2;
 const OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 const OY_LIGHT_COMMIT = 0.4;
 const OY_PEER_RESERVETIME = 300;//peers are expected to establish latency timing with each other within this interval in seconds
@@ -3183,6 +3184,10 @@ function oy_block_light() {
     oy_log_debug("LIGHT MESHBLOCK HASH "+OY_BLOCK_HASH+"\n"+OY_BLOCK_FLAT);
     console.log("LIGHT MESHBLOCK HASH "+OY_BLOCK_HASH);
     console.log(OY_BLOCK_FLAT);
+
+    let oy_last_calc = ((Date.now()/1000)-OY_BLOCK_TIME)+OY_SYNC_LAST_BUFFER;
+    if (oy_last_calc>OY_BLOCK_SECTORS[0][0]&&oy_last_calc<OY_BLOCK_SECTORS[1][0]) OY_SYNC_LAST = [oy_last_calc, oy_last_calc];
+    else OY_SYNC_LAST = [0, 0];
 
     if (typeof(OY_BLOCK_MAP)==="function") OY_BLOCK_MAP(0);
     document.dispatchEvent(OY_BLOCK_TRIGGER);
