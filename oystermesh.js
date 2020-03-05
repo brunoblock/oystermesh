@@ -3185,10 +3185,6 @@ function oy_block_light() {
     console.log("LIGHT MESHBLOCK HASH "+OY_BLOCK_HASH);
     console.log(OY_BLOCK_FLAT);
 
-    let oy_last_calc = ((Date.now()/1000)-OY_BLOCK_TIME)+OY_SYNC_LAST_BUFFER;
-    if (oy_last_calc>OY_BLOCK_SECTORS[0][0]&&oy_last_calc<OY_BLOCK_SECTORS[1][0]) OY_SYNC_LAST = [oy_last_calc, oy_last_calc];
-    else OY_SYNC_LAST = [0, 0];
-
     if (typeof(OY_BLOCK_MAP)==="function") OY_BLOCK_MAP(0);
     document.dispatchEvent(OY_BLOCK_TRIGGER);
 
@@ -3216,6 +3212,10 @@ function oy_block_light() {
         if (oy_peer_full()) {
             OY_LIGHT_STATE = false;
             OY_BLOCK_JUDGE = true;
+
+            let oy_last_calc = ((Date.now()/1000)-OY_BLOCK_TIME)+OY_SYNC_LAST_BUFFER;
+            if (oy_last_calc>OY_BLOCK_SECTORS[0][0]&&oy_last_calc<OY_BLOCK_SECTORS[1][0]) OY_SYNC_LAST = [oy_last_calc, oy_last_calc];
+            else OY_SYNC_LAST = [0, 0];
 
             OY_WORK_SOLUTION = null;
             OY_WORKER_THREADS[oy_worker_point()].postMessage([0, [OY_SELF_PUBLIC, OY_BLOCK_HASH, OY_BLOCK[0][3]]]);
@@ -3271,6 +3271,8 @@ function oy_block_range(oy_mesh_range_new) {
 
     if (OY_BLOCK[0][2]<OY_BLOCK_RANGE_MIN&&OY_BLOCK_BOOT===false) {
         oy_block_reset("OY_RESET_RANGE_DROP");
+        console.log("RANGE_DROP: "+OY_BLOCK[0][2]);
+        console.log(JSON.stringify(OY_BLOCK));
         return false;
     }
     return true;
