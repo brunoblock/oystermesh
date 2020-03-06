@@ -29,7 +29,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 5;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1583459700;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1583461600;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -44,7 +44,7 @@ const OY_PEER_FULL_MIN = 4;
 const OY_PEER_CUT = 0.3;//minimum percentage threshold to be safe from being selected as a potential weakest peer, higher is less peers safe
 const OY_WORK_MATCH = 5;//lower is more bandwidth/memory bound, higher is more CPU bound, anomaly birds come from CPU bound therefore higher is safer against unemployment absence
 const OY_WORK_MAX = 10000;//10000
-const OY_WORK_MIN = 1;
+const OY_WORK_MIN = 2;
 const OY_WORK_DELTA = 0.2;
 const OY_WORK_DILUTE = 3;
 const OY_WORK_TARGET = 30;//1440x7/1 week, value in minutes, lower is harsher work that kicks nodes off the mesh more frequently, higher discourages new node operators and hence less decentralization
@@ -3042,7 +3042,7 @@ function oy_block_engine() {
             }
             console.log("JUDGE: "+JSON.stringify(OY_BLOCK_JUDGE));
 
-            if (OY_BLOCK_BOOT===true) OY_SYNC_LAST = [0, 0];
+            if (OY_BLOCK_BOOT===true) OY_SYNC_LAST = [1, 1];
             else {
                 OY_SYNC_LAST.shift();
                 OY_SYNC_LAST.push(0);
