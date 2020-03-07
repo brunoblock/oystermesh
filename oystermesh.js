@@ -27,9 +27,9 @@ const OY_BLOCK_SNAPSHOT_KEEP = 120;//how many hashes of previous blocks to keep 
 const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
 const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
-const OY_BLOCK_RANGE_MIN = 5;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
+const OY_BLOCK_RANGE_MIN = 2;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1583461600;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1583483400;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -42,7 +42,7 @@ const OY_PEER_RESERVETIME = 300;//peers are expected to establish latency timing
 const OY_PEER_MAX = 6;//maximum mutual peers
 const OY_PEER_FULL_MIN = 4;
 const OY_PEER_CUT = 0.3;//minimum percentage threshold to be safe from being selected as a potential weakest peer, higher is less peers safe
-const OY_WORK_MATCH = 5;//lower is more bandwidth/memory bound, higher is more CPU bound, anomaly birds come from CPU bound therefore higher is safer against unemployment absence
+const OY_WORK_MATCH = 4;//lower is more bandwidth/memory bound, higher is more CPU bound, anomaly birds come from CPU bound therefore higher is safer against unemployment absence
 const OY_WORK_MAX = 10000;//10000
 const OY_WORK_MIN = 2;
 const OY_WORK_DELTA = 0.2;
@@ -1454,6 +1454,7 @@ function oy_node_initiate(oy_node_id) {
     return true;
 }
 
+/*
 function oy_node_boost() {
     if (OY_BOOST_RESERVE.length===0) return true;
 
@@ -1486,6 +1487,7 @@ function oy_node_assign() {
     oy_xhttp.open("POST", "https://top.oyster.org/oy_node_assign_alpha.php", true);
     oy_xhttp.send("oy_node_id="+OY_SELF_PUBLIC);
 }
+*/
 
 //respond to a node that is not mutually peered with self
 function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
@@ -3828,6 +3830,7 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
         oy_channel:"oy_broadcast_hash,oy_channel_id"
     });
 
+    /*
     OY_CONN = new Peer(OY_SELF_PUBLIC, {host: 'top.oyster.org', port: 8200, path: '/', secure:true});
 
     OY_CONN.on('open', function(oy_self_id) {
@@ -3858,6 +3861,7 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
         oy_log("PeerJS Error: "+oy_error.type);
         if (oy_error.type==="browser-incompatible"&&typeof(OY_ERROR_BROWSER)==="function") OY_ERROR_BROWSER();
     }, null);
+     */
 
     oy_chrono(function() {
         if (OY_READY===true) {
