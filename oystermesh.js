@@ -47,7 +47,7 @@ const OY_WORK_MAX = 10000;//10000
 const OY_WORK_MIN = 2;
 const OY_WORK_DELTA = 0.2;
 const OY_WORK_DILUTE = 3;
-const OY_WORK_TARGET = 30;//1440x7/1 week, value in minutes, lower is harsher work that kicks nodes off the mesh more frequently, higher discourages new node operators and hence less decentralization
+const OY_WORK_TARGET = 50;//1440x7/1 week, value in minutes, lower is harsher work that kicks nodes off the mesh more frequently, higher discourages new node operators and hence less decentralization
 const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
 const OY_AKOYA_LIQUID = 10000000*OY_AKOYA_DECIMALS;//akoya liquidity restrictions to prevent integer overflow
 const OY_AKOYA_FEE = 0.000001*OY_AKOYA_DECIMALS;//akoya fee per block
@@ -328,7 +328,9 @@ let OY_LIGHT_PROCESS = false;
 let OY_WORKER_THREADS = [null, null];
 let OY_WORKER_POINTER = [null, null];
 let OY_LOGIC_ALL_TYPE = ["OY_DATA_PULL", "OY_CHANNEL_BROADCAST"];//OY_LOGIC_ALL definitions
-let OY_WORK_SOLUTION = null;
+let OY_WORK_SOLUTIONS = [null];
+let OY_WORK_GRADES = [null]
+let OY_WORK_BITS = [null];
 let OY_SYNC_LAST = [0, 0];
 let OY_BLOCK_JUDGE = [null];
 let OY_BLOCK_LEARN = [null];
@@ -436,24 +438,19 @@ function oy_worker_spawn(oy_worker_type) {
             return oy_uint8_hex(nacl.hash(nacl.util.decodeUTF8(oy_input))).substr(0, 40);
         }
 
-        function oy_rand_gen(oy_gen_custom, oy_rand_secure) {//DUPLICATED IN MAIN BLOCK
-            if (typeof(oy_gen_custom)==="undefined") oy_gen_custom = 1;
-            if (typeof(oy_rand_secure)!=="undefined"&&oy_rand_secure===true) return oy_uint8_hex(nacl.randomBytes(oy_gen_custom*2));
-            let oy_rand_gen_fast = function() {
-                return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
-            };
-            if (oy_gen_custom===1) return oy_rand_gen_fast();
-            return "x".repeat(oy_gen_custom).replace(/x/g, oy_rand_gen_fast);
+        function oy_rand_gen(oy_length) {
+            return Math.round((Math.pow(36, oy_length+1)-Math.random()*Math.pow(36, oy_length))).toString(36).slice(1);
         }
 
-        function oy_work_mine(oy_work_hash, oy_work_difficulty) {
+        function oy_work_mine(oy_work_bit) {
             let oy_work_solution;
-            while (oy_hash_gen(oy_work_solution = oy_work_hash+oy_rand_gen(oy_work_difficulty)).substr(0, oy_work_match)!==oy_work_hash.substring(0, oy_work_match)) {}
+            console.log("WORK BIT: "+oy_work_bit);
+            while (oy_hash_gen(oy_work_bit+(oy_work_solution = oy_rand_gen(oy_work_match))).substr(0, oy_work_match)!==oy_work_bit.substring(0, oy_work_match)) {}
             return oy_work_solution;
         }
 
-        function oy_work_verify(oy_work_hash, oy_work_solution, oy_work_difficulty) {//DUPLICATED IN MAIN BLOCK
-            return (oy_work_solution.length===(oy_work_difficulty*4)+oy_work_hash.length&&oy_work_solution.substr(0, oy_work_hash.length)===oy_work_hash&&oy_work_hash.substr(0, oy_work_match)===oy_hash_gen(oy_work_solution).substr(0, oy_work_match));
+        function oy_work_verify(oy_work_bit, oy_work_solution) {//DUPLICATED IN MAIN BLOCK
+            return (oy_work_bit.length===oy_work_match&&oy_work_solution.length===oy_work_match&&oy_work_bit.substr(0, oy_work_match)===oy_hash_gen(oy_work_bit+oy_work_solution).substr(0, oy_work_match));
         }
 
         function oy_block_sync_hop(oy_dive_ledger, oy_passport_passive, oy_passport_crypt, oy_crypt_short, oy_first) {
@@ -488,9 +485,11 @@ function oy_worker_spawn(oy_worker_type) {
             let [oy_work_type, oy_work_data] = oy_event.data;
 
             if (oy_work_type===0) {
-                let [oy_self_public, oy_block_next, oy_block_hash, oy_work_difficulty] = oy_work_data;
+                let [oy_work_nonce, oy_work_bit] = oy_work_data;
+                if (oy_work_nonce!==-1&&oy_work_bit.length!==oy_work_match) return false;
 
-                postMessage([oy_work_type, [oy_work_mine(oy_hash_gen(oy_block_next+oy_self_public+oy_block_hash), oy_work_difficulty)]]);
+                if (oy_work_nonce===-1) postMessage([oy_work_type, [oy_work_nonce, null]]);
+                else postMessage([oy_work_type, [oy_work_nonce, oy_work_mine(oy_work_bit)]]);
             }
             else if (oy_work_type===1) {
                 let [oy_data_payload, oy_dive_ledger, oy_crypt_short, oy_sync_expand, oy_block_boot, oy_block_time, oy_block_hash, oy_work_difficulty] = oy_work_data;
@@ -517,12 +516,37 @@ function oy_worker_spawn(oy_worker_type) {
             let oy_time_local = Date.now()/1000;
             let oy_time_offset = oy_time_local-OY_BLOCK_TIME;
             if (oy_work_type===0) {
-                let [oy_work_solution] = oy_work_data;
+                let [oy_work_nonce, oy_work_solution] = oy_work_data;
 
-                if (oy_time_offset<OY_BLOCK_SECTORS[0][0]) OY_WORK_SOLUTION = null;
-                else OY_WORK_SOLUTION = oy_work_solution;console.log("WORK["+i+"]: "+oy_work_solution);
+                //if (oy_time_offset<OY_BLOCK_SECTORS[0][0]) return false;
 
-                oy_worker_halt(oy_worker_type);
+                if (oy_work_nonce!==-1&&(OY_WORK_SOLUTIONS[oy_work_nonce]===null||oy_calc_grade(oy_work_solution)>OY_WORK_GRADES[oy_work_nonce])) {
+                    OY_WORK_SOLUTIONS[oy_work_nonce] = oy_work_solution;
+                    OY_WORK_GRADES[oy_work_nonce] = oy_calc_grade(oy_work_solution);
+                }
+
+                GREEN.push(((performance.now()-BLUE)/1000));
+                ORANGE.push(oy_calc_grade(oy_work_solution));
+                console.log("WORK["+i+"]: "+oy_calc_avg(ORANGE).toFixed(2)+" - "+(Math.max(...ORANGE))+" - "+oy_calc_grade(oy_work_solution)+" - "+oy_calc_avg(GREEN)+" "+oy_work_solution);
+                BLUE = performance.now();
+                console.log(JSON.stringify(OY_WORK_SOLUTIONS));
+                console.log(JSON.stringify(OY_WORK_GRADES));
+
+                let oy_nonce_select;
+                if (oy_work_nonce===-1) {
+                    oy_nonce_select = parseInt(i);
+                    if (oy_nonce_select>=OY_WORK_BITS.length) oy_nonce_select = Math.floor(Math.random()*OY_WORK_BITS.length);
+                }
+                else {
+                    oy_nonce_select = OY_WORK_GRADES.indexOf(null);
+                    if (oy_nonce_select===-1) {
+                        oy_nonce_select = OY_WORK_GRADES.indexOf(true);
+                        if (oy_nonce_select===-1) oy_nonce_select = OY_WORK_GRADES.indexOf(Math.min(...OY_WORK_GRADES));
+                    }
+                    else OY_WORK_GRADES[oy_nonce_select] = true;
+                }
+                console.log("CHERRY"+oy_nonce_select);
+                OY_WORKER_THREADS[0][i].postMessage([0, [oy_nonce_select, OY_WORK_BITS[oy_nonce_select]]]);
             }
             else if (oy_work_type===1) {
                 let [oy_data_payload, oy_sync_command] = oy_work_data;
@@ -550,6 +574,21 @@ function oy_worker_spawn(oy_worker_type) {
     }
 }
 //WEB WORKER BLOCK
+
+function oy_calc_grade(oy_input) {
+    if (typeof(oy_input)!=="string") return false;
+
+    let oy_grade_points = {
+        "1":1, "2":2, "3":3, "4":4, "5":5, "6":6, "7":7, "8":8, "9":9,
+        "a":1, "b":2, "c":3, "d":4, "e":5, "f":6, "g":7, "h":8, "i":9, "j":10, "k":11, "l":12, "m":13, "n":14, "o":15, "p":16, "q":17, "r":18, "s":19, "t":20, "u":21, "v":22, "w":23, "x":24, "y":25, "z":26
+    };
+
+    let oy_grade_score = 0;
+    for (let i = 0; i<oy_input.length; i++) {
+        if (typeof(oy_grade_points[oy_input[i]])!=="undefined") oy_grade_score += oy_grade_points[oy_input[i]];
+    }
+    return oy_grade_score;
+}
 
 function oy_work_verify(oy_work_hash, oy_work_solution, oy_work_difficulty) {//DUPLICATED IN WEB WORKER
     return (oy_work_solution.length===(oy_work_difficulty*4)+oy_work_hash.length&&oy_work_solution.substr(0, oy_work_hash.length)===oy_work_hash&&oy_work_hash.substr(0, OY_WORK_MATCH)===oy_hash_gen(oy_work_solution).substr(0, OY_WORK_MATCH));
@@ -2806,10 +2845,15 @@ function oy_block_engine() {
             for (let i = 0;i<oy_array_length;i++) {
                 OY_BLOCK_LEARN.push([]);
             }
-            oy_log_debug("HASH: "+OY_BLOCK_HASH+" FULL PASS: "+oy_peer_full()+" WORK SOLUTION: "+JSON.stringify(OY_WORK_SOLUTION));
+            oy_log_debug("HASH: "+OY_BLOCK_HASH+" FULL PASS: "+oy_peer_full()+" WORK SOLUTION: "+JSON.stringify(OY_WORK_SOLUTIONS));
         }
-        if (OY_LIGHT_STATE===false&&OY_BLOCK_HASH!==null&&OY_WORK_SOLUTION===null&&oy_peer_full()&&typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined") oy_log_debug("WORK NULL: "+OY_SELF_SHORT);
-        if (OY_LIGHT_STATE===false&&OY_BLOCK_HASH!==null&&OY_WORK_SOLUTION!==null&&(oy_peer_full()||OY_BLOCK_BOOT===true)) {
+        if (OY_LIGHT_STATE===false&&OY_BLOCK_HASH!==null&&OY_WORK_SOLUTIONS.indexOf(null)!==-1&&oy_peer_full()&&typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined") oy_log_debug("WORK NULL: "+OY_SELF_SHORT);
+        if (OY_LIGHT_STATE===false&&OY_BLOCK_HASH!==null&&OY_WORK_SOLUTIONS.indexOf(null)!==-1&&(oy_peer_full()||OY_BLOCK_BOOT===true)) {
+            let oy_solutions_compress = LZString.compressToUTF16(JSON.stringify(OY_WORK_SOLUTIONS));
+            OY_WORK_SOLUTIONS = [null];
+            OY_WORK_GRADES = [null];
+            OY_WORK_BITS = [null];
+
             //oy_log_debug("COMMAND: "+JSON.stringify(OY_BLOCK_COMMAND));
             let oy_command_sort = [];
             for (let oy_command_hash in OY_BLOCK_COMMAND) {
@@ -2832,17 +2876,16 @@ function oy_block_engine() {
 
             OY_BLOCK_SYNC[OY_SELF_PUBLIC] = [true, oy_command_sort];
             if (typeof(OY_BLOCK_WORK_SOLUTION[OY_BLOCK_TIME])==="undefined") OY_BLOCK_WORK_SOLUTION[OY_BLOCK_TIME] = {};
-            OY_BLOCK_WORK_SOLUTION[OY_BLOCK_TIME][OY_SELF_PUBLIC] = [OY_WORK_SOLUTION, 0];
+            OY_BLOCK_WORK_SOLUTION[OY_BLOCK_TIME][OY_SELF_PUBLIC] = [OY_WORK_SOLUTIONS, 0];
 
             for (let i in oy_command_sort) {
                 oy_command_sort[i].pop();
             }
 
             let oy_sync_command = LZString.compressToUTF16(JSON.stringify(oy_command_sort));
-            let oy_sync_crypt = oy_key_sign(OY_SELF_PRIVATE, OY_BLOCK_TIME+oy_hash_gen(oy_sync_command)+OY_WORK_SOLUTION);
+            let oy_sync_crypt = oy_key_sign(OY_SELF_PRIVATE, OY_BLOCK_TIME+oy_hash_gen(oy_sync_command)+oy_solutions_compress);//TODO hash arrangement
             oy_chrono(function() {
-                oy_data_route("OY_LOGIC_SYNC", "OY_BLOCK_SYNC", [[], [oy_key_sign(OY_SELF_PRIVATE, oy_short(oy_sync_crypt))], oy_sync_crypt, OY_BLOCK_TIME, oy_sync_command, OY_WORK_SOLUTION]);
-                OY_WORK_SOLUTION = null;
+                oy_data_route("OY_LOGIC_SYNC", "OY_BLOCK_SYNC", [[], [oy_key_sign(OY_SELF_PRIVATE, oy_short(oy_sync_crypt))], oy_sync_crypt, OY_BLOCK_TIME, oy_sync_command, oy_solutions_compress]);
             }, OY_MESH_BUFFER[1]);//TODO clock skew for peer_request
         }
 
@@ -2951,11 +2994,7 @@ function oy_block_engine() {
                 for (let oy_key_public in OY_BLOCK[1]) {
                     if (OY_BOOST_BUILD.length<OY_BOOST_KEEP*OY_BOOST_BIAS&&typeof(oy_dive_ledger[oy_key_public])==="undefined"&&OY_BOOST_BUILD.indexOf(oy_key_public)===-1&&typeof(OY_PEERS[oy_key_public])==="undefined"&&typeof(OY_NODES[oy_key_public])==="undefined"&&oy_key_public!==OY_SELF_PUBLIC) OY_BOOST_BUILD.push(oy_key_public);
                 }
-                if (OY_DIVE_STATE!==null) {
-                    for (let oy_peer_select in OY_PEERS) {
-                        if (OY_PEERS[oy_peer_select][1]===2&&OY_PEERS[oy_peer_select][0]<OY_BLOCK_TIME&&typeof(oy_dive_ledger[oy_peer_select])==="undefined"&&typeof(OY_BLOCK[1][oy_peer_select])==="undefined") oy_node_deny(oy_peer_select, "OY_DENY_FULL_DIVE_"+OY_PEERS[oy_peer_select][0]+"_"+OY_BLOCK_TIME);
-                    }
-                }
+
                 if (typeof(OY_BLOCK[1][OY_SELF_PUBLIC])==="undefined") OY_DIVE_STATE = null;
                 else OY_DIVE_STATE = OY_BLOCK[1][OY_SELF_PUBLIC][0]>=OY_BLOCK[0][7];
                 OY_BLOCK[1] = oy_block_dive_sort(oy_dive_ledger);
@@ -2973,6 +3012,12 @@ function oy_block_engine() {
                 });
 
                 if (!oy_block_range(Object.keys(OY_BLOCK[1]).length)) return false;//block_range will invoke block_reset if necessary
+
+                if (OY_DIVE_STATE!==null) {
+                    for (let oy_peer_select in OY_PEERS) {
+                        if (OY_PEERS[oy_peer_select][1]===2&&OY_PEERS[oy_peer_select][0]<OY_BLOCK_TIME&&typeof(OY_BLOCK[1][oy_peer_select])==="undefined") oy_node_deny(oy_peer_select, "OY_DENY_FULL_DIVE");
+                    }
+                }
 
                 OY_BLOCK[0][7] = Math.round(OY_BLOCK[0][7]/OY_BLOCK[0][2]);
             }
@@ -3645,12 +3690,24 @@ function oy_block_process(oy_command_execute, oy_full_flag, oy_jump_flag) {
 }
 
 function oy_block_finish() {
-    OY_WORK_SOLUTION = null;
     if (OY_LIGHT_STATE===false) {
+        OY_WORK_SOLUTIONS = new Array(OY_BLOCK[0][3]);
+        OY_WORK_GRADES = new Array(OY_BLOCK[0][3]);
+        OY_WORK_BITS = new Array(OY_BLOCK[0][3]);
+        OY_WORK_SOLUTIONS.fill(null);
+        OY_WORK_GRADES.fill(null);
+        OY_WORK_BITS.fill(null);
+        for (let i in OY_WORK_BITS) {
+            OY_WORK_BITS[i] = oy_hash_gen(OY_SELF_PUBLIC+OY_BLOCK_NEXT+OY_BLOCK_HASH+i).substr(0, OY_WORK_MATCH);
+        }
         oy_worker_spawn(0);
         for (let i in OY_WORKER_THREADS[0]) {
-            OY_WORKER_THREADS[0][i].postMessage([0, [OY_SELF_PUBLIC, OY_BLOCK_NEXT, OY_BLOCK_HASH, OY_BLOCK[0][3]]]);
+            OY_WORKER_THREADS[0][i].postMessage([0, [-1, null]]);
         }
+    }
+    else {
+        OY_WORK_SOLUTIONS = [null];
+        OY_WORK_BITS = [null];
     }
 
     for (let oy_command_hash in OY_BLOCK_CONFIRM) {
