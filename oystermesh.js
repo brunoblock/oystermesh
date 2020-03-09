@@ -82,7 +82,6 @@ const OY_DATA_PULL_INTERVAL = 800;//ms per pull loop iteration
 const OY_DATA_PULL_NONCE_MAX = 3;//maximum amount of nonces to request per pull beam, if too high fulfill will overrun soak limits and cause time/resource waste
 const OY_ENGINE_INTERVAL = 20000;//ms interval for core mesh engine to run, the time must clear a reasonable latency round-about
 const OY_CHRONO_ACCURACY = 10;//ms accuracy for chrono function, lower means more accurate meshblock timing yet more CPU usage
-const OY_READY_RETRY = 2000;//ms interval to retry connection if READY is still false
 /*
 const OY_CHANNEL_BROADCAST_PACKET_MAX = 3000;//maximum size for a packet that is routed via OY_CHANNEL_BROADCAST (OY_LOGIC_ALL)
 const OY_CHANNEL_KEEPTIME = 10;//channel bearing nodes are expected to broadcast a logic_all packet within this interval
@@ -298,13 +297,10 @@ let OY_SIMULATOR_MODE = false;//run in node.js simulator, requires oystersimulat
 let OY_SELF_PRIVATE;//private key of node identity
 let OY_SELF_PUBLIC;//public key of node identity
 let OY_SELF_SHORT;//short representation of public key of node identity
-let OY_READY = false;//connection status
-let OY_CONN;//global P2P connection handle
-let OY_ENGINE_KILL = false;//forces engine to stop its loop
 let OY_CONSOLE;//custom function for handling console
 let OY_MESH_MAP;//custom function for tracking mesh map
 let OY_BLOCK_MAP;//custom function for tracking meshblock map
-let OY_INIT = 0;//prevents multiple instances of oy_init() from running simultaneously
+let OY_INIT = false;//prevents multiple instances of oy_init() from running simultaneously
 let OY_COLLECT = {};//object for tracking pull fulfillments
 let OY_CONSTRUCT = {};//data considered valid from OY_COLLECT is stored here, awaiting for final data reconstruction
 let OY_DATA_PUSH = {};//object for tracking data push threads
@@ -999,7 +995,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         oy_signal_carry = null;
         if (typeof(OY_NODES[oy_key_public])==="undefined") {
             OY_NODES[oy_key_public] = new SimplePeer({initiator:false, trickle:false});
-            OY_NODES[oy_key_public].on('signal', function(oy_signal_data) {
+            OY_NODES[oy_key_public].on("signal", function(oy_signal_data) {
                 oy_data_beam(oy_peer_id, "OY_PEER_EXCHANGE_C", oy_signal_beam(oy_signal_data));
             });
             oy_node_connect(oy_key_public);
@@ -1043,7 +1039,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             OY_NODES[oy_key_public] = OY_PEERS[oy_peer_id][10];
             OY_PEERS[oy_peer_id][10] = null;//TODO verify
             oy_node_connect(oy_key_public);
-            OY_NODES[oy_key_public].on('connect', function() {
+            OY_NODES[oy_key_public].on("connect", function() {
                 delete OY_WARM[oy_key_public];
                 oy_node_initiate(oy_key_public);
             });
@@ -1559,14 +1555,14 @@ function oy_node_reset(oy_node_id) {
 function oy_node_connect(oy_node_id) {
     if (typeof(OY_NODES[oy_node_id])==="undefined") return false;
 
-    OY_NODES[oy_node_id].on('data', function(oy_data_raw) {
+    OY_NODES[oy_node_id].on("data", function(oy_data_raw) {
         oy_data_soak(oy_node_id, oy_data_raw);
     });
-    OY_NODES[oy_node_id].on('error', function(oy_node_error) {
+    OY_NODES[oy_node_id].on("error", function(oy_node_error) {
         oy_node_deny(oy_node_id, "OY_DENY_CONNECT_FAIL");
         oy_log("ERROR["+oy_short(oy_node_id)+"][OY_ERROR_CONNECT_FAIL]["+oy_node_error+"]", true);
     });
-    OY_NODES[oy_node_id].on('close', function() {
+    OY_NODES[oy_node_id].on("close", function() {
         delete OY_NODES[oy_node_id];
         delete OY_COLD[oy_node_id];
     });
@@ -1592,6 +1588,10 @@ function oy_node_initiate(oy_node_id) {
     return true;
 }
 
+function oy_node_assign() {
+    if (OY_BLOCK_BOOT===null) return false;
+}
+
 /*
 function oy_node_boost() {
     if (OY_BOOST_RESERVE.length===0) return true;
@@ -1600,30 +1600,6 @@ function oy_node_boost() {
     //console.log("BOOST: "+OY_BOOST_RESERVE[0]);
     oy_node_initiate(OY_BOOST_RESERVE.shift());
     oy_chrono(oy_node_boost, OY_NODE_ASSIGN_DELAY);
-}
-
-//retrieves nodes from and submit self id to top.oyster.org
-function oy_node_assign() {
-    if (OY_BLOCK_BOOT===null) return false;
-    let oy_xhttp = new XMLHttpRequest();
-    oy_xhttp.onreadystatechange = function() {
-        if (this.readyState===4&&this.status===200) {
-            if (this.responseText.substr(0, 5)==="ERROR"||this.responseText.length===0) {
-                oy_log("TOP[ASSIGN][ERROR]["+this.responseText+"]");
-                return false;
-            }
-            let oy_node_array = JSON.parse(this.responseText);
-            let oy_delay = 0;
-            for (let i in oy_node_array) {
-                oy_chrono(function() {
-                    oy_node_initiate(oy_node_array[i]);
-                }, oy_delay);
-                oy_delay += OY_NODE_ASSIGN_DELAY;
-            }
-        }
-    };
-    oy_xhttp.open("POST", "https://top.oyster.org/oy_node_assign_alpha.php", true);
-    oy_xhttp.send("oy_node_id="+OY_SELF_PUBLIC);
 }
 */
 
@@ -2906,7 +2882,7 @@ function oy_block_engine() {
         for (let oy_peer_select in OY_PEERS) {
             if (OY_PEERS[oy_peer_select][1]===0||OY_PEERS[oy_peer_select][0]>=OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]||Object.keys(OY_NODES).length>=OY_NODE_MAX) continue;
             OY_PEERS[oy_peer_select][10] = new SimplePeer({initiator:true, trickle:false});
-            OY_PEERS[oy_peer_select][10].on('signal', oy_signal_data => {
+            OY_PEERS[oy_peer_select][10].on("signal", oy_signal_data => {
                 OY_PEERS[oy_peer_select][11][0] = true;
                 oy_chrono(function() {
                     oy_data_beam(oy_peer_select, "OY_PEER_EXCHANGE_A", [oy_peer_map, oy_signal_beam(oy_signal_data)]);
@@ -3894,21 +3870,7 @@ function oy_block_finish() {
     }
 }
 
-//core loop that runs critical functions and checks
-function oy_engine(oy_thread_track) {
-    if (OY_ENGINE_KILL===true) {
-        OY_ENGINE_KILL = false;
-        return true;
-    }
-    //reboot INIT if the connection was lost
-    if (OY_READY===true&&(OY_CONN===null||OY_CONN.disconnected!==false)) {
-        oy_log("Engine found connection handler dead, will reboot INIT and kill engine chain");
-        OY_INIT = 0;
-        OY_READY = false;
-        oy_init();
-        return true;
-    }
-
+/*
     let oy_time_local = Date.now()/1000;
     let oy_hash_keep = [];
     for (let oy_channel_id in OY_CHANNEL_KEEP) {
@@ -3959,46 +3921,31 @@ function oy_engine(oy_thread_track) {
     for (let oy_key_public in OY_CHANNEL_DYNAMIC) {
         if (oy_time_local-OY_CHANNEL_DYNAMIC[oy_key_public]>OY_CHANNEL_ALLOWANCE) delete OY_CHANNEL_DYNAMIC[oy_key_public];
     }
-
-    oy_chrono(function() {
-        oy_engine(oy_thread_track);
-    }, OY_ENGINE_INTERVAL);
-}
+     */
 
 //initialize oyster mesh boot up sequence
-function oy_init(oy_callback, oy_passthru, oy_console) {
-    //localStorage.clear();
+function oy_init(oy_console) {
     if (typeof(oy_console)==="function") {
-        console.log("Console redirected to custom function");
+        console.log("Oyster console redirected to custom function");
         OY_CONSOLE = oy_console;
     }
-    if (typeof(oy_passthru)==="undefined"||oy_passthru===null) {
-        if (OY_INIT===1) {
-            oy_log("Clashing instance of INIT prevented from running", 1);
-            return false;
-        }
-        OY_INIT = 1;
-        oy_log("Oyster Mesh initializing...");
-
-        document.addEventListener("oy_peers_null", oy_block_reset, false);
-
-        let oy_key_pair = oy_key_gen();
-        //reset cryptographic node id for self, and any persisting variables that are related to the old self id (if any)
-        OY_SELF_PRIVATE = oy_key_pair[0];
-        OY_SELF_PUBLIC = oy_key_pair[1];
-        OY_SELF_SHORT = oy_short(OY_SELF_PUBLIC);
-        OY_PROPOSED = {};
-        oy_log("Initiating new P2P session with new ID "+OY_SELF_SHORT);
-        oy_init(oy_callback, true);
-        return true;
+    if (OY_INIT===true) {
+        oy_log("[ERROR][INIT_DUPLICATE]", true);
+        return false;
     }
+    OY_INIT = true;
+    oy_log("[OYSTER]["+OY_MESH_DYNASTY+"]", true);
 
-    /* SIMULATOR BLOCK
-    parentPort.once('message', (message) => {
-        parentPort.postMessage(message);
-    });
-    */
+    document.addEventListener("oy_peers_null", oy_block_reset, false);
 
+    let oy_key_pair = oy_key_gen();
+    OY_SELF_PRIVATE = oy_key_pair[0];
+    OY_SELF_PUBLIC = oy_key_pair[1];
+    OY_SELF_SHORT = oy_short(OY_SELF_PUBLIC);
+    OY_PROPOSED = {};
+    oy_log("[SELF_ID_"+OY_SELF_SHORT+"]", true);
+
+    //localStorage.clear();//TODO phase out localstorage in favour of async
     //Dexie.delete("oy_db");
     OY_DB = new Dexie("oy_db");
     OY_DB.version(1).stores({
@@ -4007,70 +3954,31 @@ function oy_init(oy_callback, oy_passthru, oy_console) {
         oy_channel:"oy_broadcast_hash,oy_channel_id"
     });
 
-    /*
-    OY_CONN = new Peer(OY_SELF_PUBLIC, {host: 'top.oyster.org', port: 8200, path: '/', secure:true});
+    let oy_time_local = Date.now()/1000;
+    if (oy_time_local<OY_BLOCK_BOOTTIME) OY_BLOCK_BOOT = null;
+    else OY_BLOCK_BOOT = oy_time_local-OY_BLOCK_BOOTTIME<OY_BLOCK_BOOT_BUFFER;
 
-    OY_CONN.on('open', function(oy_self_id) {
-        if (oy_self_id===null) return false;
-        OY_READY = true;
-        oy_log("P2P connection ready with self ID "+oy_short(oy_self_id));
-        if (typeof(oy_callback)==="function") oy_callback();
-        oy_local_get("oy_boost_expire", null, function(oy_boost_expire) {
-            if (oy_boost_expire!==null&&Date.now()/1000<oy_boost_expire) oy_local_get("oy_boost_reserve", [], function(oy_boost) {
-                OY_BOOST_RESERVE = oy_boost;
-            });
-            else oy_local_set("oy_boost_reserve", []);
-        });
-    }, null);
+    oy_node_assign();
+    oy_block_engine();
 
-    OY_CONN.on('connection', function(oy_conn) {
-        oy_conn.on('data', function(oy_data_raw) {
-            let oy_data = oy_data_soak(oy_conn.peer, oy_data_raw);
-            if (oy_data===true) return true;
-            else if (oy_data===false) oy_node_deny(oy_conn.peer, "OY_DENY_DATA_INVALID");
-            else if (oy_data[0]==="OY_LATENCY_RESPONSE") oy_latency_response(oy_conn.peer, oy_data[1]);
-            else if (typeof(OY_PEERS[oy_conn.peer])!=="undefined") oy_peer_process(oy_conn.peer, oy_data[0], oy_data[1]);
-            else oy_node_negotiate(oy_conn.peer, oy_data[0], oy_data[1]);
-        });
-    }, null);
+    document.dispatchEvent(OY_STATE_BLANK);
 
-    OY_CONN.on('error', function(oy_error) {
-        oy_log("PeerJS Error: "+oy_error.type);
-        if (oy_error.type==="browser-incompatible"&&typeof(OY_ERROR_BROWSER)==="function") OY_ERROR_BROWSER();
-    }, null);
-     */
-
-    oy_chrono(function() {
-        if (OY_READY===true) {
-            oy_log("Connection is now ready, sparking engine");
-
-            let oy_time_local = Date.now()/1000;
-            if (oy_time_local<OY_BLOCK_BOOTTIME) OY_BLOCK_BOOT = null;
-            else OY_BLOCK_BOOT = oy_time_local-OY_BLOCK_BOOTTIME<OY_BLOCK_BOOT_BUFFER;
-
-            oy_node_assign();
-            oy_block_engine();
-
-            oy_chrono(oy_engine, 50);//TODO temp
-
-            document.dispatchEvent(OY_STATE_BLANK);
-        }
-        else {
-            oy_log("Connection was not established before cutoff, re-sparking INIT");
-            OY_INIT = 0;
-            oy_init(oy_callback);
-        }
-    }, OY_READY_RETRY);
+    /* SIMULATOR BLOCK
+    parentPort.once('message', (message) => {
+        parentPort.postMessage(message);
+    });
+    */
 }
 
+/*TODO offset to oysterdive.js
 let oy_call_detect = document.getElementById("oy.js");
 if (!!oy_call_detect) {
     let oy_dive_detect = oy_call_detect.getAttribute("payout");
     if (oy_key_check(oy_dive_detect)) {
         OY_PASSIVE_MODE = true;
         OY_DIVE_PAYOUT = oy_dive_detect;
-        oy_init(function() {
-            console.log("Oyster is diving for address "+OY_DIVE_PAYOUT);
-        });
+        oy_init();
+        console.log("Oyster is diving for address "+OY_DIVE_PAYOUT);
     }
 }
+*/
