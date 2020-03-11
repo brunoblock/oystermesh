@@ -528,8 +528,8 @@ function oy_worker_spawn(oy_worker_type) {
                 let [oy_data_payload, oy_dive_ledger, oy_crypt_short, oy_sync_expand, oy_work_solutions, oy_block_boot, oy_block_time, oy_block_hash, oy_work_difficulty] = oy_work_data;
 
                 if (oy_block_sync_hop(oy_dive_ledger, oy_data_payload[0].slice(), oy_data_payload[1].slice(), oy_crypt_short, true)||oy_block_boot===true) {
-                    let oy_sync_hash = oy_hash_gen(oy_data_payload[4]);
-                    if (oy_key_verify(oy_data_payload[0][0], oy_data_payload[2], oy_data_payload[3]+oy_sync_hash+oy_data_payload[5])&&oy_work_verify(oy_block_time, oy_data_payload[0][0], oy_block_hash, oy_work_solutions, oy_work_difficulty)) {
+                    let oy_work_solutions = JSON.parse(oy_work_solutions);
+                    if (oy_key_verify(oy_data_payload[0][0], oy_data_payload[2], oy_data_payload[3]+oy_data_payload[4]+oy_data_payload[5])&&oy_work_verify(oy_block_time, oy_data_payload[0][0], oy_block_hash, oy_work_solutions, oy_work_difficulty)) {
                         let oy_sync_command = oy_block_command_hash(JSON.parse(oy_sync_expand));
                         if (oy_sync_command!==false) {
                             let oy_grade_array = [];
@@ -959,7 +959,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             }
             else {
                 OY_BLOCK_SYNC[oy_data_payload[0][0]] = [oy_data_payload[2], false];
-                OY_WORKER_THREADS[1][oy_worker_point(1)].postMessage([1, [oy_data_payload, OY_BLOCK[1], oy_short(oy_data_payload[2]), LZString.decompressFromUTF16(oy_data_payload[4]), JSON.parse(LZString.decompressFromUTF16(oy_data_payload[5])), OY_BLOCK_BOOT, OY_BLOCK_TIME, OY_BLOCK_HASH, OY_BLOCK[0][3]]]);
+                OY_WORKER_THREADS[1][oy_worker_point(1)].postMessage([1, [oy_data_payload, OY_BLOCK[1], oy_short(oy_data_payload[2]), oy_data_payload[4], oy_data_payload[5], OY_BLOCK_BOOT, OY_BLOCK_TIME, OY_BLOCK_HASH, OY_BLOCK[0][3]]]);
             }
         }
         return true;
@@ -2969,7 +2969,7 @@ function oy_block_engine() {
                 oy_grade_array.push(oy_calc_grade(OY_WORK_SOLUTIONS[i]));
             }
             OY_BLOCK_WORK_GRADE[OY_SELF_PUBLIC] = Math.floor(oy_calc_avg(oy_grade_array));
-            let oy_solutions_compress = LZString.compressToUTF16(JSON.stringify(OY_WORK_SOLUTIONS));
+            let oy_solutions_flat = JSON.stringify(OY_WORK_SOLUTIONS);
             OY_WORK_SOLUTIONS = [null];
             OY_WORK_GRADES = [null];
             OY_WORK_BITS = [null];
@@ -2996,16 +2996,16 @@ function oy_block_engine() {
 
             OY_BLOCK_SYNC[OY_SELF_PUBLIC] = [true, oy_command_sort];
             if (typeof(OY_BLOCK_WORK_SOLUTION[OY_BLOCK_TIME])==="undefined") OY_BLOCK_WORK_SOLUTION[OY_BLOCK_TIME] = {};
-            OY_BLOCK_WORK_SOLUTION[OY_BLOCK_TIME][OY_SELF_PUBLIC] = [oy_solutions_compress, 0];
+            OY_BLOCK_WORK_SOLUTION[OY_BLOCK_TIME][OY_SELF_PUBLIC] = [oy_solutions_flat, 0];
 
             for (let i in oy_command_sort) {
                 oy_command_sort[i].pop();
             }
 
-            let oy_sync_command = LZString.compressToUTF16(JSON.stringify(oy_command_sort));
-            let oy_sync_crypt = oy_key_sign(OY_SELF_PRIVATE, OY_BLOCK_TIME+oy_hash_gen(oy_sync_command)+oy_solutions_compress);//TODO hash arrangement
+            let oy_sync_command = JSON.stringify(oy_command_sort);
+            let oy_sync_crypt = oy_key_sign(OY_SELF_PRIVATE, OY_BLOCK_TIME+oy_sync_command+oy_solutions_flat);
             oy_chrono(function() {
-                oy_data_route("OY_LOGIC_SYNC", "OY_BLOCK_SYNC", [[], [oy_key_sign(OY_SELF_PRIVATE, oy_short(oy_sync_crypt))], oy_sync_crypt, OY_BLOCK_TIME, oy_sync_command, oy_solutions_compress]);
+                oy_data_route("OY_LOGIC_SYNC", "OY_BLOCK_SYNC", [[], [oy_key_sign(OY_SELF_PRIVATE, oy_short(oy_sync_crypt))], oy_sync_crypt, OY_BLOCK_TIME, oy_sync_command, oy_solutions_flat]);
             }, OY_MESH_BUFFER[1]);//TODO clock skew for peer_request
         }
 
@@ -3079,7 +3079,7 @@ function oy_block_engine() {
                 let oy_dive_ledger = {};
                 for (let oy_key_public in OY_BLOCK_SYNC) {
                     //[[0]:work_grade, [1]:grade_top, [2]:uptime_count, [3]:transact_fee_payout, [4]:intro_addr, [5]:work_solution, [6]:dive_final_balance]
-                    oy_dive_ledger[oy_key_public] = [OY_BLOCK_WORK_GRADE[oy_key_public], 0, (typeof(OY_BLOCK[1][oy_key_public])!=="undefined")?OY_BLOCK[1][oy_key_public][0]+1:1, (typeof(OY_BLOCK[1][oy_key_public])!=="undefined")?OY_BLOCK[1][oy_key_public][1]:0, (OY_BLOCK_SYNC===false)?0:0, JSON.parse(LZString.decompressFromUTF16(OY_BLOCK_WORK_SOLUTION[OY_BLOCK_TIME][oy_key_public][0])), 0];
+                    oy_dive_ledger[oy_key_public] = [OY_BLOCK_WORK_GRADE[oy_key_public], 0, (typeof(OY_BLOCK[1][oy_key_public])!=="undefined")?OY_BLOCK[1][oy_key_public][0]+1:1, (typeof(OY_BLOCK[1][oy_key_public])!=="undefined")?OY_BLOCK[1][oy_key_public][1]:0, (OY_BLOCK_SYNC===false)?0:0, JSON.parse(OY_BLOCK_WORK_SOLUTION[OY_BLOCK_TIME][oy_key_public][0]), 0];
                     oy_grade_total += OY_BLOCK_WORK_GRADE[oy_key_public];
                 }
                 OY_BLOCK_WORK_GRADE = {};
