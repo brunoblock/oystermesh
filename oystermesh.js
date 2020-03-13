@@ -43,6 +43,7 @@ const OY_PEER_RESERVETIME = 300;//peers are expected to establish latency timing
 const OY_PEER_MAX = 6;//maximum mutual peers
 const OY_PEER_FULL_MIN = 4;
 const OY_PEER_CUT = 0.3;//minimum percentage threshold to be safe from being selected as a potential weakest peer, higher is less peers safe
+const OY_INTRO_TRIP = [0.8, 800];
 const OY_WORK_MATCH = 4;//lower is more bandwidth/memory bound, higher is more CPU bound, anomaly birds come from CPU bound therefore higher is safer against unemployment absence
 const OY_WORK_MAX = 10000;//10000
 const OY_WORK_MIN = 2;
@@ -298,6 +299,7 @@ let OY_INTRO_DEFAULT = {
     "nodea4.oyster.org:8443":true
 };
 let OY_INTRO_PUNISH = {};
+let OY_NODE_STATE = typeof(window)==="undefined";
 let OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inputs are expected
 let OY_SIMULATOR_MODE = false;//run in node.js simulator, requires oystersimulate.js
 let OY_SELF_PRIVATE;//private key of node identity
@@ -2575,6 +2577,38 @@ function oy_data_deposit_purge() {
     oy_log("Purged "+OY_DATA_PURGE+" handles from deposit");
 }
 
+function oy_intro_beam(oy_intro_select, oy_data_flag, oy_data_payload, oy_callback) {
+    let ws = new WebSocket("wss://"+oy_intro_select);
+    let oy_response = false;
+    ws.onopen = function() {
+        ws.send(JSON.stringify([oy_data_flag, oy_data_payload]));
+    };
+    ws.onmessage = function (oy_event) {
+        oy_response = true;
+        ws.close();
+        console.log("INTRO_SOAK: "+oy_event.data);
+        if (typeof(oy_callback)==="function") {
+            try {
+                let [oy_data_flag, oy_data_payload] = JSON.parse(oy_event.data);
+                if (oy_data_flag==="OY_INTRO_UNREADY") oy_intro_punish(oy_intro_select);
+                else oy_callback(oy_data_flag, oy_data_payload);
+            }
+            catch {}
+        }
+    };
+    oy_chrono(function() {
+        if (oy_response===false) {
+            ws.close();
+            oy_intro_punish(oy_intro_select);
+        }
+    }, OY_INTRO_TRIP[1]);
+}
+
+function oy_intro_punish(oy_intro_select) {
+    if (typeof(OY_INTRO_PUNISH[oy_intro_select])==="undefined") OY_INTRO_PUNISH[oy_intro_select] = 1;
+    else OY_INTRO_PUNISH[oy_intro_select]++;
+}
+
 function oy_channel_check(oy_channel_id) {
     return oy_channel_id.length===40;
 }
@@ -3140,19 +3174,33 @@ function oy_block_engine() {
                     for (let oy_full_intro in OY_INTRO_PUNISH) {
                         if (OY_INTRO_PUNISH[oy_full_intro]<oy_punish_low||oy_punish_low===-1) oy_punish_low = OY_INTRO_PUNISH[oy_full_intro];
                     }
+                    let oy_punish_diff = oy_punish_low-1;
+                    if (oy_punish_diff>0) {
+                        oy_punish_low -= oy_punish_diff;
+                        for (let oy_full_intro in OY_INTRO_PUNISH) {
+                            OY_INTRO_PUNISH[oy_full_intro] -= oy_punish_diff;
+                        }
+                    }
                     for (let oy_full_intro in OY_INTRO_PUNISH) {
                         if (OY_INTRO_PUNISH[oy_full_intro]===oy_punish_low) oy_intro_array.push(oy_full_intro);
                     }
                 }
                 let oy_intro_select = oy_intro_array[Math.floor(Math.random()*oy_intro_array)];
-                let ws = new WebSocket("wss://"+oy_intro_select);
-                ws.onopen = function() {
-                    ws.send("TEMP1");
-                };
-                ws.onmessage = function (oy_event) {
-                    console.log("TEMP2: "+oy_event.data);
-                    ws.close();
-                };
+                oy_intro_beam(oy_intro_select, "OY_INTRO_PRE", null, function(oy_data_flag, oy_data_payload) {
+                    if (oy_data_flag!=="OY_INTRO_TIME"||!Number.isInteger(oy_data_payload)||oy_data_payload<OY_BLOCK_SECTORS[0][1]||oy_data_payload>OY_BLOCK_SECTORS[1][1]) {
+                        oy_intro_punish(oy_intro_select);
+                        return false;
+                    }
+                    let oy_time_offset = ((Date.now()/1000)-OY_BLOCK_TIME)*1000;
+                    if (oy_data_payload<=oy_time_offset) return false;
+                    oy_chrono(function() {
+                        oy_intro_beam(oy_intro_select, "OY_INTRO_GET", null, function(oy_data_flag, oy_data_payload) {
+                            if (oy_data_flag!=="OY_INTRO_WORK") {
+
+                            }
+                        });
+                    }, oy_data_payload-oy_time_offset);
+                });
             }
         }, OY_BLOCK_SECTORS[0][1]-OY_BLOCK_BUFFER_CLEAR[1]);
 
@@ -4112,31 +4160,6 @@ function oy_block_finish() {
     for (let oy_key_public in OY_CHANNEL_DYNAMIC) {
         if (oy_time_local-OY_CHANNEL_DYNAMIC[oy_key_public]>OY_CHANNEL_ALLOWANCE) delete OY_CHANNEL_DYNAMIC[oy_key_public];
     }
-
-    var fs = require('fs');
-
-    var privateKey = fs.readFileSync('/etc/letsencrypt/live/domain/privkey.pem', 'utf8');
-    var certificate = fs.readFileSync('/etc/letsencrypt/live/domain/fullchain.pem', 'utf8');
-
-    var credentials = { key: privateKey, cert: certificate };
-    var https = require('https');
-
-    var httpsServer = https.createServer(credentials);
-    httpsServer.listen(8443);
-
-    var WebSocketServer = require('ws').Server;
-    var wss = new WebSocketServer({
-        server: httpsServer
-    });
-
-    wss.on('connection', function connection(ws) {
-        ws.on('message', function incoming(message) {
-            console.log('received: %s', message);
-            ws.send('reply from server : ' + message)
-        });
-
-        ws.send('something');
-    });
      */
 
 //initialize oyster mesh boot up sequence
@@ -4178,6 +4201,46 @@ function oy_init(oy_console) {
     oy_block_engine();
 
     document.dispatchEvent(OY_STATE_BLANK);
+
+    if (OY_FULL_INTRO!==false&&OY_FULL_INTRO.indexOf(":")!==-1&&OY_NODE_STATE===true) {
+        let fs = require('fs');
+
+        let privateKey = fs.readFileSync('/etc/letsencrypt/live/domain/privkey.pem', 'utf8');
+        let certificate = fs.readFileSync('/etc/letsencrypt/live/domain/fullchain.pem', 'utf8');
+
+        let credentials = {key:privateKey, cert:certificate};
+        let https = require('https');
+
+        let httpsServer = https.createServer(credentials);
+        httpsServer.listen(parseInt(OY_FULL_INTRO.split(":")[1]));
+
+        let WebSocketServer = require('ws').Server;
+        let wss = new WebSocketServer({
+            server: httpsServer
+        });
+
+        wss.on('connection', function(ws) {
+            ws.on('message', function(oy_data_raw) {
+                console.log('received: %s', oy_data_raw);
+                try {
+                    if (oy_state_current()!==2||typeof(OY_BLOCK[1][OY_SELF_PUBLIC])==="undefined") {
+                        ws.send(JSON.stringify(["OY_INTRO_UNREADY", null]));
+                        return false;
+                    }
+                    let oy_time_offset = (Date.now()/1000)-OY_BLOCK_TIME;
+                    let [oy_data_flag, oy_data_payload] = JSON.parse(oy_data_raw);
+                    if (oy_data_flag==="OY_INTRO_PRE") {
+                        if (oy_time_offset<(OY_BLOCK_SECTORS[0][0]-OY_BLOCK_BUFFER_CLEAR[0])-OY_MESH_BUFFER[0]||oy_time_offset>OY_BLOCK_SECTORS[0][0]+OY_MESH_BUFFER[0]) return false;
+                        ws.send(JSON.stringify(["OY_INTRO_TIME", (OY_SYNC_LAST[0]>0)?Math.max(OY_BLOCK_SECTORS[0][1], Math.min(OY_BLOCK_SECTORS[1][1], OY_SYNC_LAST[0]+OY_BLOCK_BUFFER_SPACE[1])):OY_BLOCK_SECTORS[1][1]]));
+                    }
+                    else if (oy_data_flag==="OY_INTRO_GET") {
+
+                    }
+                }
+                catch {}
+            });
+        });
+    }
 
     /* SIMULATOR BLOCK
     parentPort.once('message', (message) => {
