@@ -34,6 +34,8 @@ const OY_BLOCK_BOOT_SEED = 1583483400;//timestamp to boot the mesh, node remains
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
+const OY_BLOCK_RECORD_LIMIT = 20;
+const OY_BLOCK_RECORD_INTRO_BUFFER = 1.4;
 const OY_JUDGE_BUFFER_BASE = 1.8;
 const OY_JUDGE_BUFFER_CURVE = 1.2;//allocation for curve
 const OY_SYNC_LAST_BUFFER = 2;
@@ -342,6 +344,9 @@ let OY_WORK_GRADES = [null];
 let OY_WORK_BITS = [null];
 let OY_INTRO_SELECT = null;
 let OY_INTRO_SOLUTIONS = {};
+let OY_INTRO_MARKER = null;
+let OY_INTRO_PICKUP_COUNT = null;
+let OY_INTRO_ALLOCATE = {};
 let OY_BLOCK_JUDGE = [null];
 let OY_BLOCK_LEARN = [null];
 let OY_BLOCK_HASH = null;//hash of the most current block
@@ -363,6 +368,8 @@ let OY_BLOCK_COMMAND_ROLLBACK = {};
 let OY_BLOCK_SYNC = {};
 let OY_BLOCK_SYNC_PASS = {};
 let OY_BLOCK_WORK_GRADE = {};
+let OY_BLOCK_RECORD = null;
+let OY_BLOCK_RECORD_KEEP = [];
 let OY_BLOCK_FINISH = false;
 let OY_BLOCK_JUMP_MAP = {};
 let OY_JUMP_ASSIGN = [null, null];//handle jump sessions
@@ -600,17 +607,23 @@ function oy_worker_spawn(oy_worker_type) {
                         if (OY_INTRO_SOLUTIONS[oy_work_nonce]===null||oy_calc_grade(oy_work_solution)>oy_calc_grade(OY_INTRO_SOLUTIONS[oy_work_nonce])) OY_INTRO_SOLUTIONS[oy_work_nonce] = oy_work_solution;
                         if (Object.keys(OY_INTRO_SOLUTIONS).length>0&&Object.values(OY_INTRO_SOLUTIONS).indexOf(null)===-1) {
                             oy_intro_beam(OY_INTRO_SELECT, "OY_INTRO_DONE", [true, OY_INTRO_SOLUTIONS], function(oy_data_flag, oy_data_payload) {
-                                let oy_signal_carry;
-                                if (oy_data_flag!=="OY_INTRO_SIGNAL_A"||!(oy_signal_carry = oy_signal_soak(oy_data_payload))||typeof(OY_NODES[oy_signal_carry[0]])!=="undefined") {
+                                if (oy_data_flag!=="OY_INTRO_SIGNAL_A"||typeof(oy_data_payload)!=="object"||oy_data_payload.length<1) {
                                     oy_intro_punish(OY_INTRO_SELECT);
                                     return false;
                                 }
-                                OY_NODES[oy_signal_carry[0]] = new SimplePeer({initiator:false, trickle:false});
-                                OY_NODES[oy_signal_carry[0]].on("signal", function(oy_signal_data) {
-                                    oy_intro_beam(OY_INTRO_SELECT, "OY_INTRO_SIGNAL_B", oy_signal_beam(oy_signal_data));
-                                });
-                                oy_node_connect(oy_signal_carry[0]);
-                                OY_NODES[oy_signal_carry[0]].signal(oy_signal_carry[1]);
+                                for (let i in oy_data_payload) {
+                                    let oy_signal_carry;
+                                    if (!(oy_signal_carry = oy_signal_soak(oy_data_payload[i]))||typeof(OY_NODES[oy_signal_carry[0]])!=="undefined") {
+                                        oy_intro_punish(OY_INTRO_SELECT);
+                                        return false;
+                                    }
+                                    OY_NODES[oy_signal_carry[0]] = new SimplePeer({initiator:false, trickle:false});
+                                    OY_NODES[oy_signal_carry[0]].on("signal", function(oy_signal_data) {
+                                        oy_intro_beam(OY_INTRO_SELECT, "OY_INTRO_SIGNAL_B", oy_signal_beam(oy_signal_data));
+                                    });
+                                    oy_node_connect(oy_signal_carry[0]);
+                                    OY_NODES[oy_signal_carry[0]].signal(oy_signal_carry[1]);
+                                }
                             });
                             OY_INTRO_SOLUTIONS = {};
                         }
@@ -2944,8 +2957,13 @@ function oy_block_reset(oy_reset_flag) {
     OY_BLOCK_COMMAND_NONCE = 0;
     OY_BLOCK_COMMAND = {};
     OY_BLOCK_SYNC = {};
+    OY_BLOCK_RECORD = null;
+    OY_BLOCK_RECORD_KEEP = [];
     OY_BLOCK_FINISH = false;
     OY_PEER_OFFER = [null, null];
+    OY_INTRO_MARKER = null;
+    OY_INTRO_PICKUP_COUNT = null;
+    OY_INTRO_ALLOCATE = {};
     OY_BLOCK_CHALLENGE = {};
     OY_BLOCK_JUDGE = [null];
     OY_BLOCK_LEARN = [null];
@@ -2995,6 +3013,7 @@ function oy_block_engine() {
         OY_BLOCK_SYNC = {};
         OY_BLOCK_SYNC_PASS[OY_BLOCK_TIME] = {};
         OY_BLOCK_WORK_GRADE = {};
+        OY_BLOCK_RECORD = null;
         OY_BLOCK_FINISH = false;
         OY_SYNC_TALLY = {};
         OY_OFFER_COUNTER = 0;
@@ -3002,14 +3021,18 @@ function oy_block_engine() {
         OY_OFFER_PICKUP = [];
         OY_INTRO_SELECT = null;
         OY_INTRO_SOLUTIONS = {};
+        OY_INTRO_PICKUP_COUNT = null;
+        OY_INTRO_ALLOCATE = {};
         OY_PEER_OFFER = [null, null];
         OY_LIGHT_PROCESS = false;
         OY_BASE_BUILD = [];
         OY_JUMP_PRE = {};
         oy_block_jump_reset();
         let oy_block_continue = true;
-
         oy_worker_halt(0);
+
+        if (OY_FULL_INTRO!==false&&OY_FULL_INTRO.indexOf(":")!==-1&&OY_NODE_STATE===true&&OY_BLOCK_RECORD_KEEP.length>1) OY_INTRO_MARKER = ((OY_SYNC_LAST[0]>0)?Math.max(OY_BLOCK_SECTORS[0][1], Math.min(OY_BLOCK_SECTORS[1][1], OY_SYNC_LAST[0]+OY_BLOCK_BUFFER_SPACE[1])):OY_BLOCK_SECTORS[1][1])+(Math.max(...OY_BLOCK_RECORD_KEEP)*1000*OY_BLOCK_RECORD_INTRO_BUFFER);
+        else OY_INTRO_MARKER = null;
 
         if (OY_BLOCK_BOOT===true) {
             if (OY_LIGHT_MODE===true) return false;//if self elects to be a light node they cannot participate in the initial boot-up sequence of the mesh
@@ -3225,7 +3248,7 @@ function oy_block_engine() {
                     let oy_time_offset = ((Date.now()/1000)-OY_BLOCK_TIME)*1000;
                     if (oy_data_payload<=oy_time_offset) return false;
                     oy_chrono(function() {
-                        oy_intro_beam(oy_intro_select, "OY_INTRO_GET", null, function(oy_data_flag, oy_data_payload) {
+                        oy_intro_beam(oy_intro_select, "OY_INTRO_GET", true, function(oy_data_flag, oy_data_payload) {
                             if (oy_data_flag!=="OY_INTRO_WORK"||typeof(oy_data_payload)!=="object"||oy_data_payload.length>OY_WORK_MAX/OY_WORK_INTRO) {
                                 oy_intro_punish(oy_intro_select);
                                 return false;
@@ -3254,6 +3277,8 @@ function oy_block_engine() {
                 oy_block_reset("OY_RESET_NULL_HASH_A");
                 return false;
             }
+
+            OY_BLOCK_RECORD = Date.now()/1000;
 
             let oy_command_execute = [];
             if (OY_BLOCK_TIME-OY_BLOCK_BOOTTIME>OY_BLOCK_BOOT_BUFFER/2) {
@@ -3534,6 +3559,7 @@ function oy_block_light() {
     }
     OY_BLOCK_DIFF = true;
     OY_LIGHT_PROCESS = true;
+    OY_BLOCK_RECORD = Date.now()/1000;
 
     let oy_reference_select = [null, 0];
     for (let oy_diff_reference in OY_LIGHT_BUILD) {
@@ -4135,7 +4161,11 @@ function oy_block_finish() {
             OY_PEERS[oy_peer_select][2] = true;
         }
     }
-    OY_BLOCK_FINISH = Date.now()/1000;
+    if (OY_BLOCK_RECORD!==null) {
+        OY_BLOCK_RECORD_KEEP.push((Date.now()/1000)-OY_BLOCK_RECORD);
+        while (OY_BLOCK_RECORD_KEEP.length>OY_BLOCK_RECORD_LIMIT) OY_BLOCK_RECORD_KEEP.shift();
+    }
+    OY_BLOCK_FINISH = true;
 }
 
 /*
@@ -4252,7 +4282,7 @@ function oy_init(oy_console) {
             ws.on('message', function(oy_data_raw) {
                 console.log('received: %s', oy_data_raw);
                 try {
-                    if (oy_state_current()!==2||typeof(OY_BLOCK[1][OY_SELF_PUBLIC])==="undefined") {
+                    if (oy_state_current()!==2||typeof(OY_BLOCK[1][OY_SELF_PUBLIC])==="undefined"||OY_INTRO_MARKER===null||OY_BLOCK_RECORD_KEEP.length<=1) {
                         ws.send(JSON.stringify(["OY_INTRO_UNREADY", null]));
                         return false;
                     }
@@ -4260,13 +4290,20 @@ function oy_init(oy_console) {
                     let [oy_data_flag, oy_data_payload] = JSON.parse(oy_data_raw);
                     if (oy_data_flag==="OY_INTRO_PRE") {
                         if (oy_time_offset<(OY_BLOCK_SECTORS[0][0]-OY_BLOCK_BUFFER_CLEAR[0])-OY_MESH_BUFFER[0]||oy_time_offset>OY_BLOCK_SECTORS[0][0]+OY_MESH_BUFFER[0]) return false;
-                        ws.send(JSON.stringify(["OY_INTRO_TIME", (OY_SYNC_LAST[0]>0)?Math.max(OY_BLOCK_SECTORS[0][1], Math.min(OY_BLOCK_SECTORS[1][1], OY_SYNC_LAST[0]+OY_BLOCK_BUFFER_SPACE[1])):OY_BLOCK_SECTORS[1][1]]));
+                        ws.send(JSON.stringify(["OY_INTRO_TIME", OY_INTRO_MARKER]));
                     }
                     else if (oy_data_flag==="OY_INTRO_GET") {
                         if (OY_BLOCK_FINISH===false) {
                             ws.send(JSON.stringify(["OY_INTRO_UNREADY", null]));
                             return false;
                         }
+                        if (oy_data_payload===true&&(oy_time_offset<(OY_INTRO_MARKER/1000)-OY_MESH_BUFFER[0]||oy_time_offset>(OY_INTRO_MARKER/1000)+OY_MESH_BUFFER[0])) return false;
+                        if (typeof(OY_INTRO_ALLOCATE[ws._socket.remoteAddress])!=="undefined"||(oy_data_payload!==false&&oy_data_payload!==true)) {
+                            //BAN
+                            delete OY_INTRO_ALLOCATE[ws._socket.remoteAddress];
+                            return false;
+                        }
+                        if (oy_data_payload===true) OY_INTRO_ALLOCATE[ws._socket.remoteAddress] = true;
                         let oy_work_queue = new Array(Math.ceil(OY_BLOCK[0][3]/OY_WORK_INTRO));
                         oy_work_queue.fill([null, null]);
                         for (let i in oy_work_queue) {
@@ -4276,7 +4313,7 @@ function oy_init(oy_console) {
                         ws.send(JSON.stringify(["OY_INTRO_WORK", oy_work_queue]));
                     }
                     else if (oy_data_flag==="OY_INTRO_DONE") {
-                        if (OY_BLOCK_FINISH===false||oy_data_payload.length!==2||typeof(oy_data_payload[1])!=="object"||Object.keys(oy_data_payload[1]).length!==Math.ceil(OY_BLOCK[0][3]/OY_WORK_INTRO)) {
+                        if (OY_BLOCK_FINISH===false||oy_data_payload.length!==2||(oy_data_payload[0]!==false&&oy_data_payload[0]!==true)||typeof(oy_data_payload[1])!=="object"||Object.keys(oy_data_payload[1]).length!==Math.ceil(OY_BLOCK[0][3]/OY_WORK_INTRO)) {
                             //BAN
                             return false;
                         }
@@ -4294,7 +4331,16 @@ function oy_init(oy_console) {
                             }
                         }
                         if (oy_data_payload[0]===true) {
-                            ws.send(JSON.stringify(["OY_INTRO_SIGNAL_A", oy_signal_data]));//TODO pickup signal data
+                            if (typeof(OY_INTRO_ALLOCATE[ws._socket.remoteAddress])==="undefined") {
+                                //BAN
+                                return false;
+                            }
+                            if (OY_INTRO_PICKUP_COUNT===null) OY_INTRO_PICKUP_COUNT = Math.ceil(OY_OFFER_PICKUP.length/Object.keys(OY_INTRO_ALLOCATE).length);
+                            let oy_signal_array = [];
+                            for (let oy_counter = 0;oy_counter<OY_INTRO_PICKUP_COUNT;oy_counter++) {
+                                oy_signal_array.push(OY_OFFER_PICKUP.shift());
+                            }
+                            ws.send(JSON.stringify(["OY_INTRO_SIGNAL_A", oy_signal_array]));
                         }
                     }
                     else if (oy_data_flag==="OY_INTRO_SIGNAL_B") {
@@ -4302,6 +4348,7 @@ function oy_init(oy_console) {
                             //BAN
                             return false;
                         }
+                        //TODO permit multiple signal_b, upto pickup_count or else ban
                         //TODO perform signatures and send signal data to origin node via LOGIC_FOLLOW
                     }
                 }
