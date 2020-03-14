@@ -308,6 +308,7 @@ let OY_INTRO_SOLUTIONS = {};
 let OY_INTRO_MARKER = null;
 let OY_INTRO_PICKUP_COUNT = null;
 let OY_INTRO_ALLOCATE = {};
+let OY_INTRO_TAG = {};
 let OY_NODE_STATE = typeof(window)==="undefined";
 let OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inputs are expected
 let OY_SIMULATOR_MODE = false;//run in node.js simulator, requires oystersimulate.js
@@ -403,12 +404,12 @@ let OY_CHANNEL_RENDER = {};//track channel broadcasts that have been rendered
 let OY_DB = null;
 let OY_ERROR_BROWSER;
 
-/* SIMULATOR BLOCK
-const LZString = require('lz-string');
-const nacl = require('tweetnacl');
-nacl.util = require('tweetnacl-util');
-const parentPort  = require('worker_threads');
-*/
+if (OY_NODE_STATE===true) {
+    //const LZString = require('lz-string');
+    //const nacl = require('tweetnacl');
+    //nacl.util = require('tweetnacl-util');
+    //const parentPort  = require('worker_threads');
+}
 
 //WEB WORKER BLOCK
 function oy_worker_cores() {
@@ -617,6 +618,7 @@ function oy_worker_spawn(oy_worker_type) {
                                         oy_intro_punish(OY_INTRO_SELECT);
                                         return false;
                                     }
+                                    OY_INTRO_TAG[oy_signal_carry[0]] = false;
                                     OY_NODES[oy_signal_carry[0]] = new SimplePeer({initiator:false, trickle:false});
                                     OY_NODES[oy_signal_carry[0]].on("signal", function(oy_signal_data) {
                                         oy_intro_beam(OY_INTRO_SELECT, "OY_INTRO_SIGNAL_B", oy_signal_beam(oy_signal_data));
@@ -898,6 +900,7 @@ function oy_peer_add(oy_peer_id, oy_state_flag) {
     if (OY_JUMP_ASSIGN[0]===oy_peer_id) OY_PEERS[oy_peer_id][0] = OY_BLOCK_NEXT;
     else OY_PEERS[oy_peer_id][0] = OY_BLOCK_TIME;
     OY_PEERS[oy_peer_id][1] = oy_state_flag;
+    if (typeof(OY_INTRO_TAG[oy_peer_id])!=="undefined") OY_INTRO_TAG[oy_peer_id] = true;
     if (Object.keys(OY_PEERS).length===1) document.dispatchEvent(OY_PEERS_RECOVER);
     oy_log_debug("PEER_ADD: "+OY_SELF_SHORT+" - "+oy_short(oy_peer_id)+" - "+OY_PEERS[oy_peer_id][0]+" - "+OY_PEERS[oy_peer_id][1]);
     return true;
@@ -3023,6 +3026,8 @@ function oy_block_engine() {
         if (OY_BLOCK_TIME<OY_BLOCK_BOOTTIME) OY_BLOCK_BOOT = null;
         else OY_BLOCK_BOOT = OY_BLOCK_TIME-OY_BLOCK_BOOTTIME<OY_BLOCK_BOOT_BUFFER;
 
+        oy_worker_halt(0);
+
         OY_BLOCK_COMMAND_NONCE = 0;
         OY_BLOCK_SYNC = {};
         OY_BLOCK_SYNC_PASS[OY_BLOCK_TIME] = {};
@@ -3033,18 +3038,20 @@ function oy_block_engine() {
         OY_OFFER_COUNTER = 0;
         OY_OFFER_COLLECT = {};
         OY_OFFER_PICKUP = [];
-        OY_INTRO_SELECT = null;
-        OY_INTRO_SOLUTIONS = {};
-        OY_INTRO_PICKUP_COUNT = null;
-        OY_INTRO_ALLOCATE = {};
-        OY_INTRO_BAN = {};
         OY_PEER_OFFER = [null, null];
         OY_LIGHT_PROCESS = false;
         OY_BASE_BUILD = [];
         OY_JUMP_PRE = {};
         oy_block_jump_reset();
         let oy_block_continue = true;
-        oy_worker_halt(0);
+
+        if (OY_INTRO_SELECT!==null&&Object.values(OY_INTRO_TAG).indexOf(true)===-1) oy_intro_punish(OY_INTRO_SELECT);
+        OY_INTRO_SELECT = null;
+        OY_INTRO_SOLUTIONS = {};
+        OY_INTRO_PICKUP_COUNT = null;
+        OY_INTRO_ALLOCATE = {};
+        OY_INTRO_TAG = {};
+        OY_INTRO_BAN = {};
 
         if (OY_FULL_INTRO!==false&&OY_FULL_INTRO.indexOf(":")!==-1&&OY_NODE_STATE===true&&OY_BLOCK_RECORD_KEEP.length>1) OY_INTRO_MARKER = ((OY_SYNC_LAST[0]>0)?Math.max(OY_BLOCK_SECTORS[0][1], Math.min(OY_BLOCK_SECTORS[1][1], OY_SYNC_LAST[0]+OY_BLOCK_BUFFER_SPACE[1])):OY_BLOCK_SECTORS[1][1])+(Math.max(...OY_BLOCK_RECORD_KEEP)*1000*OY_BLOCK_RECORD_INTRO_BUFFER);
         else OY_INTRO_MARKER = null;
