@@ -612,8 +612,8 @@ function oy_worker_spawn(oy_worker_type) {
                                     return false;
                                 }
                                 for (let i in oy_data_payload) {
-                                    let oy_signal_carry;
-                                    if (!(oy_signal_carry = oy_signal_soak(oy_data_payload[i]))||typeof(OY_NODES[oy_signal_carry[0]])!=="undefined") {
+                                    let oy_signal_carry = oy_signal_soak(oy_data_payload[i]);
+                                    if (!oy_signal_carry||typeof(OY_NODES[oy_signal_carry[0]])!=="undefined") {
                                         oy_intro_punish(OY_INTRO_SELECT);
                                         return false;
                                     }
@@ -1025,9 +1025,9 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
         if (OY_LIGHT_STATE===false&&typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined") {
             if (OY_FULL_INTRO!==false&&OY_BLOCK[1][OY_SELF_PUBLIC][1]===1) {
-                let oy_signal_carry;
-                if (!(oy_signal_carry = oy_signal_soak(oy_data_payload[4]))||oy_signal_carry[0]!==oy_data_payload[0][0]||typeof(OY_OFFER_COLLECT[oy_signal_carry[0]])!=="undefined"||!oy_key_verify(oy_data_payload[0][0], oy_data_payload[2], OY_BLOCK_HASH+oy_data_payload[3]+oy_data_payload[4])) return false;
-                OY_OFFER_COLLECT[oy_data_payload[0][0]] = [OY_OFFER_COUNTER, oy_data_payload[3], oy_data_payload[0], oy_signal_carry[1]];//[[0]:priority_counter, [1]:oy_offer_rand, [2]:passport, [3]:signal_data]
+                let oy_signal_carry = oy_signal_soak(oy_data_payload[4]);
+                if (!oy_signal_carry||oy_signal_carry[0]!==oy_data_payload[0][0]||typeof(OY_OFFER_COLLECT[oy_signal_carry[0]])!=="undefined"||!oy_key_verify(oy_data_payload[0][0], oy_data_payload[2], OY_BLOCK_HASH+oy_data_payload[3]+oy_data_payload[4])) return false;
+                OY_OFFER_COLLECT[oy_data_payload[0][0]] = [OY_OFFER_COUNTER, oy_data_payload[3], oy_data_payload[0], oy_data_payload[4]];//[[0]:priority_counter, [1]:oy_offer_rand, [2]:passport, [3]:signal_data]
                 OY_OFFER_COUNTER++;
             }
             else {
@@ -1048,7 +1048,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_PEER_OFFER_B") {
 
-        if (OY_BLOCK_HASH===null) return false;
+        if (OY_BLOCK_HASH===null||typeof(OY_BLOCK[1][oy_data_payload[0][0]])==="undefined"||OY_BLOCK[1][oy_data_payload[0][0]][1]===0) return false;//TODO uptime check
 
         if (OY_PEERS[oy_peer_id][1]===0) {
             oy_node_deny(oy_peer_id, "OY_DENY_OFFER_B_BLANK");
@@ -1087,8 +1087,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_node_deny(oy_peer_id, "OY_DENY_EXCHANGE_B_BLANK");
             return false;
         }
-        let oy_signal_carry;
-        if (!(oy_signal_carry = oy_signal_soak(oy_data_payload))) {
+        let oy_signal_carry = oy_signal_soak(oy_data_payload);
+        if (!oy_signal_carry) {
             oy_node_deny(oy_peer_id, "OY_DENY_EXCHANGE_B_INVALID");
             return false;
         }
@@ -1131,8 +1131,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_node_deny(oy_peer_id, "OY_DENY_EXCHANGE_D_BLANK");
             return false;
         }
-        let oy_signal_carry;
-        if (!(oy_signal_carry = oy_signal_soak(oy_data_payload))) {
+        let oy_signal_carry = oy_signal_soak(oy_data_payload);
+        if (!oy_signal_carry) {
             oy_node_deny(oy_peer_id, "OY_DENY_EXCHANGE_D_INVALID");
             return false;
         }
@@ -1145,21 +1145,19 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             return false;
         }
         OY_PEERS[oy_peer_id][11][1] = true;
-        let [oy_key_public, oy_signal_data] = oy_signal_carry;
-        oy_signal_carry = null;
-        if (typeof(OY_PEERS[oy_key_public])!=="undefined") {
+        if (typeof(OY_PEERS[oy_signal_carry[0]])!=="undefined") {
             oy_node_deny(oy_peer_id, "OY_DENY_EXCHANGE_D_MAP");
             return false;
         }
-        if (typeof(OY_NODES[oy_key_public])==="undefined") {
-            OY_NODES[oy_key_public] = OY_PEERS[oy_peer_id][10];
+        if (typeof(OY_NODES[oy_signal_carry[0]])==="undefined") {
+            OY_NODES[oy_signal_carry[0]] = OY_PEERS[oy_peer_id][10];
             OY_PEERS[oy_peer_id][10] = null;//TODO verify
-            oy_node_connect(oy_key_public);
-            OY_NODES[oy_key_public].on("connect", function() {
-                delete OY_WARM[oy_key_public];
-                oy_node_initiate(oy_key_public);
+            oy_node_connect(oy_signal_carry[0]);
+            OY_NODES[oy_signal_carry[0]].on("connect", function() {
+                delete OY_WARM[oy_signal_carry[0]];
+                oy_node_initiate(oy_signal_carry[0]);
             });
-            OY_NODES[oy_key_public].signal(oy_signal_data);
+            OY_NODES[oy_signal_carry[0]].signal(oy_signal_carry[1]);
         }
     }
     else if (oy_data_flag==="OY_PEER_BASE") {//OY_LOGIC_DIRECT
@@ -3450,7 +3448,7 @@ function oy_block_engine() {
             if (OY_FULL_INTRO!==false&&OY_BLOCK[1][OY_SELF_PUBLIC][1]===1) {
                 OY_OFFER_PICKUP = [];
                 for (let oy_key_public in OY_OFFER_COLLECT) {
-                    if (typeof(OY_BLOCK[1][oy_key_public])!=="undefined") OY_OFFER_PICKUP.push([oy_key_public, OY_OFFER_COLLECT[oy_key_public], OY_BLOCK[1][oy_key_public][0], OY_BLOCK[1][oy_key_public][2]]);
+                    if (typeof(OY_BLOCK[1][oy_key_public])!=="undefined") OY_OFFER_PICKUP.push([oy_key_public, OY_OFFER_COLLECT[oy_key_public][3], OY_BLOCK[1][oy_key_public][0], OY_BLOCK[1][oy_key_public][2]]);
                 }
                 OY_OFFER_PICKUP.sort(function(a, b) {
                     if (a[2]===b[2]) {
@@ -3466,16 +3464,16 @@ function oy_block_engine() {
                 });
                 let oy_pickup_sort = [];
                 for (let oy_key_public in OY_OFFER_COLLECT) {
-                    if (typeof(OY_BLOCK[1][oy_key_public])==="undefined") oy_pickup_sort.push([oy_key_public, OY_OFFER_COLLECT[oy_key_public]]);
+                    if (typeof(OY_BLOCK[1][oy_key_public])==="undefined") oy_pickup_sort.push([oy_key_public, OY_OFFER_COLLECT[oy_key_public]][3], OY_OFFER_COLLECT[oy_key_public][0]);
                 }
                 oy_pickup_sort.sort(function(a, b) {
-                    if (a[1][0]===b[1][0]) {
+                    if (a[2]===b[2]) {
                         let x = a[0].toLowerCase();
                         let y = b[0].toLowerCase();
 
                         return x < y ? -1 : x > y ? 1 : 0;
                     }
-                    return a[1][0] - b[1][0];
+                    return a[2] - b[2];
                 });
                 for (let i in oy_pickup_sort) {
                     OY_OFFER_PICKUP.push(oy_pickup_sort[i]);
@@ -4282,7 +4280,7 @@ function oy_init(oy_console) {
             ws.on('message', function(oy_data_raw) {
                 console.log('received: %s', oy_data_raw);
                 try {
-                    if (oy_state_current()!==2||typeof(OY_BLOCK[1][OY_SELF_PUBLIC])==="undefined"||OY_INTRO_MARKER===null||OY_BLOCK_RECORD_KEEP.length<=1) {
+                    if (oy_state_current()!==2||typeof(OY_BLOCK[1][OY_SELF_PUBLIC])==="undefined"||OY_INTRO_MARKER===null||OY_BLOCK_RECORD_KEEP.length<=1) {//TODO check self grade and uptime
                         ws.send(JSON.stringify(["OY_INTRO_UNREADY", null]));
                         return false;
                     }
@@ -4303,7 +4301,7 @@ function oy_init(oy_console) {
                             delete OY_INTRO_ALLOCATE[ws._socket.remoteAddress];
                             return false;
                         }
-                        if (oy_data_payload===true) OY_INTRO_ALLOCATE[ws._socket.remoteAddress] = true;
+                        if (oy_data_payload===true) OY_INTRO_ALLOCATE[ws._socket.remoteAddress] = 0;
                         let oy_work_queue = new Array(Math.ceil(OY_BLOCK[0][3]/OY_WORK_INTRO));
                         oy_work_queue.fill([null, null]);
                         for (let i in oy_work_queue) {
@@ -4338,17 +4336,20 @@ function oy_init(oy_console) {
                             if (OY_INTRO_PICKUP_COUNT===null) OY_INTRO_PICKUP_COUNT = Math.ceil(OY_OFFER_PICKUP.length/Object.keys(OY_INTRO_ALLOCATE).length);
                             let oy_signal_array = [];
                             for (let oy_counter = 0;oy_counter<OY_INTRO_PICKUP_COUNT;oy_counter++) {
-                                oy_signal_array.push(OY_OFFER_PICKUP.shift());
+                                oy_signal_array.push(OY_OFFER_PICKUP.shift()[1]);
                             }
                             ws.send(JSON.stringify(["OY_INTRO_SIGNAL_A", oy_signal_array]));
                         }
                     }
                     else if (oy_data_flag==="OY_INTRO_SIGNAL_B") {
-                        if (OY_BLOCK_FINISH===false||typeof(oy_data_payload)!=="string"||!oy_signal_soak(oy_data_payload)) {
+                        let oy_signal_carry = oy_signal_soak(oy_data_payload);
+                        if (OY_BLOCK_FINISH===false||typeof(oy_data_payload)!=="string"||!oy_signal_carry||typeof(OY_OFFER_COLLECT[oy_signal_carry[0]])==="undefined"||typeof(OY_INTRO_ALLOCATE[ws._socket.remoteAddress])==="undefined"||OY_INTRO_ALLOCATE[ws._socket.remoteAddress]>=OY_INTRO_PICKUP_COUNT) {
                             //BAN
                             return false;
                         }
-                        //TODO permit multiple signal_b, upto pickup_count or else ban
+                        OY_INTRO_ALLOCATE[ws._socket.remoteAddress]++;
+                        oy_data_route("OY_LOGIC_FOLLOW", "OY_PEER_OFFER_B", [[], OY_OFFER_COLLECT[oy_signal_carry[0]][2], oy_key_sign(OY_SELF_PRIVATE, OY_OFFER_COLLECT[oy_signal_carry[0]][1]+OY_OFFER_COLLECT[oy_signal_carry[0]][3]+oy_data_payload), oy_data_payload]);
+                        //TODO do not cool packets from top grade dive ledger
                         //TODO perform signatures and send signal data to origin node via LOGIC_FOLLOW
                     }
                 }
