@@ -405,10 +405,12 @@ let OY_DB = null;
 let OY_ERROR_BROWSER;
 
 if (OY_NODE_STATE===true) {
+    console.log("NODE_MODE");
     //const LZString = require('lz-string');
     //const nacl = require('tweetnacl');
     //nacl.util = require('tweetnacl-util');
     //const parentPort  = require('worker_threads');
+    oy_init();
 }
 
 //WEB WORKER BLOCK
@@ -916,24 +918,13 @@ function oy_peer_latency(oy_peer_id, oy_latency_new) {
 }
 
 //checks if short id of node correlates with a mutual peer or a latch
-function oy_peer_find(oy_peer_short) {
+function oy_peer_find(oy_peer_short) {//TODO remove
     if (oy_peer_short===OY_SELF_SHORT) return false;
 
     for (let oy_peer_select in OY_PEERS) {
         if (OY_PEERS[oy_peer_select][1]!==0&&oy_peer_short===oy_short(oy_peer_select)) return oy_peer_select;
     }
     return false;
-}
-
-//select a random peer, includes latches
-function oy_peer_rand(oy_peers_exception) {
-    let oy_peers_local = {};
-    for (let oy_peer_select in OY_PEERS) {
-        if (OY_PEERS[oy_peer_select][1]!==0&&oy_peers_exception.indexOf(oy_short(oy_peer_select))===-1) oy_peers_local[oy_peer_select] = true;
-    }
-    if (Object.keys(oy_peers_local).length===0) return false;
-    let oy_peers_keys = Object.keys(oy_peers_local);
-    return oy_peers_keys[oy_peers_keys.length * Math.random() << 0];
 }
 
 function oy_peer_full() {
@@ -4279,18 +4270,18 @@ function oy_init(oy_console) {
     document.dispatchEvent(OY_STATE_BLANK);
 
     if (OY_FULL_INTRO!==false&&OY_FULL_INTRO.indexOf(":")!==-1&&OY_NODE_STATE===true) {
-        let fs = require('fs');
+        const fs = require('fs');
+        const https = require('https');
+        const WebSocketServer = require('ws').Server;
 
         let privateKey = fs.readFileSync('/etc/letsencrypt/live/domain/privkey.pem', 'utf8');
         let certificate = fs.readFileSync('/etc/letsencrypt/live/domain/fullchain.pem', 'utf8');
 
         let credentials = {key:privateKey, cert:certificate};
-        let https = require('https');
 
         let httpsServer = https.createServer(credentials);
         httpsServer.listen(parseInt(OY_FULL_INTRO.split(":")[1]));
 
-        let WebSocketServer = require('ws').Server;
         let wss = new WebSocketServer({
             server: httpsServer
         });
@@ -4354,10 +4345,11 @@ function oy_init(oy_console) {
                             }
                             if (OY_INTRO_PICKUP_COUNT===null) OY_INTRO_PICKUP_COUNT = Math.ceil(OY_OFFER_PICKUP.length/Object.keys(OY_INTRO_ALLOCATE).length);
                             let oy_signal_array = [];
-                            for (let oy_counter = 0;oy_counter<OY_INTRO_PICKUP_COUNT;oy_counter++) {
+                            for (let oy_counter = 0;oy_counter<OY_INTRO_PICKUP_COUNT&&OY_OFFER_PICKUP.length>0;oy_counter++) {
                                 oy_signal_array.push(OY_OFFER_PICKUP.shift()[1]);
                             }
-                            ws.send(JSON.stringify(["OY_INTRO_SIGNAL_A", oy_signal_array]));
+                            if (oy_signal_array.length===0) ws.send(JSON.stringify(["OY_INTRO_UNREADY", null]));
+                            else ws.send(JSON.stringify(["OY_INTRO_SIGNAL_A", oy_signal_array]));
                         }
                     }
                     else if (oy_data_flag==="OY_INTRO_SIGNAL_B") {
