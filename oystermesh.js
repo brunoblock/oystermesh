@@ -285,6 +285,22 @@ const OY_BLOCK_TRANSACTS = {
             oy_handle_check(oy_command_array[5][1][1]));//check that the post content is a mesh handle
     }]
 };
+let OY_NODE_STATE = typeof(window)==="undefined";
+
+const NodeEvent = require('events');
+const LZString = require('lz-string');
+const nacl = require('tweetnacl');
+nacl.util = require('tweetnacl-util');
+/*
+if (OY_NODE_STATE===true) {
+    console.log("NODE_MODE");
+    NodeEvent = require('events');
+    const LZString = require('lz-string');
+    nacl = require('tweetnacl');
+    nacl.util = require('tweetnacl-util');
+    //const parentPort  = require('worker_threads');
+}
+*/
 
 // INIT
 let OY_LIGHT_MODE = true;//seek to stay permanently connected to the mesh as a light node/latch, manipulable by the user
@@ -309,9 +325,9 @@ let OY_INTRO_MARKER = null;
 let OY_INTRO_PICKUP_COUNT = null;
 let OY_INTRO_ALLOCATE = {};
 let OY_INTRO_TAG = {};
-let OY_NODE_STATE = typeof(window)==="undefined";
 let OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inputs are expected
 let OY_SIMULATOR_MODE = false;//run in node.js simulator, requires oystersimulate.js
+let OY_EVENTS = {};
 let OY_SELF_PRIVATE;//private key of node identity
 let OY_SELF_PUBLIC;//public key of node identity
 let OY_SELF_SHORT;//short representation of public key of node identity
@@ -326,8 +342,6 @@ let OY_DATA_PULL = {};//object for tracking data pull threads
 let OY_PEERS = {};
 let OY_PEERS_PRE = {};//tracks nodes that are almost peers, will become peers once PEER_AFFIRM is received from other node
 let OY_PEER_OFFER = [null, null];
-let OY_PEERS_NULL = new Event('oy_peers_null');//trigger-able event for when peer_count == 0
-let OY_PEERS_RECOVER = new Event('oy_peers_recover');//trigger-able event for when peer_count > 0
 let OY_NODES = {};//P2P connection handling for individual nodes
 let OY_COLD = {};//tracking connection shutdowns to specific nodes
 let OY_OFFER_COUNTER = 0;
@@ -387,12 +401,6 @@ let OY_BLOCK_CHALLENGE = {};
 let OY_BLOCK_NEW = {};
 let OY_BLOCK_CONFIRM = {};
 let OY_BLOCK_HALT = null;
-let OY_BLOCK_INIT = new Event('oy_block_init');//trigger-able event for when a new block is issued
-let OY_BLOCK_TRIGGER = new Event('oy_block_trigger');//trigger-able event for when a new block is issued
-let OY_BLOCK_RESET = new Event('oy_block_reset');//trigger-able event for when a new block is issued
-let OY_STATE_BLANK = new Event('oy_state_blank');//trigger-able event for when self becomes blank
-let OY_STATE_LIGHT = new Event('oy_state_light');//trigger-able event for when self becomes a light node
-let OY_STATE_FULL = new Event('oy_state_full');//trigger-able event for when self becomes a full node
 let OY_DIFF_TRACK = [{}, []];
 let OY_REPORT_HASH = null;
 let OY_CHANNEL_DYNAMIC = {};//track channel broadcasts to ensure allowance compliance
@@ -404,14 +412,15 @@ let OY_CHANNEL_RENDER = {};//track channel broadcasts that have been rendered
 let OY_DB = null;
 let OY_ERROR_BROWSER;
 
-if (OY_NODE_STATE===true) {
-    console.log("NODE_MODE");
-    //const LZString = require('lz-string');
-    //const nacl = require('tweetnacl');
-    //nacl.util = require('tweetnacl-util');
-    //const parentPort  = require('worker_threads');
-    oy_init();
-}
+//EVENTS
+oy_event_create("oy_peers_null", oy_block_reset);//trigger-able event for when peer_count == 0
+oy_event_create("oy_peers_recover");//trigger-able event for when peer_count > 0
+oy_event_create("oy_block_init");//trigger-able event for when a new block is issued
+oy_event_create("oy_block_trigger");//trigger-able event for when a new block is issued
+oy_event_create("oy_block_reset");//trigger-able event for when a new block is issued
+oy_event_create("oy_state_blank");//trigger-able event for when self becomes blank
+oy_event_create("oy_state_light");//trigger-able event for when self becomes a light node
+oy_event_create("oy_state_full");//trigger-able event for when self becomes a full node
 
 //WEB WORKER BLOCK
 function oy_worker_cores() {
@@ -711,6 +720,32 @@ function oy_chrono(oy_chrono_callback, oy_chrono_duration) {
     oy_chrono_instance();
 }
 
+function oy_event_create(oy_event_name, oy_event_callback) {
+    if (typeof(OY_EVENTS[oy_event_name])!=="undefined") return false;
+    if (typeof(oy_event_callback)==="undefined") oy_event_callback = function() {};
+
+    if (OY_NODE_STATE===true) {
+        OY_EVENTS[oy_event_name] = new NodeEvent();
+        OY_EVENTS[oy_event_name].on(oy_event_name, oy_event_callback);
+    }
+    else {
+        OY_EVENTS[oy_event_name] = new Event(oy_event_name);
+        document.addEventListener(oy_event_name, oy_event_callback, false);
+    }
+}
+
+function oy_event_dispatch(oy_event_name) {
+    if (typeof(OY_EVENTS[oy_event_name])==="undefined") return false;
+    if (OY_NODE_STATE===true) OY_EVENTS[oy_event_name].emit(oy_event_name);
+    else document.dispatchEvent(OY_EVENTS[oy_event_name]);
+}
+
+function oy_event_hook(oy_event_name, oy_event_callback) {
+    if (typeof(OY_EVENTS[oy_event_name])==="undefined"||typeof(oy_event_callback)==="undefined") return false;
+
+    document.addEventListener(oy_event_name, oy_event_callback, false);
+}
+
 function oy_calc_shuffle(a) {
     let j, x, i;
     for (i = a.length - 1; i > 0; i--) {
@@ -903,7 +938,7 @@ function oy_peer_add(oy_peer_id, oy_state_flag) {
     else OY_PEERS[oy_peer_id][0] = OY_BLOCK_TIME;
     OY_PEERS[oy_peer_id][1] = oy_state_flag;
     if (typeof(OY_INTRO_TAG[oy_peer_id])!=="undefined") OY_INTRO_TAG[oy_peer_id] = true;
-    if (Object.keys(OY_PEERS).length===1) document.dispatchEvent(OY_PEERS_RECOVER);
+    if (Object.keys(OY_PEERS).length===1) oy_event_dispatch("oy_peers_recover");
     oy_log_debug("PEER_ADD: "+OY_SELF_SHORT+" - "+oy_short(oy_peer_id)+" - "+OY_PEERS[oy_peer_id][0]+" - "+OY_PEERS[oy_peer_id][1]);
     return true;
 }
@@ -1216,8 +1251,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             OY_DIVE_STATE = false;
 
             if (typeof(OY_BLOCK_MAP)==="function") OY_BLOCK_MAP(0);
-            document.dispatchEvent(OY_BLOCK_TRIGGER);
-            document.dispatchEvent(OY_STATE_LIGHT);
+            oy_event_dispatch("oy_block_trigger");
+            oy_event_dispatch("oy_state_light");
 
             let oy_time_offset = (Date.now()/1000)-OY_BLOCK_TIME;
             oy_chrono(function() {
@@ -1660,7 +1695,7 @@ function oy_node_deny(oy_node_id, oy_deny_reason) {
     if (typeof(OY_PEERS[oy_node_id])!=="undefined") {
         console.log("%cREMOVE: "+(Date.now()/1000)+" "+oy_deny_reason+" - "+oy_node_id+" - "+OY_PEERS[oy_node_id][1]+" - "+((Date.now()/1000)-OY_BLOCK_TIME), "color: red");
         delete OY_PEERS[oy_node_id];
-        if (Object.keys(OY_PEERS).length===0) document.dispatchEvent(OY_PEERS_NULL);
+        if (Object.keys(OY_PEERS).length===0) oy_event_dispatch("oy_peers_null");
     }
     if (OY_JUMP_ASSIGN[0]===oy_node_id) {
         oy_log_debug("BLUE["+oy_deny_reason+"]["+JSON.stringify(OY_JUMP_ASSIGN)+"]");
@@ -1670,8 +1705,6 @@ function oy_node_deny(oy_node_id, oy_deny_reason) {
     oy_node_reset(oy_node_id);
     oy_log("DENY["+oy_short(oy_node_id)+"]["+oy_deny_reason+"]", true);
     if (oy_deny_reason!=="OY_DENY_LATENCY_WEAK") oy_log_debug("DENY["+oy_deny_reason+"]["+oy_short(oy_node_id)+"]");
-    //let oy_boost_select = OY_BOOST_BUILD.indexOf(oy_node_id);
-    //if (oy_boost_select!==-1) OY_BOOST_BUILD.splice(oy_boost_select, 1);
     return true;
 }
 
@@ -3002,8 +3035,8 @@ function oy_block_reset(oy_reset_flag) {
     oy_log_debug("MESHBLOCK RESET["+OY_SELF_PUBLIC+"]["+oy_reset_flag+"]");//TODO temp
     console.log("MESHBLOCK RESET ["+oy_reset_flag+"]");//TODO temp
 
-    document.dispatchEvent(OY_BLOCK_RESET);
-    document.dispatchEvent(OY_STATE_BLANK);
+    oy_event_dispatch("oy_block_reset");
+    oy_event_dispatch("oy_state_blank");
 
     oy_node_assign();
 }
@@ -3069,7 +3102,7 @@ function oy_block_engine() {
             oy_peer_map[oy_hash_gen(oy_peer_select)] = true;
         }
 
-        document.dispatchEvent(OY_BLOCK_INIT);
+        oy_event_dispatch("oy_block_init");
 
         oy_chrono(function() {
             if (OY_BLOCK_HASH===null) return false;
@@ -3125,7 +3158,7 @@ function oy_block_engine() {
             //SEED DEFINITION------------------------------------
 
             OY_BLOCK_HASH = oy_hash_gen(JSON.stringify(OY_BLOCK));
-            document.dispatchEvent(OY_STATE_FULL);
+            oy_event_dispatch("oy_state_full");
             oy_worker_spawn(1);
         }
         //BLOCK SEED--------------------------------------------------
@@ -3396,7 +3429,7 @@ function oy_block_engine() {
             oy_log_debug("HASH: "+OY_BLOCK_HASH+"\nBLOCK: "+OY_BLOCK_FLAT);
 
             if (typeof(OY_BLOCK_MAP)==="function") OY_BLOCK_MAP(0);
-            document.dispatchEvent(OY_BLOCK_TRIGGER);
+            oy_event_dispatch("oy_block_trigger");
 
             let oy_light_pass = false;
             for (let oy_peer_select in OY_PEERS) {
@@ -3501,7 +3534,7 @@ function oy_block_engine() {
                     OY_SYNC_LAST = [0, 0];
                     OY_SYNC_MAP = [{}, {}];
 
-                    document.dispatchEvent(OY_STATE_LIGHT);
+                    oy_event_dispatch("oy_state_light");
                     oy_worker_halt(1);
 
                     for (let oy_peer_select in OY_PEERS) {//TODO terminate any jump session
@@ -3641,7 +3674,7 @@ function oy_block_light() {
     console.log(OY_BLOCK_FLAT);
 
     if (typeof(OY_BLOCK_MAP)==="function") OY_BLOCK_MAP(0);
-    document.dispatchEvent(OY_BLOCK_TRIGGER);
+    oy_event_dispatch("oy_block_trigger");
 
     /*
     let oy_dive_array = [];
@@ -3674,7 +3707,7 @@ function oy_block_light() {
             if (oy_last_calc>OY_BLOCK_SECTORS[0][0]&&oy_last_calc<OY_BLOCK_SECTORS[1][0]) OY_SYNC_LAST = [oy_last_calc, oy_last_calc];
             else OY_SYNC_LAST = [0, 0];
 
-            document.dispatchEvent(OY_STATE_FULL);
+            oy_event_dispatch("oy_state_full");
             oy_worker_spawn(1);
 
             let oy_nonfull_sort = [];
@@ -4242,8 +4275,6 @@ function oy_init(oy_console) {
     OY_INIT = true;
     oy_log("[OYSTER]["+OY_MESH_DYNASTY+"]", true);
 
-    document.addEventListener("oy_peers_null", oy_block_reset, false);
-
     let oy_key_pair = oy_key_gen();
     OY_SELF_PRIVATE = oy_key_pair[0];
     OY_SELF_PUBLIC = oy_key_pair[1];
@@ -4251,7 +4282,6 @@ function oy_init(oy_console) {
     OY_PROPOSED = {};
     oy_log("[SELF_ID_"+OY_SELF_SHORT+"]", true);
 
-    //localStorage.clear();//TODO phase out localstorage in favour of async
     //Dexie.delete("oy_db");
     OY_DB = new Dexie("oy_db");
     OY_DB.version(1).stores({
@@ -4267,7 +4297,7 @@ function oy_init(oy_console) {
     oy_node_assign();
     oy_block_engine();
 
-    document.dispatchEvent(OY_STATE_BLANK);
+    oy_event_dispatch("oy_state_blank");
 
     if (OY_FULL_INTRO!==false&&OY_FULL_INTRO.indexOf(":")!==-1&&OY_NODE_STATE===true) {
         const fs = require('fs');
@@ -4374,6 +4404,7 @@ function oy_init(oy_console) {
     });
     */
 }
+if (OY_NODE_STATE===true) oy_init();
 
 /*TODO offset to oysterdive.js
 let oy_call_detect = document.getElementById("oy.js");

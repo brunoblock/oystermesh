@@ -1433,6 +1433,7 @@
         });
 
         document.addEventListener("oy_key_enter", oy_dapper_launch, false);
+
         document.addEventListener("oy_block_init", oy_block_render, false);
         document.addEventListener("oy_block_reset", oy_block_render_reset, false);
         document.addEventListener("oy_block_reset", oy_block_reset_local, false);
@@ -1444,6 +1445,10 @@
         document.addEventListener("oy_state_blank", oy_mode_state_blank, false);
         document.addEventListener("oy_state_light", oy_mode_state_light, false);
         document.addEventListener("oy_state_full", oy_mode_state_full, false);
+
+        oy_event_hook("oy_block_init", oy_block_render);
+        oy_event_hook("oy_block_reset", oy_block_render_reset);
+
 
         OY_ERROR_BROWSER = function() {
             document.getElementById("oy_graph_akoya_progress").innerHTML = "<div class='oy_center_both' style='font-size:2.8vh;color:#000000;font-weight:bold;font-family: \'Courier New\''>INCOMPATIBLE&nbsp;BROWSER</div>";
