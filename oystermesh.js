@@ -288,11 +288,11 @@ const OY_BLOCK_TRANSACTS = {
 let OY_NODE_STATE = typeof(window)==="undefined";
 
 // DEPENDENCIES
-let NodeEvent, SimplePeer, wrtc;
+let perf, NodeEvent, SimplePeer, wrtc;
 
 //OYSTER DEPENDENCY HACKTIMER
 //https://github.com/turuslan/HackTimer
-(function(s){var w,f={},o=window,l=console,m=Math,z='postMessage',x='',v='Initialisation failed',p=0,r='hasOwnProperty',y=[].slice,b=o.Worker;function d(){do{p=0x7FFFFFFF>p?p+1:0}while(f[r](p));return p}if(!/MSIE 10/i.test(navigator.userAgent)){try{s=o.URL.createObjectURL(new Blob(["var f={},p=postMessage,r='hasOwnProperty';onmessage=function(e){var d=e.data,i=d.i,t=d[r]('t')?d.t:0;switch(d.n){case'a':f[i]=setInterval(function(){p(i)},t);break;case'b':if(f[r](i)){clearInterval(f[i]);delete f[i]}break;case'c':f[i]=setTimeout(function(){p(i);if(f[r](i))delete f[i]},t);break;case'd':if(f[r](i)){clearTimeout(f[i]);delete f[i]}break}}"]))}catch(e){}}if(typeof(b)!=='undefined'){try{w=new b(s);o.setInterval=function(c,t){var i=d();f[i]={c:c,p:y.call(arguments,2)};w[z]({n:'a',i:i,t:t});return i};o.clearInterval=function(i){if(f[r](i))delete f[i],w[z]({n:'b',i:i})};o.setTimeout=function(c,t){var i=d();f[i]={c:c,p:y.call(arguments,2),t:!0};w[z]({n:'c',i:i,t:t});return i};o.clearTimeout=function(i){if(f[r](i))delete f[i],w[z]({n:'d',i:i})};w.onmessage=function(e){var i=e.data,c,n;if(f[r](i)){n=f[i];c=n.c;if(n[r]('t'))delete f[i]}if(typeof(c)=='string')try{c=new Function(c)}catch(k){l.log(x+'Error parsing callback code string: ',k)}if(typeof(c)=='function')c.apply(o,n.p)};w.onerror=function(e){l.log(e)};}catch(e){l.log(x+v);l.error(e)}}else l.log(x+v+' - HTML5 Web Worker is not supported')})('HackTimerWorker.min.js');
+if (OY_NODE_STATE===false) {(function(s){var w,f={},o=window,l=console,m=Math,z='postMessage',x='',v='Initialisation failed',p=0,r='hasOwnProperty',y=[].slice,b=o.Worker;function d(){do{p=0x7FFFFFFF>p?p+1:0}while(f[r](p));return p}if(!/MSIE 10/i.test(navigator.userAgent)){try{s=o.URL.createObjectURL(new Blob(["var f={},p=postMessage,r='hasOwnProperty';onmessage=function(e){var d=e.data,i=d.i,t=d[r]('t')?d.t:0;switch(d.n){case'a':f[i]=setInterval(function(){p(i)},t);break;case'b':if(f[r](i)){clearInterval(f[i]);delete f[i]}break;case'c':f[i]=setTimeout(function(){p(i);if(f[r](i))delete f[i]},t);break;case'd':if(f[r](i)){clearTimeout(f[i]);delete f[i]}break}}"]))}catch(e){}}if(typeof(b)!=='undefined'){try{w=new b(s);o.setInterval=function(c,t){var i=d();f[i]={c:c,p:y.call(arguments,2)};w[z]({n:'a',i:i,t:t});return i};o.clearInterval=function(i){if(f[r](i))delete f[i],w[z]({n:'b',i:i})};o.setTimeout=function(c,t){var i=d();f[i]={c:c,p:y.call(arguments,2),t:!0};w[z]({n:'c',i:i,t:t});return i};o.clearTimeout=function(i){if(f[r](i))delete f[i],w[z]({n:'d',i:i})};w.onmessage=function(e){var i=e.data,c,n;if(f[r](i)){n=f[i];c=n.c;if(n[r]('t'))delete f[i]}if(typeof(c)=='string')try{c=new Function(c)}catch(k){l.log(x+'Error parsing callback code string: ',k)}if(typeof(c)=='function')c.apply(o,n.p)};w.onerror=function(e){l.log(e)};}catch(e){l.log(x+v);l.error(e)}}else l.log(x+v+' - HTML5 Web Worker is not supported')})('HackTimerWorker.min.js');}
 
 //OYSTER DEPENDENCY TWEETNACL-JS
 //https://github.com/dchest/tweetnacl-js
@@ -308,10 +308,12 @@ let LZString=function(){var o=String.fromCharCode,r="ABCDEFGHIJKLMNOPQRSTUVWXYZa
 
 if (OY_NODE_STATE===true) {
     console.log("NODE_MODE");
+    perf = {now: function(start) {if ( !start ) return process.hrtime();let end = process.hrtime(start);return Math.round((end[0]*1000) + (end[1]/1000000));}}
     NodeEvent = require('events');
     SimplePeer = require('simple-peer');
     wrtc = require('wrtc');
 }
+else perf = performance;
 
 // INIT
 let OY_LIGHT_MODE = true;//seek to stay permanently connected to the mesh as a light node/latch, manipulable by the user
@@ -716,13 +718,13 @@ function oy_short(oy_message) {
 
 function oy_chrono(oy_chrono_callback, oy_chrono_duration) {
     let oy_chrono_elapsed = 0;
-    let oy_chrono_last = performance.now();
+    let oy_chrono_last = perf.now();
 
     let oy_chrono_instance = function() {
-        oy_chrono_elapsed += performance.now()-oy_chrono_last;
+        oy_chrono_elapsed += perf.now()-oy_chrono_last;
         if (oy_chrono_elapsed>=oy_chrono_duration) return oy_chrono_callback();
         setTimeout(oy_chrono_instance, OY_CHRONO_ACCURACY);
-        oy_chrono_last = performance.now();
+        oy_chrono_last = perf.now();
     };
     oy_chrono_instance();
 }
@@ -4295,6 +4297,7 @@ function oy_init(oy_console) {
     OY_PROPOSED = {};
     oy_log("[SELF_ID_"+OY_SELF_SHORT+"]", true);
 
+    /*TODO nodejs DB integration
     //Dexie.delete("oy_db");
     OY_DB = new Dexie("oy_db");
     OY_DB.version(1).stores({
@@ -4302,6 +4305,7 @@ function oy_init(oy_console) {
         oy_data:"oy_data_key,oy_data_time",
         oy_channel:"oy_broadcast_hash,oy_channel_id"
     });
+    */
 
     let oy_time_local = Date.now()/1000;
     if (oy_time_local<OY_BLOCK_BOOTTIME) OY_BLOCK_BOOT = null;
