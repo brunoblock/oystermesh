@@ -695,7 +695,7 @@ function oy_log(oy_log_msg, oy_log_attn) {
 
     if (OY_NODE_STATE===false&&typeof(oy_log_attn)!=="undefined"&&oy_log_attn===true) oy_log_msg = "<b>"+oy_log_msg+"</b>";
     if (OY_CONSOLE===undefined) {
-        if (OY_NODE_STATE===true&&typeof(oy_log_attn)!=="undefined"&&oy_log_attn===true) console.log("\x1b[1m", oy_log_msg);
+        if (OY_NODE_STATE===true&&typeof(oy_log_attn)!=="undefined"&&oy_log_attn===true) console.log("\x1b[1m", oy_log_msg, "\x1b[0m");
         else console.log(oy_log_msg);
     }
     else OY_CONSOLE(oy_log_msg);
