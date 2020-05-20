@@ -693,8 +693,11 @@ function oy_work_verify_single(oy_block_time, oy_key_public, oy_block_hash, oy_w
 function oy_log(oy_log_msg, oy_log_attn) {
     if (OY_PASSIVE_MODE===true) return false;
 
-    if (typeof(oy_log_attn)!=="undefined"&&oy_log_attn===true) oy_log_msg = "<b>"+oy_log_msg+"</b>";
-    if (OY_CONSOLE===undefined) console.log(oy_log_msg);
+    if (OY_NODE_STATE===false&&typeof(oy_log_attn)!=="undefined"&&oy_log_attn===true) oy_log_msg = "<b>"+oy_log_msg+"</b>";
+    if (OY_CONSOLE===undefined) {
+        if (OY_NODE_STATE===true&&typeof(oy_log_attn)!=="undefined"&&oy_log_attn===true) console.log("\x1b[1m", oy_log_msg);
+        else console.log(oy_log_msg);
+    }
     else OY_CONSOLE(oy_log_msg);
 }
 
@@ -2617,7 +2620,7 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
            return true;
        }
    }
-   catch {}
+   catch(e) {}
    oy_node_deny(oy_node_id, "OY_DENY_DATA_ERROR");
    return false;
 }
@@ -2684,7 +2687,7 @@ function oy_intro_beam(oy_intro_select, oy_data_flag, oy_data_payload, oy_callba
                 if (oy_data_flag==="OY_INTRO_UNREADY") oy_intro_punish(oy_intro_select);
                 else oy_callback(oy_data_flag, oy_data_payload);
             }
-            catch {}
+            catch(e) {}
         }
     };
     oy_chrono(function() {
@@ -4291,7 +4294,7 @@ function oy_init(oy_console) {
     OY_SELF_PUBLIC = oy_key_pair[1];
     OY_SELF_SHORT = oy_short(OY_SELF_PUBLIC);
     OY_PROPOSED = {};
-    oy_log("[SELF_ID_"+OY_SELF_SHORT+"]", true);
+    oy_log("[SELF_ID]["+OY_SELF_SHORT+"]", true);
 
     /*TODO nodejs DB integration
     //Dexie.delete("oy_db");
@@ -4317,8 +4320,8 @@ function oy_init(oy_console) {
         const https = require('https');
         const WebSocketServer = require('ws').Server;
 
-        let privateKey = fs.readFileSync('/etc/letsencrypt/live/domain/privkey.pem', 'utf8');
-        let certificate = fs.readFileSync('/etc/letsencrypt/live/domain/fullchain.pem', 'utf8');
+        let privateKey = fs.readFileSync('/etc/letsencrypt/live/nodea1.oyster.org/privkey.pem', 'utf8');
+        let certificate = fs.readFileSync('/etc/letsencrypt/live/nodea1.oyster.org/fullchain.pem', 'utf8');
 
         let credentials = {key:privateKey, cert:certificate};
 
@@ -4406,7 +4409,7 @@ function oy_init(oy_console) {
                         //TODO do not cool packets from top grade dive ledger
                     }
                 }
-                catch {}
+                catch(e) {}
             });
         });
     }
