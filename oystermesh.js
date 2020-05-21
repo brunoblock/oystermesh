@@ -319,7 +319,7 @@ let OY_DIVE_GRADE = false;
 let OY_DIVE_PAYOUT = false;
 let OY_DIVE_TEAM = false;
 let OY_DIVE_STATE = false;
-let OY_FULL_INTRO = "nodea1.oyster.org:8443";//default is false, TODO force set to false if not in nodejs mode
+let OY_FULL_INTRO = false;//default is false, can be set here or via nodejs argv first parameter TODO force set to false if not in nodejs mode
 let OY_INTRO_DEFAULT = {
     "nodea1.oyster.org:8443":true,
     "nodea2.oyster.org:8443":true,
@@ -4315,7 +4315,10 @@ function oy_init(oy_console) {
 
     oy_event_dispatch("oy_state_blank");
 
-    if (OY_FULL_INTRO!==false&&OY_FULL_INTRO.indexOf(":")!==-1&&OY_NODE_STATE===true) {
+    if (OY_NODE_STATE===true&&typeof(process.argv[2])!=="undefined") OY_FULL_INTRO = process.argv[2];
+    if (OY_NODE_STATE===true&&OY_FULL_INTRO!==false&&OY_FULL_INTRO.indexOf(":")!==-1) {
+        oy_log("[INTRO_MODE]["+OY_FULL_INTRO+"]", true);
+
         const fs = require('fs');
         const https = require('https');
         const WebSocketServer = require('ws').Server;
