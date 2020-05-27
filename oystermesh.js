@@ -582,7 +582,7 @@ function oy_worker_spawn(oy_worker_type) {
                 let [oy_work_self, oy_work_nonce, oy_work_bit] = oy_work_data;
                 if (oy_work_nonce!==-1&&oy_work_bit.length!==OY_WORK_MATCH) return false;
 
-                if (oy_work_nonce===-1) oy_worker_respond([oy_work_type, [oy_work_nonce, null]]);
+                if (oy_work_nonce===-1) oy_worker_respond([oy_work_type, [oy_work_self, oy_work_nonce, null]]);
                 else oy_worker_respond([oy_work_type, [oy_work_self, oy_work_nonce, oy_work_mine(oy_work_bit)]]);
             }
             else if (oy_work_type===1) {
@@ -604,7 +604,7 @@ function oy_worker_spawn(oy_worker_type) {
             }
         }
         if (OY_NODE_STATE===true) {
-            parentPort.once('message', (oy_data) => {
+            parentPort.on('message', (oy_data) => {
                 let oy_event = {};
                 oy_event.data = oy_data;
                 oy_worker_receive(oy_event);
@@ -630,9 +630,12 @@ function oy_worker_spawn(oy_worker_type) {
             if (oy_work_type===0) {
                 let [oy_work_self, oy_work_nonce, oy_work_solution] = oy_work_data;
 
-                if (oy_time_offset<OY_BLOCK_SECTORS[0][0]) return false;
+                //if (oy_time_offset<OY_BLOCK_SECTORS[0][0]) return false;TODO restore
 
                 if (oy_work_self===true) {
+                    //console.log("SOLUTION: "+oy_work_solution);
+                    console.log("SOLUTIONS: "+JSON.stringify(OY_WORK_SOLUTIONS));
+                    //console.log("BITS: "+JSON.stringify(OY_WORK_BITS));
                     if (oy_work_nonce!==-1&&(OY_WORK_SOLUTIONS[oy_work_nonce]===null||oy_calc_grade(oy_work_solution)>OY_WORK_GRADES[oy_work_nonce])) {
                         OY_WORK_SOLUTIONS[oy_work_nonce] = oy_work_solution;
                         OY_WORK_GRADES[oy_work_nonce] = oy_calc_grade(oy_work_solution);
@@ -651,6 +654,7 @@ function oy_worker_spawn(oy_worker_type) {
                         }
                         else OY_WORK_GRADES[oy_nonce_select] = true;
                     }
+                    console.log("SELECT: "+oy_nonce_select+" "+i);
                     if (oy_nonce_select!==-1) OY_WORKER_THREADS[0][i].postMessage([0, [oy_work_self, oy_nonce_select, OY_WORK_BITS[oy_nonce_select]]]);
                 }
                 else {
@@ -706,7 +710,7 @@ function oy_worker_spawn(oy_worker_type) {
             }
         };
         if (OY_NODE_STATE===true) {
-            OY_WORKER_THREADS[oy_worker_type][i].once('message', (oy_data) => {
+            OY_WORKER_THREADS[oy_worker_type][i].on('message', (oy_data) => {
                 let oy_event = {};
                 oy_event.data = oy_data;
                 oy_worker_message(oy_event);
@@ -4454,7 +4458,7 @@ function oy_init(oy_console) {
     }
 
     /* SIMULATOR BLOCK
-    parentPort.once('message', (message) => {
+    parentPort.on('message', (message) => {
         parentPort.postMessage(message);
     });
     */
@@ -4475,6 +4479,7 @@ if (OY_NODE_STATE===true) {
     oy_worker_spawn(0);
     for (let i in OY_WORKER_THREADS[0]) {
         OY_WORKER_THREADS[0][i].postMessage([0, [true, -1, null]]);
+        //console.log(OY_WORKER_THREADS[0][0]);
     }
 }
 
