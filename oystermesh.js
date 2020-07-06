@@ -1734,8 +1734,8 @@ function oy_peer_report() {
     let oy_report_hash = oy_hash_gen(oy_report_payload);
     if (OY_REPORT_HASH!==oy_report_hash) {
         OY_REPORT_HASH = oy_report_hash;
-        oy_xhttp.open("POST", "https://top.oyster.org/oy_peer_report.php", true);
-        oy_xhttp.send("oy_peer_report="+oy_report_payload);
+        oy_xhttp.open("POST", "https://top.oyster.org/oy_peer_report", true);
+        oy_xhttp.send(oy_report_payload);
     }
 }
 
@@ -4464,7 +4464,8 @@ function oy_init(oy_console) {
     */
 }
 if (OY_NODE_STATE===true) {
-    //oy_init();
+    oy_init();
+    /*
     console.log("TEMP NODE INIT");
     OY_BLOCK[0][3] = 10;
     OY_WORK_SOLUTIONS = new Array(OY_BLOCK[0][3]);
@@ -4481,6 +4482,7 @@ if (OY_NODE_STATE===true) {
         OY_WORKER_THREADS[0][i].postMessage([0, [true, -1, null]]);
         //console.log(OY_WORKER_THREADS[0][0]);
     }
+    */
 }
 
 /*TODO offset to oysterdive.js
