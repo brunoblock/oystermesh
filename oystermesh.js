@@ -314,7 +314,7 @@ if (OY_NODE_STATE===true) {
     NodeEvent = require('events');
     SimplePeer = require('simple-peer');
     wrtc = require('wrtc');
-    perf = {now: function(start) {if ( !start ) return process.hrtime();let end = process.hrtime(start);return Math.round((end[0]*1000) + (end[1]/1000000));}}
+    perf = {now: function() {let end = process.hrtime();return Math.round((end[0]*1000) + (end[1]/1000000));}}
 }
 else perf = performance;
 
