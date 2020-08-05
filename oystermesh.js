@@ -30,7 +30,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 2;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1583483400;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1596662500;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -288,7 +288,7 @@ const OY_BLOCK_TRANSACTS = {
 let OY_NODE_STATE = typeof(window)==="undefined";
 
 // DEPENDENCIES
-let os, NodeEvent, SimplePeer, wrtc, perf;
+let websock, os, NodeEvent, SimplePeer, wrtc, perf;
 
 //OYSTER DEPENDENCY TWEETNACL-JS
 //https://github.com/dchest/tweetnacl-js
@@ -308,18 +308,23 @@ let LZString=function(){var o=String.fromCharCode,r="ABCDEFGHIJKLMNOPQRSTUVWXYZa
 
 if (OY_NODE_STATE===true) {
     console.log("NODE_MODE");
-    os = require('os')
+    websock = require('ws');
+    os = require('os');
     keccak256 = require('js-sha3').keccak256;
     Worker = require('worker_threads').Worker;
     NodeEvent = require('events');
     SimplePeer = require('simple-peer');
     wrtc = require('wrtc');
     perf = {now: function() {let end = process.hrtime();return Math.round((end[0]*1000) + (end[1]/1000000));}}
+    XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 }
-else perf = performance;
+else {
+    websock = WebSocket;
+    perf = performance;
+}
 
 // INIT
-let OY_LIGHT_MODE = true;//seek to stay permanently connected to the mesh as a light node/latch, manipulable by the user
+let OY_LIGHT_MODE = false;//seek to stay permanently connected to the mesh as a light node/latch, manipulable by the user
 let OY_LIGHT_LEAN = false;
 let OY_LIGHT_STATE = true;//immediate status of being a light node/latch, not manipulable by the user
 let OY_DIVE_GRADE = false;
@@ -328,10 +333,7 @@ let OY_DIVE_TEAM = false;
 let OY_DIVE_STATE = false;
 let OY_FULL_INTRO = false;//default is false, can be set here or via nodejs argv first parameter TODO force set to false if not in nodejs mode
 let OY_INTRO_DEFAULT = {
-    "nodea1.oyster.org:8443":true,
-    "nodea2.oyster.org:8443":true,
-    "nodea3.oyster.org:8443":true,
-    "nodea4.oyster.org:8443":true
+    "vnode1.oyster.org:8443":true
 };
 let OY_INTRO_PUNISH = {};
 let OY_INTRO_BAN = {};
@@ -751,10 +753,10 @@ function oy_log(oy_log_msg, oy_log_attn) {
 function oy_log_debug(oy_log_msg) {
     if (OY_SELF_SHORT===null) return false;
 
-    oy_log_msg = "["+(Date.now()/1000).toFixed(2)+"] "+oy_log_msg;
+    oy_log_msg = "["+OY_SELF_SHORT+"]["+(Date.now()/1000).toFixed(2)+"] "+oy_log_msg;
     let oy_xhttp = new XMLHttpRequest();
-    oy_xhttp.open("POST", "https://top.oyster.org/oy_log_catch.php", true);
-    oy_xhttp.send("oy_log_catch="+JSON.stringify([OY_SELF_SHORT, oy_log_msg]));
+    oy_xhttp.open("POST", "https://top.oyster.org/oy_log_catch", true);
+    oy_xhttp.send(JSON.stringify(oy_log_msg));
 }
 
 function oy_short(oy_message) {
@@ -1732,7 +1734,7 @@ function oy_peer_report() {
 
     let oy_report_payload = JSON.stringify([OY_SELF_PUBLIC, oy_state_current(), oy_peers_thin, {}]);
     let oy_report_hash = oy_hash_gen(oy_report_payload);
-    if (OY_REPORT_HASH!==oy_report_hash) {
+    if (true||OY_REPORT_HASH!==oy_report_hash) {//TODO confirm why not replenish node topology data even if duplicated
         OY_REPORT_HASH = oy_report_hash;
         oy_xhttp.open("POST", "https://top.oyster.org/oy_peer_report", true);
         oy_xhttp.send(oy_report_payload);
@@ -2712,7 +2714,8 @@ function oy_data_deposit_purge() {
 }
 
 function oy_intro_beam(oy_intro_select, oy_data_flag, oy_data_payload, oy_callback) {
-    let ws = new WebSocket("wss://"+oy_intro_select);
+    oy_log("INTRO[BEAM]["+oy_intro_select+"]");
+    let ws = new websock("wss://"+oy_intro_select);
     let oy_response = false;
     ws.onopen = function() {
         ws.send(JSON.stringify([oy_data_flag, oy_data_payload]));
@@ -3105,6 +3108,7 @@ function oy_block_engine() {
         else OY_BLOCK_BOOT = OY_BLOCK_TIME-OY_BLOCK_BOOTTIME<OY_BLOCK_BOOT_BUFFER;
 
         oy_worker_halt(0);
+        oy_log_debug("NEW MESHBLOCK: "+OY_BLOCK_TIME);
 
         OY_BLOCK_COMMAND_NONCE = 0;
         OY_BLOCK_SYNC = {};
@@ -3186,6 +3190,8 @@ function oy_block_engine() {
 
         //BLOCK SEED--------------------------------------------------
         if (OY_LIGHT_MODE===false&&OY_BLOCK_TIME===OY_BLOCK_BOOTTIME) {
+            oy_log("MESHBLOCK BOOT SEED", true);
+            oy_log_debug("MESHBLOCK BOOT SEED");
             OY_BLOCK = oy_clone_object(OY_BLOCK_TEMPLATE);
             OY_BLOCK[0][0] = OY_MESH_DYNASTY;//dynasty
             OY_BLOCK[0][1] = OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0];
@@ -3309,6 +3315,7 @@ function oy_block_engine() {
 
             if (OY_BLOCK_HASH===null||Object.keys(OY_PEERS).length<=OY_PEER_MAX/2) {
                 let oy_intro_keep = oy_clone_object(OY_INTRO_DEFAULT);
+                oy_log_debug("DEBUG [1]: "+JSON.stringify(oy_intro_keep));
                 if (OY_BLOCK_HASH!==null) {
                     for (let oy_key_public in OY_BLOCK[1]) {
                         if (OY_BLOCK[1][oy_key_public][6]!==0&&OY_BLOCK[1][oy_key_public][1]===1&&OY_BLOCK[1][oy_key_public][2]>=OY_BLOCK[0][15]&&typeof(oy_intro_keep[OY_BLOCK[1][oy_key_public][6]])==="undefined") oy_intro_keep[OY_BLOCK[1][oy_key_public][6]] = true;
@@ -3318,6 +3325,7 @@ function oy_block_engine() {
                     if (typeof(OY_INTRO_PUNISH[oy_full_intro])!=="undefined") delete oy_intro_keep[oy_full_intro];
                 }
                 let oy_intro_array = Object.keys(oy_intro_keep);
+                oy_log_debug("DEBUG [2]: "+JSON.stringify(oy_intro_array));
                 if (oy_intro_array.length===0) {
                     let oy_punish_low = -1;
                     for (let oy_full_intro in OY_INTRO_PUNISH) {
@@ -3334,7 +3342,8 @@ function oy_block_engine() {
                         if (OY_INTRO_PUNISH[oy_full_intro]===oy_punish_low) oy_intro_array.push(oy_full_intro);
                     }
                 }
-                let oy_intro_select = oy_intro_array[Math.floor(Math.random()*oy_intro_array)];
+                let oy_intro_select = oy_intro_array[Math.floor(Math.random()*oy_intro_array.length)];
+                oy_log_debug("DEBUG [3]: "+JSON.stringify(oy_intro_select));
                 oy_intro_beam(oy_intro_select, "OY_INTRO_PRE", null, function(oy_data_flag, oy_data_payload) {
                     if (oy_data_flag!=="OY_INTRO_TIME"||!Number.isInteger(oy_data_payload)||oy_data_payload<OY_BLOCK_SECTORS[0][1]||oy_data_payload>OY_BLOCK_SECTORS[1][1]) {
                         oy_intro_punish(oy_intro_select);
@@ -4361,17 +4370,16 @@ function oy_init(oy_console) {
 
         const fs = require('fs');
         const https = require('https');
-        const WebSocketServer = require('ws').Server;
 
-        let privateKey = fs.readFileSync('/etc/letsencrypt/live/nodea1.oyster.org/privkey.pem', 'utf8');
-        let certificate = fs.readFileSync('/etc/letsencrypt/live/nodea1.oyster.org/fullchain.pem', 'utf8');
+        let privateKey = fs.readFileSync('/etc/letsencrypt/live/vnode1.oyster.org/privkey.pem', 'utf8');
+        let certificate = fs.readFileSync('/etc/letsencrypt/live/vnode1.oyster.org/fullchain.pem', 'utf8');
 
         let credentials = {key:privateKey, cert:certificate};
 
         let httpsServer = https.createServer(credentials);
         httpsServer.listen(parseInt(OY_FULL_INTRO.split(":")[1]));
 
-        let wss = new WebSocketServer({
+        let wss = new websock.Server({
             server: httpsServer
         });
 
