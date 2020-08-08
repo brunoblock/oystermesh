@@ -30,7 +30,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 2;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1596900800;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1596919700;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -288,7 +288,7 @@ const OY_BLOCK_TRANSACTS = {
 let OY_NODE_STATE = typeof(window)==="undefined";
 
 // DEPENDENCIES
-let websock, os, NodeEvent, SimplePeer, wrtc, perf;
+let websock, os, nacl, LZString, NodeEvent, SimplePeer, wrtc, perf;
 
 //OYSTER DEPENDENCY TWEETNACL-JS
 //https://github.com/dchest/tweetnacl-js
@@ -310,7 +310,10 @@ if (OY_NODE_STATE===true) {
     console.log("NODE_MODE");
     websock = require('ws');
     os = require('os');
+    nacl = require('tweetnacl');
+    nacl.util = require('tweetnacl-util');
     keccak256 = require('js-sha3').keccak256;
+    LZString = require('lz-string');
     Worker = require('worker_threads').Worker;
     NodeEvent = require('events');
     SimplePeer = require('simple-peer');
@@ -2717,7 +2720,7 @@ function oy_data_deposit_purge() {
 function oy_intro_beam(oy_intro_select, oy_data_flag, oy_data_payload, oy_callback) {
     if (oy_intro_select===OY_FULL_INTRO) return false;
 
-    //TODO implement try/catch from proper handling of offline intro node
+    //TODO implement try/catch for proper handling of offline intro node
     oy_log("INTRO[BEAM]["+oy_intro_select+"]");
     let ws = new websock("wss://"+oy_intro_select);
     let oy_response = false;
@@ -2727,13 +2730,13 @@ function oy_intro_beam(oy_intro_select, oy_data_flag, oy_data_payload, oy_callba
     ws.onmessage = function (oy_event) {
         oy_response = true;
         ws.close();
-        console.log("INTRO_SOAK: "+oy_event.data);
+        console.log("INTRO[SOAK]["+oy_event.data+"]["+((Date.now()/1000)-OY_BLOCK_TIME)+"]");
+        oy_log_debug("INTRO[SOAK]["+oy_event.data+"]["+((Date.now()/1000)-OY_BLOCK_TIME)+"]");
         if (typeof(oy_callback)==="function") {
             try {
                 let [oy_data_flag, oy_data_payload] = JSON.parse(oy_event.data);
                 if (oy_data_flag==="OY_INTRO_UNREADY") {
-                    if (OY_BLOCK_BOOT===true) return false;
-                    oy_intro_punish(oy_intro_select);
+                    if (OY_BLOCK_BOOT===false) oy_intro_punish(oy_intro_select);
                 }
                 else oy_callback(oy_data_flag, oy_data_payload);
             }
@@ -3142,7 +3145,7 @@ function oy_block_engine() {
         OY_INTRO_TAG = {};
         OY_INTRO_BAN = {};
 
-        if (OY_FULL_INTRO!==false&&OY_FULL_INTRO.indexOf(":")!==-1&&OY_NODE_STATE===true&&OY_BLOCK_RECORD_KEEP.length>1) OY_INTRO_MARKER = ((OY_SYNC_LAST[0]>0)?Math.max(OY_BLOCK_SECTORS[0][1], Math.min(OY_BLOCK_SECTORS[1][1], OY_SYNC_LAST[0]+OY_BLOCK_BUFFER_SPACE[1])):OY_BLOCK_SECTORS[1][1])+(Math.max(...OY_BLOCK_RECORD_KEEP)*1000*OY_BLOCK_RECORD_INTRO_BUFFER);
+        if (OY_FULL_INTRO!==false&&OY_FULL_INTRO.indexOf(":")!==-1&&OY_NODE_STATE===true&&OY_BLOCK_RECORD_KEEP.length>1) OY_INTRO_MARKER = Math.ceil(((OY_SYNC_LAST[0]>0)?Math.max(OY_BLOCK_SECTORS[0][1], Math.min(OY_BLOCK_SECTORS[1][1], OY_SYNC_LAST[0]+OY_BLOCK_BUFFER_SPACE[1])):OY_BLOCK_SECTORS[1][1])+(Math.max(...OY_BLOCK_RECORD_KEEP)*1000*OY_BLOCK_RECORD_INTRO_BUFFER));
         else OY_INTRO_MARKER = null;
 
         if (OY_BLOCK_BOOT===true) {
@@ -3357,18 +3360,24 @@ function oy_block_engine() {
                 let oy_intro_select = oy_intro_array[Math.floor(Math.random()*oy_intro_array.length)];
                 oy_log_debug("DEBUG [3]: "+JSON.stringify(oy_intro_select));
                 oy_intro_beam(oy_intro_select, "OY_INTRO_PRE", null, function(oy_data_flag, oy_data_payload) {
+                    console.log("A1");
                     if (oy_data_flag!=="OY_INTRO_TIME"||!Number.isInteger(oy_data_payload)||oy_data_payload<OY_BLOCK_SECTORS[0][1]||oy_data_payload>OY_BLOCK_SECTORS[1][1]) {
-                        oy_intro_punish(oy_intro_select);
+                        oy_intro_punish(oy_intro_select);console.log("A2");
                         return false;
                     }
+                    console.log("A3");
                     let oy_time_offset = ((Date.now()/1000)-OY_BLOCK_TIME)*1000;
                     if (oy_data_payload<=oy_time_offset) return false;
+                    console.log("A4");
                     oy_chrono(function() {
+                        console.log("A5");
                         oy_intro_beam(oy_intro_select, "OY_INTRO_GET", true, function(oy_data_flag, oy_data_payload) {
+                            console.log("A6");
                             if (oy_data_flag!=="OY_INTRO_WORK"||typeof(oy_data_payload)!=="object"||oy_data_payload.length>OY_WORK_MAX/OY_WORK_INTRO) {
                                 oy_intro_punish(oy_intro_select);
                                 return false;
                             }
+                            console.log("A7");
                             oy_worker_spawn(0);
                             OY_INTRO_SELECT = oy_intro_select;
                             OY_INTRO_SOLUTIONS = {};
@@ -4406,7 +4415,7 @@ function oy_init(oy_console) {
                     }
                     //if (OY_INTRO_MARKER===null&&OY_BLOCK_BOOT===true) OY_INTRO_MARKER = OY_BLOCK_SECTORS[2][1];
                     console.log(2);
-                    if (OY_BLOCK_BOOT===false&&(oy_state_current()!==2||OY_INTRO_MARKER===null||OY_BLOCK_RECORD_KEEP.length<=1||typeof(OY_BLOCK[1][OY_SELF_PUBLIC])==="undefined"||OY_BLOCK[1][OY_SELF_PUBLIC][1]===0||OY_BLOCK[1][OY_SELF_PUBLIC][2]<OY_BLOCK[0][15])) {
+                    if (oy_state_current()!==2||OY_INTRO_MARKER===null||OY_BLOCK_RECORD_KEEP.length<=1||(OY_BLOCK_BOOT===false&&(typeof(OY_BLOCK[1][OY_SELF_PUBLIC])==="undefined"||OY_BLOCK[1][OY_SELF_PUBLIC][1]===0||OY_BLOCK[1][OY_SELF_PUBLIC][2]<OY_BLOCK[0][15]))) {
                         console.log("LEMON");
                         console.log(JSON.stringify([oy_state_current(), OY_INTRO_MARKER, OY_BLOCK_RECORD_KEEP.length, typeof(OY_BLOCK[1][OY_SELF_PUBLIC])]));
                         console.log(OY_BLOCK[1]);
