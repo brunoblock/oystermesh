@@ -30,7 +30,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 2;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1596919700;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1596946300;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -667,6 +667,7 @@ function oy_worker_spawn(oy_worker_type) {
                     if (typeof(OY_INTRO_SOLUTIONS[oy_work_nonce])!=="undefined") {
                         if (OY_INTRO_SOLUTIONS[oy_work_nonce]===null||oy_calc_grade(oy_work_solution)>oy_calc_grade(OY_INTRO_SOLUTIONS[oy_work_nonce])) OY_INTRO_SOLUTIONS[oy_work_nonce] = oy_work_solution;
                         if (Object.keys(OY_INTRO_SOLUTIONS).length>0&&Object.values(OY_INTRO_SOLUTIONS).indexOf(null)===-1) {
+                            oy_log_debug("WORKDEBUG END: "+JSON.stringify(OY_INTRO_SOLUTIONS));
                             oy_intro_beam(OY_INTRO_SELECT, "OY_INTRO_DONE", [true, OY_INTRO_SOLUTIONS], function(oy_data_flag, oy_data_payload) {
                                 if (oy_data_flag!=="OY_INTRO_SIGNAL_A"||typeof(oy_data_payload)!=="object"||oy_data_payload.length<1) {
                                     oy_intro_punish(OY_INTRO_SELECT);
@@ -3384,6 +3385,7 @@ function oy_block_engine() {
                             for (let i in oy_data_payload) {
                                 OY_INTRO_SOLUTIONS[oy_data_payload[i][0]] = null;
                             }
+                            oy_log_debug("WORKDEBUG START: "+JSON.stringify([OY_INTRO_SOLUTIONS, oy_data_payload]));
                             for (let i in oy_data_payload) {
                                 for (let oy_counter = 0;oy_counter<OY_WORKER_THREADS[0].length/oy_data_payload.length;oy_counter++) {
                                     OY_WORKER_THREADS[0][oy_worker_point(0)].postMessage([0, [false, oy_data_payload[i][0], oy_data_payload[i][1]]]);
@@ -4225,7 +4227,8 @@ function oy_block_finish() {
         OY_WORK_GRADES.fill(null);
         OY_WORK_BITS.fill(null);
         for (let i in OY_WORK_BITS) {
-            OY_WORK_BITS[i] = oy_hash_gen(OY_SELF_PUBLIC+OY_BLOCK_NEXT+OY_BLOCK_HASH+i).substr(0, OY_WORK_MATCH);
+            OY_WORK_BITS[i] = oy_hash_gen(OY_BLOCK_TIME+OY_SELF_PUBLIC+OY_BLOCK_HASH+i).substr(0, OY_WORK_MATCH);
+            oy_log_debug("WORKDEBUG DELTA: "+JSON.stringify([OY_BLOCK_TIME, OY_SELF_PUBLIC, OY_BLOCK_HASH, i], OY_WORK_BITS[i]));
         }
         oy_worker_spawn(0);
         for (let i in OY_WORKER_THREADS[0]) {
@@ -4461,6 +4464,7 @@ function oy_init(oy_console) {
                             oy_work_queue[i][0] = Math.floor(Math.random()*OY_WORK_BITS.length);
                             oy_work_queue[i][1] = OY_WORK_BITS[oy_work_queue[i][0]];
                         }
+                        oy_log_debug("WORKDEBUG ALPHA: "+JSON.stringify([OY_WORK_BITS, oy_work_queue, OY_BLOCK_TIME, OY_SELF_PUBLIC, OY_BLOCK_HASH]));
                         ws.send(JSON.stringify(["OY_INTRO_WORK", oy_work_queue]));
                     }
                     else if (oy_data_flag==="OY_INTRO_DONE") {
@@ -4471,7 +4475,11 @@ function oy_init(oy_console) {
                             return false;
                         }
                         console.log(11);
+                        console.log(OY_WORK_SOLUTIONS);
+                        oy_log_debug("WORKDEBUG BETA: "+JSON.stringify([OY_WORK_BITS, OY_WORK_SOLUTIONS, OY_BLOCK_TIME, OY_SELF_PUBLIC, OY_BLOCK_HASH]));
                         for (let oy_work_nonce in oy_data_payload[1]) {
+                            console.log([OY_WORK_SOLUTIONS[oy_work_nonce], OY_BLOCK_TIME, OY_SELF_PUBLIC, OY_BLOCK_HASH, oy_work_nonce, oy_data_payload[1][oy_work_nonce]]);
+                            oy_log_debug("WORKDEBUG GAMMA: "+JSON.stringify([[OY_BLOCK_TIME, OY_SELF_PUBLIC, OY_BLOCK_HASH, oy_work_nonce], oy_hash_gen(OY_BLOCK_TIME+OY_SELF_PUBLIC+OY_BLOCK_HASH+oy_work_nonce).substr(0, OY_WORK_MATCH), oy_data_payload[1][oy_work_nonce]]));
                             if (typeof(OY_WORK_SOLUTIONS[oy_work_nonce])!=="undefined"&&oy_work_verify_single(OY_BLOCK_TIME, OY_SELF_PUBLIC, OY_BLOCK_HASH, oy_work_nonce, oy_data_payload[1][oy_work_nonce])) {
                                 if (OY_WORK_SOLUTIONS[oy_work_nonce]===null||oy_calc_grade(oy_data_payload[1][oy_work_nonce])>OY_WORK_GRADES[oy_work_nonce]) {
                                     OY_WORK_SOLUTIONS[oy_work_nonce] = oy_data_payload[1][oy_work_nonce];
