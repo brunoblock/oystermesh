@@ -30,7 +30,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 2;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1597031500;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1597114200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -670,7 +670,7 @@ function oy_worker_spawn(oy_worker_type) {
                         if (Object.keys(OY_INTRO_SOLUTIONS).length>0&&Object.values(OY_INTRO_SOLUTIONS).indexOf(null)===-1) {
                             oy_log_debug("WORKDEBUG END: "+JSON.stringify(OY_INTRO_SOLUTIONS));
                             oy_intro_beam(OY_INTRO_SELECT, "OY_INTRO_DONE", [true, OY_INTRO_SOLUTIONS], function(oy_data_flag, oy_data_payload) {
-                                if (oy_data_flag!=="OY_INTRO_SIGNAL_A"||typeof(oy_data_payload)!=="object"||oy_data_payload.length<1) {
+                                if (oy_data_flag!=="OY_INTRO_SIGNAL_A"||typeof(oy_data_payload)!=="object"||oy_data_payload.length===0) {
                                     oy_intro_punish(OY_INTRO_SELECT);
                                     return false;
                                 }
@@ -1736,6 +1736,7 @@ function oy_peer_report() {
         oy_peers_thin[oy_peer_select][4] = null;
         oy_peers_thin[oy_peer_select][6] = null;
         oy_peers_thin[oy_peer_select][8] = null;
+        oy_peers_thin[oy_peer_select][10] = null;
     }
 
     let oy_report_payload = JSON.stringify([OY_SELF_PUBLIC, oy_state_current(), oy_peers_thin, {}]);
@@ -3592,36 +3593,39 @@ function oy_block_engine() {
             if (OY_FULL_INTRO!==false&&(OY_BLOCK_BOOT===true||(typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined"&&OY_BLOCK[1][OY_SELF_PUBLIC][1]===1))) {
                 OY_OFFER_PICKUP = [];
                 for (let oy_key_public in OY_OFFER_COLLECT) {
-                    oy_log_debug("PEERDEBUG ALPHA: "+JSON.stringify([oy_key_public, OY_OFFER_COLLECT[oy_key_public][3], OY_BLOCK[1][oy_key_public][0], OY_BLOCK[1][oy_key_public][2]]));
                     if (typeof(OY_BLOCK[1][oy_key_public])!=="undefined") OY_OFFER_PICKUP.push([oy_key_public, OY_OFFER_COLLECT[oy_key_public][3], OY_BLOCK[1][oy_key_public][0], OY_BLOCK[1][oy_key_public][2]]);
                 }
-                OY_OFFER_PICKUP.sort(function(a, b) {
-                    if (a[2]===b[2]) {
-                        if (a[3]===b[3]) {
+                if (OY_OFFER_PICKUP.length>0) {
+                    OY_OFFER_PICKUP.sort(function(a, b) {
+                        if (a[2]===b[2]) {
+                            if (a[3]===b[3]) {
+                                let x = a[0].toLowerCase();
+                                let y = b[0].toLowerCase();
+
+                                return x < y ? -1 : x > y ? 1 : 0;
+                            }
+                            return b[3] - a[3];
+                        }
+                        return b[2] - a[2];
+                    });
+                }
+                let oy_pickup_sort = [];
+                for (let oy_key_public in OY_OFFER_COLLECT) {
+                    if (typeof(OY_BLOCK[1][oy_key_public])==="undefined") oy_pickup_sort.push([oy_key_public, OY_OFFER_COLLECT[oy_key_public][3], OY_OFFER_COLLECT[oy_key_public][0]]);
+                }
+                if (oy_pickup_sort.length>0) {
+                    oy_pickup_sort.sort(function(a, b) {
+                        if (a[2]===b[2]) {
                             let x = a[0].toLowerCase();
                             let y = b[0].toLowerCase();
 
                             return x < y ? -1 : x > y ? 1 : 0;
                         }
-                        return b[3] - a[3];
+                        return a[2] - b[2];
+                    });
+                    for (let i in oy_pickup_sort) {
+                        OY_OFFER_PICKUP.push(oy_pickup_sort[i]);
                     }
-                    return b[2] - a[2];
-                });
-                let oy_pickup_sort = [];
-                for (let oy_key_public in OY_OFFER_COLLECT) {
-                    if (typeof(OY_BLOCK[1][oy_key_public])==="undefined") oy_pickup_sort.push([oy_key_public, OY_OFFER_COLLECT[oy_key_public]][3], OY_OFFER_COLLECT[oy_key_public][0]);
-                }
-                oy_pickup_sort.sort(function(a, b) {
-                    if (a[2]===b[2]) {
-                        let x = a[0].toLowerCase();
-                        let y = b[0].toLowerCase();
-
-                        return x < y ? -1 : x > y ? 1 : 0;
-                    }
-                    return a[2] - b[2];
-                });
-                for (let i in oy_pickup_sort) {
-                    OY_OFFER_PICKUP.push(oy_pickup_sort[i]);
                 }
                 OY_OFFER_COUNTER = -1;
             }
