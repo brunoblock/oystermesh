@@ -30,7 +30,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 2;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1597356900;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1597374000;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -551,13 +551,13 @@ function oy_worker_spawn(oy_worker_type) {
             return oy_work_bit===oy_hash_gen(oy_work_bit+oy_work_solution).substr(0, OY_WORK_MATCH);
         }
 
-        function oy_block_sync_hop(oy_dive_ledger, oy_passport_passive, oy_passport_crypt, oy_crypt_short, oy_first) {
+        function oy_block_sync_hop(oy_dive_ledger, oy_passport_passive, oy_passport_crypt, oy_sync_crypt, oy_first) {
             if (oy_passport_passive.length===0) return oy_first!==true;
             let oy_node_select = oy_passport_passive.shift();
             let oy_crypt_select = oy_passport_crypt.shift();
-            if (oy_key_verify(oy_node_select, oy_crypt_select, oy_crypt_short)) {
+            if (oy_key_verify(oy_node_select, oy_crypt_select, oy_sync_crypt)) {
                 if (oy_first===false&&typeof(oy_dive_ledger[oy_node_select])==="undefined") return false;
-                return oy_block_sync_hop(oy_dive_ledger, oy_passport_passive, oy_passport_crypt, oy_crypt_short, false);
+                return oy_block_sync_hop(oy_dive_ledger, oy_passport_passive, oy_passport_crypt, oy_sync_crypt, false);
             }
             return false;
         }
@@ -597,7 +597,7 @@ function oy_worker_spawn(oy_worker_type) {
             else if (oy_work_type===1) {
                 let [oy_data_payload, oy_dive_ledger, oy_block_boot, oy_block_time, oy_block_hash, oy_work_difficulty] = oy_work_data;
 
-                console.log("RED8: "+JSON.stringify([oy_block_sync_hop(oy_dive_ledger, oy_data_payload[0].slice(), oy_data_payload[1].slice(), oy_data_payload[2], true), oy_block_boot]));
+                console.log("RED8: "+JSON.stringify([oy_block_sync_hop(oy_dive_ledger, oy_data_payload[0].slice(), oy_data_payload[1].slice(), oy_data_payload[2], true), oy_block_boot, [oy_dive_ledger, oy_data_payload[0].slice(), oy_data_payload[1].slice(), oy_data_payload[2]]]));
                 if (oy_block_sync_hop(oy_dive_ledger, oy_data_payload[0].slice(), oy_data_payload[1].slice(), oy_data_payload[2], true)||oy_block_boot===true) {
                     let oy_work_solutions = JSON.parse(oy_data_payload[6]);
                     console.log("RED950: "+JSON.stringify([oy_block_time, oy_data_payload[0][0], oy_block_hash, oy_work_difficulty, oy_work_solutions]));
@@ -717,7 +717,7 @@ function oy_worker_spawn(oy_worker_type) {
 
                     if (typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined"||OY_BLOCK_BOOT===true) {
                         oy_log_debug("RED14");console.log("RED14");
-                        oy_data_payload[1].push(oy_key_sign(OY_SELF_PRIVATE, oy_short(oy_data_payload[2])));
+                        oy_data_payload[1].push(oy_key_sign(OY_SELF_PRIVATE, oy_data_payload[2]));
                         oy_data_route("OY_LOGIC_SYNC", "OY_BLOCK_SYNC", oy_data_payload);
                     }
 
@@ -1096,7 +1096,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                 OY_BLOCK_SYNC[oy_data_payload[0][0]] = false;
 
                 if (typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined"||OY_BLOCK_BOOT===true) {
-                    oy_data_payload[1].push(oy_key_sign(OY_SELF_PRIVATE, oy_short(oy_data_payload[2])));
+                    oy_data_payload[1].push(oy_key_sign(OY_SELF_PRIVATE, oy_data_payload[2]));
                     oy_data_route("OY_LOGIC_SYNC", "OY_BLOCK_SYNC", oy_data_payload);
                 }
             }
