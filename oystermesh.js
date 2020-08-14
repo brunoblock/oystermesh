@@ -30,7 +30,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 2;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1597427500;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1597431600;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -3572,7 +3572,10 @@ function oy_block_engine() {
             if (OY_FULL_INTRO!==false&&(OY_BLOCK_BOOT===true||(typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined"&&OY_BLOCK[1][OY_SELF_PUBLIC][1]===1))) {
                 OY_OFFER_PICKUP = [];
                 for (let oy_key_public in OY_OFFER_COLLECT) {
-                    if (typeof(OY_BLOCK[1][oy_key_public])!=="undefined") OY_OFFER_PICKUP.push([oy_key_public, OY_OFFER_COLLECT[oy_key_public][3], OY_BLOCK[1][oy_key_public][0], OY_BLOCK[1][oy_key_public][2]]);
+                    if (typeof(OY_BLOCK[1][oy_key_public])!=="undefined") {
+                        oy_log_debug("GREEN1: "+oy_key_public);
+                        OY_OFFER_PICKUP.push([oy_key_public, OY_OFFER_COLLECT[oy_key_public][3], OY_BLOCK[1][oy_key_public][0], OY_BLOCK[1][oy_key_public][2]]);
+                    }
                 }
                 if (OY_OFFER_PICKUP.length>0) {
                     OY_OFFER_PICKUP.sort(function(a, b) {
@@ -3590,7 +3593,10 @@ function oy_block_engine() {
                 }
                 let oy_pickup_sort = [];
                 for (let oy_key_public in OY_OFFER_COLLECT) {
-                    if (typeof(OY_BLOCK[1][oy_key_public])==="undefined") oy_pickup_sort.push([oy_key_public, OY_OFFER_COLLECT[oy_key_public][3], OY_OFFER_COLLECT[oy_key_public][0]]);
+                    if (typeof(OY_BLOCK[1][oy_key_public])==="undefined") {
+                        oy_log_debug("GREEN2: "+oy_key_public);
+                        oy_pickup_sort.push([oy_key_public, OY_OFFER_COLLECT[oy_key_public][3], OY_OFFER_COLLECT[oy_key_public][0]]);
+                    }
                 }
                 if (oy_pickup_sort.length>0) {
                     oy_pickup_sort.sort(function(a, b) {
@@ -4478,7 +4484,7 @@ function oy_init(oy_console) {
                                 ws.close();
                                 return false;
                             }
-                            if (OY_INTRO_PICKUP_COUNT===null) OY_INTRO_PICKUP_COUNT = Math.ceil(OY_OFFER_PICKUP.length/Object.keys(OY_INTRO_ALLOCATE).length);
+                            if (OY_INTRO_PICKUP_COUNT===null) OY_INTRO_PICKUP_COUNT = Math.max(1, Math.ceil(OY_OFFER_PICKUP.length/Object.keys(OY_INTRO_ALLOCATE).length));
                             let oy_signal_array = [];
                             for (let oy_counter = 0;oy_counter<OY_INTRO_PICKUP_COUNT&&OY_OFFER_PICKUP.length>0;oy_counter++) {
                                 oy_signal_array.push(OY_OFFER_PICKUP.shift()[1]);
@@ -4488,7 +4494,8 @@ function oy_init(oy_console) {
                                     if (OY_INTRO_SELF[oy_offer_rand][2]!==null) continue;
                                     OY_INTRO_SELF[oy_offer_rand][2] = ws._socket.remoteAddress;
                                     oy_signal_array.push(OY_INTRO_SELF[oy_offer_rand][1]);
-                                    //delete OY_INTRO_SELF[oy_offer_rand];
+                                    delete OY_INTRO_SELF[oy_offer_rand];
+                                    oy_log_debug("BLUE6["+ws._socket.remoteAddress+"]");
                                     break;
                                 }
                             }
@@ -4499,24 +4506,37 @@ function oy_init(oy_console) {
                     else if (oy_data_flag==="OY_INTRO_SIGNAL_B") {
                         let oy_self_pass = false;
                         let oy_signal_carry = oy_signal_soak(oy_data_payload);
-                        if (OY_BLOCK_FINISH===false||typeof(oy_data_payload)!=="string"||!oy_signal_carry||typeof(OY_OFFER_COLLECT[oy_signal_carry[0]])==="undefined"||typeof(OY_INTRO_ALLOCATE[ws._socket.remoteAddress])==="undefined"||OY_INTRO_ALLOCATE[ws._socket.remoteAddress]>=OY_INTRO_PICKUP_COUNT) {
+                        oy_log_debug("BLUE7["+ws._socket.remoteAddress+"]");
+                        if (OY_BLOCK_FINISH===false||typeof(oy_data_payload)!=="string"||!oy_signal_carry||typeof(OY_INTRO_ALLOCATE[ws._socket.remoteAddress])==="undefined"||OY_INTRO_ALLOCATE[ws._socket.remoteAddress]>=OY_INTRO_PICKUP_COUNT) {
+                            oy_log_debug("BLUE8["+ws._socket.remoteAddress+"]["+JSON.stringify([OY_INTRO_ALLOCATE[ws._socket.remoteAddress], OY_INTRO_PICKUP_COUNT])+"]");
+                            OY_INTRO_BAN[ws._socket.remoteAddress] = true;
+                            delete OY_INTRO_ALLOCATE[ws._socket.remoteAddress];
+                            ws.close();
+                            return false;
+                        }
+                        if (typeof(OY_OFFER_COLLECT[oy_signal_carry[0]])==="undefined") {
                             for (let oy_offer_rand in OY_INTRO_SELF) {
                                 if (OY_INTRO_SELF[oy_offer_rand][2]===ws._socket.remoteAddress) {
+                                    oy_log_debug("BLUE9["+ws._socket.remoteAddress+"]");
                                     oy_self_pass = oy_offer_rand;
                                     break;
                                 }
                             }
                             if (oy_self_pass===false) {
                                 OY_INTRO_BAN[ws._socket.remoteAddress] = true;
+                                delete OY_INTRO_ALLOCATE[ws._socket.remoteAddress];
                                 ws.close();
                                 return false;
                             }
                         }
-                        OY_INTRO_ALLOCATE[ws._socket.remoteAddress]++;//TODO consider declaring normally
+                        OY_INTRO_ALLOCATE[ws._socket.remoteAddress]++;
+                        oy_log_debug("BLUE10["+ws._socket.remoteAddress+"]");
                         if (oy_self_pass!==false) {
+                            oy_log_debug("BLUE11["+ws._socket.remoteAddress+"]");
                             OY_NODES[oy_signal_carry[0]] = OY_INTRO_SELF[oy_self_pass][0];
                             oy_node_connect(oy_signal_carry[0]);
                             OY_NODES[oy_signal_carry[0]].on("connect", function() {
+                                oy_log_debug("BLUE12["+ws._socket.remoteAddress+"]");
                                 oy_node_initiate(oy_signal_carry[0]);
                             });
                             OY_NODES[oy_signal_carry[0]].signal(oy_signal_carry[1]);
