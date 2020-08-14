@@ -30,7 +30,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 2;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1597407800;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1597409800;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -2722,8 +2722,9 @@ function oy_intro_beam(oy_intro_select, oy_data_flag, oy_data_payload, oy_callba
     try {
         oy_log("INTRO[BEAM]["+oy_intro_select+"]");
         let ws = new websock("wss://"+oy_intro_select);
-        let oy_response = false;
+        let oy_response = null;
         ws.onopen = function() {
+            oy_response = false;
             ws.send(JSON.stringify([oy_data_flag, oy_data_payload]));
         };
         ws.onmessage = function (oy_event) {
@@ -2743,8 +2744,8 @@ function oy_intro_beam(oy_intro_select, oy_data_flag, oy_data_payload, oy_callba
             }
         };
         oy_chrono(function() {
-            if (oy_response===false) {
-                ws.close();
+            if (oy_response===null||oy_response===false) {
+                if (oy_response===false) ws.close();
                 oy_intro_punish(oy_intro_select);
             }
         }, OY_INTRO_TRIP[1]);
@@ -4424,15 +4425,19 @@ function oy_init(oy_console) {
                         ws.send(JSON.stringify(["OY_INTRO_TIME", OY_INTRO_MARKER]));
                     }
                     else if (oy_data_flag==="OY_INTRO_GET") {
+                        oy_log_debug("BLUE1["+ws._socket.remoteAddress+"]");
                         if (OY_BLOCK_FINISH===false) {
+                            oy_log_debug("BLUE2["+ws._socket.remoteAddress+"]");
                             ws.send(JSON.stringify(["OY_INTRO_UNREADY", 2]));
                             return false;
                         }
                         if (oy_data_payload===true&&(oy_time_offset<(OY_INTRO_MARKER/1000)-OY_MESH_BUFFER[0]||oy_time_offset>(OY_INTRO_MARKER/1000)+OY_MESH_BUFFER[0])) {
+                            oy_log_debug("BLUE3["+ws._socket.remoteAddress+"]["+JSON.stringify([oy_data_payload, oy_time_offset, (OY_INTRO_MARKER/1000)-OY_MESH_BUFFER[0], oy_time_offset>(OY_INTRO_MARKER/1000)+OY_MESH_BUFFER[0]])+"]");
                             ws.close();
                             return false;
                         }
                         if (typeof(OY_INTRO_ALLOCATE[ws._socket.remoteAddress])!=="undefined"||(oy_data_payload!==false&&oy_data_payload!==true)) {
+                            oy_log_debug("BLUE4["+ws._socket.remoteAddress+"]");
                             OY_INTRO_BAN[ws._socket.remoteAddress] = true;
                             delete OY_INTRO_ALLOCATE[ws._socket.remoteAddress];
                             ws.close();
@@ -4445,6 +4450,7 @@ function oy_init(oy_console) {
                             oy_work_queue[i][0] = Math.floor(Math.random()*OY_WORK_BITS.length);
                             oy_work_queue[i][1] = OY_WORK_BITS[oy_work_queue[i][0]];
                         }
+                        oy_log_debug("BLUE5["+ws._socket.remoteAddress+"]");
                         ws.send(JSON.stringify(["OY_INTRO_WORK", oy_work_queue]));
                     }
                     else if (oy_data_flag==="OY_INTRO_DONE") {
