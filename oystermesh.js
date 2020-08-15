@@ -30,7 +30,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 2;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 360;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1597464900;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1597472300;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -670,7 +670,7 @@ function oy_worker_spawn(oy_worker_type) {
                     if (typeof(OY_INTRO_SOLUTIONS[oy_work_nonce])!=="undefined") {
                         if (OY_INTRO_SOLUTIONS[oy_work_nonce]===null||oy_calc_grade(oy_work_solution)>oy_calc_grade(OY_INTRO_SOLUTIONS[oy_work_nonce])) OY_INTRO_SOLUTIONS[oy_work_nonce] = oy_work_solution;
                         if (Object.keys(OY_INTRO_SOLUTIONS).length>0&&Object.values(OY_INTRO_SOLUTIONS).indexOf(null)===-1) {
-                            oy_intro_beam(OY_INTRO_SELECT, "OY_INTRO_DONE", [true, OY_INTRO_SOLUTIONS], function(oy_data_flag, oy_data_payload) {
+                            oy_intro_beam(OY_INTRO_SELECT, "OY_INTRO_DONE", [true, OY_SELF_PUBLIC, oy_key_sign(OY_SELF_PRIVATE, JSON.stringify(OY_INTRO_SOLUTIONS)), OY_INTRO_SOLUTIONS], function(oy_data_flag, oy_data_payload) {
                                 console.log("REDPREPRE1");
                                 oy_log_debug("REDPREPRE1: "+JSON.stringify([oy_data_flag, oy_data_payload]));
                                 if (oy_data_flag!=="OY_INTRO_SIGNAL_A"||typeof(oy_data_payload)!=="object"||oy_data_payload.length===0) {
@@ -1161,15 +1161,19 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_log_debug("ORANGE: "+JSON.stringify([oy_hash_gen(oy_data_payload[0][0]+oy_data_payload[2]+OY_PEER_OFFER[0]+OY_PEER_OFFER[2]+oy_data_payload[3]), oy_data_payload[0][0], oy_data_payload[2], OY_PEER_OFFER[0], OY_PEER_OFFER[2], oy_data_payload[3]]));
             if (OY_PEER_OFFER[0]===null||!oy_signal_carry||typeof(OY_NODES[oy_signal_carry[0]])!=="undefined"||!oy_key_verify(oy_data_payload[0][0], oy_data_payload[2], OY_PEER_OFFER[0]+OY_PEER_OFFER[2]+oy_data_payload[3])) return false;
             oy_log_debug("RED6");
-            //OY_NODES[oy_signal_carry[0]] = OY_PEER_OFFER[1];
+            OY_NODES[oy_signal_carry[0]] = OY_PEER_OFFER[1];
+            console.log("RED7: "+JSON.stringify([oy_signal_carry[0], oy_signal_carry[1]]));
             oy_log_debug("RED7: "+JSON.stringify([oy_signal_carry[0], oy_signal_carry[1]]));
-            //oy_node_connect(oy_signal_carry[0]);
-            OY_PEER_OFFER[1].on("connect", function() {
+            oy_node_connect(oy_signal_carry[0]);
+            console.log("RED7.1");
+            oy_log_debug("RED7.1");
+            OY_NODES[oy_signal_carry[0]].on("connect", function() {
+                console.log("RED8");
                 oy_log_debug("RED8");
                 //OY_PEER_OFFER = [null, null, null];
                 oy_node_initiate(oy_signal_carry[0]);
             });
-            OY_PEER_OFFER[1].signal(oy_signal_carry[1]);
+            OY_NODES[oy_signal_carry[0]].signal(oy_signal_carry[1]);
         }
         else {
             oy_log_debug("RED9: "+JSON.stringify(oy_data_payload));
@@ -3313,6 +3317,7 @@ function oy_block_engine() {
                 }
             }
 
+            /*
             for (let oy_peer_select in OY_PEERS) {
                 if (OY_PEERS[oy_peer_select][1]===0||OY_PEERS[oy_peer_select][0]>=OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]||Object.keys(OY_NODES).length>=OY_NODE_MAX) continue;
                 OY_PEERS[oy_peer_select][10] = oy_node_boot(true);
@@ -3321,7 +3326,8 @@ function oy_block_engine() {
                     oy_data_beam(oy_peer_select, "OY_PEER_EXCHANGE_A", [oy_peer_map, oy_signal_beam(oy_signal_data)]);
                 });
             }
-        }, 20000);
+             */
+        }, 15000);
 
         oy_chrono(function() {
             if (OY_BLOCK_HASH===null) return false;
@@ -4489,16 +4495,18 @@ function oy_init(oy_console) {
                         ws.send(JSON.stringify(["OY_INTRO_WORK", oy_work_queue]));
                     }
                     else if (oy_data_flag==="OY_INTRO_DONE") {
-                        if (OY_BLOCK_FINISH===false||oy_data_payload.length!==2||(oy_data_payload[0]!==false&&oy_data_payload[0]!==true)||typeof(oy_data_payload[1])!=="object"||Object.keys(oy_data_payload[1]).length!==Math.ceil(OY_BLOCK[0][3]/OY_WORK_INTRO)) {
+                        if (OY_BLOCK_FINISH===false||oy_data_payload.length!==4||(oy_data_payload[0]!==false&&oy_data_payload[0]!==true)||!oy_key_check(oy_data_payload[1])||typeof(oy_data_payload[3])!=="object"||Object.keys(oy_data_payload[3]).length!==Math.ceil(OY_BLOCK[0][3]/OY_WORK_INTRO)||!oy_key_verify(oy_data_payload[1], oy_data_payload[2], JSON.stringify(oy_data_payload[3]))) {
+                            console.log("REDFAIL");
+                            oy_log_debug("REDFAIL: "+JSON.stringify([OY_BLOCK_FINISH===false, oy_data_payload.length!==4, (oy_data_payload[0]!==false&&oy_data_payload[0]!==true), !oy_key_check(oy_data_payload[1]), typeof(oy_data_payload[3])!=="object", Object.keys(oy_data_payload[3]).length!==Math.ceil(OY_BLOCK[0][3]/OY_WORK_INTRO), !oy_key_verify(oy_data_payload[1], oy_data_payload[2], JSON.stringify(oy_data_payload[3]))]));
                             OY_INTRO_BAN[ws._socket.remoteAddress] = true;
                             ws.close();
                             return false;
                         }
-                        for (let oy_work_nonce in oy_data_payload[1]) {
-                            if (typeof(OY_WORK_SOLUTIONS[oy_work_nonce])!=="undefined"&&oy_work_verify_single(OY_BLOCK_NEXT, OY_SELF_PUBLIC, OY_BLOCK_HASH, oy_work_nonce, oy_data_payload[1][oy_work_nonce])) {
-                                if (OY_WORK_SOLUTIONS[oy_work_nonce]===null||oy_calc_grade(oy_data_payload[1][oy_work_nonce])>OY_WORK_GRADES[oy_work_nonce]) {
-                                    OY_WORK_SOLUTIONS[oy_work_nonce] = oy_data_payload[1][oy_work_nonce];
-                                    OY_WORK_GRADES[oy_work_nonce] = oy_calc_grade(oy_data_payload[1][oy_work_nonce]);
+                        for (let oy_work_nonce in oy_data_payload[3]) {
+                            if (typeof(OY_WORK_SOLUTIONS[oy_work_nonce])!=="undefined"&&oy_work_verify_single(OY_BLOCK_NEXT, OY_SELF_PUBLIC, OY_BLOCK_HASH, oy_work_nonce, oy_data_payload[3][oy_work_nonce])) {
+                                if (OY_WORK_SOLUTIONS[oy_work_nonce]===null||oy_calc_grade(oy_data_payload[3][oy_work_nonce])>OY_WORK_GRADES[oy_work_nonce]) {
+                                    OY_WORK_SOLUTIONS[oy_work_nonce] = oy_data_payload[3][oy_work_nonce];
+                                    OY_WORK_GRADES[oy_work_nonce] = oy_calc_grade(oy_data_payload[3][oy_work_nonce]);
                                 }
                             }
                             else {
@@ -4516,7 +4524,13 @@ function oy_init(oy_console) {
                             if (OY_INTRO_PICKUP_COUNT===null) OY_INTRO_PICKUP_COUNT = Math.max(1, Math.ceil(OY_OFFER_PICKUP.length/Object.keys(OY_INTRO_ALLOCATE).length));
                             let oy_signal_array = [];
                             for (let oy_counter = 0;oy_counter<OY_INTRO_PICKUP_COUNT&&OY_OFFER_PICKUP.length>0;oy_counter++) {
-                                oy_signal_array.push(OY_OFFER_PICKUP.shift()[1]);
+                                for (let oy_key_public in OY_OFFER_PICKUP) {
+                                    if (oy_key_public!==oy_data_payload[1]) {
+                                        oy_signal_array.push(OY_OFFER_PICKUP[oy_key_public][1]);
+                                        delete OY_OFFER_PICKUP[oy_key_public];
+                                        break;
+                                    }
+                                }
                             }
                             if (oy_signal_array.length===0&&Object.keys(OY_PEERS).length<OY_PEER_MAX&&Object.keys(OY_INTRO_SELF).length>0) {
                                 for (let oy_offer_rand in OY_INTRO_SELF) {
