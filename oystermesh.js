@@ -30,7 +30,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 2;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 3600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1597577000;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1597577500;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -4556,7 +4556,6 @@ function oy_init(oy_console) {
                             for (let oy_counter = 0;oy_counter<OY_INTRO_PICKUP_COUNT&&OY_OFFER_PICKUP.length>0;oy_counter++) {
                                 for (let i in OY_OFFER_PICKUP) {
                                     if (OY_OFFER_PICKUP[i]===null) continue;
-                                    oy_log_debug("REDSPEC1["+OY_OFFER_COLLECT[oy_data_payload[1]][2]+"]: "+JSON.stringify([OY_OFFER_PICKUP[i][0], oy_data_payload[1]]));
                                     if (OY_OFFER_PICKUP[i][0]!==oy_data_payload[1]&&OY_OFFER_COLLECT[OY_OFFER_PICKUP[i][0]][0]!==oy_data_payload[1]&&(typeof(OY_OFFER_COLLECT[oy_data_payload[1]])==="undefined"||OY_OFFER_COLLECT[oy_data_payload[1]][0]!==OY_OFFER_PICKUP[i][0])) {
                                         OY_OFFER_BROKER[oy_data_payload[1]] = oy_clone_object(OY_OFFER_COLLECT[OY_OFFER_PICKUP[i][0]]);
                                         OY_OFFER_COLLECT[OY_OFFER_PICKUP[i][0]] = [oy_data_payload[1], null, null, null];
@@ -4621,7 +4620,6 @@ function oy_init(oy_console) {
                             OY_NODES[oy_signal_carry[0]].signal(oy_signal_carry[1]);
                         }
                         else {
-                            oy_log_debug("REDSPEC2["+OY_OFFER_BROKER[oy_signal_carry[0]][2]+"] - "+oy_signal_carry[0]);
                             oy_log_debug("LEMON: "+JSON.stringify([oy_hash_gen(OY_SELF_PUBLIC+oy_key_sign(OY_SELF_PRIVATE, OY_OFFER_BROKER[oy_signal_carry[0]][1]+OY_OFFER_BROKER[oy_signal_carry[0]][3]+oy_data_payload)+OY_OFFER_BROKER[oy_signal_carry[0]][1]+OY_OFFER_BROKER[oy_signal_carry[0]][3]+oy_data_payload), OY_SELF_PUBLIC, oy_key_sign(OY_SELF_PRIVATE, OY_OFFER_BROKER[oy_signal_carry[0]][1]+OY_OFFER_BROKER[oy_signal_carry[0]][3]+oy_data_payload), OY_OFFER_BROKER[oy_signal_carry[0]][1], OY_OFFER_BROKER[oy_signal_carry[0]][3], oy_data_payload]));
                             oy_data_route("OY_LOGIC_FOLLOW", "OY_INTRO_OFFER_B", [[], OY_OFFER_BROKER[oy_signal_carry[0]][2], oy_key_sign(OY_SELF_PRIVATE, OY_OFFER_BROKER[oy_signal_carry[0]][1]+OY_OFFER_BROKER[oy_signal_carry[0]][3]+oy_data_payload), oy_data_payload]);
                         }
