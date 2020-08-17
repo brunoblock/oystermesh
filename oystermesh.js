@@ -30,7 +30,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 2;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1597663200;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1597664000;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -1110,7 +1110,6 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             return false;
         }
         let oy_time_offset = (Date.now()/1000)-OY_BLOCK_TIME;
-        oy_log_debug("REDPRE0: "+[oy_time_offset<OY_BLOCK_PEER_SPACE[0]-(OY_BLOCK_BUFFER_CLEAR[0]+OY_MESH_BUFFER[0]), oy_time_offset>OY_BLOCK_SECTORS[0][0]+OY_MESH_BUFFER[0], oy_time_offset, OY_BLOCK_PEER_SPACE[0]-(OY_BLOCK_BUFFER_CLEAR[0]+OY_MESH_BUFFER[0])]);
         if (OY_BLOCK_HASH===null||oy_time_offset<OY_BLOCK_PEER_SPACE[0]-(OY_BLOCK_BUFFER_CLEAR[0]+OY_MESH_BUFFER[0])||oy_time_offset>OY_BLOCK_SECTORS[0][0]+OY_MESH_BUFFER[0]) return false;
 
         if (OY_LIGHT_STATE===false&&(OY_BLOCK_BOOT===true||typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined")) {
@@ -1169,7 +1168,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             return false;
         }
 
-        if (OY_BLOCK_HASH===null) return false;oy_log_debug("RED6");
+        if (OY_BLOCK_HASH===null) return false;
 
         if (OY_PEERS[oy_peer_id][1]===0) {
             oy_node_deny(oy_peer_id, "OY_DENY_EXCHANGE_A_BLANK");
@@ -2733,7 +2732,6 @@ function oy_intro_beam(oy_intro_select, oy_data_flag, oy_data_payload, oy_callba
             oy_response = true;
             ws.close();
             oy_log("INTRO[SOAK]["+oy_event.data+"]["+((Date.now()/1000)-OY_BLOCK_TIME)+"]");
-            oy_log_debug("INTRO[SOAK]["+oy_event.data+"]["+((Date.now()/1000)-OY_BLOCK_TIME)+"]");
             if (typeof(oy_callback)==="function") {
                 try {
                     let [oy_data_flag, oy_data_payload] = JSON.parse(oy_event.data);
@@ -3122,7 +3120,6 @@ function oy_block_engine() {
         else OY_BLOCK_BOOT = OY_BLOCK_TIME-OY_BLOCK_BOOTTIME<OY_BLOCK_BOOT_BUFFER;
 
         oy_worker_halt(0);
-        oy_log_debug("NEW MESHBLOCK: "+OY_BLOCK_TIME);
 
         OY_BLOCK_COMMAND_NONCE = 0;
         OY_BLOCK_SYNC = {};
@@ -3282,11 +3279,9 @@ function oy_block_engine() {
             if (OY_BLOCK_HASH===null) return false;
 
             if (OY_FULL_INTRO===false&&Object.keys(OY_NODES).length<OY_NODE_MAX) {
-                oy_log_debug("REDPRE1");
                 let oy_offer_rand = oy_rand_gen(OY_MESH_SEQUENCE);
                 OY_PEER_OFFER = [oy_offer_rand, oy_node_boot(true), null];
                 OY_PEER_OFFER[1].on("signal", function(oy_signal_data) {
-                    oy_log_debug("REDPRE2");
                     let oy_signal_crypt = oy_signal_beam(oy_signal_data);
                     OY_PEER_OFFER[2] = oy_signal_crypt;
                     oy_data_route("OY_LOGIC_UPSTREAM", "OY_INTRO_OFFER_A", [[], [], oy_key_sign(OY_SELF_PRIVATE, OY_BLOCK_HASH+oy_offer_rand+oy_signal_crypt), oy_offer_rand, oy_signal_crypt]);
