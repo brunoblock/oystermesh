@@ -30,7 +30,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 2;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1597664600;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1597665900;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -3170,6 +3170,8 @@ function oy_block_engine() {
             oy_peer_map[oy_hash_gen(oy_peer_select)] = true;
         }
 
+        console.log(Object.keys(OY_PEERS));
+
         oy_event_dispatch("oy_block_init");
 
         for (let oy_report_count = 10000; oy_report_count<=OY_BLOCK_SECTORS[5][1]; oy_report_count += 10000) {
@@ -3278,10 +3280,13 @@ function oy_block_engine() {
         oy_chrono(function() {
             if (OY_BLOCK_HASH===null) return false;
 
+            oy_log_debug("DEBUG1: "+JSON.stringify([OY_FULL_INTRO, Object.keys(OY_NODES).length, OY_NODE_MAX]));
             if (OY_FULL_INTRO===false&&Object.keys(OY_NODES).length<OY_NODE_MAX) {
+                oy_log_debug("DEBUG2");
                 let oy_offer_rand = oy_rand_gen(OY_MESH_SEQUENCE);
                 OY_PEER_OFFER = [oy_offer_rand, oy_node_boot(true), null];
                 OY_PEER_OFFER[1].on("signal", function(oy_signal_data) {
+                    oy_log_debug("DEBUG3");
                     let oy_signal_crypt = oy_signal_beam(oy_signal_data);
                     OY_PEER_OFFER[2] = oy_signal_crypt;
                     oy_data_route("OY_LOGIC_UPSTREAM", "OY_INTRO_OFFER_A", [[], [], oy_key_sign(OY_SELF_PRIVATE, OY_BLOCK_HASH+oy_offer_rand+oy_signal_crypt), oy_offer_rand, oy_signal_crypt]);
@@ -4300,7 +4305,6 @@ function oy_block_finish() {
     OY_BLOCK_FINISH = true;
     oy_log("BLOCK_HASH: "+OY_BLOCK_HASH);
     console.log(OY_BLOCK);
-    console.log(Object.keys(OY_PEERS));
 }
 
 /*
