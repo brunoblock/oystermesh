@@ -30,7 +30,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 2;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1597667700;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1597670500;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -2558,7 +2558,7 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_push_def
         else {
             let oy_peer_upstream = [null, -1];
             for (let oy_peer_select in OY_PEERS) {
-                if (OY_PEERS[oy_peer_select][9]>oy_peer_upstream[1]&&OY_PEERS[oy_peer_select][9]>=OY_PEER_CUT&&OY_PEERS[oy_peer_select][1]!==0&&oy_data_payload[0].indexOf(oy_peer_select)===-1) oy_peer_upstream[0] = oy_peer_select;
+                if (OY_PEERS[oy_peer_select][9]>oy_peer_upstream[1]&&OY_PEERS[oy_peer_select][1]!==0&&oy_data_payload[0].indexOf(oy_peer_select)===-1) oy_peer_upstream[0] = oy_peer_select;
             }
             if (oy_peer_upstream[0]===null) return false;
             oy_data_beam(oy_peer_upstream[0], oy_data_flag, oy_data_payload);
