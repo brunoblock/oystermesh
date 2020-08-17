@@ -1164,12 +1164,10 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         else oy_data_route("OY_LOGIC_FOLLOW", "OY_INTRO_OFFER_B", oy_data_payload);
     }
     else if (oy_data_flag==="OY_PEER_EXCHANGE_A") {//OY_LOGIC_DIRECT
-        oy_log_debug("RED4");
         if (oy_data_payload.length!==2||typeof(oy_data_payload[0])!=="object"||typeof(oy_data_payload[1])!=="string"||!oy_signal_soak(oy_data_payload[1])) {
             oy_node_deny(oy_peer_id, "OY_DENY_EXCHANGE_A_INVALID");
             return false;
         }
-        oy_log_debug("RED5");
 
         if (OY_BLOCK_HASH===null) return false;oy_log_debug("RED6");
 
@@ -1177,17 +1175,13 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_node_deny(oy_peer_id, "OY_DENY_EXCHANGE_A_BLANK");
             return false;
         }
-        oy_log_debug("RED7");
         if (OY_PEERS[oy_peer_id][11][2]===true) {
             oy_node_deny(oy_peer_id, "OY_DENY_EXCHANGE_A_ABUSE");
             return false;
         }
-        oy_log_debug("RED8");
         OY_PEERS[oy_peer_id][11][2] = true;
         for (let oy_peer_select in OY_PEERS) {
-            oy_log_debug("RED9: "+JSON.stringify([OY_PEERS[oy_peer_select][11][3], oy_data_payload[0], oy_hash_gen(oy_peer_select), oy_peer_select]));
             if (OY_PEERS[oy_peer_select][11][3]===null&&typeof(oy_data_payload[0][oy_hash_gen(oy_peer_select)])==="undefined") {
-                oy_log_debug("RED10");
                 OY_PEERS[oy_peer_select][11][3] = oy_peer_id;
                 oy_data_beam(oy_peer_select, "OY_PEER_EXCHANGE_B", oy_data_payload[1]);
                 break;
@@ -1195,101 +1189,78 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         }
     }
     else if (oy_data_flag==="OY_PEER_EXCHANGE_B") {//OY_LOGIC_DIRECT
-        oy_log_debug("RED11");
-        if (OY_BLOCK_HASH===null) return false;oy_log_debug("RED12");
+        if (OY_BLOCK_HASH===null) return false;
 
         if (OY_PEERS[oy_peer_id][1]===0) {
             oy_node_deny(oy_peer_id, "OY_DENY_EXCHANGE_B_BLANK");
             return false;
         }
-        oy_log_debug("RED13");
         let oy_signal_carry = oy_signal_soak(oy_data_payload);
         if (!oy_signal_carry) {
             oy_node_deny(oy_peer_id, "OY_DENY_EXCHANGE_B_INVALID");
             return false;
         }
-        oy_log_debug("RED14");
         if (OY_PEERS[oy_peer_id][11][5]===true) {
             oy_node_deny(oy_peer_id, "OY_DENY_EXCHANGE_B_ABUSE");
             return false;
         }
-        oy_log_debug("RED15");
         OY_PEERS[oy_peer_id][11][5] = true;
         if (typeof(OY_NODES[oy_signal_carry[0]])==="undefined") {
-            oy_log_debug("RED16");
             OY_NODES[oy_signal_carry[0]] = oy_node_boot(false);
             oy_node_connect(oy_signal_carry[0]);
             OY_NODES[oy_signal_carry[0]].on("signal", function(oy_signal_data) {
-                oy_log_debug("RED17");
                 oy_data_beam(oy_peer_id, "OY_PEER_EXCHANGE_C", oy_signal_beam(oy_signal_data));
             });
             OY_NODES[oy_signal_carry[0]].signal(oy_signal_carry[1]);
         }
     }
     else if (oy_data_flag==="OY_PEER_EXCHANGE_C") {//OY_LOGIC_DIRECT
-        oy_log_debug("RED18");
         if (OY_BLOCK_HASH===null) return false;
-
-        oy_log_debug("RED19");
 
         if (OY_PEERS[oy_peer_id][1]===0) {
             oy_node_deny(oy_peer_id, "OY_DENY_EXCHANGE_C_BLANK");
             return false;
         }
-        oy_log_debug("RED20");
         if (!oy_signal_soak(oy_data_payload)) {
             oy_node_deny(oy_peer_id, "OY_DENY_EXCHANGE_C_INVALID");
             return false;
         }
-        oy_log_debug("RED21");
         if (OY_PEERS[oy_peer_id][11][4]===true) {
             oy_node_deny(oy_peer_id, "OY_DENY_EXCHANGE_C_ABUSE");
             return false;
         }
-        oy_log_debug("RED22");
         OY_PEERS[oy_peer_id][11][4] = true;
-        if (OY_PEERS[oy_peer_id][11][3]!==null&&typeof(OY_PEERS[OY_PEERS[oy_peer_id][11][3]])!=="undefined") {
-            oy_log_debug("RED23");
-            oy_data_beam(OY_PEERS[oy_peer_id][11][3], "OY_PEER_EXCHANGE_D", oy_data_payload);
-        }
+        if (OY_PEERS[oy_peer_id][11][3]!==null&&typeof(OY_PEERS[OY_PEERS[oy_peer_id][11][3]])!=="undefined") oy_data_beam(OY_PEERS[oy_peer_id][11][3], "OY_PEER_EXCHANGE_D", oy_data_payload);
     }
     else if (oy_data_flag==="OY_PEER_EXCHANGE_D") {//OY_LOGIC_DIRECT
-        oy_log_debug("RED24");
         if (OY_BLOCK_HASH===null) return false;
-        oy_log_debug("RED25");
 
         if (OY_PEERS[oy_peer_id][1]===0) {
             oy_node_deny(oy_peer_id, "OY_DENY_EXCHANGE_D_BLANK");
             return false;
         }
-        oy_log_debug("RED26");
         let oy_signal_carry = oy_signal_soak(oy_data_payload);
         if (!oy_signal_carry) {
             oy_node_deny(oy_peer_id, "OY_DENY_EXCHANGE_D_INVALID");
             return false;
         }
-        oy_log_debug("RED27");
         if (OY_PEERS[oy_peer_id][10]===null) {
             oy_node_deny(oy_peer_id, "OY_DENY_EXCHANGE_D_MISALIGN");
             return false;
         }
-        oy_log_debug("RED28");
         if (OY_PEERS[oy_peer_id][11][1]===true) {
             oy_node_deny(oy_peer_id, "OY_DENY_EXCHANGE_D_ABUSE");
             return false;
         }
-        oy_log_debug("RED29");
         OY_PEERS[oy_peer_id][11][1] = true;
-
-        oy_log_debug("RED30");
         if (typeof(OY_NODES[oy_signal_carry[0]])==="undefined") {
-            oy_log_debug("RED31: "+JSON.stringify([OY_SELF_PUBLIC, oy_signal_carry[0], oy_peer_id]));
             OY_NODES[oy_signal_carry[0]] = OY_PEERS[oy_peer_id][10];
             oy_node_connect(oy_signal_carry[0]);
             OY_NODES[oy_signal_carry[0]].on("connect", function() {
-                oy_log_debug("RED32");
-                OY_PEERS[oy_peer_id][10] = null;//TODO verify
-                oy_node_initiate(oy_signal_carry[0]);
+                if (typeof(OY_PEERS[oy_peer_id])!=="undefined") {
+                    OY_PEERS[oy_peer_id][10] = null;
+                    oy_node_initiate(oy_signal_carry[0]);
+                }
             });
             OY_NODES[oy_signal_carry[0]].signal(oy_signal_carry[1]);
         }
@@ -3334,14 +3305,13 @@ function oy_block_engine() {
             }
 
             for (let oy_peer_select in OY_PEERS) {
-                oy_log_debug("RED1: "+(OY_PEERS[oy_peer_select][0]>=OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]));
                 if (OY_PEERS[oy_peer_select][1]===0||OY_PEERS[oy_peer_select][0]>=OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]||Object.keys(OY_NODES).length>=OY_NODE_MAX) continue;
-                oy_log_debug("RED2");
                 OY_PEERS[oy_peer_select][10] = oy_node_boot(true);
                 OY_PEERS[oy_peer_select][10].on("signal", function(oy_signal_data) {
-                    oy_log_debug("RED3");
-                    OY_PEERS[oy_peer_select][11][0] = true;
-                    oy_data_beam(oy_peer_select, "OY_PEER_EXCHANGE_A", [oy_peer_map, oy_signal_beam(oy_signal_data)]);
+                    if (typeof(OY_PEERS[oy_peer_select])!=="undefined") {
+                        OY_PEERS[oy_peer_select][11][0] = true;
+                        oy_data_beam(oy_peer_select, "OY_PEER_EXCHANGE_A", [oy_peer_map, oy_signal_beam(oy_signal_data)]);
+                    }
                 });
             }
         }, OY_BLOCK_PEER_SPACE[1]);
