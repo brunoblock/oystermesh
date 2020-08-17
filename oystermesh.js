@@ -30,7 +30,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 2;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1597704900;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1597706700;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -2743,7 +2743,7 @@ function oy_intro_beam(oy_intro_select, oy_data_flag, oy_data_payload, oy_callba
                 try {
                     let [oy_data_flag, oy_data_payload] = JSON.parse(oy_event.data);
                     if (oy_data_flag==="OY_INTRO_UNREADY") {
-                        if (OY_BLOCK_BOOT===false) oy_intro_punish(oy_intro_select);
+                        if (OY_BLOCK_BOOT===false&&oy_data_flag!=="OY_INTRO_TIME") oy_intro_punish(oy_intro_select);
                     }
                     else oy_callback(oy_data_flag, oy_data_payload);
                 }
@@ -4441,7 +4441,7 @@ function oy_init(oy_console) {
                     }
                     //if (OY_INTRO_MARKER===null&&OY_BLOCK_BOOT===true) OY_INTRO_MARKER = OY_BLOCK_SECTORS[2][1];
                     if (oy_state_current()!==2||OY_INTRO_MARKER===null||OY_BLOCK_RECORD_KEEP.length<=1||(OY_BLOCK_BOOT===false&&(typeof(OY_BLOCK[1][OY_SELF_PUBLIC])==="undefined"||OY_BLOCK[1][OY_SELF_PUBLIC][1]===0||OY_BLOCK[1][OY_SELF_PUBLIC][2]<OY_BLOCK[0][15]))) {
-                        ws.send(JSON.stringify(["OY_INTRO_UNREADY", 1]));
+                        ws.send(JSON.stringify(["OY_INTRO_UNREADY", 0]));
                         return false;
                     }
                     let oy_time_offset = (Date.now()/1000)-OY_BLOCK_TIME;
@@ -4455,7 +4455,7 @@ function oy_init(oy_console) {
                     }
                     else if (oy_data_flag==="OY_INTRO_GET") {
                         if (OY_BLOCK_FINISH===false) {
-                            ws.send(JSON.stringify(["OY_INTRO_UNREADY", 2]));
+                            ws.send(JSON.stringify(["OY_INTRO_UNREADY", 1]));
                             return false;
                         }
                         if (oy_data_payload===true&&(oy_time_offset<(OY_INTRO_MARKER/1000)-OY_MESH_BUFFER[0]||oy_time_offset>(OY_INTRO_MARKER/1000)+OY_INTRO_TRIP[0]+OY_MESH_BUFFER[0])) {
@@ -4525,7 +4525,7 @@ function oy_init(oy_console) {
                                     break;
                                 }
                             }
-                            if (oy_signal_array.length===0) ws.send(JSON.stringify(["OY_INTRO_UNREADY", 3]));
+                            if (oy_signal_array.length===0) ws.send(JSON.stringify(["OY_INTRO_UNREADY", 2]));
                             else ws.send(JSON.stringify(["OY_INTRO_SIGNAL_A", oy_signal_array]));
                         }
                     }
