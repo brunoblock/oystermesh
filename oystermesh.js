@@ -30,7 +30,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 2;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1597666700;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1597667700;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -1110,18 +1110,20 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             return false;
         }
         let oy_time_offset = (Date.now()/1000)-OY_BLOCK_TIME;
+        oy_log_debug("DEBUG4A");
         if (OY_BLOCK_HASH===null||oy_time_offset<OY_BLOCK_PEER_SPACE[0]-(OY_BLOCK_BUFFER_CLEAR[0]+OY_MESH_BUFFER[0])||oy_time_offset>OY_BLOCK_SECTORS[0][0]+OY_MESH_BUFFER[0]) return false;
+        oy_log_debug("DEBUG4B");
 
         if (OY_LIGHT_STATE===false&&(OY_BLOCK_BOOT===true||typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined")) {
             if (OY_FULL_INTRO!==false&&(OY_BLOCK_BOOT===true||OY_BLOCK[1][OY_SELF_PUBLIC][1]===1)) {
-                oy_log_debug("DEBUG5");
+                oy_log_debug("DEBUG60");
                 let oy_signal_carry = oy_signal_soak(oy_data_payload[4]);
                 if (!oy_signal_carry||oy_signal_carry[0]!==oy_data_payload[0][0]||typeof(OY_OFFER_COLLECT[oy_signal_carry[0]])!=="undefined"||!oy_key_verify(oy_data_payload[0][0], oy_data_payload[2], OY_BLOCK_HASH+oy_data_payload[3]+oy_data_payload[4])) return false;
                 OY_OFFER_COLLECT[oy_data_payload[0][0]] = [OY_OFFER_COUNTER, oy_data_payload[3], oy_data_payload[0], oy_data_payload[4]];//[[0]:priority_counter/broker_assign, [1]:oy_offer_rand, [2]:passport, [3]:signal_data]
                 OY_OFFER_COUNTER++;
             }
             else {
-                oy_log_debug("DEBUG4");
+                oy_log_debug("DEBUG5");
                 if (oy_data_payload[1].length===0) {
                     let oy_intro_select = [null, -1];
                     for (let oy_key_public in OY_BLOCK[1]) {
@@ -3219,7 +3221,7 @@ function oy_block_engine() {
             for (let i = 0;i<oy_array_length;i++) {
                 OY_BLOCK_LEARN.push([]);
             }
-            oy_log_debug("HASH: "+OY_BLOCK_HASH+" FULL PASS: "+oy_peer_full()+" WORK SOLUTION: "+JSON.stringify(OY_WORK_SOLUTIONS));
+            oy_log_debug("HASH: "+OY_BLOCK_HASH+" PEERS: "+Object.keys(OY_PEERS).length+" FULL PASS: "+oy_peer_full()+" WORK SOLUTION: "+JSON.stringify(OY_WORK_SOLUTIONS));
         }
         if (OY_LIGHT_STATE===false&&OY_BLOCK_HASH!==null&&OY_WORK_SOLUTIONS.indexOf(null)===-1&&(oy_peer_full()||OY_BLOCK_BOOT===true)) {
             //oy_log_debug("COMMAND: "+JSON.stringify(OY_BLOCK_COMMAND));
