@@ -30,7 +30,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 2;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1597670500;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1597684200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -2577,30 +2577,37 @@ function oy_data_direct(oy_data_flag) {
 function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
     if (typeof(OY_NODES[oy_node_id])==="undefined") return false;
 
-    let oy_data_raw = JSON.stringify([oy_data_flag, oy_data_payload]);//convert data array to JSON
-    let oy_data_direct_bool = oy_data_direct(oy_data_flag);
-    if (oy_data_direct_bool===false) {
-        if (oy_data_payload[0].length>OY_MESH_HOP_MAX) {
-            oy_log("ERROR["+oy_data_flag+"][OY_ERROR_HOP_MAX]", true);
+    try {
+        let oy_data_raw = JSON.stringify([oy_data_flag, oy_data_payload]);//convert data array to JSON
+        let oy_data_direct_bool = oy_data_direct(oy_data_flag);
+        if (oy_data_direct_bool===false) {
+            if (oy_data_payload[0].length>OY_MESH_HOP_MAX) {
+                oy_log("ERROR["+oy_data_flag+"][OY_ERROR_HOP_MAX]", true);
+                return false;
+            }
+            if (oy_data_payload[0].indexOf(oy_node_id)!==-1) {
+                oy_log("ERROR["+oy_data_flag+"][OY_ERROR_HOP_ALREADY]", true);
+                return false;
+            }
+        }
+        oy_data_payload = null;
+        if (oy_data_raw.length>OY_DATA_MAX) {
+            oy_log("ERROR["+oy_data_flag+"][OY_ERROR_DATA_MAX]", true);
             return false;
         }
-        if (oy_data_payload[0].indexOf(oy_node_id)!==-1) {
-            oy_log("ERROR["+oy_data_flag+"][OY_ERROR_HOP_ALREADY]", true);
-            return false;
+        if (oy_data_flag!=="OY_BLOCK_SYNC"&&oy_data_direct_bool===false&&typeof(OY_PEERS[oy_node_id])!=="undefined"&&!oy_data_measure(true, oy_node_id, oy_data_raw.length)) {
+            oy_log("COOL["+oy_short(oy_node_id)+"]["+oy_data_flag+"]");
+            return true;
         }
-    }
-    oy_data_payload = null;
-    if (oy_data_raw.length>OY_DATA_MAX) {
-        oy_log("ERROR["+oy_data_flag+"][OY_ERROR_DATA_MAX]", true);
-        return false;
-    }
-    if (oy_data_flag!=="OY_BLOCK_SYNC"&&oy_data_direct_bool===false&&typeof(OY_PEERS[oy_node_id])!=="undefined"&&!oy_data_measure(true, oy_node_id, oy_data_raw.length)) {
-        oy_log("COOL["+oy_short(oy_node_id)+"]["+oy_data_flag+"]");
+        OY_NODES[oy_node_id].send(oy_data_raw);//send the JSON-converted data array to the destination node
+        oy_log("BEAM["+oy_short(oy_node_id)+"]["+oy_data_flag+"]");
         return true;
     }
-    OY_NODES[oy_node_id].send(oy_data_raw);//send the JSON-converted data array to the destination node
-    oy_log("BEAM["+oy_short(oy_node_id)+"]["+oy_data_flag+"]");
-    return true;
+    catch(e) {
+        console.log(e.error);
+    }
+    oy_log("ERROR["+oy_data_flag+"][OY_ERROR_BEAM_UNKNOWN]", true);
+    return false;
 }
 
 //incoming data validation
@@ -2732,7 +2739,7 @@ function oy_intro_beam(oy_intro_select, oy_data_flag, oy_data_payload, oy_callba
             oy_response = false;
             ws.send(JSON.stringify([oy_data_flag, oy_data_payload]));
         };
-        ws.onmessage = function (oy_event) {
+        ws.onmessage = function(oy_event) {
             oy_response = true;
             ws.close();
             oy_log("INTRO[SOAK]["+oy_event.data+"]["+((Date.now()/1000)-OY_BLOCK_TIME)+"]");
@@ -2746,6 +2753,10 @@ function oy_intro_beam(oy_intro_select, oy_data_flag, oy_data_payload, oy_callba
                 }
                 catch(e) {}
             }
+        };
+        ws.onerror = function(oy_event) {
+            console.log("ERROR_INTRO_BEAM_UNKNOWN");
+            console.log(oy_event);
         };
         oy_chrono(function() {
             if (oy_response===null||oy_response===false) {
