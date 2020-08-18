@@ -30,7 +30,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 2;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1597715400;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1597717400;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -690,7 +690,6 @@ function oy_worker_spawn(oy_worker_type) {
                                         oy_intro_beam(OY_INTRO_SELECT, "OY_INTRO_SIGNAL_B", oy_signal_beam(oy_signal_data));
                                     });
                                     OY_NODES[oy_signal_carry[0]].signal(oy_signal_carry[1]);
-                                    break;
                                 }
                             });
                             OY_INTRO_SOLUTIONS = {};
@@ -1272,9 +1271,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             return false;
         }
          */
-        oy_log_debug("RED6");
         if (OY_BLOCK_DIFF===true||OY_BLOCK_HASH!==null) return false;//TODO consider timing validation
-        oy_log_debug("RED7");
         OY_BASE_BUILD[oy_data_payload[1]] = oy_data_payload[2];//key is block_nonce and value is block_split
         let oy_base_pass = true;
         let oy_nonce_count = -1;
@@ -1285,10 +1282,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                 break;
             }
         }
-        oy_log_debug("RED8");
         //TODO prevent clashes with bases from other mesh splits
         if (oy_nonce_count===oy_data_payload[0]&&oy_base_pass===true) {//check if block_nonce equals block_nonce_max
-            oy_log_debug("RED9");
             OY_BLOCK_DIFF = true;
             oy_data_payload = null;
 
@@ -2024,12 +2019,12 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
                     return false;
                 }
                 if (typeof(oy_block_sync_pass[OY_BLOCK_TIME_JUMP])==="undefined") {
-                    oy_log_debug("RED1: "+JSON.stringify([OY_JUMP_ASSIGN[1], OY_BLOCK_TIME_JUMP, OY_BLOCK_TIME, oy_block_sync_pass]));
+                    oy_log_debug("REDJUMP1: "+JSON.stringify([OY_JUMP_ASSIGN[1], OY_BLOCK_TIME_JUMP, OY_BLOCK_TIME, oy_block_sync_pass]));
                     oy_node_deny(oy_node_id, "OY_DENY_JUMP_FAIL_E");
                     return false;
                 }
                 if (typeof(oy_block_command_rollback[OY_BLOCK_TIME_JUMP])==="undefined") {
-                    oy_log_debug("RED2: "+JSON.stringify([OY_JUMP_ASSIGN[1], OY_BLOCK_TIME_JUMP, OY_BLOCK_TIME, oy_block_command_rollback]));
+                    oy_log_debug("REDJUMP2: "+JSON.stringify([OY_JUMP_ASSIGN[1], OY_BLOCK_TIME_JUMP, OY_BLOCK_TIME, oy_block_command_rollback]));
                     oy_node_deny(oy_node_id, "OY_DENY_JUMP_FAIL_F");
                     return false;
                 }
@@ -4288,9 +4283,7 @@ function oy_block_finish() {
     else OY_BLOCK_COMPRESS = null;
     OY_BLOCK_FLAT = null;
 
-    oy_log_debug("RED1");
     if (oy_base_process===true&&OY_BLOCK_COMPRESS!==null) {
-        oy_log_debug("RED2");
         let oy_base_payload = OY_BLOCK_COMPRESS;
         let oy_block_nonce_max = -1;
         let oy_block_split = [];
@@ -4306,12 +4299,9 @@ function oy_block_finish() {
         oy_calc_shuffle(oy_block_juggle);
 
         for (let oy_peer_select in OY_PEERS) {
-            oy_log_debug("RED3");
             if (OY_PEERS[oy_peer_select][1]!==0||OY_PEERS[oy_peer_select][2]===true||oy_peer_select===OY_JUMP_ASSIGN[0]) continue;
-            oy_log_debug("RED4");
 
             for (let i in oy_block_juggle) {
-                oy_log_debug("RED5");
                 oy_data_beam(oy_peer_select, "OY_PEER_BASE", [oy_block_nonce_max, oy_block_juggle[i], oy_block_split[oy_block_juggle[i]]]);
             }
             OY_PEERS[oy_peer_select][2] = true;
@@ -4446,8 +4436,8 @@ function oy_init(oy_console) {
                         ws.close();
                         return false;
                     }
-                    //if (OY_INTRO_MARKER===null&&OY_BLOCK_BOOT===true) OY_INTRO_MARKER = OY_BLOCK_SECTORS[2][1];
-                    if (oy_state_current()!==2||OY_INTRO_MARKER===null||OY_BLOCK_RECORD_KEEP.length<=1||(OY_BLOCK_BOOT===false&&(typeof(OY_BLOCK[1][OY_SELF_PUBLIC])==="undefined"||OY_BLOCK[1][OY_SELF_PUBLIC][1]===0||OY_BLOCK[1][OY_SELF_PUBLIC][2]<OY_BLOCK[0][15]))) {
+                    oy_log_debug("RED1: "+JSON.stringify([OY_OFFER_PICKUP.length, Object.keys(OY_INTRO_ALLOCATE).length]));
+                    if (oy_state_current()!==2||OY_INTRO_MARKER===null||OY_BLOCK_RECORD_KEEP.length<=1||Object.keys(OY_INTRO_ALLOCATE).length>=OY_OFFER_PICKUP.length||(OY_BLOCK_BOOT===false&&(typeof(OY_BLOCK[1][OY_SELF_PUBLIC])==="undefined"||OY_BLOCK[1][OY_SELF_PUBLIC][1]===0||OY_BLOCK[1][OY_SELF_PUBLIC][2]<OY_BLOCK[0][15]))) {
                         ws.send(JSON.stringify(["OY_INTRO_UNREADY", 0]));
                         return false;
                     }
@@ -4509,8 +4499,7 @@ function oy_init(oy_console) {
                                 ws.close();
                                 return false;
                             }
-                            //if (OY_INTRO_PICKUP_COUNT===null) OY_INTRO_PICKUP_COUNT = Math.max(1, Math.ceil(OY_OFFER_PICKUP.length/Object.keys(OY_INTRO_ALLOCATE).length));
-                            OY_INTRO_PICKUP_COUNT = 1;
+                            if (OY_INTRO_PICKUP_COUNT===null) OY_INTRO_PICKUP_COUNT = Math.max(1, Math.floor(OY_OFFER_PICKUP.length/Object.keys(OY_INTRO_ALLOCATE).length));
                             let oy_signal_array = [];
                             for (let oy_counter = 0;oy_counter<OY_INTRO_PICKUP_COUNT&&OY_OFFER_PICKUP.length>0;oy_counter++) {
                                 for (let i in OY_OFFER_PICKUP) {
