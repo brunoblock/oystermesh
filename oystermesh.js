@@ -30,7 +30,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 2;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1597706700;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1597715400;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -1778,25 +1778,32 @@ function oy_node_reset(oy_node_id) {
 function oy_node_connect(oy_node_id) {
     if (typeof(OY_NODES[oy_node_id])==="undefined") return false;
 
-    OY_NODES[oy_node_id].on("data", function(oy_data_raw) {
-        oy_data_soak(oy_node_id, oy_data_raw);
-    });
-    OY_NODES[oy_node_id].on("error", function(oy_node_error) {
-        oy_node_deny(oy_node_id, "OY_DENY_CONNECT_FAIL");
-        oy_log("ERROR["+oy_short(oy_node_id)+"][OY_ERROR_CONNECT_FAIL]["+oy_node_error+"]", true);
-    });
-    OY_NODES[oy_node_id].on("close", function() {
-        delete OY_NODES[oy_node_id];
-        delete OY_COLD[oy_node_id];
-    });
+    try {
+        OY_NODES[oy_node_id].on("data", function(oy_data_raw) {
+            oy_data_soak(oy_node_id, oy_data_raw);
+        });
+        OY_NODES[oy_node_id].on("error", function(oy_node_error) {
+            oy_node_deny(oy_node_id, "OY_DENY_CONNECT_FAIL");
+            oy_log("ERROR["+oy_short(oy_node_id)+"][OY_ERROR_CONNECT_FAIL]["+oy_node_error+"]", true);
+        });
+        OY_NODES[oy_node_id].on("close", function() {
+            delete OY_NODES[oy_node_id];
+            delete OY_COLD[oy_node_id];
+        });
+    }
+    catch(e) {}
+    return true;
 }
 
 function oy_node_disconnect(oy_node_id) {
     if (typeof(OY_NODES[oy_node_id])!=="undefined") {
-        oy_node_reset(oy_node_id);
-        OY_COLD[oy_node_id] = true;
-        OY_NODES[oy_node_id].destroy();
-        return true;
+        try {
+            oy_node_reset(oy_node_id);
+            OY_COLD[oy_node_id] = true;
+            OY_NODES[oy_node_id].destroy();
+            return true;
+        }
+        catch(e) {}
     }
     return false;
 }
@@ -2608,7 +2615,7 @@ function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
 
 //incoming data validation
 function oy_data_soak(oy_node_id, oy_data_raw) {
-   //try {
+   try {
        if (oy_data_raw.length>OY_DATA_MAX) {
            oy_node_deny(oy_node_id, "OY_DENY_DATA_LARGE");
            return false;
@@ -2672,8 +2679,8 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
            else oy_node_negotiate(oy_node_id, oy_data[0], oy_data[1]);
            return true;
        }
-   //}
-   //catch(e) {}
+   }
+   catch(e) {}
    oy_node_deny(oy_node_id, "OY_DENY_DATA_ERROR");
    return false;
 }
