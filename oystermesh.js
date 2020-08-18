@@ -30,7 +30,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 2;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1597756800;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1597771500;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -49,7 +49,7 @@ const OY_PEER_CUT = 0.3;//minimum percentage threshold to be safe from being sel
 const OY_INTRO_TRIP = [0.8, 800];
 const OY_WORK_MATCH = 4;//lower is more bandwidth/memory bound, higher is more CPU bound, anomaly birds come from CPU bound therefore higher is safer against unemployment absence
 const OY_WORK_MAX = 10000;//10000
-const OY_WORK_MIN = 2;
+const OY_WORK_MIN = 3;
 const OY_WORK_DELTA = 0.2;
 const OY_WORK_DILUTE = 3;
 const OY_WORK_TARGET = 4000;//1440x7/1 week, value in minutes, lower is harsher work that kicks nodes off the mesh more frequently, higher discourages new node operators and hence less decentralization
@@ -3985,10 +3985,8 @@ function oy_block_process(oy_command_execute, oy_full_flag, oy_jump_flag) {
         let oy_delta_array = new Array(OY_WORK_DILUTE);
         oy_delta_array.fill(1);
         oy_delta_array.push(oy_block[0][9]/OY_WORK_TARGET);
-        let oy_work_old = oy_block[0][3];
         oy_block[0][3] = Math.round(oy_block[0][3]*Math.max(1-OY_WORK_DELTA, Math.min(1+OY_WORK_DELTA, oy_calc_avg(oy_delta_array))));
         if (oy_block[0][3]<OY_WORK_MIN) oy_block[0][3] = OY_WORK_MIN;
-        if (oy_work_old===oy_block[0][3]) oy_block[0][3]++;
         if (oy_block[0][3]>OY_WORK_MAX) oy_block[0][3] = OY_WORK_MAX;
 
         oy_block[2][0].push(oy_block_hash);
