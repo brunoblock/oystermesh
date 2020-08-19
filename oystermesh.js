@@ -30,7 +30,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 const OY_BLOCK_RANGE_MIN = 2;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1597783700;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1597803900;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -658,7 +658,7 @@ function oy_worker_spawn(oy_worker_type) {
         else OY_WORKER_THREADS[oy_worker_type][i] = new Worker(oy_worker_define);
 
         let oy_worker_message = function(oy_event) {
-            let [oy_work_type, oy_work_data] = oy_event.data;console.log(oy_event.data);
+            let [oy_work_type, oy_work_data] = oy_event.data;
 
             let oy_time_local = Date.now()/1000;
             let oy_time_offset = oy_time_local-OY_BLOCK_TIME;
@@ -669,10 +669,9 @@ function oy_worker_spawn(oy_worker_type) {
 
                 if (oy_work_self===true) {
                     //console.log("SOLUTION: "+oy_work_solution);
-                    console.log("SOLUTIONS: "+JSON.stringify(OY_WORK_SOLUTIONS));
-                    console.log("BITS: "+JSON.stringify(OY_WORK_BITS));
-                    console.log("GRADES: "+JSON.stringify(OY_WORK_GRADES));
-                    console.log(JSON.stringify([oy_calc_grade(oy_work_solution, oy_block_metahash), oy_work_solution, oy_block_metahash, oy_work_nonce, OY_DIVE_GRADE]));
+                    //console.log("SOLUTIONS: "+JSON.stringify(OY_WORK_SOLUTIONS));
+                    //console.log("BITS: "+JSON.stringify(OY_WORK_BITS));
+                    //console.log("GRADES: "+JSON.stringify(OY_WORK_GRADES));
                     if (oy_work_nonce!==-1&&(OY_WORK_SOLUTIONS[oy_work_nonce]===null||oy_calc_grade(oy_work_solution, oy_block_metahash)>OY_WORK_GRADES[oy_work_nonce])) {
                         OY_WORK_SOLUTIONS[oy_work_nonce] = oy_work_solution;
                         OY_WORK_GRADES[oy_work_nonce] = oy_calc_grade(oy_work_solution, oy_block_metahash);
@@ -691,7 +690,7 @@ function oy_worker_spawn(oy_worker_type) {
                         }
                         else OY_WORK_GRADES[oy_nonce_select] = true;
                     }
-                    console.log("SELECT: "+oy_nonce_select+" "+i);
+                    //console.log("SELECT: "+oy_nonce_select+" "+i);
                     if (oy_nonce_select!==-1) OY_WORKER_THREADS[0][i].postMessage([0, [oy_work_self, oy_nonce_select, OY_WORK_BITS[oy_nonce_select], oy_block_metahash]]);
                 }
                 else {
@@ -3454,8 +3453,6 @@ function oy_block_engine() {
                             }
                             for (let i in oy_data_payload) {
                                 for (let oy_counter = 0;oy_counter<OY_WORKER_THREADS[0].length/oy_data_payload[1].length;oy_counter++) {
-                                    console.log("BLUE2");
-                                    console.log(oy_data_payload[0]);
                                     OY_WORKER_THREADS[0][oy_worker_point(0)].postMessage([0, [false, oy_data_payload[1][i][0], oy_data_payload[1][i][1], oy_data_payload[0]]]);
                                 }
                             }
@@ -4341,8 +4338,6 @@ function oy_block_finish() {
         }
         oy_worker_spawn(0);
         for (let i in OY_WORKER_THREADS[0]) {
-            console.log("BLUE1");
-            console.log(OY_BLOCK_METAHASH);
             OY_WORKER_THREADS[0][i].postMessage([0, [true, -1, null, OY_BLOCK_METAHASH]]);
         }
     }
