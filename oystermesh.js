@@ -434,7 +434,7 @@ if (OY_NODE_STATE===true) {
     XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
     globalThis.Blob = require("cross-blob");
     isMainThread = require('worker_threads').isMainThread;
-    if (OY_SIMULATOR_MODE===true) parentPort = require('worker_threads').parentPort;
+    parentPort = require('worker_threads').parentPort;
 }
 else {
     websock = WebSocket;
@@ -4671,16 +4671,17 @@ function oy_init(oy_console) {
 if (OY_NODE_STATE===true) {
     if (isMainThread) oy_init();
     else {
+        oy_chrono(function() {
+            console.log("[BOOT][CATCH]");
+        }, 2000);
         parentPort.on('message', (oy_data) => {
-            let [oy_sim_flag, oy_sim_node, oy_sim_data] = oy_data;
+            let [oy_sim_type, oy_sim_node, oy_sim_data] = oy_data;
 
-            if (oy_sim_flag===0) {
-
-            }
-            else if (oy_sim_flag===1) {
+            if (oy_sim_type===0) oy_data_soak(oy_sim_node, oy_sim_data);
+            else if (oy_sim_type===1) {
 
             }
-            else if (oy_sim_flag===2) {
+            else if (oy_sim_type===2) {
                 if (oy_sim_node==="OY_SIM_SET") {
                     OY_SIMULATOR_MODE = true;
                     OY_LIGHT_MODE = oy_sim_data[0][0];
