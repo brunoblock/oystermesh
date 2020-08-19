@@ -286,49 +286,9 @@ const OY_BLOCK_TRANSACTS = {
             oy_handle_check(oy_command_array[5][1][1]));//check that the post content is a mesh handle
     }]
 };
-let OY_NODE_STATE = typeof(window)==="undefined";
-
-// DEPENDENCIES
-let websock, os, nacl, LZString, NodeEvent, SimplePeer, wrtc, perf;
-
-//OYSTER DEPENDENCY TWEETNACL-JS
-//https://github.com/dchest/tweetnacl-js
-//VOID
-
-//OYSTER DEPENDENCY JS-SHA3
-//https://github.com/emn178/js-sha3
-//VOID
-
-//OYSTER DEPENDENCY LZ-STRING
-//https://github.com/pieroxy/lz-string
-//VOID
-
-//OYSTER DEPENDENCY SIMPLE-PEER
-//https://github.com/feross/simple-peer
-//VOID
-
-if (OY_NODE_STATE===true) {
-    console.log("NODE_MODE");
-    websock = require('ws');
-    os = require('os');
-    nacl = require('tweetnacl');
-    nacl.util = require('tweetnacl-util');
-    keccak256 = require('js-sha3').keccak256;
-    LZString = require('lz-string');
-    Worker = require('worker_threads').Worker;
-    NodeEvent = require('events');
-    SimplePeer = require('simple-peer');
-    wrtc = require('wrtc');
-    perf = {now: function() {let end = process.hrtime();return Math.round((end[0]*1000) + (end[1]/1000000));}}
-    XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
-    globalThis.Blob = require("cross-blob");
-}
-else {
-    websock = WebSocket;
-    perf = performance;
-}
 
 // INIT
+let OY_SIMULATOR_MODE = true;
 let OY_LIGHT_MODE = false;//seek to stay permanently connected to the mesh as a light node/latch, manipulable by the user
 let OY_LIGHT_LEAN = false;
 let OY_LIGHT_STATE = true;//immediate status of being a light node/latch, not manipulable by the user
@@ -336,7 +296,7 @@ let OY_DIVE_GRADE = false;
 let OY_DIVE_PAYOUT = false;
 let OY_DIVE_TEAM = false;
 let OY_DIVE_STATE = false;
-let OY_FULL_INTRO = false;//default is false, can be set here or via nodejs argv first parameter TODO force set to false if not in nodejs mode
+let OY_FULL_INTRO = false;//default is false, can be set here or via nodejs argv first parameter
 let OY_INTRO_DEFAULT = {
     "vnode1.oyster.org:8443":true
 };
@@ -350,7 +310,6 @@ let OY_INTRO_ALLOCATE = {};
 let OY_INTRO_SELF = {};
 let OY_INTRO_TAG = {};
 let OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inputs are expected
-let OY_SIMULATOR_MODE = false;//run in node.js simulator, requires oystersimulate.js
 let OY_EVENTS = {};
 let OY_SELF_PRIVATE;//private key of node identity
 let OY_SELF_PUBLIC;//public key of node identity
@@ -437,6 +396,57 @@ let OY_CHANNEL_TOP = {};//track current channel topology
 let OY_CHANNEL_RENDER = {};//track channel broadcasts that have been rendered
 let OY_DB = null;
 let OY_ERROR_BROWSER;
+
+const OY_NODE_STATE = typeof(window)==="undefined";
+
+// DEPENDENCIES
+let websock, os, nacl, LZString, NodeEvent, SimplePeer, wrtc, perf, parentPort;
+
+//OYSTER DEPENDENCY TWEETNACL-JS
+//https://github.com/dchest/tweetnacl-js
+//VOID
+
+//OYSTER DEPENDENCY JS-SHA3
+//https://github.com/emn178/js-sha3
+//VOID
+
+//OYSTER DEPENDENCY LZ-STRING
+//https://github.com/pieroxy/lz-string
+//VOID
+
+//OYSTER DEPENDENCY SIMPLE-PEER
+//https://github.com/feross/simple-peer
+//VOID
+
+if (OY_NODE_STATE===true) {
+    console.log("NODE_MODE");
+    websock = require('ws');
+    os = require('os');
+    nacl = require('tweetnacl');
+    nacl.util = require('tweetnacl-util');
+    keccak256 = require('js-sha3').keccak256;
+    LZString = require('lz-string');
+    Worker = require('worker_threads').Worker;
+    NodeEvent = require('events');
+    SimplePeer = require('simple-peer');
+    wrtc = require('wrtc');
+    perf = {now: function() {let end = process.hrtime();return Math.round((end[0]*1000) + (end[1]/1000000));}}
+    XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
+    globalThis.Blob = require("cross-blob");
+    if (OY_SIMULATOR_MODE===true) parentPort = require('worker_threads').parentPort;
+}
+else {
+    websock = WebSocket;
+    perf = performance;
+    if (OY_SIMULATOR_MODE===true) {
+        oy_log("[ERROR][SIMULATOR_ENABLED]", true);
+        return false;
+    }
+    if (OY_FULL_INTRO!==false) {
+        oy_log("[ERROR][INTRO_ENABLED]", true);
+        return false;
+    }
+}
 
 //EVENTS
 oy_event_create("oy_peers_null", oy_block_reset);//trigger-able event for when peer_count == 0
@@ -4477,6 +4487,13 @@ function oy_init(oy_console) {
     OY_PROPOSED = {};
     oy_log("[SELF_ID]["+OY_SELF_SHORT+"]", true);
 
+    if (OY_SIMULATOR_MODE===true) {
+        parentPort.postMessage(["OY_SELF_INIT", OY_SELF_PUBLIC]);
+        oy_chrono(function() {
+            parentPort.postMessage(["OY_SIM_ROUTE", "TEST"]);
+        }, 5000);
+    }
+
     /*TODO nodejs DB integration
     //Dexie.delete("oy_db");
     OY_DB = new Dexie("oy_db");
@@ -4651,12 +4668,6 @@ function oy_init(oy_console) {
             });
         });
     }
-
-    /* SIMULATOR BLOCK
-    parentPort.on('message', (message) => {
-        parentPort.postMessage(message);
-    });
-    */
 }
 if (OY_NODE_STATE===true) {
     oy_init();
