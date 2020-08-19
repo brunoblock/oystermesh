@@ -6,14 +6,14 @@
 // GLOBAL VARS
 const OY_MESH_DYNASTY = "BRUNO_GENESIS_V6";//mesh dynasty definition, changing this will cause a hard-fork
 const OY_MESH_BUFFER = [0.2, 200];//seconds and ms buffer a block command's timestamp is allowed to be in the future, this variable exists to deal with slight mis-calibrations between node clocks
-const OY_MESH_FLOW = 256000;//characters per second allowed per peer, and for all aggregate non-peer nodes
+let OY_MESH_FLOW = 256000;//characters per second allowed per peer, and for all aggregate non-peer nodes
 const OY_MESH_HOP_MAX = 1000;//maximum hops allowed on a transmission passport
 const OY_MESH_MEASURE = 10;//seconds by which to measure mesh flow, larger means more tracking of nearby node and peer activity
 const OY_MESH_BEAM_SAMPLE = 3;//time/data measurements to determine mesh beam flow required to state a result, too low can lead to volatile and inaccurate readings
-const OY_MESH_BEAM_COOL = 2.5;//cool factor for beaming, higher is less beam intensity
-const OY_MESH_BEAM_MIN = 0.5;//minimum beam ratio to start returning false
-const OY_MESH_SOAK_SAMPLE = 5;//time/data measurements to determine mesh soak flow required to state a result, too low can lead to volatile and inaccurate readings
-const OY_MESH_SOAK_BUFFER = 1.2;//multiplication factor for mesh inflow/soak buffer, to give some leeway to compliant peers
+let OY_MESH_BEAM_COOL = 2.5;//cool factor for beaming, higher is less beam intensity
+let OY_MESH_BEAM_MIN = 0.5;//minimum beam ratio to start returning false
+let OY_MESH_SOAK_SAMPLE = 5;//time/data measurements to determine mesh soak flow required to state a result, too low can lead to volatile and inaccurate readings
+let OY_MESH_SOAK_BUFFER = 1.2;//multiplication factor for mesh inflow/soak buffer, to give some leeway to compliant peers
 const OY_MESH_PUSH_CHANCE = 0.9;//probability that self will forward a data_push when the nonce was not previously stored on self
 const OY_MESH_DEPOSIT_CHANCE = 0.5;//probability that self will deposit pushed data
 const OY_MESH_FULLFILL_CHANCE = 0.2;//probability that data is stored whilst fulfilling a pull request, this makes data intelligently migrate and recommit overtime
@@ -28,31 +28,31 @@ const OY_BLOCK_SNAPSHOT_KEEP = 120;//how many hashes of previous blocks to keep 
 const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
 const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
-const OY_BLOCK_RANGE_MIN = 2;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
+let OY_BLOCK_RANGE_MIN = 10;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-const OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
+let OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
-const OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
-const OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
+let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
+let OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
 const OY_BLOCK_PEER_SPACE = [15, 15000];
-const OY_BLOCK_RECORD_LIMIT = 20;
-const OY_BLOCK_RECORD_INTRO_BUFFER = 1.4;
-const OY_JUDGE_BUFFER_BASE = 1.8;
-const OY_JUDGE_BUFFER_CURVE = 1.2;//allocation for curve
-const OY_SYNC_LAST_BUFFER = 2;
-const OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
-const OY_LIGHT_COMMIT = 0.4;
+let OY_BLOCK_RECORD_LIMIT = 20;
+let OY_BLOCK_RECORD_INTRO_BUFFER = 1.4;
+let OY_JUDGE_BUFFER_BASE = 1.8;
+let OY_JUDGE_BUFFER_CURVE = 1.2;//allocation for curve
+let OY_SYNC_LAST_BUFFER = 2;
+let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
+let OY_LIGHT_COMMIT = 0.4;
 const OY_PEER_RESERVETIME = 300;//peers are expected to establish latency timing with each other within this interval in seconds
 const OY_PEER_MAX = 6;//maximum mutual peers
 const OY_PEER_FULL_MIN = 4;
-const OY_PEER_CUT = 0.3;//minimum percentage threshold to be safe from being selected as a potential weakest peer, higher is less peers safe
+let OY_PEER_CUT = 0.3;//minimum percentage threshold to be safe from being selected as a potential weakest peer, higher is less peers safe
 const OY_INTRO_TRIP = [0.8, 800];
 const OY_WORK_MATCH = 4;//lower is more bandwidth/memory bound, higher is more CPU bound
 const OY_WORK_MAX = 10000;//10000
 const OY_WORK_MIN = 3;
-const OY_WORK_DELTA = 0.2;
-const OY_WORK_DILUTE = 3;
-const OY_WORK_TARGET = 4000;//1440x7/1 week, value in minutes, lower is harsher work that kicks nodes off the mesh more frequently, higher discourages new node operators and hence less decentralization
+let OY_WORK_DELTA = 0.2;
+let OY_WORK_DILUTE = 3;
+let OY_WORK_TARGET = 4000;//1440x7/1 week, value in minutes, lower is harsher work that kicks nodes off the mesh more frequently, higher discourages new node operators and hence less decentralization
 const OY_WORK_INTRO = 100;
 const OY_AKOYA_DECIMALS = 100000000;//zeros after the decimal point for akoya currency
 const OY_AKOYA_LIQUID = 10000000*OY_AKOYA_DECIMALS;//akoya liquidity restrictions to prevent integer overflow
@@ -69,12 +69,12 @@ const OY_META_DAPP_RANGE = 9;//max amount of meshblock amendable dapps including
 const OY_META_FEE = 0.0001*OY_AKOYA_DECIMALS;//meta fee per block per 99 characters - 99 used instead of 100 for space savings on the meshblock
 const OY_NULLING_BUFFER = 0.001*OY_AKOYA_DECIMALS;
 const OY_NODE_MAX = 32;
-const OY_WORKER_CORES_FALLBACK = 4;
+let OY_WORKER_CORES_FALLBACK = 4;
 const OY_ROUTE_DYNAMIC_KEEP = 200;//how many dynamic identifiers for a routed data sequence to remember and block
 const OY_LATENCY_SIZE = 80;//size of latency ping payload, larger is more accurate yet more taxing
 const OY_LATENCY_LENGTH = 8;//length of rand sequence which is repeated for payload and signed for ID verification
 const OY_LATENCY_TRACK = 200;//how many latency measurements to keep at a time per peer
-const OY_LATENCY_GEO_SENS = 2.5;//percentage buffer for comparing latency with peers, higher means less likely weakest peer will get dropped and mesh is less geo-sensitive
+let OY_LATENCY_GEO_SENS = 2.5;//percentage buffer for comparing latency with peers, higher means less likely weakest peer will get dropped and mesh is less geo-sensitive
 const OY_DATA_MAX = 250000;//max size of data that can be sent to another node
 const OY_DATA_CHUNK = 125000;//chunk size by which data is split up and sent per transmission
 const OY_DATA_PURGE = 10;//how many handles to delete if indexedDB limit is reached
@@ -288,7 +288,6 @@ const OY_BLOCK_TRANSACTS = {
 };
 
 // INIT
-let OY_SIMULATOR_MODE = true;
 let OY_LIGHT_MODE = false;//seek to stay permanently connected to the mesh as a light node/latch, manipulable by the user
 let OY_LIGHT_LEAN = false;
 let OY_LIGHT_STATE = true;//immediate status of being a light node/latch, not manipulable by the user
@@ -296,6 +295,7 @@ let OY_DIVE_GRADE = false;
 let OY_DIVE_PAYOUT = false;
 let OY_DIVE_TEAM = false;
 let OY_DIVE_STATE = false;
+let OY_SIMULATOR_MODE = false;
 let OY_FULL_INTRO = false;//default is false, can be set here or via nodejs argv first parameter
 let OY_INTRO_DEFAULT = {
     "vnode1.oyster.org:8443":true
@@ -4672,8 +4672,28 @@ if (OY_NODE_STATE===true) {
     if (isMainThread) oy_init();
     else {
         parentPort.on('message', (oy_data) => {
-            //parentPort.postMessage(message);
+            let [oy_sim_flag, oy_sim_node, oy_sim_data] = oy_data;
+
+            if (oy_sim_flag===0) {
+
+            }
+            else if (oy_sim_flag===1) {
+
+            }
+            else if (oy_sim_flag===2) {
+                if (oy_sim_node==="OY_SIM_SET") {
+                    OY_SIMULATOR_MODE = true;
+                    OY_LIGHT_MODE = oy_sim_data[0][0];
+                    OY_FULL_INTRO = oy_sim_data[0][1];
+                    OY_INTRO_DEFAULT = oy_sim_data[0][0];
+                    oy_init();
+                }
+                else if (oy_sim_node==="OY_SIM_KILL") {
+
+                }
+            }
         });
+        parentPort.postMessage(["OY_SIM_BOOT", null]);
     }
 }
 
