@@ -296,6 +296,7 @@ let OY_DIVE_PAYOUT = false;
 let OY_DIVE_TEAM = false;
 let OY_DIVE_STATE = false;
 let OY_SIMULATOR_MODE = false;
+let OY_SIMULATOR_CALLBACK = {};
 let OY_FULL_INTRO = false;//default is false, can be set here or via nodejs argv first parameter
 let OY_INTRO_DEFAULT = {
     "vnode1.oyster.org:8443":true
@@ -2827,7 +2828,11 @@ function oy_intro_beam(oy_intro_select, oy_data_flag, oy_data_payload, oy_callba
 
     try {
         oy_log("INTRO[BEAM]["+oy_intro_select+"]["+((Date.now()/1000)-OY_BLOCK_TIME)+"]");
-        if (OY_SIMULATOR_MODE===true) parentPort.postMessage([1, oy_intro_select, JSON.stringify([oy_data_flag, oy_data_payload]), [oy_intro_select, oy_callback]]);
+        if (OY_SIMULATOR_MODE===true) {
+            let oy_sim_ref = oy_rand_gen(8);
+            OY_SIMULATOR_CALLBACK[oy_sim_ref] = oy_callback;
+            parentPort.postMessage([1, oy_intro_select, JSON.stringify([oy_data_flag, oy_data_payload]), [oy_intro_select, oy_sim_ref]]);
+        }
         else {
             let ws = new websock("wss://"+oy_intro_select);
             let oy_response = null;
@@ -3377,6 +3382,8 @@ function oy_block_engine() {
         OY_INTRO_SELF = {};
         OY_INTRO_TAG = {};
         OY_INTRO_BAN = {};
+
+        if (OY_SIMULATOR_MODE===true) OY_SIMULATOR_CALLBACK = {};
 
         if (OY_BLOCK_BOOT===true) {
             if (OY_LIGHT_MODE===true) return false;//if self elects to be a light node they cannot participate in the initial boot-up sequence of the mesh
@@ -4693,17 +4700,18 @@ if (OY_NODE_STATE===true) {
             if (oy_sim_type===0) oy_data_soak(oy_sim_node, oy_sim_data);
             else if (oy_sim_type===1) {
                 let oy_soak_result = oy_intro_soak(oy_sim_node, oy_sim_data);
-                if (oy_soak_result!==false&&oy_sim_misc[0]===OY_FULL_INTRO) parentPort.postMessage(2, oy_sim_node, oy_soak_result, oy_sim_misc);
+                if (oy_soak_result!==false&&oy_sim_misc[0]===OY_FULL_INTRO) parentPort.postMessage([2, oy_sim_node, oy_soak_result, oy_sim_misc]);
             }
             else if (oy_sim_type===2) {
-                if (typeof(oy_sim_misc[1])==="function") {
+                if (typeof(OY_SIMULATOR_CALLBACK[oy_sim_misc[1]])==="function") {
                     try {
                         let [oy_data_flag, oy_data_payload] = JSON.parse(oy_sim_data);
                         oy_log("INTRO[SOAK]["+oy_data_flag+"]["+((Date.now()/1000)-OY_BLOCK_TIME)+"]");
                         if (oy_data_flag==="OY_INTRO_UNREADY") {
                             if (OY_BLOCK_BOOT===false&&oy_data_flag!=="OY_INTRO_TIME") oy_intro_punish(oy_sim_misc[0]);
                         }
-                        else oy_sim_misc[1](oy_data_flag, oy_data_payload);
+                        else OY_SIMULATOR_CALLBACK[oy_sim_misc[1]](oy_data_flag, oy_data_payload);
+                        delete OY_SIMULATOR_CALLBACK[oy_sim_misc[1]];
                     }
                     catch(e) {}
                 }
