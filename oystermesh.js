@@ -4631,9 +4631,7 @@ function oy_init(oy_console) {
     OY_PROPOSED = {};
     oy_log("[SELF_ID]["+OY_SELF_SHORT+"]", true);
 
-    if (OY_SIMULATOR_MODE===true) {
-        parentPort.postMessage(["OY_SIM_INIT", OY_SELF_PUBLIC, OY_FULL_INTRO]);
-    }
+    if (OY_SIMULATOR_MODE===true) parentPort.postMessage([6, OY_SELF_PUBLIC, OY_FULL_INTRO]);
 
     /*TODO nodejs DB integration
     //Dexie.delete("oy_db");
@@ -4655,7 +4653,7 @@ function oy_init(oy_console) {
     oy_event_dispatch("oy_state_blank");
 
     if (OY_NODE_STATE===true&&typeof(process.argv[2])!=="undefined") OY_FULL_INTRO = process.argv[2];
-    if (OY_FULL_INTRO!==false&&OY_FULL_INTRO.indexOf(":")!==-1) {
+    if (OY_FULL_INTRO!==false&&OY_FULL_INTRO.indexOf(":")!==-1&&OY_SIMULATOR_MODE===false) {
         oy_log("[INTRO_MODE]["+OY_FULL_INTRO+"]", true);
 
         const fs = require('fs');
@@ -4716,7 +4714,7 @@ if (OY_NODE_STATE===true) {
                     OY_SIMULATOR_MODE = true;
                     OY_LIGHT_MODE = oy_sim_data[0][0];
                     OY_FULL_INTRO = oy_sim_data[0][1];
-                    OY_INTRO_DEFAULT = oy_sim_data[0][0];
+                    OY_INTRO_DEFAULT = oy_sim_data[1][0];
                     oy_init();
                 }
                 else if (oy_sim_node==="OY_SIM_KILL") {
@@ -4724,7 +4722,7 @@ if (OY_NODE_STATE===true) {
                 }
             }
         });
-        parentPort.postMessage(["OY_SIM_BOOT", null, null]);
+        parentPort.postMessage([5, null, null]);
     }
 }
 
