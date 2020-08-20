@@ -30,7 +30,7 @@ const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 let OY_BLOCK_RANGE_MIN = 10;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
-let OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
+const OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 let OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventually more profitable (makes it harder for edge nodes to dive), higher means better connection stability/reliability for self
@@ -98,7 +98,7 @@ const OY_KEY_BRUNO = "JSJqmlzAxwuINY2FCpWPJYvKIK1AjavBgkIwIm139k4M";//prevent im
 const OY_SHORT_LENGTH = 6;//various data value such as nonce IDs, data handles, data values are shortened for efficiency
 
 // PRE-CALCULATED VARS
-const OY_BLOCK_BOOTTIME = oy_block_boot_calc(OY_BLOCK_BOOT_SEED);
+let OY_BLOCK_BOOTTIME = oy_block_boot_calc(OY_BLOCK_BOOT_SEED);
 const OY_DNS_AUCTION_MIN = (OY_AKOYA_FEE+OY_DNS_FEE)*(OY_DNS_AUCTION_DURATION/OY_BLOCK_SECTORS[5][0]);
 const OY_DNS_OWNER_MIN = (OY_AKOYA_FEE+OY_DNS_FEE)*OY_DNS_AUCTION_MIN+(OY_AKOYA_FEE*(OY_DNS_OWNER_DURATION/OY_BLOCK_SECTORS[5][0]));
 //const OY_META_OWNER_MIN
@@ -401,7 +401,9 @@ let OY_ERROR_BROWSER;
 const OY_NODE_STATE = typeof(window)==="undefined";
 
 // DEPENDENCIES
-let websock, os, nacl, LZString, NodeEvent, SimplePeer, wrtc, perf, isMainThread, parentPort;
+let os, nacl, keccak256, LZString, NodeEvent, perf, isMainThread, parentPort, websock, SimplePeer, wrtc;
+
+if (OY_NODE_STATE===true) parentPort = require('worker_threads').parentPort;
 
 //OYSTER DEPENDENCY TWEETNACL-JS
 //https://github.com/dchest/tweetnacl-js
@@ -418,47 +420,6 @@ let websock, os, nacl, LZString, NodeEvent, SimplePeer, wrtc, perf, isMainThread
 //OYSTER DEPENDENCY SIMPLE-PEER
 //https://github.com/feross/simple-peer
 //VOID
-
-if (OY_NODE_STATE===true) {
-    console.log("NODE_MODE");
-    websock = require('ws');
-    os = require('os');
-    nacl = require('tweetnacl');
-    nacl.util = require('tweetnacl-util');
-    keccak256 = require('js-sha3').keccak256;
-    LZString = require('lz-string');
-    Worker = require('worker_threads').Worker;
-    NodeEvent = require('events');
-    SimplePeer = require('simple-peer');
-    wrtc = require('wrtc');
-    perf = {now: function() {let end = process.hrtime();return Math.round((end[0]*1000) + (end[1]/1000000));}}
-    XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
-    globalThis.Blob = require("cross-blob");
-    isMainThread = require('worker_threads').isMainThread;
-    parentPort = require('worker_threads').parentPort;
-}
-else {
-    websock = WebSocket;
-    perf = performance;
-    if (OY_SIMULATOR_MODE===true) {
-        oy_log("[ERROR][SIMULATOR_ENABLED]", true);
-        return false;
-    }
-    if (OY_FULL_INTRO!==false) {
-        oy_log("[ERROR][INTRO_ENABLED]", true);
-        return false;
-    }
-}
-
-//EVENTS
-oy_event_create("oy_peers_null", oy_block_reset);//trigger-able event for when peer_count == 0
-oy_event_create("oy_peers_recover");//trigger-able event for when peer_count > 0
-oy_event_create("oy_block_init");//trigger-able event for when a new block is issued
-oy_event_create("oy_block_trigger");//trigger-able event for when a new block is issued
-oy_event_create("oy_block_reset");//trigger-able event for when a new block is issued
-oy_event_create("oy_state_blank");//trigger-able event for when self becomes blank
-oy_event_create("oy_state_light");//trigger-able event for when self becomes a light node
-oy_event_create("oy_state_full");//trigger-able event for when self becomes a full node
 
 //WEB WORKER BLOCK
 function oy_worker_cores() {
@@ -3517,9 +3478,9 @@ function oy_block_engine() {
         else OY_INTRO_MARKER = null;
 
         oy_chrono(function() {
-            if (OY_BLOCK_HASH===null) return false;
+            if (OY_BLOCK_HASH===null||Object.keys(OY_NODES).length>=OY_NODE_MAX) return false;
 
-            if (OY_FULL_INTRO===false&&Object.keys(OY_NODES).length<OY_NODE_MAX) {
+            if (OY_FULL_INTRO===false) {
                 let oy_offer_rand = oy_rand_gen(OY_MESH_SEQUENCE);
                 function oy_signal_local(oy_signal_data) {
                     let oy_signal_crypt = oy_signal_beam(oy_signal_data);
@@ -3535,10 +3496,11 @@ function oy_block_engine() {
                     OY_PEER_OFFER[1].on("signal", oy_signal_local);
                 }
             }
-            else if (OY_FULL_INTRO!==false&&OY_FULL_INTRO.indexOf(":")!==-1&&OY_BLOCK_RECORD_KEEP.length>1) {
-                if (Object.keys(OY_NODES).length<OY_NODE_MAX) {
-                    for (let i = Object.keys(OY_PEERS).length;i<OY_PEER_MAX;i++) {
-                        let oy_offer_rand = oy_rand_gen(OY_MESH_SEQUENCE);
+            else if (OY_FULL_INTRO.indexOf(":")!==-1&&OY_BLOCK_RECORD_KEEP.length>1) {
+                for (let i = Object.keys(OY_PEERS).length;i<OY_PEER_MAX;i++) {
+                    let oy_offer_rand = oy_rand_gen(OY_MESH_SEQUENCE);
+                    if (OY_SIMULATOR_MODE===true) OY_INTRO_SELF[oy_offer_rand] = [true, oy_signal_beam(oy_rand_gen(128)), null];
+                    else {
                         OY_INTRO_SELF[oy_offer_rand] = [oy_node_boot(true), null, null];
                         OY_INTRO_SELF[oy_offer_rand][0].on("signal", function(oy_signal_data) {
                             OY_INTRO_SELF[oy_offer_rand][1] = oy_signal_beam(oy_signal_data);
@@ -3548,14 +3510,21 @@ function oy_block_engine() {
             }
 
             for (let oy_peer_select in OY_PEERS) {
-                if (OY_PEERS[oy_peer_select][1]===0||OY_PEERS[oy_peer_select][0]>=OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]||Object.keys(OY_NODES).length>=OY_NODE_MAX) continue;
-                OY_PEERS[oy_peer_select][10] = oy_node_boot(true);
-                OY_PEERS[oy_peer_select][10].on("signal", function(oy_signal_data) {
-                    if (typeof(OY_PEERS[oy_peer_select])!=="undefined") {
-                        OY_PEERS[oy_peer_select][11][0] = true;
-                        oy_data_beam(oy_peer_select, "OY_PEER_EXCHANGE_A", [oy_peer_map, oy_signal_beam(oy_signal_data)]);
-                    }
-                });
+                if (OY_PEERS[oy_peer_select][1]===0||OY_PEERS[oy_peer_select][0]>=OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]) continue;
+                if (OY_SIMULATOR_MODE===true) {
+                    OY_PEERS[oy_peer_select][10] = true;
+                    OY_PEERS[oy_peer_select][11][0] = true;
+                    oy_data_beam(oy_peer_select, "OY_PEER_EXCHANGE_A", [oy_peer_map, oy_signal_beam(oy_rand_gen(128))]);
+                }
+                else {
+                    OY_PEERS[oy_peer_select][10] = oy_node_boot(true);
+                    OY_PEERS[oy_peer_select][10].on("signal", function(oy_signal_data) {
+                        if (typeof(OY_PEERS[oy_peer_select])!=="undefined") {
+                            OY_PEERS[oy_peer_select][11][0] = true;
+                            oy_data_beam(oy_peer_select, "OY_PEER_EXCHANGE_A", [oy_peer_map, oy_signal_beam(oy_signal_data)]);
+                        }
+                    });
+                }
             }
         }, OY_BLOCK_PEER_SPACE[1]);
 
@@ -4631,6 +4600,48 @@ function oy_init(oy_console) {
     OY_INIT = true;
     oy_log("[OYSTER]["+OY_MESH_DYNASTY+"]", true);
 
+    if (OY_NODE_STATE===true) {
+        console.log("NODE_MODE");
+        os = require('os');
+        nacl = require('tweetnacl');
+        nacl.util = require('tweetnacl-util');
+        keccak256 = require('js-sha3').keccak256;
+        LZString = require('lz-string');
+        Worker = require('worker_threads').Worker;
+        NodeEvent = require('events');
+        perf = {now: function() {let end = process.hrtime();return Math.round((end[0]*1000) + (end[1]/1000000));}}
+        XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
+        globalThis.Blob = require("cross-blob");
+        isMainThread = require('worker_threads').isMainThread;
+        if (OY_SIMULATOR_MODE===false) {
+            websock = require('ws');
+            SimplePeer = require('simple-peer');
+            wrtc = require('wrtc');
+        }
+    }
+    else {
+        websock = WebSocket;
+        perf = performance;
+        if (OY_SIMULATOR_MODE===true) {
+            oy_log("[ERROR][SIMULATOR_ENABLED]", true);
+            return false;
+        }
+        if (OY_FULL_INTRO!==false) {
+            oy_log("[ERROR][INTRO_ENABLED]", true);
+            return false;
+        }
+    }
+
+    //EVENTS
+    oy_event_create("oy_peers_null", oy_block_reset);//trigger-able event for when peer_count == 0
+    oy_event_create("oy_peers_recover");//trigger-able event for when peer_count > 0
+    oy_event_create("oy_block_init");//trigger-able event for when a new block is issued
+    oy_event_create("oy_block_trigger");//trigger-able event for when a new block is issued
+    oy_event_create("oy_block_reset");//trigger-able event for when a new block is issued
+    oy_event_create("oy_state_blank");//trigger-able event for when self becomes blank
+    oy_event_create("oy_state_light");//trigger-able event for when self becomes a light node
+    oy_event_create("oy_state_full");//trigger-able event for when self becomes a full node
+
     let oy_key_pair = oy_key_gen();
     OY_SELF_PRIVATE = oy_key_pair[0];
     OY_SELF_PUBLIC = oy_key_pair[1];
@@ -4691,9 +4702,6 @@ function oy_init(oy_console) {
 if (OY_NODE_STATE===true) {
     if (isMainThread) oy_init();
     else {
-        oy_chrono(function() {
-            console.log("[BOOT][CATCH]");
-        }, 2000);
         parentPort.on('message', (oy_data) => {
             let [oy_sim_type, oy_sim_node, oy_sim_data, oy_sim_misc] = oy_data;
 
@@ -4722,7 +4730,8 @@ if (OY_NODE_STATE===true) {
                     OY_SIMULATOR_MODE = true;
                     OY_LIGHT_MODE = oy_sim_data[0][0];
                     OY_FULL_INTRO = oy_sim_data[0][1];
-                    OY_INTRO_DEFAULT = oy_sim_data[1][0];
+                    OY_BLOCK_BOOTTIME = oy_sim_data[1]['oy_block_boottime'];
+                    OY_INTRO_DEFAULT = oy_sim_data[1]['oy_intro_default'];
                     oy_init();
                 }
                 else if (oy_sim_node==="OY_SIM_KILL") {
