@@ -761,7 +761,7 @@ function oy_log(oy_log_msg, oy_log_attn = 0) {
         if (OY_NODE_STATE===true) {
             if (oy_log_attn===0) console.log(chalk.white.bgCyan("["+OY_SELF_SHORT+"]")+oy_log_msg);
             else if (oy_log_attn===1) console.log(chalk.white.bgCyan("["+OY_SELF_SHORT+"]")+chalk.hex('#00c9ff')(oy_log_msg));//
-            else if (oy_log_attn===2) console.log(chalk.white.bgMagenta("["+OY_SELF_SHORT+"]")+chalk.white.bgRed(oy_log_msg));
+            else if (oy_log_attn===2) console.log(chalk.white.bgRed("["+OY_SELF_SHORT+"]")+chalk.white.bgMagenta(oy_log_msg));
         }
         else console.log(oy_log_msg);
     }
@@ -2676,7 +2676,7 @@ function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
         }
         if (OY_SIMULATOR_MODE===true) parentPort.postMessage([0, oy_node_id, oy_data_raw]);
         else OY_NODES[oy_node_id].send(oy_data_raw);//send the JSON-converted data array to the destination node
-        oy_log("[BEAM]["+oy_short(oy_node_id)+"]["+oy_data_flag+"]");
+        if (oy_data_flag!=="OY_BLOCK_SYNC") oy_log("[BEAM]["+oy_short(oy_node_id)+"]["+oy_data_flag+"]");
         return true;
     }
     catch(e) {}
@@ -2702,7 +2702,7 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
                }
            }
            oy_data_raw = null;
-           oy_log("[SOAK]["+oy_short(oy_node_id)+"]["+oy_data[0]+"]");
+           if (oy_data[0]!=="OY_BLOCK_SYNC") oy_log("[SOAK]["+oy_short(oy_node_id)+"]["+oy_data[0]+"]");
            if (!oy_data_direct(oy_data[0])) {
                if (typeof(oy_data[1][0])!=="object") {
                    oy_node_deny(oy_node_id, "OY_DENY_PASSPORT_INVALID");
