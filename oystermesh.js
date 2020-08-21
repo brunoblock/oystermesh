@@ -99,7 +99,7 @@ const OY_KEY_BRUNO = "JSJqmlzAxwuINY2FCpWPJYvKIK1AjavBgkIwIm139k4M";//prevent im
 const OY_SHORT_LENGTH = 6;//various data value such as nonce IDs, data handles, data values are shortened for efficiency
 
 // PRE-CALCULATED VARS
-let OY_BLOCK_BOOTTIME = oy_block_boot_calc(OY_BLOCK_BOOT_SEED);
+let OY_BLOCK_BOOT_MARK = oy_block_boot_calc(OY_BLOCK_BOOT_SEED);
 const OY_DNS_AUCTION_MIN = (OY_AKOYA_FEE+OY_DNS_FEE)*(OY_DNS_AUCTION_DURATION/OY_BLOCK_SECTORS[5][0]);
 const OY_DNS_OWNER_MIN = (OY_AKOYA_FEE+OY_DNS_FEE)*OY_DNS_AUCTION_MIN+(OY_AKOYA_FEE*(OY_DNS_OWNER_DURATION/OY_BLOCK_SECTORS[5][0]));
 //const OY_META_OWNER_MIN
@@ -3327,8 +3327,8 @@ function oy_block_engine() {
     if (oy_block_time_local!==OY_BLOCK_TIME&&(oy_block_time_local/10)%6===0) {
         OY_BLOCK_TIME = oy_block_time_local;
         OY_BLOCK_NEXT = OY_BLOCK_TIME+OY_BLOCK_SECTORS[5][0];
-        if (OY_BLOCK_TIME<OY_BLOCK_BOOTTIME) OY_BLOCK_BOOT = null;
-        else OY_BLOCK_BOOT = OY_BLOCK_TIME-OY_BLOCK_BOOTTIME<OY_BLOCK_BOOT_BUFFER;
+        if (OY_BLOCK_TIME<OY_BLOCK_BOOT_MARK) OY_BLOCK_BOOT = null;
+        else OY_BLOCK_BOOT = OY_BLOCK_TIME-OY_BLOCK_BOOT_MARK<OY_BLOCK_BOOT_BUFFER;
 
         oy_worker_halt(0);
 
@@ -3390,7 +3390,7 @@ function oy_block_engine() {
         }
 
         //BLOCK SEED--------------------------------------------------
-        if (OY_LIGHT_MODE===false&&OY_BLOCK_TIME===OY_BLOCK_BOOTTIME) {
+        if (OY_LIGHT_MODE===false&&OY_BLOCK_TIME===OY_BLOCK_BOOT_MARK) {
             oy_log("[MESHBLOCK]["+chalk.bolder("BOOT_SEED")+"]", 1);
             oy_log_debug("MESHBLOCK BOOT SEED");
             OY_BLOCK = oy_clone_object(OY_BLOCK_TEMPLATE);
@@ -3398,7 +3398,7 @@ function oy_block_engine() {
             OY_BLOCK[0][1] = OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0];
             OY_BLOCK[0][2] = OY_BLOCK_RANGE_MIN;//mesh range
             OY_BLOCK[0][3] = OY_WORK_MIN;//work difficulty
-            OY_BLOCK[0][4] = OY_BLOCK_BOOTTIME;//genesis timestamp
+            OY_BLOCK[0][4] = OY_BLOCK_BOOT_MARK;//genesis timestamp
             OY_BLOCK[0][5] = 0;//epoch macro counter
             OY_BLOCK[0][6] = 0;//epoch counter
             OY_BLOCK[0][7] = OY_WORK_TARGET*OY_BLOCK_RANGE_MIN;//oy_grade_total
@@ -3617,7 +3617,7 @@ function oy_block_engine() {
                 oy_block_continue = false;
                 return false;
             }
-            if (OY_BLOCK[0][4]!==OY_BLOCK_BOOTTIME) {
+            if (OY_BLOCK[0][4]!==OY_BLOCK_BOOT_MARK) {
                 oy_block_reset("OY_RESET_BOOT_INVALID");
                 oy_block_continue = false;
                 return false;
@@ -3682,7 +3682,7 @@ function oy_block_engine() {
             OY_BLOCK_RECORD = Date.now()/1000;
 
             let oy_command_execute = [];
-            if (OY_BLOCK_TIME-OY_BLOCK_BOOTTIME>OY_BLOCK_BOOT_BUFFER/2) {
+            if (OY_BLOCK_TIME-OY_BLOCK_BOOT_MARK>OY_BLOCK_BOOT_BUFFER/2) {
                 for (let oy_key_public in OY_BLOCK_SYNC) {
                     if (OY_BLOCK_SYNC[oy_key_public]===false||OY_BLOCK_SYNC[oy_key_public][1]===false) {
                         delete OY_BLOCK_SYNC[oy_key_public];
@@ -3692,7 +3692,7 @@ function oy_block_engine() {
                 }
 
                 /*
-                if (((OY_BLOCK_TIME-OY_BLOCK_BOOTTIME)/60)%240===0&&Math.floor(Math.random()*2)===0) {//artificial mesh splitter
+                if (((OY_BLOCK_TIME-OY_BLOCK_BOOT_MARK)/60)%240===0&&Math.floor(Math.random()*2)===0) {//artificial mesh splitter
                     let oy_split_sort = [];
                     for (let oy_key_public in OY_BLOCK_SYNC) {
                         oy_split_sort.push(oy_key_public);
@@ -4106,7 +4106,7 @@ function oy_block_process(oy_command_execute, oy_full_flag, oy_jump_flag) {
     //MAINTAIN--------------------------------
     oy_block[0][0] = OY_MESH_DYNASTY;
     oy_block[0][1] = oy_block_time;
-    oy_block[0][4] = OY_BLOCK_BOOTTIME;
+    oy_block[0][4] = OY_BLOCK_BOOT_MARK;
     oy_block[0][5]++;
     oy_block[0][6]++;
     oy_block[0][8] = Math.floor(oy_block[0][7]/oy_block[0][2]);
@@ -4545,8 +4545,11 @@ function oy_block_finish() {
         while (OY_BLOCK_RECORD_KEEP.length>OY_BLOCK_RECORD_LIMIT) OY_BLOCK_RECORD_KEEP.shift();
     }
     OY_BLOCK_FINISH = true;
-    console.log(OY_BLOCK);
-    console.log(Object.keys(OY_PEERS));
+    oy_chrono(function() {
+        console.log(OY_BLOCK);
+        console.log(Object.keys(OY_PEERS));
+        console.log(Math.floor((Date.now()/1000)-OY_BLOCK_BOOT_MARK));
+    }, 20000);
 }
 
 /*
@@ -4677,8 +4680,8 @@ function oy_init(oy_console) {
     */
 
     let oy_time_local = Date.now()/1000;
-    if (oy_time_local<OY_BLOCK_BOOTTIME) OY_BLOCK_BOOT = null;
-    else OY_BLOCK_BOOT = oy_time_local-OY_BLOCK_BOOTTIME<OY_BLOCK_BOOT_BUFFER;
+    if (oy_time_local<OY_BLOCK_BOOT_MARK) OY_BLOCK_BOOT = null;
+    else OY_BLOCK_BOOT = oy_time_local-OY_BLOCK_BOOT_MARK<OY_BLOCK_BOOT_BUFFER;
 
     oy_node_assign();
     oy_block_engine();
@@ -4746,7 +4749,7 @@ if (OY_NODE_STATE===true) {
                     OY_LIGHT_MODE = oy_sim_data[0][0];
                     OY_FULL_INTRO = oy_sim_data[0][1];
                     OY_VERBOSE_MODE = oy_sim_data[1]['oy_verbose_mode'];
-                    OY_BLOCK_BOOTTIME = oy_sim_data[1]['oy_block_boottime'];
+                    OY_BLOCK_BOOT_MARK = oy_sim_data[1]['oy_block_boot_mark'];
                     OY_INTRO_DEFAULT = oy_sim_data[1]['oy_intro_default'];
                     OY_WORK_MATCH = oy_sim_data[1]['oy_work_match'];
                     oy_init();
