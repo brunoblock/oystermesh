@@ -3330,6 +3330,9 @@ function oy_block_engine() {
         if (OY_BLOCK_TIME<OY_BLOCK_BOOT_MARK) OY_BLOCK_BOOT = null;
         else OY_BLOCK_BOOT = OY_BLOCK_TIME-OY_BLOCK_BOOT_MARK<OY_BLOCK_BOOT_BUFFER;
 
+        let oy_boot_elapsed = Math.floor((Date.now()/1000)-OY_BLOCK_BOOT_MARK)-OY_BLOCK_BOOT_BUFFER;
+        if (OY_BLOCK_HASH!==null) oy_log("[MESHBLOCK][ELAPSED]["+chalk.bolder(((((oy_boot_elapsed/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((oy_boot_elapsed/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(oy_boot_elapsed)+"S]", 1);
+
         oy_worker_halt(0);
 
         OY_BLOCK_COMMAND_NONCE = 0;
@@ -4548,7 +4551,6 @@ function oy_block_finish() {
     oy_chrono(function() {
         console.log(OY_BLOCK);
         console.log(Object.keys(OY_PEERS));
-        console.log(Math.floor((Date.now()/1000)-OY_BLOCK_BOOT_MARK));
     }, 20000);
 }
 
