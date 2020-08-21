@@ -687,7 +687,6 @@ function oy_worker_spawn(oy_worker_type) {
                                         oy_intro_beam(OY_INTRO_SELECT, "OY_INTRO_SIGNAL_B", oy_signal_beam(oy_signal_data));
                                     }
                                     if (OY_SIMULATOR_MODE===true) {
-                                        oy_log("LEMON"+JSON.stringify([OY_SELF_SHORT, oy_signal_carry[0]]), 2);
                                         OY_NODES[oy_signal_carry[0]] = true;
                                         oy_signal_local(oy_rand_gen(128));
                                     }
@@ -1854,9 +1853,15 @@ function oy_node_connect(oy_node_id) {
 function oy_node_disconnect(oy_node_id) {
     if (typeof(OY_NODES[oy_node_id])!=="undefined") {
         try {
-            oy_node_reset(oy_node_id);
-            OY_COLD[oy_node_id] = true;
-            OY_NODES[oy_node_id].destroy();
+            if (OY_SIMULATOR_MODE===true) {
+                oy_node_reset(oy_node_id);
+                delete OY_NODES[oy_node_id];
+            }
+            else {
+                oy_node_reset(oy_node_id);
+                OY_COLD[oy_node_id] = true;
+                OY_NODES[oy_node_id].destroy();
+            }
             return true;
         }
         catch(e) {}
@@ -2801,7 +2806,7 @@ function oy_intro_beam(oy_intro_select, oy_data_flag, oy_data_payload, oy_callba
     if (oy_intro_select===OY_FULL_INTRO) return false;
 
     try {
-        oy_log("[INTRO][BEAM]["+oy_intro_select+"]["+((Date.now()/1000)-OY_BLOCK_TIME)+"]");
+        oy_log("[INTRO][BEAM]["+oy_data_flag+"]["+oy_intro_select+"]["+((Date.now()/1000)-OY_BLOCK_TIME).toFixed(2)+"]");
         if (OY_SIMULATOR_MODE===true) {
             let oy_sim_ref = oy_rand_gen(8);
             OY_SIMULATOR_CALLBACK[oy_sim_ref] = oy_callback;
@@ -2820,7 +2825,7 @@ function oy_intro_beam(oy_intro_select, oy_data_flag, oy_data_payload, oy_callba
                 if (typeof(oy_callback)==="function") {
                     try {
                         let [oy_data_flag, oy_data_payload] = JSON.parse(oy_event.data);
-                        oy_log("[INTRO][SOAK]["+oy_data_flag+"]["+((Date.now()/1000)-OY_BLOCK_TIME)+"]");
+                        oy_log("[INTRO][SOAK]["+oy_data_flag+"]["+oy_intro_select+"]["+((Date.now()/1000)-OY_BLOCK_TIME).toFixed(2)+"]");
                         if (oy_data_flag==="OY_INTRO_UNREADY") {
                             if (OY_BLOCK_BOOT===false&&oy_data_flag!=="OY_INTRO_TIME") oy_intro_punish(oy_intro_select);
                         }
@@ -3370,7 +3375,7 @@ function oy_block_engine() {
             delete OY_COLD[oy_node_select];
         }
         for (let oy_node_select in OY_NODES) {
-            //if (typeof(OY_PEERS[oy_node_select])==="undefined") oy_node_disconnect(oy_node_select);
+            if (typeof(OY_PEERS[oy_node_select])==="undefined") oy_node_disconnect(oy_node_select);
         }
         OY_PROPOSED = {};
         OY_PEERS_PRE = {};
@@ -4728,7 +4733,7 @@ if (OY_NODE_STATE===true) {
                 if (typeof(OY_SIMULATOR_CALLBACK[oy_sim_misc[1]])==="function") {
                     try {
                         let [oy_data_flag, oy_data_payload] = JSON.parse(oy_sim_data);
-                        oy_log("[INTRO][SOAK]["+oy_data_flag+"]["+((Date.now()/1000)-OY_BLOCK_TIME)+"]");
+                        oy_log("[INTRO][SOAK]["+oy_data_flag+"]["+oy_sim_misc[0]+"]["+((Date.now()/1000)-OY_BLOCK_TIME).toFixed(2)+"]");
                         if (oy_data_flag==="OY_INTRO_UNREADY") {
                             if (OY_BLOCK_BOOT===false&&oy_data_flag!=="OY_INTRO_TIME") oy_intro_punish(oy_sim_misc[0]);
                         }
