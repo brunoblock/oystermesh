@@ -639,7 +639,6 @@ function oy_worker_manager(oy_instance, oy_data) {
                 if (oy_nonce_select>=OY_WORK_BITS.length) oy_nonce_select = Math.floor(Math.random()*OY_WORK_BITS.length);
             }
             else {
-                if (OY_DIVE_GRADE===true&&OY_WORK_SOLUTIONS.indexOf(null)!==-1) oy_log("BLUE: "+JSON.stringify([OY_WORK_SOLUTIONS, OY_WORK_GRADES]), 2);
                 oy_nonce_select = OY_WORK_GRADES.indexOf(null);
                 if (oy_nonce_select===-1) {
                     oy_nonce_select = OY_WORK_GRADES.indexOf(true);
