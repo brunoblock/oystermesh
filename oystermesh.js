@@ -47,7 +47,7 @@ const OY_PEER_MAX = 6;//maximum mutual peers
 const OY_PEER_FULL_MIN = 4;
 let OY_PEER_CUT = 0.3;//minimum percentage threshold to be safe from being selected as a potential weakest peer, higher is less peers safe
 const OY_INTRO_TRIP = [0.8, 800];
-let OY_WORK_MATCH = 4;//lower is more bandwidth/memory bound, higher is more CPU bound
+const OY_WORK_MATCH = 4;//lower is more bandwidth/memory bound, higher is more CPU bound
 const OY_WORK_MAX = 10000;//10000
 const OY_WORK_MIN = 3;
 let OY_WORK_DELTA = 0.2;
@@ -69,8 +69,8 @@ const OY_META_DAPP_RANGE = 9;//max amount of meshblock amendable dapps including
 const OY_META_FEE = 0.0001*OY_AKOYA_DECIMALS;//meta fee per block per 99 characters - 99 used instead of 100 for space savings on the meshblock
 const OY_NULLING_BUFFER = 0.001*OY_AKOYA_DECIMALS;
 const OY_NODE_MAX = 32;
-let OY_WORKER_CORES_MIN = 2;
-let OY_WORKER_CORES_MAX = 2;
+let OY_WORKER_CORES_MIN = 1;
+let OY_WORKER_CORES_MAX = 1;
 const OY_ROUTE_DYNAMIC_KEEP = 200;//how many dynamic identifiers for a routed data sequence to remember and block
 const OY_LATENCY_SIZE = 80;//size of latency ping payload, larger is more accurate yet more taxing
 const OY_LATENCY_LENGTH = 8;//length of rand sequence which is repeated for payload and signed for ID verification
@@ -2285,8 +2285,6 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
         return false;
     }
     if (OY_LATENCY[oy_node_id][0].repeat(OY_LATENCY_SIZE)===oy_data_payload[2]) {//check if payload data matches latency session definition
-        if (typeof(OY_BLOCK_CHALLENGE[oy_node_id])==="undefined") oy_log("BLUE1: "+JSON.stringify([oy_node_id, oy_time_local-OY_BLOCK_TIME]), 2);
-        oy_log("BLUE2: "+JSON.stringify([oy_node_id, oy_time_local-OY_BLOCK_TIME]), 2);
         delete OY_BLOCK_CHALLENGE[oy_node_id];
 
         let oy_latency_result = oy_time_local-OY_LATENCY[oy_node_id][1];
@@ -3522,7 +3520,7 @@ function oy_block_engine() {
         }
 
         if (OY_FULL_INTRO!==false&&OY_FULL_INTRO.indexOf(":")!==-1&&OY_BLOCK_RECORD_KEEP.length>1) {
-            //OY_DIVE_GRADE = true;
+            OY_DIVE_GRADE = true;
             OY_INTRO_MARKER = Math.ceil(((OY_SYNC_LAST[0]>0)?Math.max(OY_BLOCK_SECTORS[0][1]+OY_INTRO_TRIP[1], Math.min(OY_BLOCK_SECTORS[1][1], OY_SYNC_LAST[0]+OY_BLOCK_BUFFER_SPACE[1])):OY_BLOCK_SECTORS[1][1])+(Math.max(...OY_BLOCK_RECORD_KEEP)*1000*OY_BLOCK_RECORD_INTRO_BUFFER));
         }
         else OY_INTRO_MARKER = null;
@@ -3925,7 +3923,6 @@ function oy_block_challenge(oy_challenge_stage) {
         }
         oy_chrono(function() {
             for (let oy_peer_select in OY_PEERS) {
-                oy_log("GREEN2: "+JSON.stringify([oy_peer_select, (Date.now()/1000)-OY_BLOCK_TIME]), 2);
                 oy_latency_test(oy_peer_select, "OY_PEER_ROUTINE", OY_PEERS[oy_peer_select][1]);
             }
         }, OY_BLOCK_BUFFER_CLEAR[1]+OY_MESH_BUFFER[1]);
@@ -4787,7 +4784,6 @@ if (OY_NODE_STATE===true) {
                     OY_VERBOSE_MODE = oy_sim_data[1]['oy_verbose_mode'];
                     OY_BLOCK_BOOT_MARK = oy_sim_data[1]['oy_block_boot_mark'];
                     OY_INTRO_DEFAULT = oy_sim_data[1]['oy_intro_default'];
-                    OY_WORK_MATCH = oy_sim_data[1]['oy_work_match'];
                     OY_LATENCY_GEO_SENS = oy_sim_data[1]['oy_latency_geo_sens'];
                     oy_init();
                 }
