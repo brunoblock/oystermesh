@@ -761,7 +761,10 @@ function oy_worker_point(oy_worker_type) {
 }
 
 function oy_worker_process(oy_worker_type, oy_worker_instance, oy_worker_data) {
-    if (OY_MONO_MODE===true) oy_worker_internal(null, [oy_worker_type, oy_worker_data]);
+    if (OY_MONO_MODE===true) {
+        return true;//TODO remove
+        oy_worker_internal(null, [oy_worker_type, oy_worker_data]);
+    }
     else {
         if (oy_worker_instance===false) {
             for (let i in OY_WORKER_THREADS[oy_worker_type]) {
@@ -2294,6 +2297,8 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
         return false;
     }
     if (OY_LATENCY[oy_node_id][0].repeat(OY_LATENCY_SIZE)===oy_data_payload[2]) {//check if payload data matches latency session definition
+        if (typeof(OY_BLOCK_CHALLENGE[oy_node_id])==="undefined") oy_log("BLUE1: "+JSON.stringify([oy_node_id, oy_time_local-OY_BLOCK_TIME]), 2);
+        oy_log("BLUE2: "+JSON.stringify([oy_node_id, oy_time_local-OY_BLOCK_TIME]), 2);
         delete OY_BLOCK_CHALLENGE[oy_node_id];
 
         let oy_latency_result = oy_time_local-OY_LATENCY[oy_node_id][1];
@@ -3932,9 +3937,10 @@ function oy_block_challenge(oy_challenge_stage) {
         }
         oy_chrono(function() {
             for (let oy_peer_select in OY_PEERS) {
+                oy_log("GREEN2: "+JSON.stringify([oy_peer_select, (Date.now()/1000)-OY_BLOCK_TIME]), 2);
                 oy_latency_test(oy_peer_select, "OY_PEER_ROUTINE", OY_PEERS[oy_peer_select][1]);
             }
-        }, OY_BLOCK_BUFFER_CLEAR[1]+OY_MESH_BUFFER[1]+500);
+        }, OY_BLOCK_BUFFER_CLEAR[1]+OY_MESH_BUFFER[1]);
     }
     else if (oy_challenge_stage===1) {
         for (let oy_peer_select in OY_BLOCK_CHALLENGE) {
@@ -4218,7 +4224,7 @@ function oy_block_process(oy_command_execute, oy_full_flag, oy_jump_flag) {
         let oy_grade_median = oy_calc_median(oy_grade_array);
 
         for (let oy_key_public in oy_block[1]) {
-            if (oy_block[1][oy_key_public][0]>=oy_grade_median) oy_block[1][oy_key_public][1] = 1;
+            if (true||oy_block[1][oy_key_public][0]>=oy_grade_median) oy_block[1][oy_key_public][1] = 1;//TODO restore
         }
         return true;
     }
@@ -4499,7 +4505,7 @@ function oy_block_process(oy_command_execute, oy_full_flag, oy_jump_flag) {
         //if (oy_jump_flag===false&&oy_dive_reward===oy_dive_reward_pool[i]) OY_BLOCK_DIVE_TRACK += oy_dive_share;TODO track self dive earnings
         oy_block[4][oy_key_public] += Math.floor(oy_dive_bounty*(oy_block[1][oy_key_public][0]/oy_block[0][7]));//payout from meshblock maintenance fees and issuance
         oy_block[4][oy_key_public] += oy_block[1][oy_key_public][3];//payout from command transact fees
-        if (oy_block[1][oy_key_public][0]>=oy_grade_median) oy_block[1][oy_key_public][1] = 1;
+        if (true||oy_block[1][oy_key_public][0]>=oy_grade_median) oy_block[1][oy_key_public][1] = 1;//TODO restore
     }
 
     let oy_supply_post = 0;
