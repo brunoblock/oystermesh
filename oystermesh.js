@@ -588,12 +588,7 @@ function oy_worker_internal(oy_static_data, oy_mono_pass) {
 
         if (oy_work_type===0) {
             let [oy_work_self, oy_work_nonce, oy_work_bit, oy_block_metahash, temp, temp2] = oy_work_data;
-            console.log("BOB1: "+oy_work_nonce+" "+oy_work_bit+"/"+OY_WORK_MATCH_WK+" - "+temp+" - "+temp2);
-            if (oy_work_nonce!==-1&&oy_work_bit.length!==OY_WORK_MATCH_WK) {
-                console.log("PINK: "+oy_work_nonce+" "+oy_work_bit+"/"+OY_WORK_MATCH_WK+" - "+temp+" - "+temp2);
-                return false;
-            }
-            console.log("BOB2: "+oy_work_nonce+" - "+temp+" - "+temp2);
+            if (oy_work_nonce!==-1&&oy_work_bit.length!==OY_WORK_MATCH_WK) return false;
 
             if (oy_work_nonce===-1) oy_worker_respond([oy_work_type, [oy_work_self, oy_work_nonce, null, oy_block_metahash, temp, temp2]]);
             else oy_worker_respond([oy_work_type, [oy_work_self, oy_work_nonce, oy_work_mine(oy_work_bit), oy_block_metahash, temp, temp2]]);
@@ -636,15 +631,12 @@ function oy_worker_manager(oy_instance, oy_data) {
     let oy_time_local = Date.now()/1000;
     let oy_time_offset = oy_time_local-OY_BLOCK_TIME;
     if (oy_work_type===0) {
-        let [oy_work_self, oy_work_nonce, oy_work_solution, oy_block_metahash, temp, temp2] = oy_work_data;
+        let [oy_work_self, oy_work_nonce, oy_work_solution, oy_block_metahash] = oy_work_data;
 
-        if (oy_time_offset<OY_BLOCK_SECTORS[0][0]-(OY_BLOCK_BUFFER_CLEAR[0]+OY_MESH_BUFFER[0])||oy_time_offset>OY_BLOCK_SECTORS[0][5]+OY_MESH_BUFFER[0]) {
-            oy_log("SKIPPED: "+JSON.stringify(oy_work_data), 2);
-            return false;
-        }
+        if (oy_time_offset<OY_BLOCK_SECTORS[0][0]-(OY_BLOCK_BUFFER_CLEAR[0]+OY_MESH_BUFFER[0])||oy_time_offset>OY_BLOCK_SECTORS[0][5]+OY_MESH_BUFFER[0]) return false;
 
         if (oy_work_self===true) {
-            oy_log("SOLUTION: "+oy_work_solution+" SOLUTIONS: "+JSON.stringify(OY_WORK_SOLUTIONS)+" BITS: "+JSON.stringify(OY_WORK_BITS)+" GRADES: "+JSON.stringify(OY_WORK_GRADES)+" MISC: "+JSON.stringify([temp, temp2]), 2);
+            //oy_log("SOLUTION: "+oy_work_solution+" SOLUTIONS: "+JSON.stringify(OY_WORK_SOLUTIONS)+" BITS: "+JSON.stringify(OY_WORK_BITS)+" GRADES: "+JSON.stringify(OY_WORK_GRADES), 2);
             if (oy_work_nonce!==-1&&(OY_WORK_SOLUTIONS[oy_work_nonce]===null||oy_calc_grade(oy_work_solution, oy_block_metahash)>OY_WORK_GRADES[oy_work_nonce])) {
                 OY_WORK_SOLUTIONS[oy_work_nonce] = oy_work_solution;
                 OY_WORK_GRADES[oy_work_nonce] = oy_calc_grade(oy_work_solution, oy_block_metahash);
@@ -664,8 +656,6 @@ function oy_worker_manager(oy_instance, oy_data) {
                 }
                 else OY_WORK_GRADES[oy_nonce_select] = true;
             }
-            oy_log("SELECT: "+oy_nonce_select+" "+oy_instance, 2);
-            //if (oy_nonce_select!==-1) OY_WORKER_THREADS[0][oy_instance].postMessage([0, [oy_work_self, oy_nonce_select, OY_WORK_BITS[oy_nonce_select], oy_block_metahash, OY_SELF_SHORT, oy_time_offset]]);
             if (oy_nonce_select!==-1) oy_worker_process(0, oy_instance, [oy_work_self, oy_nonce_select, OY_WORK_BITS[oy_nonce_select], oy_block_metahash, OY_SELF_SHORT, oy_time_offset]);
         }
         else {
@@ -3527,7 +3517,7 @@ function oy_block_engine() {
 
             let oy_sync_crypt = oy_key_sign(OY_SELF_PRIVATE, OY_BLOCK_TIME+oy_command_flat+oy_identity_flat+oy_solutions_flat);
             oy_chrono(function() {
-                oy_log("ORANGE "+((Date.now()/1000)-OY_BLOCK_TIME).toFixed(2), 2);
+                //oy_log("[SYNC_BROADCAST]["+((Date.now()/1000)-OY_BLOCK_TIME).toFixed(2)+"]", 2);
                 oy_data_route("OY_LOGIC_SYNC", "OY_BLOCK_SYNC", [[], [oy_key_sign(OY_SELF_PRIVATE, oy_sync_crypt)], oy_sync_crypt, OY_BLOCK_TIME, oy_command_flat, oy_identity_flat, oy_solutions_flat]);
             }, OY_MESH_BUFFER[1]);//TODO clock skew for peer_request
         }
