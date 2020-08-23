@@ -2891,7 +2891,6 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
             return JSON.stringify(["OY_INTRO_TIME", OY_INTRO_MARKER]);
         }
         else if (oy_data_flag==="OY_INTRO_GET") {
-            oy_log("LEMON: "+OY_BLOCK_FINISH, 2);
             if (OY_BLOCK_FINISH===false) return JSON.stringify(["OY_INTRO_UNREADY", 1]);
             if (oy_data_payload===true&&(oy_time_offset<(OY_INTRO_MARKER/1000)-OY_MESH_BUFFER[0]||oy_time_offset>(OY_INTRO_MARKER/1000)+OY_INTRO_TRIP[0]+OY_MESH_BUFFER[0])) return false;
             if (typeof(OY_INTRO_ALLOCATE[oy_soak_node])!=="undefined"||(oy_data_payload!==false&&oy_data_payload!==true)) {
@@ -3931,9 +3930,11 @@ function oy_block_challenge(oy_challenge_stage) {
         for (let oy_peer_select in OY_PEERS) {
             if (OY_PEERS[oy_peer_select][1]!==0&&oy_peer_select!==OY_JUMP_ASSIGN[0]) OY_BLOCK_CHALLENGE[oy_peer_select] = true;
         }
-        for (let oy_peer_select in OY_PEERS) {
-            oy_latency_test(oy_peer_select, "OY_PEER_ROUTINE", OY_PEERS[oy_peer_select][1]);
-        }
+        oy_chrono(function() {
+            for (let oy_peer_select in OY_PEERS) {
+                oy_latency_test(oy_peer_select, "OY_PEER_ROUTINE", OY_PEERS[oy_peer_select][1]);
+            }
+        }, OY_BLOCK_BUFFER_CLEAR[1]+OY_MESH_BUFFER[1]+500);
     }
     else if (oy_challenge_stage===1) {
         for (let oy_peer_select in OY_BLOCK_CHALLENGE) {
