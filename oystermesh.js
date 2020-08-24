@@ -29,7 +29,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 let OY_BLOCK_RANGE_MIN = 3;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
+const OY_BLOCK_BOOT_BUFFER = 1200;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
@@ -1185,19 +1185,15 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         let oy_time_offset = (Date.now()/1000)-OY_BLOCK_TIME;
         if (OY_BLOCK_HASH===null||oy_time_offset<OY_BLOCK_PEER_SPACE[0]-(OY_BLOCK_BUFFER_CLEAR[0]+OY_MESH_BUFFER[0])||oy_time_offset>OY_BLOCK_SECTORS[0][0]+OY_MESH_BUFFER[0]) return false;
 
-        oy_log("BLUE1", 2);
         if (OY_LIGHT_STATE===false&&(OY_BLOCK_BOOT===true||typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined")) {
             if (OY_FULL_INTRO!==false&&(OY_BLOCK_BOOT===true||OY_BLOCK[1][OY_SELF_PUBLIC][1]===1)) {
-                oy_log("BLUE6", 2);
                 let oy_signal_carry = oy_signal_soak(oy_data_payload[4]);
                 if (!oy_signal_carry||oy_signal_carry[0]!==oy_data_payload[0][0]||typeof(OY_OFFER_COLLECT[oy_signal_carry[0]])!=="undefined"||!oy_key_verify(oy_data_payload[0][0], oy_data_payload[2], OY_BLOCK_HASH+oy_data_payload[3]+oy_data_payload[4])) return false;
                 OY_OFFER_COLLECT[oy_data_payload[0][0]] = [OY_OFFER_COUNTER, oy_data_payload[3], oy_data_payload[0], oy_data_payload[4]];//[[0]:priority_counter/broker_assign, [1]:oy_offer_rand, [2]:passport, [3]:signal_data]
                 OY_OFFER_COUNTER++;
             }
             else {
-                oy_log("BLUE2", 2);
                 if (oy_data_payload[1].length===0) {
-                    oy_log("BLUE3", 2);
                     let oy_intro_select = [null, -1];
                     if (OY_BLOCK_BOOT===true) {
                         for (let oy_key_public in OY_BOOT_INTRO) {
@@ -1209,10 +1205,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                                         break;
                                     }
                                 }
-                                if (oy_select_pass===true) {
-                                    oy_log("BLUE3A: "+oy_key_public, 2);
-                                    oy_intro_select = [OY_SYNC_MAP[0][oy_key_public][1], OY_SYNC_MAP[0][oy_key_public][0]];
-                                }
+                                if (oy_select_pass===true) oy_intro_select = [OY_SYNC_MAP[0][oy_key_public][1], OY_SYNC_MAP[0][oy_key_public][0]];
                             }
                         }
                     }
@@ -1226,29 +1219,19 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                                         break;
                                     }
                                 }
-                                if (oy_select_pass===true) {
-                                    oy_log("BLUE3B: "+oy_key_public, 2);
-                                    oy_intro_select = [OY_SYNC_MAP[0][oy_key_public][1], OY_SYNC_MAP[0][oy_key_public][0]];
-                                }
+                                if (oy_select_pass===true) oy_intro_select = [OY_SYNC_MAP[0][oy_key_public][1], OY_SYNC_MAP[0][oy_key_public][0]];
                             }
                         }
                     }
                     if (oy_intro_select[0]!==null) {
-                        oy_log("BLUE3C", 2);
                         oy_data_payload[1] = oy_intro_select[0];
                         oy_data_route("OY_LOGIC_FOLLOW", "OY_INTRO_OFFER_A", oy_data_payload);
                     }
                 }
-                else {
-                    oy_log("BLUE4", 2);
-                    oy_data_route("OY_LOGIC_FOLLOW", "OY_INTRO_OFFER_A", oy_data_payload);
-                }
+                else oy_data_route("OY_LOGIC_FOLLOW", "OY_INTRO_OFFER_A", oy_data_payload);
             }
         }
-        else {
-            oy_log("BLUE5", 2);
-            oy_data_route("OY_LOGIC_UPSTREAM", "OY_INTRO_OFFER_A", oy_data_payload);
-        }
+        else oy_data_route("OY_LOGIC_UPSTREAM", "OY_INTRO_OFFER_A", oy_data_payload);
     }
     else if (oy_data_flag==="OY_INTRO_OFFER_B") {//OY_LOGIC_FOLLOW
         //oy_data_payload = [oy_passport_passive, oy_passport_follow, oy_offer_crypt, oy_signal_crypt]
@@ -3749,12 +3732,12 @@ function oy_block_engine() {
             OY_BOOT_INTRO = {};
             if (OY_BLOCK_BOOT===true) {
                 for (let oy_key_public in OY_BLOCK_SYNC) {
-                    if (OY_BLOCK_SYNC_PASS[OY_BLOCK_TIME][oy_key_public][0][2]!==0) OY_BOOT_INTRO[oy_key_public] = true;
+                    if (typeof(OY_BLOCK_SYNC_PASS[OY_BLOCK_TIME][oy_key_public])!=="undefined"&&OY_BLOCK_SYNC_PASS[OY_BLOCK_TIME][oy_key_public][0][2]!==0) OY_BOOT_INTRO[oy_key_public] = true;
                 }
             }
 
             let oy_command_execute = [];
-            if (OY_BLOCK_BOOT===false||OY_BLOCK_TIME-OY_BLOCK_BOOT_MARK>=OY_BLOCK_BOOT_BUFFER-((OY_BLOCK_SECTORS[5][0])*2)) {
+            if (OY_BLOCK_BOOT===false||OY_BLOCK_TIME-OY_BLOCK_BOOT_MARK>=OY_BLOCK_BOOT_BUFFER-OY_BLOCK_SECTORS[5][0]) {
                 oy_log("SYNC_PROCESS", 2);
                 for (let oy_key_public in OY_BLOCK_SYNC) {
                     if (OY_BLOCK_SYNC[oy_key_public]===false||OY_BLOCK_SYNC[oy_key_public][1]===false) {
@@ -3858,6 +3841,7 @@ function oy_block_engine() {
             OY_BLOCK_WEIGHT = new Blob([OY_BLOCK_FLAT]).size;
 
             oy_log("[MESHBLOCK][FULL]["+chalk.bolder(OY_BLOCK_HASH)+"]", 1);
+            console.log(OY_BLOCK);
             //oy_log_debug("FULL MESHBLOCK HASH "+OY_BLOCK_HASH);
             //oy_log_debug("HASH: "+OY_BLOCK_HASH+"\nBLOCK: "+OY_BLOCK_FLAT);
 
