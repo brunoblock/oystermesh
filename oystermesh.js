@@ -1203,8 +1203,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                         for (let oy_key_public in OY_BOOT_INTRO) {
                             if (typeof(OY_SYNC_MAP[0][oy_key_public])!=="undefined"&&(OY_SYNC_MAP[0][oy_key_public][0]<oy_intro_select[1]||oy_intro_select[1]===-1)) {
                                 let oy_select_pass = true;
-                                for (let oy_key_public_sub in oy_data_payload[0]) {
-                                    if (OY_SYNC_MAP[0][oy_key_public][1].indexOf(oy_key_public_sub)!==-1) {
+                                for (let i in oy_data_payload[0]) {
+                                    if (OY_SYNC_MAP[0][oy_key_public][1].indexOf(oy_data_payload[0][i])!==-1) {
                                         oy_select_pass = false;
                                         break;
                                     }
@@ -1220,8 +1220,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                         for (let oy_key_public in OY_BLOCK[1]) {
                             if (OY_BLOCK[1][oy_key_public][1]===1&&OY_BLOCK[1][oy_key_public][6]!==0&&typeof(OY_SYNC_MAP[0][oy_key_public])!=="undefined"&&(OY_SYNC_MAP[0][oy_key_public][0]<oy_intro_select[1]||oy_intro_select[1]===-1)) {
                                 let oy_select_pass = true;
-                                for (let oy_key_public_sub in oy_data_payload[0]) {
-                                    if (OY_SYNC_MAP[0][oy_key_public][1].indexOf(oy_key_public_sub)!==-1) {
+                                for (let i in oy_data_payload[0]) {
+                                    if (OY_SYNC_MAP[0][oy_key_public][1].indexOf(oy_data_payload[0][i])!==-1) {
                                         oy_select_pass = false;
                                         break;
                                     }
@@ -3754,7 +3754,8 @@ function oy_block_engine() {
             }
 
             let oy_command_execute = [];
-            if (OY_BLOCK_TIME-OY_BLOCK_BOOT_MARK>OY_BLOCK_BOOT_BUFFER/2) {
+            if (OY_BLOCK_BOOT===false||OY_BLOCK_TIME-OY_BLOCK_BOOT_MARK>=OY_BLOCK_BOOT_BUFFER-((OY_BLOCK_SECTORS[5][0])*2)) {
+                oy_log("SYNC_PROCESS", 2);
                 for (let oy_key_public in OY_BLOCK_SYNC) {
                     if (OY_BLOCK_SYNC[oy_key_public]===false||OY_BLOCK_SYNC[oy_key_public][1]===false) {
                         delete OY_BLOCK_SYNC[oy_key_public];
