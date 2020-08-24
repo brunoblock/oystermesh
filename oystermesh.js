@@ -390,6 +390,7 @@ let OY_BLOCK_NEW = {};
 let OY_BLOCK_CONFIRM = {};
 let OY_BLOCK_HALT = null;
 let OY_DIFF_TRACK = [{}, []];
+let OY_BOOT_INTRO = {};
 let OY_REPORT_HASH = null;
 let OY_CHANNEL_DYNAMIC = {};//track channel broadcasts to ensure allowance compliance
 let OY_CHANNEL_LISTEN = {};//track channels to listen for
@@ -1184,28 +1185,70 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         let oy_time_offset = (Date.now()/1000)-OY_BLOCK_TIME;
         if (OY_BLOCK_HASH===null||oy_time_offset<OY_BLOCK_PEER_SPACE[0]-(OY_BLOCK_BUFFER_CLEAR[0]+OY_MESH_BUFFER[0])||oy_time_offset>OY_BLOCK_SECTORS[0][0]+OY_MESH_BUFFER[0]) return false;
 
+        oy_log("BLUE1", 2);
         if (OY_LIGHT_STATE===false&&(OY_BLOCK_BOOT===true||typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined")) {
             if (OY_FULL_INTRO!==false&&(OY_BLOCK_BOOT===true||OY_BLOCK[1][OY_SELF_PUBLIC][1]===1)) {
+                oy_log("BLUE6", 2);
                 let oy_signal_carry = oy_signal_soak(oy_data_payload[4]);
                 if (!oy_signal_carry||oy_signal_carry[0]!==oy_data_payload[0][0]||typeof(OY_OFFER_COLLECT[oy_signal_carry[0]])!=="undefined"||!oy_key_verify(oy_data_payload[0][0], oy_data_payload[2], OY_BLOCK_HASH+oy_data_payload[3]+oy_data_payload[4])) return false;
                 OY_OFFER_COLLECT[oy_data_payload[0][0]] = [OY_OFFER_COUNTER, oy_data_payload[3], oy_data_payload[0], oy_data_payload[4]];//[[0]:priority_counter/broker_assign, [1]:oy_offer_rand, [2]:passport, [3]:signal_data]
                 OY_OFFER_COUNTER++;
             }
             else {
+                oy_log("BLUE2", 2);
                 if (oy_data_payload[1].length===0) {
+                    oy_log("BLUE3", 2);
                     let oy_intro_select = [null, -1];
-                    for (let oy_key_public in OY_BLOCK[1]) {
-                        if (OY_BLOCK[1][oy_key_public][1]===1&&OY_BLOCK[1][oy_key_public][6]!==0&&typeof(OY_SYNC_MAP[0][oy_key_public])!=="undefined"&&(OY_SYNC_MAP[0][oy_key_public][0]<oy_intro_select[1]||oy_intro_select[1]===-1)) oy_intro_select = [OY_SYNC_MAP[0][oy_key_public][1], OY_SYNC_MAP[0][oy_key_public][0]];
+                    if (OY_BLOCK_BOOT===true) {
+                        for (let oy_key_public in OY_BOOT_INTRO) {
+                            if (typeof(OY_SYNC_MAP[0][oy_key_public])!=="undefined"&&(OY_SYNC_MAP[0][oy_key_public][0]<oy_intro_select[1]||oy_intro_select[1]===-1)) {
+                                let oy_select_pass = true;
+                                for (let oy_key_public_sub in oy_data_payload[0]) {
+                                    if (OY_SYNC_MAP[0][oy_key_public][1].indexOf(oy_key_public_sub)!==-1) {
+                                        oy_select_pass = false;
+                                        break;
+                                    }
+                                }
+                                if (oy_select_pass===true) {
+                                    oy_log("BLUE3A: "+oy_key_public, 2);
+                                    oy_intro_select = [OY_SYNC_MAP[0][oy_key_public][1], OY_SYNC_MAP[0][oy_key_public][0]];
+                                }
+                            }
+                        }
+                    }
+                    else {
+                        for (let oy_key_public in OY_BLOCK[1]) {
+                            if (OY_BLOCK[1][oy_key_public][1]===1&&OY_BLOCK[1][oy_key_public][6]!==0&&typeof(OY_SYNC_MAP[0][oy_key_public])!=="undefined"&&(OY_SYNC_MAP[0][oy_key_public][0]<oy_intro_select[1]||oy_intro_select[1]===-1)) {
+                                let oy_select_pass = true;
+                                for (let oy_key_public_sub in oy_data_payload[0]) {
+                                    if (OY_SYNC_MAP[0][oy_key_public][1].indexOf(oy_key_public_sub)!==-1) {
+                                        oy_select_pass = false;
+                                        break;
+                                    }
+                                }
+                                if (oy_select_pass===true) {
+                                    oy_log("BLUE3B: "+oy_key_public, 2);
+                                    oy_intro_select = [OY_SYNC_MAP[0][oy_key_public][1], OY_SYNC_MAP[0][oy_key_public][0]];
+                                }
+                            }
+                        }
                     }
                     if (oy_intro_select[0]!==null) {
+                        oy_log("BLUE3C", 2);
                         oy_data_payload[1] = oy_intro_select[0];
                         oy_data_route("OY_LOGIC_FOLLOW", "OY_INTRO_OFFER_A", oy_data_payload);
                     }
                 }
-                else oy_data_route("OY_LOGIC_FOLLOW", "OY_INTRO_OFFER_A", oy_data_payload);
+                else {
+                    oy_log("BLUE4", 2);
+                    oy_data_route("OY_LOGIC_FOLLOW", "OY_INTRO_OFFER_A", oy_data_payload);
+                }
             }
         }
-        else oy_data_route("OY_LOGIC_UPSTREAM", "OY_INTRO_OFFER_A", oy_data_payload);
+        else {
+            oy_log("BLUE5", 2);
+            oy_data_route("OY_LOGIC_UPSTREAM", "OY_INTRO_OFFER_A", oy_data_payload);
+        }
     }
     else if (oy_data_flag==="OY_INTRO_OFFER_B") {//OY_LOGIC_FOLLOW
         //oy_data_payload = [oy_passport_passive, oy_passport_follow, oy_offer_crypt, oy_signal_crypt]
@@ -2683,6 +2726,7 @@ function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
             }
             if (oy_data_payload[0].indexOf(oy_node_id)!==-1) {
                 oy_log("[ERROR]["+oy_data_flag+"][OY_ERROR_HOP_ALREADY]", 2);
+                oy_log("RED1: "+JSON.stringify([oy_node_id, oy_data_flag, oy_data_payload]));
                 return false;
             }
         }
@@ -3302,6 +3346,7 @@ function oy_block_reset(oy_reset_flag) {
     OY_BLOCK_RECORD = null;
     OY_BLOCK_RECORD_KEEP = [];
     OY_BLOCK_FINISH = false;
+    OY_BOOT_INTRO = {};
     OY_PEER_OFFER = [null, null, null];
     OY_INTRO_MARKER = null;
     OY_INTRO_PICKUP_COUNT = null;
@@ -3353,10 +3398,6 @@ function oy_block_engine() {
 
         let oy_boot_elapsed = Math.floor((Date.now()/1000)-OY_BLOCK_BOOT_MARK)-OY_BLOCK_BOOT_BUFFER;
         if (OY_BLOCK_HASH!==null) oy_log("[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(oy_peer_full().toString())+"]["+chalk.bolder(((((oy_boot_elapsed/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((oy_boot_elapsed/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(oy_boot_elapsed)+"S]["+JSON.stringify(OY_WORK_SOLUTIONS)+"]", 1);
-
-        if (OY_BLOCK_BOOT===false&&OY_BLOCK_HASH===null) OY_VERBOSE_MODE = true;
-
-        //oy_worker_halt(0);
 
         OY_BLOCK_COMMAND_NONCE = 0;
         OY_BLOCK_SYNC = {};
@@ -3705,6 +3746,13 @@ function oy_block_engine() {
 
             OY_BLOCK_RECORD = Date.now()/1000;
 
+            OY_BOOT_INTRO = {};
+            if (OY_BLOCK_BOOT===true) {
+                for (let oy_key_public in OY_BLOCK_SYNC) {
+                    if (OY_BLOCK_SYNC_PASS[OY_BLOCK_TIME][oy_key_public][0][2]!==0) OY_BOOT_INTRO[oy_key_public] = true;
+                }
+            }
+
             let oy_command_execute = [];
             if (OY_BLOCK_TIME-OY_BLOCK_BOOT_MARK>OY_BLOCK_BOOT_BUFFER/2) {
                 for (let oy_key_public in OY_BLOCK_SYNC) {
@@ -3863,14 +3911,14 @@ function oy_block_engine() {
 
             if (OY_BLOCK_BOOT===true) {
                 OY_SYNC_LAST = [1, 1];
-                OY_SYNC_MAP = [{}, {}];
             }
             else {
                 OY_SYNC_LAST.shift();
                 OY_SYNC_LAST.push(0);
-                OY_SYNC_MAP.shift();
-                OY_SYNC_MAP.push({});
             }
+
+            OY_SYNC_MAP.shift();
+            OY_SYNC_MAP.push({});
 
             oy_block_finish();
 
