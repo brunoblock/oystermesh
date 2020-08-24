@@ -686,7 +686,7 @@ function oy_worker_manager(oy_instance, oy_data) {
     else if (oy_work_type===1) {
         let [oy_data_payload, oy_sync_command, oy_work_grade] = oy_work_data;
 
-        if (oy_state_current()===2&&OY_BLOCK_SYNC[oy_data_payload[0][0]]!==false&&OY_BLOCK_SYNC[oy_data_payload[0][0]][1]===false&&oy_time_offset<OY_BLOCK_SECTORS[1][0]&&oy_block_command_scan(oy_sync_command, false)) {
+        if (oy_state_current()===2&&typeof(OY_BLOCK_SYNC[oy_data_payload[0][0]])!=="undefined"&&OY_BLOCK_SYNC[oy_data_payload[0][0]]!==false&&OY_BLOCK_SYNC[oy_data_payload[0][0]][1]===false&&oy_time_offset<OY_BLOCK_SECTORS[1][0]&&oy_block_command_scan(oy_sync_command, false)) {
             OY_BLOCK_SYNC[oy_data_payload[0][0]] = [oy_data_payload[2], oy_sync_command];
             OY_BLOCK_SYNC_PASS[OY_BLOCK_TIME][oy_data_payload[0][0]] = [JSON.parse(oy_data_payload[5]), JSON.parse(oy_data_payload[6]), 0];
             OY_BLOCK_WORK_GRADE[oy_data_payload[0][0]] = oy_work_grade;
@@ -3528,7 +3528,6 @@ function oy_block_engine() {
                 function oy_signal_local(oy_signal_data) {
                     let oy_signal_crypt = oy_signal_beam(oy_signal_data);
                     OY_PEER_OFFER[2] = oy_signal_crypt;
-                    if (Object.keys(OY_PEERS).length>0) oy_log("OFFER1: "+oy_offer_rand, 2);
                     oy_data_route("OY_LOGIC_UPSTREAM", "OY_INTRO_OFFER_A", [[], [], oy_key_sign(OY_SELF_PRIVATE, OY_BLOCK_HASH+oy_offer_rand+oy_signal_crypt), oy_offer_rand, oy_signal_crypt]);
                 }
                 if (OY_SIMULATOR_MODE===true) {
