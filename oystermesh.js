@@ -462,7 +462,9 @@ function oy_worker_internal(oy_static_data) {
     }
 
     function oy_rand_gen(oy_length) {//DUPLICATED IN MAIN BLOCK
-        return Math.round((Math.pow(36, oy_length+1)-Math.random()*Math.pow(36, oy_length))).toString(36).slice(1);
+        let oy_rand = Math.round((Math.pow(36, oy_length+1)-Math.random()*Math.pow(36, oy_length))).toString(36).slice(1);
+        if (oy_rand.length!==oy_length) return oy_rand_gen(oy_length);
+        return oy_rand;
     }
 
     function oy_calc_avg(oy_array) {//DUPLICATED IN MAIN BLOCK
@@ -793,7 +795,7 @@ function oy_log(oy_log_msg, oy_log_attn = 0) {
             if (oy_log_attn===0) console.log(chalk.white.bgCyan("["+OY_SELF_SHORT+"]["+oy_state_current()+"|"+Object.keys(OY_PEERS).length+"]")+oy_log_msg);
             else if (oy_log_attn===1) console.log(chalk.white.bgCyan("["+OY_SELF_SHORT+"]["+oy_state_current()+"|"+Object.keys(OY_PEERS).length+"]")+chalk.hex('#00c9ff')(oy_log_msg));
             else if (oy_log_attn===2) console.log(chalk.white.bgRed("["+OY_SELF_SHORT+"]["+oy_state_current()+"|"+Object.keys(OY_PEERS).length+"]")+chalk.white.bgMagenta(oy_log_msg));
-            else if (oy_log_attn===3) console.log(chalk.white.bgHex('#007bff')("["+OY_SELF_SHORT+"]["+oy_state_current()+"|"+Object.keys(OY_PEERS).length+"]")+chalk.white.bgHex('#2a91e0')(oy_log_msg));
+            else if (oy_log_attn===3) console.log(chalk.white.bgHex('#2a91e0')("["+OY_SELF_SHORT+"]["+oy_state_current()+"|"+Object.keys(OY_PEERS).length+"]")+chalk.white.bgHex('#007bff')(oy_log_msg));
         }
         else console.log(oy_log_msg);
     }
@@ -926,7 +928,9 @@ function oy_calc_grade(oy_grade_input, oy_grade_entropy) {//DUPLICATED IN WEB WO
 }
 
 function oy_rand_gen(oy_length) {//DUPLICATED IN WEB WORKER BLOCK
-    return Math.round((Math.pow(36, oy_length+1)-Math.random()*Math.pow(36, oy_length))).toString(36).slice(1);
+    let oy_rand = Math.round((Math.pow(36, oy_length+1)-Math.random()*Math.pow(36, oy_length))).toString(36).slice(1);
+    if (oy_rand.length!==oy_length) return oy_rand_gen(oy_length);
+    return oy_rand;
 }
 
 function oy_clone_object(oy_input) {
