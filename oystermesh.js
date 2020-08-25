@@ -795,7 +795,7 @@ function oy_log(oy_log_msg, oy_log_attn = 0) {
             if (oy_log_attn===0) console.log(chalk.white.bgCyan("["+OY_SELF_SHORT+"]["+oy_state_current()+"|"+Object.keys(OY_PEERS).length+"]")+oy_log_msg);
             else if (oy_log_attn===1) console.log(chalk.white.bgCyan("["+OY_SELF_SHORT+"]["+oy_state_current()+"|"+Object.keys(OY_PEERS).length+"]")+chalk.hex('#00c9ff')(oy_log_msg));
             else if (oy_log_attn===2) console.log(chalk.white.bgRed("["+OY_SELF_SHORT+"]["+oy_state_current()+"|"+Object.keys(OY_PEERS).length+"]")+chalk.white.bgMagenta(oy_log_msg));
-            else if (oy_log_attn===3) console.log(chalk.white.bgHex('#2a91e0')("["+OY_SELF_SHORT+"]["+oy_state_current()+"|"+Object.keys(OY_PEERS).length+"]")+chalk.white.bgHex('#007bff')(oy_log_msg));
+            else if (oy_log_attn===3) console.log(chalk.white.bgBlueBright("["+OY_SELF_SHORT+"]["+oy_state_current()+"|"+Object.keys(OY_PEERS).length+"]")+chalk.white.bgHex('#007bff')(oy_log_msg));
         }
         else console.log(oy_log_msg);
     }
