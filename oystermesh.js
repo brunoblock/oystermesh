@@ -1077,6 +1077,7 @@ function oy_peer_add(oy_peer_id, oy_state_flag) {
     OY_PEERS[oy_peer_id][1] = oy_state_flag;
     if (typeof(OY_INTRO_TAG[oy_peer_id])!=="undefined") OY_INTRO_TAG[oy_peer_id] = true;
     if (Object.keys(OY_PEERS).length===1) oy_event_dispatch("oy_peers_recover");
+    oy_log("[START]["+oy_short(oy_peer_id)+"]["+oy_state_flag+"]", 2);
     //oy_log_debug("PEER_ADD: "+OY_SELF_SHORT+" - "+oy_short(oy_peer_id)+" - "+OY_PEERS[oy_peer_id][0]+" - "+OY_PEERS[oy_peer_id][1]);
     return true;
 }
