@@ -300,6 +300,9 @@ let OY_VERBOSE_MODE = true;
 let OY_SIMULATOR_MODE = false;
 let OY_SIMULATOR_CALLBACK = {};
 let OY_FULL_INTRO = false;//default is false, can be set here or via nodejs argv first parameter
+let OY_INTRO_BOOT = {
+    "vnode1.oyster.org:8443":true
+};
 let OY_INTRO_DEFAULT = {
     "vnode1.oyster.org:8443":true
 };
@@ -3604,7 +3607,9 @@ function oy_block_engine() {
             let oy_time_local = Date.now()/1000;
 
             if (OY_BLOCK_HASH===null||Object.keys(OY_PEERS).length<=OY_PEER_MAX/2) {
-                let oy_intro_keep = oy_clone_object(OY_INTRO_DEFAULT);
+                let oy_intro_keep;
+                if (OY_BLOCK_BOOT===true) oy_intro_keep = oy_clone_object(OY_INTRO_BOOT);
+                else oy_intro_keep = oy_clone_object(OY_INTRO_DEFAULT);
                 if (OY_BLOCK_HASH!==null&&OY_BLOCK_BOOT===false) {
                     for (let oy_key_public in OY_BLOCK[1]) {
                         if (OY_BLOCK[1][oy_key_public][6]!==0&&OY_BLOCK[1][oy_key_public][1]===1&&OY_BLOCK[1][oy_key_public][2]>=OY_BLOCK[0][15]&&typeof(oy_intro_keep[OY_BLOCK[1][oy_key_public][6]])==="undefined") oy_intro_keep[OY_BLOCK[1][oy_key_public][6]] = true;
@@ -4718,6 +4723,7 @@ function oy_init(oy_console) {
     oy_event_create("oy_state_full");//trigger-able event for when self becomes a full node
 
     oy_log("[OYSTER]["+chalk.bolder(OY_MESH_DYNASTY)+"]["+chalk.bolder(OY_SELF_SHORT)+"]", 1);
+    oy_log(JSON.stringify({"OY_VERBOSE_MODE":OY_VERBOSE_MODE, "OY_BLOCK_BOOT_MARK":OY_BLOCK_BOOT_MARK, "OY_INTRO_BOOT":OY_INTRO_BOOT, "OY_INTRO_DEFAULT":OY_INTRO_DEFAULT, "OY_LATENCY_GEO_SENS":OY_LATENCY_GEO_SENS}), 1);
 
     if (OY_SIMULATOR_MODE===true) parentPort.postMessage([6, OY_SELF_PUBLIC, OY_FULL_INTRO]);
 
@@ -4800,10 +4806,13 @@ if (OY_NODE_STATE===true) {
                     OY_SIMULATOR_MODE = true;
                     OY_LIGHT_MODE = oy_sim_data[0][0];
                     OY_FULL_INTRO = oy_sim_data[0][1];
-                    OY_VERBOSE_MODE = oy_sim_data[1]['oy_verbose_mode'];
-                    OY_BLOCK_BOOT_MARK = oy_sim_data[1]['oy_block_boot_mark'];
-                    OY_INTRO_DEFAULT = oy_sim_data[1]['oy_intro_default'];
-                    OY_LATENCY_GEO_SENS = oy_sim_data[1]['oy_latency_geo_sens'];
+                    for (let oy_var in oy_sim_data[1]) {
+                        if (oy_var==="OY_VERBOSE_MODE") OY_VERBOSE_MODE = oy_sim_data[1][oy_var];
+                        else if (oy_var==="OY_BLOCK_BOOT_MARK") OY_VERBOSE_MODE = oy_sim_data[1][oy_var];
+                        else if (oy_var==="OY_INTRO_BOOT") OY_VERBOSE_MODE = oy_sim_data[1][oy_var];
+                        else if (oy_var==="OY_INTRO_DEFAULT") OY_VERBOSE_MODE = oy_sim_data[1][oy_var];
+                        else if (oy_var==="OY_LATENCY_GEO_SENS") OY_VERBOSE_MODE = oy_sim_data[1][oy_var];
+                    }
                     oy_init();
                 }
                 else if (oy_sim_node==="OY_SIM_KILL") {
