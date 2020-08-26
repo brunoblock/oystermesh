@@ -4723,7 +4723,7 @@ function oy_init(oy_console) {
     oy_event_create("oy_state_full");//trigger-able event for when self becomes a full node
 
     oy_log("[OYSTER]["+chalk.bolder(OY_MESH_DYNASTY)+"]["+chalk.bolder(OY_SELF_SHORT)+"]", 1);
-    oy_log(JSON.stringify({"OY_VERBOSE_MODE":OY_VERBOSE_MODE, "OY_BLOCK_BOOT_MARK":OY_BLOCK_BOOT_MARK, "OY_INTRO_BOOT":OY_INTRO_BOOT, "OY_INTRO_DEFAULT":OY_INTRO_DEFAULT, "OY_LATENCY_GEO_SENS":OY_LATENCY_GEO_SENS}), 1);
+    oy_log(JSON.stringify({"OY_VERBOSE_MODE":OY_VERBOSE_MODE, "OY_LATENCY_GEO_SENS":OY_LATENCY_GEO_SENS}), 1);
 
     if (OY_SIMULATOR_MODE===true) parentPort.postMessage([6, OY_SELF_PUBLIC, OY_FULL_INTRO]);
 
@@ -4808,10 +4808,10 @@ if (OY_NODE_STATE===true) {
                     OY_FULL_INTRO = oy_sim_data[0][1];
                     for (let oy_var in oy_sim_data[1]) {
                         if (oy_var==="OY_VERBOSE_MODE") OY_VERBOSE_MODE = oy_sim_data[1][oy_var];
-                        else if (oy_var==="OY_BLOCK_BOOT_MARK") OY_VERBOSE_MODE = oy_sim_data[1][oy_var];
-                        else if (oy_var==="OY_INTRO_BOOT") OY_VERBOSE_MODE = oy_sim_data[1][oy_var];
-                        else if (oy_var==="OY_INTRO_DEFAULT") OY_VERBOSE_MODE = oy_sim_data[1][oy_var];
-                        else if (oy_var==="OY_LATENCY_GEO_SENS") OY_VERBOSE_MODE = oy_sim_data[1][oy_var];
+                        else if (oy_var==="OY_BLOCK_BOOT_MARK") OY_BLOCK_BOOT_MARK = oy_sim_data[1][oy_var];
+                        else if (oy_var==="OY_INTRO_BOOT") OY_INTRO_BOOT = oy_sim_data[1][oy_var];
+                        else if (oy_var==="OY_INTRO_DEFAULT") OY_INTRO_DEFAULT = oy_sim_data[1][oy_var];
+                        else if (oy_var==="OY_LATENCY_GEO_SENS") OY_LATENCY_GEO_SENS = oy_sim_data[1][oy_var];
                     }
                     oy_init();
                 }
