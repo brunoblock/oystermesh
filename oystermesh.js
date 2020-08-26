@@ -1837,7 +1837,6 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
 //reports peership data to top, leads to seeing mesh big picture, mesh stability development, not required for mesh operation
 function oy_peer_report() {
-    return true;//TODO restore
     //console.log("REPORT: "+OY_REPORT_HASH+" "+((Date.now()/1000)-OY_BLOCK_TIME));
     let oy_xhttp = new XMLHttpRequest();
     oy_xhttp.onreadystatechange = function() {
@@ -1860,7 +1859,7 @@ function oy_peer_report() {
 
     let oy_report_payload = JSON.stringify([OY_SELF_PUBLIC, oy_state_current(), oy_peers_thin, {}]);
     let oy_report_hash = oy_hash_gen(oy_report_payload);
-    if (true||OY_REPORT_HASH!==oy_report_hash) {//TODO confirm why not replenish node topology data even if duplicated
+    if (OY_REPORT_HASH!==oy_report_hash) {
         OY_REPORT_HASH = oy_report_hash;
         oy_xhttp.open("POST", "https://top.oyster.org/oy_peer_report", true);
         oy_xhttp.send(oy_report_payload);
