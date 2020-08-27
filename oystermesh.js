@@ -44,7 +44,7 @@ let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and s
 let OY_LIGHT_COMMIT = 0.4;
 const OY_PEER_RESERVETIME = 300;//peers are expected to establish latency timing with each other within this interval in seconds
 let OY_PEER_CUT = 0.3;//minimum percentage threshold to be safe from being selected as a potential weakest peer, higher is less peers safe
-const OY_PEER_BOOT = 100;
+const OY_PEER_BOOT = 50;
 const OY_PEER_FULL_MIN = 4;
 let OY_PEER_MAX = 6;//maximum mutual peers
 let OY_PEER_INFLATE = 30;//cannot be larger than OY_NDOE_MAX
@@ -303,12 +303,8 @@ let OY_VERBOSE_MODE = true;
 let OY_SIMULATOR_MODE = false;
 let OY_SIMULATOR_CALLBACK = {};
 let OY_FULL_INTRO = false;//default is false, can be set here or via nodejs argv first parameter
-let OY_INTRO_BOOT = {
-    "vnode1.oyster.org:8443":true
-};
-let OY_INTRO_DEFAULT = {
-    "vnode1.oyster.org:8443":true
-};
+let OY_INTRO_BOOT = "vnode1.oyster.org:8443";
+let OY_INTRO_DEFAULT = ["vnode1.oyster.org:8443"];
 let OY_INTRO_PUNISH = {};
 let OY_INTRO_BAN = {};
 let OY_INTRO_SELECT = null;
@@ -2270,7 +2266,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
             oy_log_debug("TREE: "+JSON.stringify([OY_JUMP_ASSIGN, oy_data_payload]));
         }
         else oy_node_reset(oy_node_id);
-        oy_log("[END]["+oy_short(oy_node_id)+"]["+oy_data_payload+"]", 2);
+        oy_log("[END]["+chalk.bolder(oy_short(oy_node_id))+"]["+chalk.bolder("N")+"]["+chalk.bolder(oy_data_payload)+"]", 2);
     }
     else oy_node_deny(oy_node_id, "OY_DENY_DATA_INCOHERENT");
 }
@@ -3396,7 +3392,7 @@ function oy_block_engine() {
         else OY_BLOCK_BOOT = OY_BLOCK_TIME-OY_BLOCK_BOOT_MARK<OY_BLOCK_BOOT_BUFFER;
         let oy_boot_elapsed = Math.floor((Date.now()/1000)-OY_BLOCK_BOOT_MARK)-OY_BLOCK_BOOT_BUFFER;
 
-        if (OY_FULL_INTRO!==false&&typeof(OY_INTRO_BOOT[OY_FULL_INTRO])!=="undefined") {
+        if (OY_FULL_INTRO!==false&&OY_FULL_INTRO===OY_INTRO_BOOT) {
             if (OY_BLOCK_BOOT===true) {
                 OY_PEER_MAX = OY_PEER_BOOT;
                 OY_PEER_INFLATE = OY_PEER_BOOT;
@@ -3606,7 +3602,7 @@ function oy_block_engine() {
                     OY_PEER_OFFER[1].on("signal", oy_signal_local);
                 }
             }
-            else if (OY_FULL_INTRO.indexOf(":")!==-1&&OY_BLOCK_RECORD_KEEP.length>1&&(OY_BLOCK_BOOT===false||typeof(OY_INTRO_BOOT[OY_FULL_INTRO])!=="undefined")) {
+            else if (OY_FULL_INTRO.indexOf(":")!==-1&&OY_BLOCK_RECORD_KEEP.length>1&&(OY_BLOCK_BOOT===false||OY_FULL_INTRO===OY_INTRO_BOOT)) {
                 let oy_self_allocate = function() {
                     let oy_offer_rand = oy_rand_gen(OY_MESH_SEQUENCE);
                     if (OY_SIMULATOR_MODE===true) OY_INTRO_SELF[oy_offer_rand] = [true, oy_signal_beam(oy_rand_gen(128)), null];
@@ -3656,8 +3652,9 @@ function oy_block_engine() {
 
             if (OY_BLOCK_HASH===null||Object.keys(OY_PEERS).length<=OY_PEER_MAX/2) {
                 let oy_intro_initiate = function(oy_intro_select) {
-                    oy_log("[INTRO][INITIATE]["+oy_intro_select+"]");
                     oy_intro_beam(oy_intro_select, "OY_INTRO_PRE", null, function(oy_data_flag, oy_data_payload) {
+                        oy_log("BLUE "+oy_intro_select+" "+oy_data_flag, 2);
+                        if (oy_data_flag==="OY_INTRO_UNREADY") return false;
                         if (oy_data_flag!=="OY_INTRO_TIME"||!Number.isInteger(oy_data_payload)||oy_data_payload<OY_BLOCK_SECTORS[0][1]||oy_data_payload>OY_BLOCK_SECTORS[4][1]) {
                             oy_intro_punish(oy_intro_select);
                             return false;
@@ -3682,41 +3679,38 @@ function oy_block_engine() {
                         }, oy_data_payload-oy_time_offset);
                     });
                 }
-                if (OY_BLOCK_HASH===null) {
-                    if (OY_BLOCK_BOOT===true) {
-                        for (let oy_intro_select in OY_INTRO_BOOT) {
-                            oy_intro_initiate(oy_intro_select);
+                if (OY_BLOCK_BOOT===true) oy_intro_initiate(OY_INTRO_BOOT);
+                else {
+                    if (OY_BLOCK_HASH===null) {
+                        let oy_intro_default = oy_calc_shuffle(OY_INTRO_DEFAULT);
+                        for (let i in oy_intro_default) {
+                            oy_intro_initiate(oy_intro_default[i]);
                         }
                     }
                     else {
-                        for (let oy_intro_select in OY_INTRO_DEFAULT) {
-                            oy_intro_initiate(oy_intro_select);
+                        let oy_intro_keep = {};
+                        for (let oy_key_public in OY_BLOCK[1]) {
+                            if (OY_BLOCK[1][oy_key_public][6]!==0&&OY_BLOCK[1][oy_key_public][1]===1&&OY_BLOCK[1][oy_key_public][2]>=OY_BLOCK[0][15]&&typeof(oy_intro_keep[OY_BLOCK[1][oy_key_public][6]])==="undefined") oy_intro_keep[OY_BLOCK[1][oy_key_public][6]] = true;
                         }
-                    }
-                }
-                else {
-                    let oy_intro_keep = {};
-                    for (let oy_key_public in OY_BLOCK[1]) {
-                        if (OY_BLOCK[1][oy_key_public][6]!==0&&OY_BLOCK[1][oy_key_public][1]===1&&OY_BLOCK[1][oy_key_public][2]>=OY_BLOCK[0][15]&&typeof(oy_intro_keep[OY_BLOCK[1][oy_key_public][6]])==="undefined") oy_intro_keep[OY_BLOCK[1][oy_key_public][6]] = true;
-                    }
-                    let oy_intro_array = Object.keys(oy_intro_keep);
-                    if (oy_intro_array.length===0) {
-                        let oy_punish_low = -1;
-                        for (let oy_full_intro in OY_INTRO_PUNISH) {
-                            if (OY_INTRO_PUNISH[oy_full_intro]<oy_punish_low||oy_punish_low===-1) oy_punish_low = OY_INTRO_PUNISH[oy_full_intro];
-                        }
-                        let oy_punish_diff = oy_punish_low-1;
-                        if (oy_punish_diff>0) {
-                            oy_punish_low -= oy_punish_diff;
+                        let oy_intro_array = Object.keys(oy_intro_keep);
+                        if (oy_intro_array.length===0) {
+                            let oy_punish_low = -1;
                             for (let oy_full_intro in OY_INTRO_PUNISH) {
-                                OY_INTRO_PUNISH[oy_full_intro] -= oy_punish_diff;
+                                if (OY_INTRO_PUNISH[oy_full_intro]<oy_punish_low||oy_punish_low===-1) oy_punish_low = OY_INTRO_PUNISH[oy_full_intro];
+                            }
+                            let oy_punish_diff = oy_punish_low-1;
+                            if (oy_punish_diff>0) {
+                                oy_punish_low -= oy_punish_diff;
+                                for (let oy_full_intro in OY_INTRO_PUNISH) {
+                                    OY_INTRO_PUNISH[oy_full_intro] -= oy_punish_diff;
+                                }
+                            }
+                            for (let oy_full_intro in OY_INTRO_PUNISH) {
+                                if (OY_INTRO_PUNISH[oy_full_intro]===oy_punish_low) oy_intro_array.push(oy_full_intro);
                             }
                         }
-                        for (let oy_full_intro in OY_INTRO_PUNISH) {
-                            if (OY_INTRO_PUNISH[oy_full_intro]===oy_punish_low) oy_intro_array.push(oy_full_intro);
-                        }
+                        if (oy_intro_array.length>0) oy_intro_initiate(oy_intro_array[Math.floor(Math.random()*oy_intro_array.length)]);
                     }
-                    if (oy_intro_array.length>0) oy_intro_initiate(oy_intro_array[Math.floor(Math.random()*oy_intro_array.length)]);
                 }
             }
 
