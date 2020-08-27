@@ -44,7 +44,7 @@ let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and s
 let OY_LIGHT_COMMIT = 0.4;
 const OY_PEER_RESERVETIME = 300;//peers are expected to establish latency timing with each other within this interval in seconds
 let OY_PEER_MAX = 6;//maximum mutual peers
-const OY_PEER_BOOT = 200;
+const OY_PEER_BOOT = 50;
 const OY_PEER_FULL_MIN = 4;
 let OY_PEER_CUT = 0.3;//minimum percentage threshold to be safe from being selected as a potential weakest peer, higher is less peers safe
 const OY_INTRO_TRIP = [0.8, 800];
@@ -332,6 +332,7 @@ let OY_DATA_PULL = {};//object for tracking data pull threads
 let OY_PEERS = {};
 let OY_PEERS_PRE = {};//tracks nodes that are almost peers, will become peers once PEER_AFFIRM is received from other node
 let OY_PEER_OFFER = [null, null];
+const OY_PEER_BOOT_RESTORE = [OY_PEER_MAX, OY_NODE_MAX];
 let OY_NODES = {};//P2P connection handling for individual nodes
 let OY_COLD = {};//tracking connection shutdowns to specific nodes
 let OY_OFFER_COUNTER = 0;
@@ -1852,8 +1853,11 @@ function oy_peer_report() {
             if (this.responseText!=="OY_REPORT_SUCCESS") oy_log("[TOP][REPORT][FAIL]", 2);
         }
     };
+
+    let oy_report_pass = false;
     let oy_peers_thin = {};
     for (let oy_peer_select in OY_PEERS) {
+        oy_report_pass = true;
         oy_peers_thin[oy_peer_select] = OY_PEERS[oy_peer_select].slice();
         oy_peers_thin[oy_peer_select][4] = null;
         oy_peers_thin[oy_peer_select][6] = null;
@@ -1861,8 +1865,10 @@ function oy_peer_report() {
         oy_peers_thin[oy_peer_select][10] = null;
     }
 
-    oy_xhttp.open("POST", "https://top.oyster.org/oy_peer_report", true);
-    oy_xhttp.send(JSON.stringify([OY_SELF_PUBLIC, oy_state_current(), oy_peers_thin, {}]));
+    if (oy_report_pass===true) {
+        oy_xhttp.open("POST", "https://top.oyster.org/oy_peer_report", true);
+        oy_xhttp.send(JSON.stringify([OY_SELF_PUBLIC, oy_state_current(), oy_peers_thin, {}]));
+    }
 }
 
 function oy_node_deny(oy_node_id, oy_deny_reason) {
@@ -3384,14 +3390,34 @@ function oy_block_engine() {
         OY_BLOCK_NEXT = OY_BLOCK_TIME+OY_BLOCK_SECTORS[5][0];
         if (OY_BLOCK_TIME<OY_BLOCK_BOOT_MARK) OY_BLOCK_BOOT = null;
         else OY_BLOCK_BOOT = OY_BLOCK_TIME-OY_BLOCK_BOOT_MARK<OY_BLOCK_BOOT_BUFFER;
+        let oy_boot_elapsed = Math.floor((Date.now()/1000)-OY_BLOCK_BOOT_MARK)-OY_BLOCK_BOOT_BUFFER;
 
-        if (OY_BLOCK_BOOT===true&&OY_FULL_INTRO!==false&&typeof(OY_INTRO_BOOT[OY_FULL_INTRO])!=="undefined") {
-            OY_PEER_MAX = OY_PEER_BOOT;
-            OY_NODE_MAX = OY_PEER_BOOT*2;
+        if (OY_FULL_INTRO!==false&&typeof(OY_INTRO_BOOT[OY_FULL_INTRO])!=="undefined") {
+            if (OY_BLOCK_BOOT===true) {
+                OY_PEER_MAX = OY_PEER_BOOT;
+                OY_NODE_MAX = OY_PEER_BOOT*2;
+            }
+            else {
+                OY_PEER_MAX = OY_PEER_BOOT_RESTORE[0];
+                OY_NODE_MAX = OY_PEER_BOOT_RESTORE[1];
+                if (oy_boot_elapsed<=OY_BLOCK_BOOT_BUFFER) {
+                    let oy_local_max = Math.ceil(OY_PEER_BOOT/(OY_BLOCK_BOOT_BUFFER/OY_BLOCK_SECTORS[5][0]));
+                    let oy_drop_counter = 0;
+                    while (Object.keys(OY_PEERS).length>OY_PEER_MAX) {
+                        if (oy_drop_counter===oy_local_max) break;
+                        let oy_peer_weak = [null, -1];
+                        for (let oy_peer_select in OY_PEERS) {
+                            if (OY_PEERS[oy_peer_select][3]>oy_peer_weak[1]) oy_peer_weak = [oy_peer_select, OY_PEERS[oy_peer_select][3]];
+                        }
+                        if (oy_peer_weak[0]==null) break;
+                        oy_node_deny(oy_peer_weak[0], "OY_DENY_BOOT_DROP");
+                        oy_drop_counter++;
+                    }
+                }
+            }
         }
 
-        let oy_boot_elapsed = Math.floor((Date.now()/1000)-OY_BLOCK_BOOT_MARK)-OY_BLOCK_BOOT_BUFFER;
-        if (OY_BLOCK_HASH!==null) oy_log("[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2))+"L]["+chalk.bolder(oy_peer_full().toString())+"]["+chalk.bolder(((((oy_boot_elapsed/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((oy_boot_elapsed/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(oy_boot_elapsed)+"S]["+JSON.stringify(OY_WORK_SOLUTIONS)+"]", 1);
+        if (OY_BLOCK_HASH!==null) oy_log("[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2))+"L]["+chalk.bolder(OY_FULL_INTRO.toString())+"]["+chalk.bolder(oy_peer_full().toString())+"]["+chalk.bolder(((((oy_boot_elapsed/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((oy_boot_elapsed/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(oy_boot_elapsed)+"S]["+JSON.stringify(OY_WORK_SOLUTIONS)+"]", 1);
 
         OY_BLOCK_COMMAND_NONCE = 0;
         OY_BLOCK_SYNC = {};
