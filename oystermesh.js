@@ -2984,6 +2984,15 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
                             }
                         }
                     }
+                }
+                let oy_intro_pass = false;
+                for (let oy_key_public in OY_INTRO_PASS) {
+                    if (typeof(OY_PEERS[oy_key_public])==="undefined") {
+                        oy_intro_pass = true;
+                        break;
+                    }
+                }
+                if ((typeof(OY_INTRO_PASS[oy_soak_node])!=="undefined"&&typeof(OY_PEERS[oy_soak_node])==="undefined")||oy_intro_pass===false) {
                     if (oy_signal_array.length===0&&Object.keys(OY_PEERS).length<OY_PEER_MAX&&Object.keys(OY_INTRO_SELF).length>0) {
                         for (let oy_offer_rand in OY_INTRO_SELF) {
                             if (OY_INTRO_SELF[oy_offer_rand][1]===null||OY_INTRO_SELF[oy_offer_rand][2]!==null) continue;
