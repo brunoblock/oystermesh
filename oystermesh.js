@@ -3471,7 +3471,7 @@ function oy_block_engine() {
             }
         }
 
-        if (OY_BLOCK_HASH!==null) oy_log("[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2))+"L]["+chalk.bolder(OY_FULL_INTRO.toString())+"]["+chalk.bolder(oy_peer_full().toString())+"]["+chalk.bolder(((((oy_boot_elapsed/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((oy_boot_elapsed/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(oy_boot_elapsed)+"S]["+JSON.stringify(OY_WORK_SOLUTIONS)+"]", 1);
+        if (OY_BLOCK_HASH!==null) oy_log("[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_BLOCK_STABILITY)+"ST]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2))+"L]["+chalk.bolder(OY_FULL_INTRO.toString())+"]["+chalk.bolder(oy_peer_full().toString())+"]["+chalk.bolder(((((oy_boot_elapsed/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((oy_boot_elapsed/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(oy_boot_elapsed)+"S]["+JSON.stringify(OY_WORK_SOLUTIONS)+"]", 1);
 
         OY_BLOCK_COMMAND_NONCE = 0;
         OY_BLOCK_SYNC = {};
@@ -3712,7 +3712,6 @@ function oy_block_engine() {
             if (OY_BLOCK_HASH===null||Object.keys(OY_PEERS).length<=OY_PEER_MAX/2) {
                 let oy_intro_initiate = function(oy_intro_select) {
                     oy_intro_beam(oy_intro_select, "OY_INTRO_PRE", (OY_FULL_INTRO!==false&&typeof(OY_INTRO_DEFAULT[OY_FULL_INTRO])!=="undefined")?[OY_FULL_INTRO, oy_key_sign(OY_SELF_PRIVATE, OY_BLOCK_TIME.toString())]:null, function(oy_data_flag, oy_data_payload) {
-                        oy_log("BLUE2 "+oy_intro_select, 2);
                         if (oy_data_flag==="OY_INTRO_UNREADY") return false;
                         if (oy_data_flag!=="OY_INTRO_TIME"||!Number.isInteger(oy_data_payload)||oy_data_payload<OY_BLOCK_SECTORS[0][1]||oy_data_payload>OY_BLOCK_SECTORS[4][1]) {
                             oy_intro_punish(oy_intro_select);
@@ -4282,8 +4281,8 @@ function oy_block_light() {
 
 function oy_block_range(oy_mesh_range_new) {
     if (OY_BLOCK[0][2]-oy_mesh_range_new>=OY_BLOCK[0][2]*OY_BLOCK_RANGE_KILL) {
-        //oy_block_reset("OY_RESET_RANGE_KILL");
-        //return false;
+        oy_block_reset("OY_RESET_RANGE_KILL");
+        return false;
     }
     OY_BLOCK[0][2] = oy_mesh_range_new;
 
