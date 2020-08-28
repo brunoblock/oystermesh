@@ -314,6 +314,7 @@ let OY_INTRO_SOLUTIONS = {};
 let OY_INTRO_MARKER = null;
 let OY_INTRO_PICKUP_COUNT = null;
 let OY_INTRO_ALLOCATE = {};
+let OY_INTRO_PASS = {};
 let OY_INTRO_SELF = {};
 let OY_INTRO_TAG = {};
 let OY_PASSIVE_MODE = false;//console output is silenced, and no explicit inputs are expected
@@ -2936,10 +2937,15 @@ function oy_intro_beam(oy_intro_select, oy_data_flag, oy_data_payload, oy_callba
 
 function oy_intro_soak(oy_soak_node, oy_soak_data) {
     //try {
-        if (typeof(OY_INTRO_BAN[oy_soak_data])!=="undefined") return false;
-        if (oy_state_current()!==2||OY_INTRO_MARKER===null||OY_BLOCK_RECORD_KEEP.length<=1||(typeof(OY_INTRO_ALLOCATE[oy_soak_node])==="undefined"&&Object.keys(OY_INTRO_ALLOCATE).length>=OY_OFFER_PICKUP.length+(OY_PEER_MAX-Object.keys(OY_PEERS).length))||(OY_BLOCK_BOOT===false&&(typeof(OY_BLOCK[1][OY_SELF_PUBLIC])==="undefined"||OY_BLOCK[1][OY_SELF_PUBLIC][1]===0||OY_BLOCK[1][OY_SELF_PUBLIC][2]<OY_BLOCK[0][15]))) return JSON.stringify(["OY_INTRO_UNREADY", 0]);
         let oy_time_offset = (Date.now()/1000)-OY_BLOCK_TIME;
         let [oy_data_flag, oy_data_payload] = JSON.parse(oy_soak_data);
+
+        if (oy_data_payload==="OY_INTRO_PRE"&&oy_data_payload!==null&&typeof(oy_data_payload)==="object"&&typeof(OY_INTRO_DEFAULT[oy_data_payload[0]])!=="undefined"&&oy_key_verify(OY_INTRO_DEFAULT[oy_data_payload[0]], oy_data_payload[1], OY_BLOCK_TIME)) OY_INTRO_PASS[oy_soak_node] = true;
+        else {
+            if (typeof(OY_INTRO_BAN[oy_soak_node])!=="undefined") return false;
+            if (oy_state_current()!==2||OY_INTRO_MARKER===null||OY_BLOCK_RECORD_KEEP.length<=1||(typeof(OY_INTRO_ALLOCATE[oy_soak_node])==="undefined"&&Object.keys(OY_INTRO_ALLOCATE).length>=OY_OFFER_PICKUP.length+(OY_PEER_MAX-Object.keys(OY_PEERS).length))||(OY_BLOCK_BOOT===false&&(typeof(OY_BLOCK[1][OY_SELF_PUBLIC])==="undefined"||OY_BLOCK[1][OY_SELF_PUBLIC][1]===0||OY_BLOCK[1][OY_SELF_PUBLIC][2]<OY_BLOCK[0][15]))) return JSON.stringify(["OY_INTRO_UNREADY", 0]);
+        }
+
         if (oy_data_flag==="OY_INTRO_PRE") {
             if (oy_time_offset<OY_BLOCK_SECTORS[0][0]-(OY_INTRO_TRIP[0]+OY_MESH_BUFFER[0])||oy_time_offset>OY_BLOCK_SECTORS[0][0]+OY_MESH_BUFFER[0]) return false;
             return JSON.stringify(["OY_INTRO_TIME", OY_INTRO_MARKER]);
@@ -2962,7 +2968,7 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
             return JSON.stringify(["OY_INTRO_WORK", [OY_BLOCK_METAHASH, oy_work_queue]]);
         }
         else if (oy_data_flag==="OY_INTRO_DONE") {
-            if (OY_BLOCK_FINISH===false||oy_data_payload.length!==4||(oy_data_payload[0]!==false&&oy_data_payload[0]!==true)||!oy_key_check(oy_data_payload[1])||typeof(oy_data_payload[3])!=="object"||Object.keys(oy_data_payload[3]).length!==Math.ceil(OY_BLOCK[0][3]/OY_WORK_INTRO)||!oy_key_verify(oy_data_payload[1], oy_data_payload[2], JSON.stringify(oy_data_payload[3]))) {
+            if (OY_BLOCK_FINISH===false||oy_data_payload===null||oy_data_payload.length!==4||(oy_data_payload[0]!==false&&oy_data_payload[0]!==true)||!oy_key_check(oy_data_payload[1])||typeof(oy_data_payload[3])!=="object"||Object.keys(oy_data_payload[3]).length!==Math.ceil(OY_BLOCK[0][3]/OY_WORK_INTRO)||!oy_key_verify(oy_data_payload[1], oy_data_payload[2], JSON.stringify(oy_data_payload[3]))) {
                 OY_INTRO_BAN[oy_soak_node] = true;
                 return false;
             }
@@ -3372,6 +3378,7 @@ function oy_block_reset(oy_reset_flag) {
     OY_INTRO_MARKER = null;
     OY_INTRO_PICKUP_COUNT = null;
     OY_INTRO_ALLOCATE = {};
+    OY_INTRO_PASS = {};
     OY_INTRO_SELF = {};
     OY_INTRO_BAN = {};
     OY_BLOCK_CHALLENGE = {};
@@ -3470,6 +3477,7 @@ function oy_block_engine() {
         OY_INTRO_SOLUTIONS = {};
         OY_INTRO_PICKUP_COUNT = null;
         OY_INTRO_ALLOCATE = {};
+        OY_INTRO_PASS = {};
         OY_INTRO_SELF = {};
         OY_INTRO_TAG = {};
         OY_INTRO_BAN = {};
@@ -3608,7 +3616,7 @@ function oy_block_engine() {
             }
         }
 
-        if (OY_FULL_INTRO!==false&&OY_FULL_INTRO.indexOf(":")!==-1&&OY_BLOCK_RECORD_KEEP.length>1) {
+        if (OY_FULL_INTRO!==false&&OY_BLOCK_RECORD_KEEP.length>1) {
             OY_DIVE_GRADE = true;
             OY_INTRO_MARKER = Math.ceil(((OY_SYNC_LAST[0]>0)?Math.max(OY_BLOCK_SECTORS[0][1]+OY_INTRO_TRIP[1], Math.min(OY_BLOCK_SECTORS[1][1], OY_SYNC_LAST[0]+OY_BLOCK_BUFFER_SPACE[1])):OY_BLOCK_SECTORS[1][1])+(Math.max(...OY_BLOCK_RECORD_KEEP)*1000*OY_BLOCK_RECORD_INTRO_BUFFER));
         }
@@ -3633,7 +3641,7 @@ function oy_block_engine() {
                     OY_PEER_OFFER[1].on("signal", oy_signal_local);
                 }
             }
-            else if (OY_FULL_INTRO.indexOf(":")!==-1&&OY_BLOCK_RECORD_KEEP.length>1&&(OY_BLOCK_BOOT===false||OY_FULL_INTRO===OY_INTRO_BOOT)) {
+            else if (OY_BLOCK_RECORD_KEEP.length>1&&(OY_BLOCK_BOOT===false||OY_FULL_INTRO===OY_INTRO_BOOT)) {
                 let oy_self_allocate = function() {
                     let oy_offer_rand = oy_rand_gen(OY_MESH_SEQUENCE);
                     if (OY_SIMULATOR_MODE===true) OY_INTRO_SELF[oy_offer_rand] = [true, oy_signal_beam(oy_rand_gen(128)), null];
@@ -3684,7 +3692,7 @@ function oy_block_engine() {
             if (OY_BLOCK_HASH===null||Object.keys(OY_PEERS).length<=OY_PEER_MAX/2) {
                 let oy_intro_initiate = function(oy_intro_select) {
                     oy_log("BLUE1 "+oy_intro_select, 2);
-                    oy_intro_beam(oy_intro_select, "OY_INTRO_PRE", null, function(oy_data_flag, oy_data_payload) {
+                    oy_intro_beam(oy_intro_select, "OY_INTRO_PRE", (OY_FULL_INTRO!==false&&typeof(OY_INTRO_DEFAULT[OY_FULL_INTRO])!=="undefined")?[OY_FULL_INTRO, oy_key_sign(OY_SELF_PRIVATE, OY_BLOCK_TIME)]:null, function(oy_data_flag, oy_data_payload) {
                         oy_log("BLUE2 "+oy_intro_select+" "+oy_data_flag, 2);
                         if (oy_data_flag==="OY_INTRO_UNREADY") return false;
                         if (oy_data_flag!=="OY_INTRO_TIME"||!Number.isInteger(oy_data_payload)||oy_data_payload<OY_BLOCK_SECTORS[0][1]||oy_data_payload>OY_BLOCK_SECTORS[4][1]) {
@@ -3771,7 +3779,7 @@ function oy_block_engine() {
 
             if (OY_BLOCK_UPTIME===null&&Object.keys(OY_PEERS).length>0) OY_BLOCK_UPTIME = oy_time_local;
 
-            if ((OY_FULL_INTRO!==false&&OY_FULL_INTRO.indexOf(":")!==-1&&OY_BLOCK_RECORD_KEEP.length>1)&&(OY_BLOCK_BOOT===true||(typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined"&&OY_BLOCK[1][OY_SELF_PUBLIC][1]===1))) {
+            if ((OY_FULL_INTRO!==false&&OY_BLOCK_RECORD_KEEP.length>1)&&(OY_BLOCK_BOOT===true||(typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined"&&OY_BLOCK[1][OY_SELF_PUBLIC][1]===1))) {
                 OY_OFFER_PICKUP = [];
                 for (let oy_key_public in OY_OFFER_COLLECT) {
                     if (typeof(OY_BLOCK[1][oy_key_public])!=="undefined") OY_OFFER_PICKUP.push([oy_key_public, OY_OFFER_COLLECT[oy_key_public][3], OY_BLOCK[1][oy_key_public][0], OY_BLOCK[1][oy_key_public][2]]);
