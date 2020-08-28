@@ -78,7 +78,8 @@ const OY_ROUTE_DYNAMIC_KEEP = 200;//how many dynamic identifiers for a routed da
 const OY_LATENCY_SIZE = 80;//size of latency ping payload, larger is more accurate yet more taxing
 const OY_LATENCY_LENGTH = 8;//length of rand sequence which is repeated for payload and signed for ID verification
 const OY_LATENCY_TRACK = 200;//how many latency measurements to keep at a time per peer
-let OY_LATENCY_GEO_SENS = 2.5;//percentage buffer for comparing latency with peers, higher means less likely weakest peer will get dropped and mesh is less geo-sensitive
+let OY_LATENCY_GEO_MIN = 1;//minimum buffer for comparing latency with peers, higher means less likely weakest peer will get dropped and mesh is less geo-sensitive
+let OY_LATENCY_GEO_MULTI = 1.2;
 const OY_DATA_MAX = 250000;//max size of data that can be sent to another node
 const OY_DATA_CHUNK = 125000;//chunk size by which data is split up and sent per transmission
 const OY_DATA_PURGE = 10;//how many handles to delete if indexedDB limit is reached
@@ -2354,7 +2355,7 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
                         OY_PEERS[oy_peer_select][9]<OY_PEER_CUT&&
                         (oy_state_current()!==2||OY_LATENCY[oy_node_id][4]===2||OY_PEERS[oy_peer_select][1]!==2||typeof(OY_BLOCK[1][oy_peer_select])==="undefined")||OY_JUMP_ASSIGN[0]===oy_node_id) oy_peer_weak = [oy_peer_select, OY_PEERS[oy_peer_select][3]];
                 }
-                if (oy_peer_weak[0]!==null&&oy_latency_result*OY_LATENCY_GEO_SENS<oy_peer_weak[1]) {
+                if (oy_peer_weak[0]!==null&&oy_latency_result*Math.max(OY_LATENCY_GEO_MIN, OY_BLOCK_STABILITY*OY_LATENCY_GEO_MULTI)<oy_peer_weak[1]&&OY_BLOCK_BOOT===false) {
                     if (OY_JUMP_ASSIGN[0]===oy_node_id) oy_log_debug("JUMP_DEBUG_LATENCY_D: "+oy_node_id);
                     oy_node_deny(oy_peer_weak[0], "OY_DENY_LATENCY_DROP");
                     oy_accept_response();
@@ -3471,7 +3472,7 @@ function oy_block_engine() {
             }
         }
 
-        if (OY_BLOCK_HASH!==null) oy_log("[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_BLOCK_STABILITY)+"ST]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2))+"L]["+chalk.bolder(OY_FULL_INTRO.toString())+"]["+chalk.bolder(oy_peer_full().toString())+"]["+chalk.bolder(((((oy_boot_elapsed/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((oy_boot_elapsed/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(oy_boot_elapsed)+"S]["+JSON.stringify(OY_WORK_SOLUTIONS)+"]", 1);
+        if (OY_BLOCK_HASH!==null) oy_log("[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_BLOCK_STABILITY.toFixed(2))+"ST]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2))+"L]["+chalk.bolder(OY_FULL_INTRO.toString())+"]["+chalk.bolder(oy_peer_full().toString())+"]["+chalk.bolder(((((oy_boot_elapsed/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((oy_boot_elapsed/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(oy_boot_elapsed)+"S]["+JSON.stringify(OY_WORK_SOLUTIONS)+"]", 1);
 
         OY_BLOCK_COMMAND_NONCE = 0;
         OY_BLOCK_SYNC = {};
@@ -4987,7 +4988,8 @@ if (OY_NODE_STATE===true) {
                         else if (oy_var==="OY_BLOCK_BOOT_MARK") OY_BLOCK_BOOT_MARK = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_INTRO_BOOT") OY_INTRO_BOOT = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_INTRO_DEFAULT") OY_INTRO_DEFAULT = oy_sim_data[1][oy_var];
-                        else if (oy_var==="OY_LATENCY_GEO_SENS") OY_LATENCY_GEO_SENS = oy_sim_data[1][oy_var];
+                        else if (oy_var==="OY_LATENCY_GEO_MIN") OY_LATENCY_GEO_MIN = oy_sim_data[1][oy_var];
+                        else if (oy_var==="OY_LATENCY_GEO_MULTI") OY_LATENCY_GEO_MULTI = oy_sim_data[1][oy_var];
                     }
                     oy_init();
                 }
