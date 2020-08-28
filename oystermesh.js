@@ -19,7 +19,7 @@ const OY_MESH_DEPOSIT_CHANCE = 0.5;//probability that self will deposit pushed d
 const OY_MESH_FULLFILL_CHANCE = 0.2;//probability that data is stored whilst fulfilling a pull request, this makes data intelligently migrate and recommit overtime
 const OY_MESH_SOURCE = 3;//node in route passport (from destination) that is assigned with defining the source variable//TODO remove?
 const OY_MESH_SEQUENCE = 8;
-const OY_BLOCK_LOOP = [20, 140];//a lower value means increased accuracy for detecting the start of the next meshblock
+const OY_BLOCK_LOOP = [20, 60];//a lower value means increased accuracy for detecting the start of the next meshblock
 const OY_BLOCK_STABILITY_TRIGGER = 3;//mesh range history minimum to trigger reliance on real stability value
 const OY_BLOCK_STABILITY_LIMIT = 12;//mesh range history to keep to calculate meshblock stability, time is effectively value x 20 seconds
 const OY_BLOCK_EPOCH_MACRO = 40;//360, cadence in blocks to perform epoch processing - 6 hr interval
@@ -2356,7 +2356,7 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
                         OY_PEERS[oy_peer_select][9]<OY_PEER_CUT&&
                         (oy_state_current()!==2||OY_LATENCY[oy_node_id][4]===2||OY_PEERS[oy_peer_select][1]!==2||typeof(OY_BLOCK[1][oy_peer_select])==="undefined")||OY_JUMP_ASSIGN[0]===oy_node_id) oy_peer_weak = [oy_peer_select, OY_PEERS[oy_peer_select][3]];
                 }
-                if (oy_peer_weak[0]!==null&&oy_latency_result*Math.max(OY_LATENCY_GEO_MIN, (OY_BLOCK_BOOT===true||OY_BLOCK_ELAPSED<=OY_BLOCK_BOOT_BUFFER)?0:OY_BLOCK_STABILITY*OY_LATENCY_GEO_MULTI)<oy_peer_weak[1]) {
+                if (oy_peer_weak[0]!==null&&oy_latency_result*Math.max(OY_LATENCY_GEO_MIN, (OY_BLOCK_BOOT===true||OY_BLOCK_ELAPSED<=OY_BLOCK_BOOT_BUFFER*6)?0:(OY_BLOCK_STABILITY*OY_LATENCY_GEO_MULTI))<oy_peer_weak[1]) {
                     if (OY_JUMP_ASSIGN[0]===oy_node_id) oy_log_debug("JUMP_DEBUG_LATENCY_D: "+oy_node_id);
                     oy_node_deny(oy_peer_weak[0], "OY_DENY_LATENCY_DROP");
                     oy_accept_response();
@@ -3439,7 +3439,7 @@ function oy_block_reset(oy_reset_flag) {
 
 function oy_block_engine() {
     let oy_block_time_local = oy_block_time();
-    oy_chrono(oy_block_engine, (OY_LIGHT_MODE===false)?OY_BLOCK_LOOP[0]:OY_BLOCK_LOOP[1]);
+    setTimeout(oy_block_engine, (OY_LIGHT_MODE===false)?OY_BLOCK_LOOP[0]:OY_BLOCK_LOOP[1]);
     if (oy_block_time_local!==OY_BLOCK_TIME&&(oy_block_time_local/10)%6===0) {
         OY_BLOCK_TIME = oy_block_time_local;
         OY_BLOCK_NEXT = OY_BLOCK_TIME+OY_BLOCK_SECTORS[5][0];
@@ -4284,6 +4284,7 @@ function oy_block_light() {
 
 function oy_block_range(oy_mesh_range_new) {
     if (OY_BLOCK[0][2]-oy_mesh_range_new>=OY_BLOCK[0][2]*OY_BLOCK_RANGE_KILL) {
+        oy_log("RANGE_KILL: "+OY_BLOCK[0][2]+" -> "+oy_mesh_range_new, 2);
         oy_block_reset("OY_RESET_RANGE_KILL");
         return false;
     }
