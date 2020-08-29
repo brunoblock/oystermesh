@@ -2342,7 +2342,7 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
                 }
             }
             if (OY_JUMP_ASSIGN[0]===oy_node_id) oy_log_debug("JUMP_DEBUG_LATENCY_A: "+OY_LATENCY[oy_node_id][2]+" - "+oy_node_id);
-            if (((((OY_LIGHT_MODE===OY_LIGHT_STATE||(OY_LIGHT_MODE===true&&OY_LIGHT_STATE===false))&&Object.keys(OY_PEERS).length<OY_PEER_MAX)||(OY_LIGHT_MODE===false&&OY_LIGHT_STATE===true&&Object.keys(OY_PEERS).length<OY_PEER_MAX-1))&&(oy_state_current()!==2||OY_LATENCY[oy_node_id][4]===2||Object.keys(OY_PEERS).length-oy_full_count<OY_PEER_MAX-OY_PEER_FULL_MIN))||(OY_LATENCY[oy_node_id][3]===0&&Object.keys(OY_PEERS).length<OY_PEER_INFLATE)||(OY_JUMP_ASSIGN[0]===oy_node_id&&Object.keys(OY_PEERS).length<=OY_PEER_MAX)) {//TODO test system without jump bypass once jumping works
+            if (((((OY_LIGHT_MODE===OY_LIGHT_STATE||(OY_LIGHT_MODE===true&&OY_LIGHT_STATE===false))&&Object.keys(OY_PEERS).length<OY_PEER_MAX)||(OY_LIGHT_MODE===false&&OY_LIGHT_STATE===true&&Object.keys(OY_PEERS).length<OY_PEER_MAX-1))&&(oy_state_current()!==2||OY_LATENCY[oy_node_id][4]===2||Object.keys(OY_PEERS).length-oy_full_count<OY_PEER_MAX-OY_PEER_FULL_MIN))||((OY_LATENCY[oy_node_id][3]===0||OY_LATENCY[oy_node_id][3]===1)&&Object.keys(OY_PEERS).length<OY_PEER_INFLATE)||(OY_JUMP_ASSIGN[0]===oy_node_id&&Object.keys(OY_PEERS).length<=OY_PEER_MAX)) {//TODO test system without jump bypass once jumping works
                 if (OY_JUMP_ASSIGN[0]===oy_node_id) oy_log_debug("JUMP_DEBUG_LATENCY_B: "+OY_LATENCY[oy_node_id][2]+" - "+oy_node_id);//TODO update jumpy map upon JUMP_DROP to lock out old peers - might need delay for 2+ splits
                 oy_accept_response();
             }
@@ -4069,10 +4069,12 @@ function oy_block_engine() {
                                 if (oy_peer_weak[0]!==null) oy_node_deny(oy_peer_weak[0], "OY_DENY_DEFLATE_DROP_L");
                             }
                             else {
+                                let oy_intro_default = Object.values(OY_INTRO_DEFAULT);
                                 let oy_peer_weak = [null, -1];
                                 for (let oy_peer_select in OY_PEERS) {
                                     if (OY_PEERS[oy_peer_select][1]===2&&
                                         OY_PEERS[oy_peer_select][9]<OY_PEER_CUT&&
+                                        oy_intro_default.indexOf(oy_peer_select)===-1&&
                                         (OY_PEERS[oy_peer_select][9]<oy_peer_weak[1]||oy_peer_weak[1]===-1)&&
                                         oy_time_local-OY_PEERS[oy_peer_select][0]>=OY_PEER_RESERVETIME) oy_peer_weak = [oy_peer_select, OY_PEERS[oy_peer_select][9]];
                                 }
