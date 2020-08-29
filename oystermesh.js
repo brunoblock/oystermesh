@@ -4058,18 +4058,19 @@ function oy_block_engine() {
                             for (let oy_peer_select in OY_PEERS) {
                                 if (OY_PEERS[oy_peer_select][1]===1&&oy_time_local-OY_PEERS[oy_peer_select][0]>=OY_PEER_RESERVETIME) oy_light_count++;
                             }
+                            let oy_intro_default = Object.values(OY_INTRO_DEFAULT);
                             if (oy_light_count>OY_PEER_MAX-OY_PEER_FULL_MIN) {
                                 let oy_peer_weak = [null, -1];
                                 for (let oy_peer_select in OY_PEERS) {
                                     if (OY_PEERS[oy_peer_select][1]===1&&
                                         OY_PEERS[oy_peer_select][9]<OY_PEER_CUT&&
+                                        oy_intro_default.indexOf(oy_peer_select)===-1&&
                                         OY_PEERS[oy_peer_select][3]>oy_peer_weak[1]&&
                                         oy_time_local-OY_PEERS[oy_peer_select][0]>=OY_PEER_RESERVETIME) oy_peer_weak = [oy_peer_select, OY_PEERS[oy_peer_select][3]];
                                 }
                                 if (oy_peer_weak[0]!==null) oy_node_deny(oy_peer_weak[0], "OY_DENY_DEFLATE_DROP_L");
                             }
                             else {
-                                let oy_intro_default = Object.values(OY_INTRO_DEFAULT);
                                 let oy_peer_weak = [null, -1];
                                 for (let oy_peer_select in OY_PEERS) {
                                     if (OY_PEERS[oy_peer_select][1]===2&&
