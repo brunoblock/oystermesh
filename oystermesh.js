@@ -2926,9 +2926,9 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
             return JSON.stringify(["OY_INTRO_TIME", OY_INTRO_MARKER]);
         }
         else if (oy_data_flag==="OY_INTRO_GET") {
-            if (OY_BLOCK_FINISH===false) return JSON.stringify(["OY_INTRO_UNREADY", 1]);
             let oy_work_queue = null;
             if (typeof(OY_INTRO_PASS[oy_soak_node])==="undefined") {
+                if (OY_BLOCK_FINISH===false) return JSON.stringify(["OY_INTRO_UNREADY", 1]);
                 if (oy_data_payload===true&&(oy_time_offset<(OY_INTRO_MARKER/1000)-OY_MESH_BUFFER[0]||oy_time_offset>(OY_INTRO_MARKER/1000)+OY_INTRO_TRIP[0]+OY_MESH_BUFFER[0])) return false;
                 if (typeof(OY_INTRO_ALLOCATE[oy_soak_node])!=="undefined"||(oy_data_payload!==false&&oy_data_payload!==true)) {
                     OY_INTRO_BAN[oy_soak_node] = true;
@@ -2972,18 +2972,17 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
                     return false;
                 }
                 if (OY_INTRO_PICKUP_COUNT===null) OY_INTRO_PICKUP_COUNT = Math.max(1, Math.floor(OY_OFFER_PICKUP.length/Object.keys(OY_INTRO_ALLOCATE).length));
+                oy_log("INTRO_PASS_COUNT: "+Object.keys(OY_INTRO_PASS).length, 2);
                 let oy_signal_array = [];
-                if (typeof(OY_INTRO_PASS[oy_soak_node])!=="undefined"||Object.keys(OY_INTRO_PASS).length===0) {
-                    for (let oy_counter = 0;oy_counter<OY_INTRO_PICKUP_COUNT&&OY_OFFER_PICKUP.length>0;oy_counter++) {
-                        for (let i in OY_OFFER_PICKUP) {
-                            if (OY_OFFER_PICKUP[i]===null) continue;
-                            if (OY_OFFER_PICKUP[i][0]!==oy_data_payload[1]&&OY_OFFER_COLLECT[OY_OFFER_PICKUP[i][0]][0]!==oy_data_payload[1]&&(typeof(OY_OFFER_COLLECT[oy_data_payload[1]])==="undefined"||OY_OFFER_COLLECT[oy_data_payload[1]][0]!==OY_OFFER_PICKUP[i][0])) {
-                                OY_OFFER_BROKER[oy_data_payload[1]] = oy_clone_object(OY_OFFER_COLLECT[OY_OFFER_PICKUP[i][0]]);
-                                OY_OFFER_COLLECT[OY_OFFER_PICKUP[i][0]] = [oy_data_payload[1], null, null, null];
-                                oy_signal_array.push(OY_OFFER_PICKUP[i][1]);
-                                OY_OFFER_PICKUP[i] = null;
-                                break;
-                            }
+                for (let oy_counter = 0;oy_counter<OY_INTRO_PICKUP_COUNT&&OY_OFFER_PICKUP.length>0;oy_counter++) {
+                    for (let i in OY_OFFER_PICKUP) {
+                        if (OY_OFFER_PICKUP[i]===null) continue;
+                        if (OY_OFFER_PICKUP[i][0]!==oy_data_payload[1]&&OY_OFFER_COLLECT[OY_OFFER_PICKUP[i][0]][0]!==oy_data_payload[1]&&(typeof(OY_OFFER_COLLECT[oy_data_payload[1]])==="undefined"||OY_OFFER_COLLECT[oy_data_payload[1]][0]!==OY_OFFER_PICKUP[i][0])) {
+                            OY_OFFER_BROKER[oy_data_payload[1]] = oy_clone_object(OY_OFFER_COLLECT[OY_OFFER_PICKUP[i][0]]);
+                            OY_OFFER_COLLECT[OY_OFFER_PICKUP[i][0]] = [oy_data_payload[1], null, null, null];
+                            oy_signal_array.push(OY_OFFER_PICKUP[i][1]);
+                            OY_OFFER_PICKUP[i] = null;
+                            break;
                         }
                     }
                 }
@@ -3740,7 +3739,7 @@ function oy_block_engine() {
                                     }
                                 }
                             });
-                        }, oy_data_payload-oy_time_offset);
+                        }, (OY_FULL_INTRO!==false&&typeof(OY_INTRO_DEFAULT[OY_FULL_INTRO])!=="undefined")?1:(oy_data_payload-oy_time_offset));
                     });
                 }
                 if (OY_BLOCK_BOOT===true) oy_intro_initiate(OY_INTRO_BOOT);
