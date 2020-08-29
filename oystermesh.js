@@ -313,7 +313,6 @@ let OY_INTRO_BAN = {};
 let OY_INTRO_SELECT = null;
 let OY_INTRO_SOLUTIONS = {};
 let OY_INTRO_MARKER = null;
-let OY_INTRO_PICKUP_COUNT = null;
 let OY_INTRO_ALLOCATE = {};
 let OY_INTRO_PASS = {};
 let OY_INTRO_SELF = {};
@@ -2973,18 +2972,15 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
                     OY_INTRO_BAN[oy_soak_node] = true;
                     return false;
                 }
-                if (OY_INTRO_PICKUP_COUNT===null) OY_INTRO_PICKUP_COUNT = Math.max(1, Math.floor(OY_OFFER_PICKUP.length/Object.keys(OY_INTRO_ALLOCATE).length));
                 let oy_signal_array = [];
-                for (let oy_counter = 0;oy_counter<OY_INTRO_PICKUP_COUNT&&OY_OFFER_PICKUP.length>0;oy_counter++) {
-                    for (let i in OY_OFFER_PICKUP) {
-                        if (OY_OFFER_PICKUP[i]===null) continue;
-                        if (OY_OFFER_PICKUP[i][0]!==oy_data_payload[1]&&OY_OFFER_COLLECT[OY_OFFER_PICKUP[i][0]][0]!==oy_data_payload[1]&&(typeof(OY_OFFER_COLLECT[oy_data_payload[1]])==="undefined"||OY_OFFER_COLLECT[oy_data_payload[1]][0]!==OY_OFFER_PICKUP[i][0])) {
-                            OY_OFFER_BROKER[oy_data_payload[1]] = oy_clone_object(OY_OFFER_COLLECT[OY_OFFER_PICKUP[i][0]]);
-                            OY_OFFER_COLLECT[OY_OFFER_PICKUP[i][0]] = [oy_data_payload[1], null, null, null];
-                            oy_signal_array.push(OY_OFFER_PICKUP[i][1]);
-                            OY_OFFER_PICKUP[i] = null;
-                            break;
-                        }
+                for (let i in OY_OFFER_PICKUP) {
+                    if (OY_OFFER_PICKUP[i]===null) continue;
+                    if (OY_OFFER_PICKUP[i][0]!==oy_data_payload[1]&&OY_OFFER_COLLECT[OY_OFFER_PICKUP[i][0]][0]!==oy_data_payload[1]&&(typeof(OY_OFFER_COLLECT[oy_data_payload[1]])==="undefined"||OY_OFFER_COLLECT[oy_data_payload[1]][0]!==OY_OFFER_PICKUP[i][0])) {
+                        OY_OFFER_BROKER[oy_data_payload[1]] = oy_clone_object(OY_OFFER_COLLECT[OY_OFFER_PICKUP[i][0]]);
+                        OY_OFFER_COLLECT[OY_OFFER_PICKUP[i][0]] = [oy_data_payload[1], null, null, null];
+                        oy_signal_array.push(OY_OFFER_PICKUP[i][1]);
+                        OY_OFFER_PICKUP[i] = null;
+                        break;
                     }
                 }
                 let oy_intro_pass = false;
@@ -3011,7 +3007,7 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
         else if (oy_data_flag==="OY_INTRO_SIGNAL_B") {
             let oy_self_pass = false;
             let oy_signal_carry = oy_signal_soak(oy_data_payload);
-            if ((OY_BLOCK_FINISH===false&&typeof(OY_INTRO_PASS[oy_soak_node])==="undefined")||typeof(oy_data_payload)!=="string"||!oy_signal_carry||(typeof(OY_INTRO_PASS[oy_soak_node])!=="undefined"&&Object.values(OY_INTRO_DEFAULT).indexOf(oy_signal_carry[0])===-1)||(typeof(OY_INTRO_PASS[oy_soak_node])==="undefined"&&(typeof(OY_INTRO_ALLOCATE[oy_soak_node])==="undefined"||OY_INTRO_ALLOCATE[oy_soak_node]>=OY_INTRO_PICKUP_COUNT))) {
+            if ((OY_BLOCK_FINISH===false&&typeof(OY_INTRO_PASS[oy_soak_node])==="undefined")||typeof(oy_data_payload)!=="string"||!oy_signal_carry||(typeof(OY_INTRO_PASS[oy_soak_node])!=="undefined"&&Object.values(OY_INTRO_DEFAULT).indexOf(oy_signal_carry[0])===-1)||(typeof(OY_INTRO_PASS[oy_soak_node])==="undefined"&&typeof(OY_INTRO_ALLOCATE[oy_soak_node])==="undefined")) {
                 OY_INTRO_BAN[oy_soak_node] = true;
                 delete OY_INTRO_ALLOCATE[oy_soak_node];
                 return false;
@@ -3398,7 +3394,6 @@ function oy_block_reset(oy_reset_flag) {
     OY_BOOT_INTRO = {};
     OY_PEER_OFFER = [null, null, null];
     OY_INTRO_MARKER = null;
-    OY_INTRO_PICKUP_COUNT = null;
     OY_INTRO_ALLOCATE = {};
     OY_INTRO_PASS = {};
     OY_INTRO_SELF = {};
@@ -3498,7 +3493,6 @@ function oy_block_engine() {
 
         OY_INTRO_SELECT = null;
         OY_INTRO_SOLUTIONS = {};
-        OY_INTRO_PICKUP_COUNT = null;
         OY_INTRO_ALLOCATE = {};
         OY_INTRO_PASS = {};
         OY_INTRO_SELF = {};
