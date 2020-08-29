@@ -2349,11 +2349,13 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
             }
             else {
                 if (OY_JUMP_ASSIGN[0]===oy_node_id) oy_log_debug("JUMP_DEBUG_LATENCY_C: "+OY_LATENCY[oy_node_id][2]+" "+oy_node_id);
+                let oy_intro_default = Object.values(OY_INTRO_DEFAULT);
                 let oy_peer_weak = [null, -1];
                 for (let oy_peer_select in OY_PEERS) {
                     if (OY_PEERS[oy_peer_select][3]>oy_peer_weak[1]&&
                         oy_time_local-OY_PEERS[oy_peer_select][0]>=OY_PEER_RESERVETIME&&
                         OY_PEERS[oy_peer_select][9]<OY_PEER_CUT&&
+                        oy_intro_default.indexOf(oy_peer_select)===-1&&
                         (oy_state_current()!==2||OY_LATENCY[oy_node_id][4]===2||OY_PEERS[oy_peer_select][1]!==2||typeof(OY_BLOCK[1][oy_peer_select])==="undefined")||OY_JUMP_ASSIGN[0]===oy_node_id) oy_peer_weak = [oy_peer_select, OY_PEERS[oy_peer_select][3]];
                 }
                 if (oy_peer_weak[0]!==null&&oy_latency_result*Math.max(OY_LATENCY_GEO_MIN, (OY_BLOCK_BOOT===true||OY_BLOCK_ELAPSED<=OY_BLOCK_BOOT_BUFFER*6)?0:(OY_BLOCK_STABILITY*OY_LATENCY_GEO_MULTI))<oy_peer_weak[1]) {
