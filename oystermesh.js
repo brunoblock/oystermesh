@@ -2917,10 +2917,10 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
         let oy_time_offset = (Date.now()/1000)-OY_BLOCK_TIME;
         let [oy_data_flag, oy_data_payload] = JSON.parse(oy_soak_data);
 
-        if (oy_data_flag==="OY_INTRO_PRE"&&oy_data_payload!==null&&typeof(oy_data_payload)==="object"&&typeof(OY_INTRO_DEFAULT[oy_data_payload[0]])!=="undefined"&&oy_key_verify(OY_INTRO_DEFAULT[oy_data_payload[0]], oy_data_payload[1], OY_BLOCK_TIME.toString())) OY_INTRO_PASS[oy_soak_node] = true;
-        else {
+        if (oy_data_flag==="OY_INTRO_PRE"&&oy_data_payload!==null&&typeof(oy_data_payload)==="object"&&typeof(OY_INTRO_DEFAULT[oy_data_payload[0]])!=="undefined"&&oy_key_verify(OY_INTRO_DEFAULT[oy_data_payload[0]], oy_data_payload[1], OY_BLOCK_TIME.toString())) OY_INTRO_PASS[oy_soak_node] = OY_INTRO_DEFAULT[oy_data_payload[0]];
+        else if (typeof(OY_INTRO_PASS[oy_soak_node])==="undefined") {
             //if (typeof(OY_INTRO_BAN[oy_soak_node])!=="undefined") return false;
-            if (oy_state_current()!==2||OY_INTRO_MARKER===null||OY_BLOCK_RECORD_KEEP.length<=1||(typeof(OY_INTRO_ALLOCATE[oy_soak_node])==="undefined"&&typeof(OY_INTRO_PASS[oy_soak_node])==="undefined"&&Object.keys(OY_INTRO_ALLOCATE).length>=OY_OFFER_PICKUP.length+(OY_PEER_MAX-Object.keys(OY_PEERS).length))||(OY_BLOCK_BOOT===false&&(typeof(OY_BLOCK[1][OY_SELF_PUBLIC])==="undefined"||OY_BLOCK[1][OY_SELF_PUBLIC][1]===0||OY_BLOCK[1][OY_SELF_PUBLIC][2]<OY_BLOCK[0][15]))) return JSON.stringify(["OY_INTRO_UNREADY", 0]);
+            if (oy_state_current()!==2||OY_INTRO_MARKER===null||OY_BLOCK_RECORD_KEEP.length<=1||(typeof(OY_INTRO_ALLOCATE[oy_soak_node])==="undefined"&&Object.keys(OY_INTRO_ALLOCATE).length>=OY_OFFER_PICKUP.length+(OY_PEER_MAX-Object.keys(OY_PEERS).length))||(OY_BLOCK_BOOT===false&&(typeof(OY_BLOCK[1][OY_SELF_PUBLIC])==="undefined"||OY_BLOCK[1][OY_SELF_PUBLIC][1]===0||OY_BLOCK[1][OY_SELF_PUBLIC][2]<OY_BLOCK[0][15]))) return JSON.stringify(["OY_INTRO_UNREADY", 0]);
         }
 
         if (oy_data_flag==="OY_INTRO_PRE") {
@@ -2948,7 +2948,7 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
             return JSON.stringify(["OY_INTRO_WORK", [OY_BLOCK_METAHASH, oy_work_queue]]);
         }
         else if (oy_data_flag==="OY_INTRO_DONE") {
-            if (OY_BLOCK_FINISH===false||oy_data_payload===null||oy_data_payload.length!==4||(oy_data_payload[0]!==false&&oy_data_payload[0]!==true)||!oy_key_check(oy_data_payload[1])||(typeof(OY_INTRO_PASS[oy_soak_node])!=="undefined"&&Object.values(OY_INTRO_DEFAULT).indexOf(oy_data_payload[1])===-1)||(typeof(OY_INTRO_PASS[oy_soak_node])==="undefined"&&(typeof(oy_data_payload[3])!=="object"||Object.keys(oy_data_payload[3]).length!==Math.ceil(OY_BLOCK[0][3]/OY_WORK_INTRO)||!oy_key_verify(oy_data_payload[1], oy_data_payload[2], JSON.stringify(oy_data_payload[3]))))) {
+            if ((OY_BLOCK_FINISH===false&&typeof(OY_INTRO_PASS[oy_soak_node])==="undefined")||oy_data_payload===null||oy_data_payload.length!==4||(oy_data_payload[0]!==false&&oy_data_payload[0]!==true)||!oy_key_check(oy_data_payload[1])||(typeof(OY_INTRO_PASS[oy_soak_node])!=="undefined"&&Object.values(OY_INTRO_DEFAULT).indexOf(oy_data_payload[1])===-1)||(typeof(OY_INTRO_PASS[oy_soak_node])==="undefined"&&(typeof(oy_data_payload[3])!=="object"||Object.keys(oy_data_payload[3]).length!==Math.ceil(OY_BLOCK[0][3]/OY_WORK_INTRO)||!oy_key_verify(oy_data_payload[1], oy_data_payload[2], JSON.stringify(oy_data_payload[3]))))) {
                 OY_INTRO_BAN[oy_soak_node] = true;
                 return false;
             }
@@ -2974,7 +2974,6 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
                     return false;
                 }
                 if (OY_INTRO_PICKUP_COUNT===null) OY_INTRO_PICKUP_COUNT = Math.max(1, Math.floor(OY_OFFER_PICKUP.length/Object.keys(OY_INTRO_ALLOCATE).length));
-                oy_log("INTRO_PASS_COUNT: "+Object.keys(OY_INTRO_PASS).length, 2);
                 let oy_signal_array = [];
                 for (let oy_counter = 0;oy_counter<OY_INTRO_PICKUP_COUNT&&OY_OFFER_PICKUP.length>0;oy_counter++) {
                     for (let i in OY_OFFER_PICKUP) {
@@ -2989,13 +2988,13 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
                     }
                 }
                 let oy_intro_pass = false;
-                for (let oy_key_public in OY_INTRO_PASS) {
-                    if (typeof(OY_PEERS[oy_key_public])==="undefined") {
+                for (let oy_intro_select in OY_INTRO_PASS) {
+                    if (typeof(OY_PEERS[OY_INTRO_PASS[oy_intro_select]])==="undefined") {
                         oy_intro_pass = true;
                         break;
                     }
                 }
-                if ((typeof(OY_INTRO_PASS[oy_soak_node])!=="undefined"&&typeof(OY_PEERS[oy_soak_node])==="undefined")||oy_intro_pass===false) {
+                if ((typeof(OY_INTRO_PASS[oy_soak_node])!=="undefined"&&typeof(OY_PEERS[OY_INTRO_PASS[oy_soak_node]])==="undefined")||oy_intro_pass===false) {
                     if (oy_signal_array.length===0&&Object.keys(OY_PEERS).length<OY_PEER_MAX&&Object.keys(OY_INTRO_SELF).length>0) {
                         for (let oy_offer_rand in OY_INTRO_SELF) {
                             if (OY_INTRO_SELF[oy_offer_rand][1]===null||OY_INTRO_SELF[oy_offer_rand][2]!==null) continue;
@@ -3012,7 +3011,7 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
         else if (oy_data_flag==="OY_INTRO_SIGNAL_B") {
             let oy_self_pass = false;
             let oy_signal_carry = oy_signal_soak(oy_data_payload);
-            if (OY_BLOCK_FINISH===false||typeof(oy_data_payload)!=="string"||!oy_signal_carry||(typeof(OY_INTRO_PASS[oy_soak_node])!=="undefined"&&Object.values(OY_INTRO_DEFAULT).indexOf(oy_signal_carry[0])===-1)||(typeof(OY_INTRO_PASS[oy_soak_node])==="undefined"&&(typeof(OY_INTRO_ALLOCATE[oy_soak_node])==="undefined"||OY_INTRO_ALLOCATE[oy_soak_node]>=OY_INTRO_PICKUP_COUNT))) {
+            if ((OY_BLOCK_FINISH===false&&typeof(OY_INTRO_PASS[oy_soak_node])==="undefined")||typeof(oy_data_payload)!=="string"||!oy_signal_carry||(typeof(OY_INTRO_PASS[oy_soak_node])!=="undefined"&&Object.values(OY_INTRO_DEFAULT).indexOf(oy_signal_carry[0])===-1)||(typeof(OY_INTRO_PASS[oy_soak_node])==="undefined"&&(typeof(OY_INTRO_ALLOCATE[oy_soak_node])==="undefined"||OY_INTRO_ALLOCATE[oy_soak_node]>=OY_INTRO_PICKUP_COUNT))) {
                 OY_INTRO_BAN[oy_soak_node] = true;
                 delete OY_INTRO_ALLOCATE[oy_soak_node];
                 return false;
