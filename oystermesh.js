@@ -774,7 +774,7 @@ function oy_log(oy_log_msg, oy_log_attn = 0) {
     if (OY_NODE_STATE===false&&typeof(oy_log_attn)!=="undefined"&&oy_log_attn===true) oy_log_msg = "<b>"+oy_log_msg+"</b>";
     if (OY_CONSOLE===undefined) {
         if (OY_NODE_STATE===true) {
-            let oy_time_offset = "["+(oy_time()-OY_BLOCK_TIME).toFixed(2)+"]";
+            let oy_time_offset = (oy_time()-OY_BLOCK_TIME).toFixed(2);
             if (oy_log_attn===0) console.log(chalk.white.bgCyan("["+OY_SELF_SHORT+"]["+oy_state_current()+"|"+Object.keys(OY_PEERS).length+"]["+oy_time_offset+"]")+oy_log_msg);
             else if (oy_log_attn===1) console.log(chalk.white.bgCyan("["+OY_SELF_SHORT+"]["+oy_state_current()+"|"+Object.keys(OY_PEERS).length+"]["+oy_time_offset+"]")+chalk.hex('#00c9ff')(oy_log_msg));
             else if (oy_log_attn===2) console.log(chalk.white.bgRed("["+OY_SELF_SHORT+"]["+oy_state_current()+"|"+Object.keys(OY_PEERS).length+"]["+oy_time_offset+"]")+chalk.white.bgMagenta(oy_log_msg));
@@ -2920,7 +2920,7 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
         let oy_time_offset = oy_time()-OY_BLOCK_TIME;
         let [oy_data_flag, oy_data_payload] = JSON.parse(oy_soak_data);
 
-        if (true||OY_VERBOSE_MODE===true) oy_log("[INTRO][SOAK]["+chalk.bolder(oy_data_flag)+"]");
+        if (true||OY_VERBOSE_MODE===true) oy_log("[INTRO][SOAK]["+chalk.bolder(oy_data_flag)+"]["+chalk.bolder(oy_soak_node)+"]");
 
         if (oy_data_flag==="OY_INTRO_PRE"&&oy_data_payload!==null&&typeof(oy_data_payload)==="object"&&typeof(OY_INTRO_DEFAULT[oy_data_payload[0]])!=="undefined"&&oy_key_verify(OY_INTRO_DEFAULT[oy_data_payload[0]], oy_data_payload[1], OY_BLOCK_TIME.toString())) OY_INTRO_PASS[oy_soak_node] = OY_INTRO_DEFAULT[oy_data_payload[0]];
         else if (typeof(OY_INTRO_PASS[oy_soak_node])==="undefined") {
@@ -2929,7 +2929,7 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
         }
 
         if (oy_data_flag==="OY_INTRO_PRE") {
-            if (oy_time_offset<OY_BLOCK_SECTORS[0][0]-(OY_INTRO_TRIP[0]+OY_MESH_BUFFER[0])||oy_time_offset>OY_BLOCK_SECTORS[0][0]+OY_INTRO_TRIP[0]+OY_MESH_BUFFER[0]) return false;
+            if (oy_time_offset<OY_BLOCK_SECTORS[0][0]-(OY_BLOCK_BUFFER_CLEAR[0]+OY_MESH_BUFFER[0])||oy_time_offset>OY_BLOCK_SECTORS[0][0]+OY_INTRO_TRIP[0]+OY_MESH_BUFFER[0]) return false;
             return JSON.stringify(["OY_INTRO_TIME", OY_INTRO_MARKER]);
         }
         else if (oy_data_flag==="OY_INTRO_GET") {
@@ -2989,21 +2989,12 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
                         break;
                     }
                 }
-                let oy_intro_pass = false;
-                for (let oy_intro_select in OY_INTRO_PASS) {
-                    if (typeof(OY_PEERS[OY_INTRO_PASS[oy_intro_select]])==="undefined") {
-                        oy_intro_pass = true;
+                if (oy_signal_array.length===0&&Object.keys(OY_PEERS).length<OY_PEER_MAX&&Object.keys(OY_INTRO_SELF).length>0) {
+                    for (let oy_offer_rand in OY_INTRO_SELF) {
+                        if (OY_INTRO_SELF[oy_offer_rand][1]===null||OY_INTRO_SELF[oy_offer_rand][2]!==null) continue;
+                        OY_INTRO_SELF[oy_offer_rand][2] = oy_soak_node;
+                        oy_signal_array.push(OY_INTRO_SELF[oy_offer_rand][1]);
                         break;
-                    }
-                }
-                if ((typeof(OY_INTRO_PASS[oy_soak_node])!=="undefined"&&typeof(OY_PEERS[OY_INTRO_PASS[oy_soak_node]])==="undefined")||oy_intro_pass===false) {
-                    if (oy_signal_array.length===0&&Object.keys(OY_PEERS).length<OY_PEER_MAX&&Object.keys(OY_INTRO_SELF).length>0) {
-                        for (let oy_offer_rand in OY_INTRO_SELF) {
-                            if (OY_INTRO_SELF[oy_offer_rand][1]===null||OY_INTRO_SELF[oy_offer_rand][2]!==null) continue;
-                            OY_INTRO_SELF[oy_offer_rand][2] = oy_soak_node;
-                            oy_signal_array.push(OY_INTRO_SELF[oy_offer_rand][1]);
-                            break;
-                        }
                     }
                 }
                 if (oy_signal_array.length===0) return JSON.stringify(["OY_INTRO_UNREADY", 2]);
