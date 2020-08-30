@@ -4908,7 +4908,10 @@ function oy_init(oy_console) {
 
     oy_log("[OYSTER]["+chalk.bolder(OY_MESH_DYNASTY)+"]["+chalk.bolder(OY_SELF_SHORT)+"]["+chalk.bolder(OY_FULL_INTRO)+"]", 1);
 
-    if (OY_SIMULATOR_MODE===true) parentPort.postMessage([6, OY_SELF_PUBLIC, OY_FULL_INTRO]);
+    if (OY_SIMULATOR_MODE===true) {
+        oy_log("[OYSTER][SIMULATOR][LOAD]"+chalk.bolder(JSON.stringify([OY_SIMULATOR_SKEW, OY_LIGHT_MODE, OY_FULL_INTRO])), 1);
+        parentPort.postMessage([6, OY_SELF_PUBLIC, OY_FULL_INTRO]);
+    }
 
     /*TODO nodejs DB integration
     //Dexie.delete("oy_db");
@@ -4994,7 +4997,6 @@ if (OY_NODE_STATE===true) {
                         OY_SELF_PUBLIC = oy_sim_data[0][3][1];
                         OY_SELF_SHORT = oy_short(OY_SELF_PUBLIC);
                     }
-                    oy_log("[OYSTER][SIMULATOR][LOAD]"+chalk.bolder(JSON.stringify([OY_SIMULATOR_SKEW, OY_LIGHT_MODE, OY_FULL_INTRO])), 1);
                     for (let oy_var in oy_sim_data[1]) {
                         if (oy_var==="OY_VERBOSE_MODE") OY_VERBOSE_MODE = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_BLOCK_BOOT_MARK") OY_BLOCK_BOOT_MARK = oy_sim_data[1][oy_var];
