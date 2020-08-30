@@ -4992,7 +4992,7 @@ if (OY_NODE_STATE===true) {
                     OY_SIMULATOR_SKEW = oy_sim_data[0][0];
                     OY_LIGHT_MODE = oy_sim_data[0][1];
                     OY_FULL_INTRO = oy_sim_data[0][2];
-                    if (oy_sim_data[0][2]!==null) {
+                    if (oy_sim_data[0][3]!==null) {
                         OY_SELF_PRIVATE = oy_sim_data[0][3][0];
                         OY_SELF_PUBLIC = oy_sim_data[0][3][1];
                         OY_SELF_SHORT = oy_short(OY_SELF_PUBLIC);
