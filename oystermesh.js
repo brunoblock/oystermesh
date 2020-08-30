@@ -2929,7 +2929,7 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
         }
 
         if (oy_data_flag==="OY_INTRO_PRE") {
-            if (oy_time_offset<OY_BLOCK_SECTORS[0][0]-(OY_INTRO_TRIP[0]+OY_MESH_BUFFER[0])||oy_time_offset>OY_BLOCK_SECTORS[0][0]+OY_MESH_BUFFER[0]) return false;
+            if (oy_time_offset<OY_BLOCK_SECTORS[0][0]-(OY_INTRO_TRIP[0]+OY_MESH_BUFFER[0])||oy_time_offset>OY_BLOCK_SECTORS[0][0]+OY_INTRO_TRIP[0]+OY_MESH_BUFFER[0]) return false;
             return JSON.stringify(["OY_INTRO_TIME", OY_INTRO_MARKER]);
         }
         else if (oy_data_flag==="OY_INTRO_GET") {
