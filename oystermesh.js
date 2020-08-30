@@ -3636,7 +3636,7 @@ function oy_block_engine() {
 
         if (OY_FULL_INTRO!==false&&OY_BLOCK_RECORD_KEEP.length>1) {
             OY_DIVE_GRADE = true;
-            OY_INTRO_MARKER = Math.ceil(((OY_SYNC_LAST[0]>0)?Math.max(OY_BLOCK_SECTORS[0][1]+OY_INTRO_TRIP[1], Math.min(OY_BLOCK_SECTORS[1][1], (OY_SYNC_LAST[0]*1000)+OY_BLOCK_BUFFER_SPACE[1])):OY_BLOCK_SECTORS[1][1])+(Math.max(...OY_BLOCK_RECORD_KEEP)*1000*OY_BLOCK_RECORD_INTRO_BUFFER));
+            OY_INTRO_MARKER = Math.ceil(((OY_SYNC_LAST[0]>0)?Math.max(OY_BLOCK_SECTORS[0][1]+OY_INTRO_TRIP[1], Math.min(OY_BLOCK_SECTORS[1][1], Math.floor(OY_SYNC_LAST[0]*1000)+OY_BLOCK_BUFFER_SPACE[1])):OY_BLOCK_SECTORS[1][1])+(Math.max(...OY_BLOCK_RECORD_KEEP)*1000*OY_BLOCK_RECORD_INTRO_BUFFER));
         }
         else OY_INTRO_MARKER = null;
 
@@ -4038,7 +4038,7 @@ function oy_block_engine() {
                     }
                 }
             }, (OY_BLOCK_SECTORS[4][0]-((Date.now()/1000)-OY_BLOCK_TIME))*1000);
-        }, (OY_SYNC_LAST[0]>0)?Math.max(OY_BLOCK_SECTORS[0][1], Math.min(OY_BLOCK_SECTORS[1][1], (OY_SYNC_LAST[0]*1000)+OY_BLOCK_BUFFER_SPACE[1])):OY_BLOCK_SECTORS[1][1]);
+        }, (OY_SYNC_LAST[0]>0)?Math.max(OY_BLOCK_SECTORS[0][1], Math.min(OY_BLOCK_SECTORS[1][1], Math.floor(OY_SYNC_LAST[0]*1000)+OY_BLOCK_BUFFER_SPACE[1])):OY_BLOCK_SECTORS[1][1]);
 
         oy_chrono(function() {
             if (oy_block_continue===true&&OY_LIGHT_STATE===true&&Object.keys(OY_LIGHT_BUILD).length>0) oy_block_light();
