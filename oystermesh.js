@@ -398,7 +398,6 @@ let OY_BLOCK_NEW = {};
 let OY_BLOCK_CONFIRM = {};
 let OY_BLOCK_HALT = null;
 let OY_DIFF_TRACK = [{}, []];
-let OY_BOOT_INTRO = {};
 let OY_REPORT_HASH = null;
 let OY_CHANNEL_DYNAMIC = {};//track channel broadcasts to ensure allowance compliance
 let OY_CHANNEL_LISTEN = {};//track channels to listen for
@@ -1218,18 +1217,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                 if (oy_data_payload[1].length===0) {
                     let oy_intro_select = [null, -1];
                     if (OY_BLOCK_BOOT===true) {
-                        for (let oy_key_public in OY_BOOT_INTRO) {
-                            if (typeof(OY_SYNC_MAP[0][oy_key_public])!=="undefined"&&(OY_SYNC_MAP[0][oy_key_public][0]<oy_intro_select[1]||oy_intro_select[1]===-1)) {
-                                let oy_select_pass = true;
-                                for (let i in oy_data_payload[0]) {
-                                    if (OY_SYNC_MAP[0][oy_key_public][1].indexOf(oy_data_payload[0][i])!==-1) {
-                                        oy_select_pass = false;
-                                        break;
-                                    }
-                                }
-                                if (oy_select_pass===true) oy_intro_select = [OY_SYNC_MAP[0][oy_key_public][1], OY_SYNC_MAP[0][oy_key_public][0]];
-                            }
-                        }
+                        if (typeof(OY_SYNC_MAP[0][OY_INTRO_DEFAULT[OY_INTRO_BOOT]])!=="undefined") oy_intro_select = [OY_SYNC_MAP[0][OY_INTRO_DEFAULT[OY_INTRO_BOOT]][1], OY_SYNC_MAP[0][OY_INTRO_DEFAULT[OY_INTRO_BOOT]][0]];
                     }
                     else {
                         for (let oy_key_public in OY_BLOCK[1]) {
@@ -2989,7 +2977,7 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
                         break;
                     }
                 }
-                if (oy_signal_array.length===0&&Object.keys(OY_PEERS).length<OY_PEER_MAX&&Object.keys(OY_INTRO_SELF).length>0) {
+                if (oy_signal_array.length===0&&Object.keys(OY_PEERS).length<OY_PEER_MAX&&Object.keys(OY_INTRO_SELF).length>0&&(typeof(OY_INTRO_PASS[oy_soak_node])==="undefined"||typeof(OY_PEERS[OY_INTRO_PASS[oy_soak_node]])==="undefined")) {
                     for (let oy_offer_rand in OY_INTRO_SELF) {
                         if (OY_INTRO_SELF[oy_offer_rand][1]===null||OY_INTRO_SELF[oy_offer_rand][2]!==null) continue;
                         OY_INTRO_SELF[oy_offer_rand][2] = oy_soak_node;
@@ -3388,7 +3376,6 @@ function oy_block_reset(oy_reset_flag) {
     OY_BLOCK_RECORD = null;
     OY_BLOCK_RECORD_KEEP = [];
     OY_BLOCK_FINISH = false;
-    OY_BOOT_INTRO = {};
     OY_PEER_OFFER = [null, null, null];
     OY_INTRO_MARKER = null;
     OY_INTRO_ALLOCATE = {};
@@ -3843,13 +3830,6 @@ function oy_block_engine() {
             }
 
             OY_BLOCK_RECORD = oy_time();
-
-            OY_BOOT_INTRO = {};
-            if (OY_BLOCK_BOOT===true) {
-                for (let oy_key_public in OY_BLOCK_SYNC) {
-                    if (typeof(OY_BLOCK_SYNC_PASS[OY_BLOCK_TIME][oy_key_public])!=="undefined"&&OY_BLOCK_SYNC_PASS[OY_BLOCK_TIME][oy_key_public][0][2]!==0) OY_BOOT_INTRO[oy_key_public] = true;
-                }
-            }
 
             let oy_command_execute = [];
             if (OY_BLOCK_BOOT===false||OY_BLOCK_TIME-OY_BLOCK_BOOT_MARK>=OY_BLOCK_BOOT_BUFFER-OY_BLOCK_SECTORS[5][0]) {
