@@ -2739,7 +2739,7 @@ function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
         }
         if (OY_SIMULATOR_MODE===true) parentPort.postMessage([0, oy_node_id, oy_data_raw]);
         else OY_NODES[oy_node_id].send(oy_data_raw);//send the JSON-converted data array to the destination node
-        if (OY_VERBOSE_MODE===true&&oy_data_flag!=="OY_BLOCK_SYNC") oy_log("[BEAM]["+oy_short(oy_node_id)+"]["+oy_data_flag+"]");
+        if (OY_VERBOSE_MODE===true&&oy_data_flag!=="OY_BLOCK_SYNC") oy_log("[BEAM]["+(oy_time()-OY_BLOCK_TIME).toFixed(2)+"]["+oy_short(oy_node_id)+"]["+oy_data_flag+"]");
         return true;
     }
     catch(e) {}
@@ -2769,7 +2769,7 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
                }
            }
            oy_data_raw = null;
-           if (OY_VERBOSE_MODE===true&&oy_data[0]!=="OY_BLOCK_SYNC") oy_log("[SOAK]["+oy_short(oy_node_id)+"]["+oy_data[0]+"]");
+           if (OY_VERBOSE_MODE===true&&oy_data[0]!=="OY_BLOCK_SYNC") oy_log("[SOAK]["+(oy_time()-OY_BLOCK_TIME).toFixed(2)+"]["+oy_short(oy_node_id)+"]["+oy_data[0]+"]");
            if (!oy_data_direct(oy_data[0])) {
                if (typeof(oy_data[1][0])!=="object") {
                    oy_node_deny(oy_node_id, "OY_DENY_PASSPORT_INVALID");
@@ -2873,7 +2873,7 @@ function oy_intro_beam(oy_intro_select, oy_data_flag, oy_data_payload, oy_callba
     if (oy_intro_select===OY_FULL_INTRO) return false;
 
     try {
-        if (OY_VERBOSE_MODE===true) oy_log("[INTRO][BEAM]["+oy_data_flag+"]["+oy_intro_select+"]["+(oy_time()-OY_BLOCK_TIME).toFixed(2)+"]");
+        if (OY_VERBOSE_MODE===true) oy_log("[INTRO][BEAM]["+(oy_time()-OY_BLOCK_TIME).toFixed(2)+"]["+oy_data_flag+"]["+oy_intro_select+"]");
         if (OY_SIMULATOR_MODE===true) {
             let oy_sim_ref = oy_rand_gen(8);
             OY_SIMULATOR_CALLBACK[oy_sim_ref] = oy_callback;
@@ -2892,7 +2892,6 @@ function oy_intro_beam(oy_intro_select, oy_data_flag, oy_data_payload, oy_callba
                 if (typeof(oy_callback)==="function") {
                     try {
                         let [oy_data_flag, oy_data_payload] = JSON.parse(oy_event.data);
-                        if (OY_VERBOSE_MODE===true) oy_log("[INTRO][SOAK]["+oy_data_flag+"]["+oy_intro_select+"]["+(oy_time()-OY_BLOCK_TIME).toFixed(2)+"]");
                         if (oy_data_flag==="OY_INTRO_UNREADY") {
                             if (OY_BLOCK_BOOT===false&&oy_data_flag!=="OY_INTRO_TIME") oy_intro_punish(oy_intro_select);
                         }
@@ -2920,7 +2919,7 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
         let oy_time_offset = oy_time()-OY_BLOCK_TIME;
         let [oy_data_flag, oy_data_payload] = JSON.parse(oy_soak_data);
 
-        //oy_log("[INTRO][SOAK]"+JSON.stringify([oy_soak_node, oy_data_flag, oy_data_payload]));
+        if (true||OY_VERBOSE_MODE===true) oy_log("[INTRO][SOAK]["+chalk.bolder((oy_time()-OY_BLOCK_TIME).toFixed(2))+"]["+chalk.bolder(oy_data_flag)+"]");
 
         if (oy_data_flag==="OY_INTRO_PRE"&&oy_data_payload!==null&&typeof(oy_data_payload)==="object"&&typeof(OY_INTRO_DEFAULT[oy_data_payload[0]])!=="undefined"&&oy_key_verify(OY_INTRO_DEFAULT[oy_data_payload[0]], oy_data_payload[1], OY_BLOCK_TIME.toString())) OY_INTRO_PASS[oy_soak_node] = OY_INTRO_DEFAULT[oy_data_payload[0]];
         else if (typeof(OY_INTRO_PASS[oy_soak_node])==="undefined") {
@@ -4975,7 +4974,6 @@ if (OY_NODE_STATE===true) {
                 if (typeof(OY_SIMULATOR_CALLBACK[oy_sim_misc[1]])==="function") {
                     try {
                         let [oy_data_flag, oy_data_payload] = JSON.parse(oy_sim_data);
-                        if (OY_VERBOSE_MODE===true) oy_log("[INTRO][SOAK]["+oy_data_flag+"]["+oy_sim_misc[0]+"]["+(oy_time()-OY_BLOCK_TIME).toFixed(2)+"]");
                         if (oy_data_flag==="OY_INTRO_UNREADY") {
                             if (OY_BLOCK_BOOT===false&&oy_data_flag!=="OY_INTRO_TIME") oy_intro_punish(oy_sim_misc[0]);
                         }
