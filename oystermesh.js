@@ -1885,7 +1885,6 @@ function oy_node_deny(oy_node_id, oy_deny_reason) {
     if (oy_deny_reason!=="OY_DENY_TERMINATE_RETURN"&&oy_deny_reason.indexOf("OY_DENY_CONN")===-1) oy_data_beam(oy_node_id, "OY_PEER_TERMINATE", oy_deny_reason);
     oy_node_reset(oy_node_id);
     oy_log("[DENY]["+chalk.bolder(oy_short(oy_node_id))+"]["+chalk.bolder(oy_node_state)+"]["+chalk.bolder(oy_deny_reason)+"]", 2);
-    if (oy_deny_reason!=="OY_DENY_LATENCY_WEAK") oy_log_debug("[DENY]["+oy_deny_reason+"]["+oy_short(oy_node_id)+"]");
     return true;
 }
 
@@ -2916,6 +2915,8 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
         let oy_time_offset = (Date.now()/1000)-OY_BLOCK_TIME;
         let [oy_data_flag, oy_data_payload] = JSON.parse(oy_soak_data);
 
+        //oy_log("[INTRO][SOAK]"+JSON.stringify([oy_soak_node, oy_data_flag, oy_data_payload]));
+
         if (oy_data_flag==="OY_INTRO_PRE"&&oy_data_payload!==null&&typeof(oy_data_payload)==="object"&&typeof(OY_INTRO_DEFAULT[oy_data_payload[0]])!=="undefined"&&oy_key_verify(OY_INTRO_DEFAULT[oy_data_payload[0]], oy_data_payload[1], OY_BLOCK_TIME.toString())) OY_INTRO_PASS[oy_soak_node] = OY_INTRO_DEFAULT[oy_data_payload[0]];
         else if (typeof(OY_INTRO_PASS[oy_soak_node])==="undefined") {
             //if (typeof(OY_INTRO_BAN[oy_soak_node])!=="undefined") return false;
@@ -3635,7 +3636,7 @@ function oy_block_engine() {
 
         if (OY_FULL_INTRO!==false&&OY_BLOCK_RECORD_KEEP.length>1) {
             OY_DIVE_GRADE = true;
-            OY_INTRO_MARKER = Math.ceil(((OY_SYNC_LAST[0]>0)?Math.max(OY_BLOCK_SECTORS[0][1]+OY_INTRO_TRIP[1], Math.min(OY_BLOCK_SECTORS[1][1], OY_SYNC_LAST[0]+OY_BLOCK_BUFFER_SPACE[1])):OY_BLOCK_SECTORS[1][1])+(Math.max(...OY_BLOCK_RECORD_KEEP)*1000*OY_BLOCK_RECORD_INTRO_BUFFER));
+            OY_INTRO_MARKER = Math.ceil(((OY_SYNC_LAST[0]>0)?Math.max(OY_BLOCK_SECTORS[0][1]+OY_INTRO_TRIP[1], Math.min(OY_BLOCK_SECTORS[1][1], (OY_SYNC_LAST[0]*1000)+OY_BLOCK_BUFFER_SPACE[1])):OY_BLOCK_SECTORS[1][1])+(Math.max(...OY_BLOCK_RECORD_KEEP)*1000*OY_BLOCK_RECORD_INTRO_BUFFER));
         }
         else OY_INTRO_MARKER = null;
 
@@ -4037,7 +4038,7 @@ function oy_block_engine() {
                     }
                 }
             }, (OY_BLOCK_SECTORS[4][0]-((Date.now()/1000)-OY_BLOCK_TIME))*1000);
-        }, (OY_SYNC_LAST[0]>0)?Math.max(OY_BLOCK_SECTORS[0][1], Math.min(OY_BLOCK_SECTORS[1][1], OY_SYNC_LAST[0]+OY_BLOCK_BUFFER_SPACE[1])):OY_BLOCK_SECTORS[1][1]);
+        }, (OY_SYNC_LAST[0]>0)?Math.max(OY_BLOCK_SECTORS[0][1], Math.min(OY_BLOCK_SECTORS[1][1], (OY_SYNC_LAST[0]*1000)+OY_BLOCK_BUFFER_SPACE[1])):OY_BLOCK_SECTORS[1][1]);
 
         oy_chrono(function() {
             if (oy_block_continue===true&&OY_LIGHT_STATE===true&&Object.keys(OY_LIGHT_BUILD).length>0) oy_block_light();
