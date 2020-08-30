@@ -2907,13 +2907,10 @@ function oy_intro_beam(oy_intro_select, oy_data_flag, oy_data_payload, oy_callba
 
 function oy_intro_soak(oy_soak_node, oy_soak_data) {
     //try {
-        if (typeof(OY_INTRO_PRE[oy_soak_node])==="undefined"&&Object.keys(OY_INTRO_PRE).length>=OY_INTRO_PRE_MAX) return JSON.stringify(["OY_INTRO_UNREADY", 0]);
-        OY_INTRO_PRE[oy_soak_node] = true;
-
         let oy_time_offset = oy_time()-OY_BLOCK_TIME;
         let [oy_data_flag, oy_data_payload] = JSON.parse(oy_soak_data);
 
-        if (true||OY_VERBOSE_MODE===true) oy_log("[INTRO][SOAK]["+chalk.bolder(oy_data_flag)+"]["+chalk.bolder(oy_soak_node)+"]");
+        if ((true||OY_VERBOSE_MODE===true)&&oy_data_flag!=="OY_INTRO_PRE") oy_log("[INTRO][SOAK]["+chalk.bolder(oy_data_flag)+"]["+chalk.bolder(oy_soak_node)+"]");
 
         if (oy_data_flag==="OY_INTRO_PRE"&&oy_data_payload!==null&&typeof(oy_data_payload)==="object"&&typeof(OY_INTRO_DEFAULT[oy_data_payload[0]])!=="undefined"&&oy_key_verify(OY_INTRO_DEFAULT[oy_data_payload[0]], oy_data_payload[1], OY_BLOCK_TIME.toString())) OY_INTRO_PASS[oy_soak_node] = OY_INTRO_DEFAULT[oy_data_payload[0]];
         else if (typeof(OY_INTRO_PASS[oy_soak_node])==="undefined") {
@@ -2922,10 +2919,14 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
         }
 
         if (oy_data_flag==="OY_INTRO_PRE") {
-            if (oy_time_offset<OY_BLOCK_SECTORS[0][0]-(OY_BLOCK_BUFFER_CLEAR[0]+OY_MESH_BUFFER[0])||oy_time_offset>OY_BLOCK_SECTORS[0][0]+OY_INTRO_TRIP[0]+OY_MESH_BUFFER[0]) return false;
+            if ((typeof(OY_INTRO_PASS[oy_soak_node])==="undefined")&&(oy_time_offset<OY_BLOCK_SECTORS[0][0]-(OY_BLOCK_BUFFER_CLEAR[0]+OY_MESH_BUFFER[0])||oy_time_offset>OY_BLOCK_SECTORS[0][0]+OY_INTRO_TRIP[0]+OY_MESH_BUFFER[0]||(typeof(OY_INTRO_PRE[oy_soak_node])==="undefined"&&Object.keys(OY_INTRO_PRE).length>=OY_INTRO_PRE_MAX))) return false;
+            OY_INTRO_PRE[oy_soak_node] = true;
+            if (true||OY_VERBOSE_MODE===true) oy_log("[INTRO][SOAK]["+chalk.bolder(oy_data_flag)+"]["+chalk.bolder(oy_soak_node)+"]");
             return JSON.stringify(["OY_INTRO_TIME", OY_INTRO_MARKER]);
         }
         else if (oy_data_flag==="OY_INTRO_GET") {
+            if (typeof(OY_INTRO_PRE[oy_soak_node])==="undefined") return false;
+
             let oy_work_queue = null;
             if (typeof(OY_INTRO_PASS[oy_soak_node])==="undefined") {
                 if (OY_BLOCK_FINISH===false) return JSON.stringify(["OY_INTRO_UNREADY", 2]);
@@ -2946,6 +2947,8 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
             return JSON.stringify(["OY_INTRO_WORK", [OY_BLOCK_METAHASH, oy_work_queue]]);
         }
         else if (oy_data_flag==="OY_INTRO_DONE") {
+            if (typeof(OY_INTRO_PRE[oy_soak_node])==="undefined") return false;
+
             if ((OY_BLOCK_FINISH===false&&typeof(OY_INTRO_PASS[oy_soak_node])==="undefined")||oy_data_payload===null||oy_data_payload.length!==4||(oy_data_payload[0]!==false&&oy_data_payload[0]!==true)||!oy_key_check(oy_data_payload[1])||(typeof(OY_INTRO_PASS[oy_soak_node])!=="undefined"&&Object.values(OY_INTRO_DEFAULT).indexOf(oy_data_payload[1])===-1)||(typeof(OY_INTRO_PASS[oy_soak_node])==="undefined"&&(typeof(oy_data_payload[3])!=="object"||Object.keys(oy_data_payload[3]).length!==Math.ceil(OY_BLOCK[0][3]/OY_WORK_INTRO)||!oy_key_verify(oy_data_payload[1], oy_data_payload[2], JSON.stringify(oy_data_payload[3]))))) {
                 OY_INTRO_BAN[oy_soak_node] = true;
                 return false;
@@ -2995,6 +2998,8 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
             }
         }
         else if (oy_data_flag==="OY_INTRO_SIGNAL_B") {
+            if (typeof(OY_INTRO_PRE[oy_soak_node])==="undefined") return false;
+
             let oy_self_pass = false;
             let oy_signal_carry = oy_signal_soak(oy_data_payload);
             if ((OY_BLOCK_FINISH===false&&typeof(OY_INTRO_PASS[oy_soak_node])==="undefined")||typeof(oy_data_payload)!=="string"||!oy_signal_carry||(typeof(OY_INTRO_PASS[oy_soak_node])!=="undefined"&&Object.values(OY_INTRO_DEFAULT).indexOf(oy_signal_carry[0])===-1)||(typeof(OY_INTRO_PASS[oy_soak_node])==="undefined"&&typeof(OY_INTRO_ALLOCATE[oy_soak_node])==="undefined")) {
