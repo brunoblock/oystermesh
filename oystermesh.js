@@ -44,7 +44,8 @@ let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and s
 let OY_LIGHT_COMMIT = 0.4;
 const OY_PEER_RESERVETIME = 300;//peers are expected to establish latency timing with each other within this interval in seconds
 let OY_PEER_CUT = 0.3;//minimum percentage threshold to be safe from being selected as a potential weakest peer, higher is less peers safe
-const OY_PEER_BOOT = 600;
+let OY_PEER_BOOT = 50;
+let OY_PEER_BOOT_RATE = 20;
 const OY_PEER_FULL_MIN = 4;
 let OY_PEER_MAX = 6;//maximum mutual peers
 let OY_PEER_INFLATE = 30;//cannot be larger than OY_NDOE_MAX
@@ -3666,8 +3667,7 @@ function oy_block_engine() {
                     }
                 }
                 if (OY_BLOCK_BOOT===true) {
-                    let oy_local_max = Math.ceil(OY_PEER_BOOT/(OY_BLOCK_BOOT_BUFFER/OY_BLOCK_SECTORS[5][0]));
-                    for (let i = 0;i<oy_local_max;i++) {
+                    for (let i = 0;i<OY_PEER_BOOT_RATE;i++) {
                         oy_self_allocate();
                     }
                 }
