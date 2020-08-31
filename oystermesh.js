@@ -1211,13 +1211,11 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
         if (OY_LIGHT_STATE===false&&(OY_BLOCK_BOOT===true||typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined")) {
             if (OY_FULL_INTRO!==false&&((OY_BLOCK_BOOT===true&&OY_FULL_INTRO===OY_INTRO_BOOT)||OY_BLOCK[1][OY_SELF_PUBLIC][1]===1)) {
-                console.log("A"+OY_OFFER_COUNTER);
                 if (OY_OFFER_COUNTER<OY_INTRO_PRE_MAX) {
-                    console.log("B"+OY_OFFER_COUNTER);
+                    OY_OFFER_COUNTER++;
                     let oy_signal_carry = oy_signal_soak(oy_data_payload[4]);
                     if (!oy_signal_carry||oy_signal_carry[0]!==oy_data_payload[0][0]||typeof(OY_OFFER_COLLECT[oy_signal_carry[0]])!=="undefined"||!oy_key_verify(oy_data_payload[0][0], oy_data_payload[2], OY_BLOCK_HASH+oy_data_payload[3]+oy_data_payload[4])) return false;
                     OY_OFFER_COLLECT[oy_data_payload[0][0]] = [OY_OFFER_COUNTER, oy_data_payload[3], oy_data_payload[0], oy_data_payload[4]];//[[0]:priority_counter/broker_assign, [1]:oy_offer_rand, [2]:passport, [3]:signal_data]
-                    OY_OFFER_COUNTER++;
                 }
             }
             else {
@@ -2915,8 +2913,7 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
         let oy_time_offset = oy_time()-OY_BLOCK_TIME;
         let [oy_data_flag, oy_data_payload] = JSON.parse(oy_soak_data);
 
-        console.log([oy_data_flag, oy_soak_node]);
-        if ((true||OY_VERBOSE_MODE===true)&&oy_data_flag!=="OY_INTRO_PRE") oy_log("[INTRO][SOAK]["+chalk.bolder(oy_data_flag)+"]["+chalk.bolder(oy_soak_node)+"]");
+        if (OY_VERBOSE_MODE===true&&oy_data_flag!=="OY_INTRO_PRE") oy_log("[INTRO][SOAK]["+chalk.bolder(oy_data_flag)+"]["+chalk.bolder(oy_soak_node)+"]");
 
         if (oy_data_flag==="OY_INTRO_PRE"&&oy_data_payload!==null&&typeof(oy_data_payload)==="object"&&typeof(OY_INTRO_DEFAULT[oy_data_payload[0]])!=="undefined"&&oy_key_verify(OY_INTRO_DEFAULT[oy_data_payload[0]], oy_data_payload[1], OY_BLOCK_TIME.toString())) OY_INTRO_PASS[oy_soak_node] = OY_INTRO_DEFAULT[oy_data_payload[0]];
         else if (typeof(OY_INTRO_PASS[oy_soak_node])==="undefined") {
@@ -2927,7 +2924,7 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
         if (oy_data_flag==="OY_INTRO_PRE") {
             if ((typeof(OY_INTRO_PASS[oy_soak_node])==="undefined")&&(oy_time_offset<OY_BLOCK_SECTORS[0][0]-(OY_BLOCK_BUFFER_CLEAR[0]+OY_MESH_BUFFER[0])||oy_time_offset>OY_BLOCK_SECTORS[0][0]+OY_INTRO_TRIP[0]+OY_MESH_BUFFER[0]||(typeof(OY_INTRO_PRE[oy_soak_node])==="undefined"&&Object.keys(OY_INTRO_PRE).length>=OY_INTRO_PRE_MAX))) return false;
             OY_INTRO_PRE[oy_soak_node] = true;
-            if (true||OY_VERBOSE_MODE===true) oy_log("[INTRO][SOAK]["+chalk.bolder(oy_data_flag)+"]["+chalk.bolder(oy_soak_node)+"]");
+            if (OY_VERBOSE_MODE===true) oy_log("[INTRO][SOAK]["+chalk.bolder(oy_data_flag)+"]["+chalk.bolder(oy_soak_node)+"]");
             return JSON.stringify(["OY_INTRO_TIME", OY_INTRO_MARKER]);
         }
         else if (oy_data_flag==="OY_INTRO_GET") {
