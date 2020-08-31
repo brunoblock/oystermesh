@@ -1993,7 +1993,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
         if (Object.keys(OY_PEERS).length>OY_PEER_MAX||
             (oy_state_current()===0&&oy_data_payload===0)||
             OY_BLOCK_BOOT===null||
-            (OY_BLOCK_BOOT===true&&oy_data_payload!==2)) oy_data_beam(oy_node_id, "OY_PEER_UNREADY", null);
+            (OY_BLOCK_BOOT===true&&oy_data_payload!==2)) oy_data_beam(oy_node_id, "OY_PEER_UNREADY", "OY_DENY_PEER_UNREADY");
         else oy_latency_test(oy_node_id, "OY_PEER_REQUEST", oy_data_payload);
     }
     else if (oy_data_flag==="OY_LATENCY_DECLINE") oy_node_deny(oy_node_id, "OY_DENY_LATENCY_DECLINE");
@@ -2011,7 +2011,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
         }
         else {
             oy_log_debug("JUMP_DEBUG_D: "+oy_node_id);
-            oy_data_beam(oy_node_id, "OY_JUMP_UNREADY", null);
+            oy_data_beam(oy_node_id, "OY_JUMP_UNREADY", "OY_DENY_JUMP_UNREADY_A");
         }
     }
     else if (oy_data_flag==="OY_JUMP_RESPONSE") {
@@ -2020,13 +2020,13 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
             oy_log_debug("JUMP_DEBUG_F: "+oy_node_id);
             OY_JUMP_PRE[oy_node_id] = true;
             if (JSON.stringify(OY_BLOCK[2][1])===JSON.stringify(oy_data_payload[2])) {
-                oy_data_beam(oy_node_id, "OY_JUMP_REJECT", null);
+                oy_data_beam(oy_node_id, "OY_JUMP_REJECT", "OY_DENY_JUMP_REJECT_A");
                 oy_log_debug("JUMP_DEBUG_Z: "+oy_node_id);
                 return false;
             }
             if (oy_data_payload[0]<=OY_BLOCK[0][10]) {
                 oy_log_debug("JUMP_DEBUG_H: "+oy_node_id);
-                if (oy_data_payload[0]===OY_BLOCK[0][10]&&oy_data_payload[1]===Object.keys(OY_BLOCK[3]).length) oy_data_beam(oy_node_id, "OY_JUMP_REJECT", null);
+                if (oy_data_payload[0]===OY_BLOCK[0][10]&&oy_data_payload[1]===Object.keys(OY_BLOCK[3]).length) oy_data_beam(oy_node_id, "OY_JUMP_REJECT", "OY_DENY_JUMP_REJECT_B");
                 else if (oy_data_payload[1]<Object.keys(OY_BLOCK[3]).length) {
                     let oy_jump_response = [OY_BLOCK[0][10], Object.keys(OY_BLOCK[3]).length, OY_BLOCK[2][1], {}];
                     for (let oy_block_time in OY_BLOCK_JUMP_MAP) {
@@ -2054,7 +2054,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
             oy_log_debug("JUMP_DEBUG_J: "+oy_node_id);
             if (oy_jump_match===null) {
                 oy_log_debug("JUMP_DEBUG_K: "+oy_node_id);
-                oy_data_beam(oy_node_id, "OY_JUMP_REJECT", null);
+                oy_data_beam(oy_node_id, "OY_JUMP_REJECT", "OY_DENY_JUMP_REJECT_C");
             }
             else {
                 OY_JUMP_ASSIGN[0] = oy_node_id;
@@ -2065,7 +2065,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
         }
         else {
             oy_log_debug("JUMP_DEBUG_G: "+oy_node_id);
-            oy_data_beam(oy_node_id, "OY_JUMP_UNREADY", null);
+            oy_data_beam(oy_node_id, "OY_JUMP_UNREADY", "OY_DENY_JUMP_UNREADY_B");
         }
     }
     else if (oy_data_flag==="OY_JUMP_CONTINUE") {
@@ -2104,7 +2104,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
         }
         else {
             oy_log_debug("JUMP_DEBUG_O: "+oy_node_id);
-            oy_data_beam(oy_node_id, "OY_JUMP_UNREADY", null);
+            oy_data_beam(oy_node_id, "OY_JUMP_UNREADY", "OY_DENY_JUMP_UNREADY_C");
         }
     }
     else if (oy_data_flag==="OY_JUMP_FULFILL") {
@@ -3733,7 +3733,9 @@ function oy_block_engine() {
                         }, (OY_FULL_INTRO!==false&&typeof(OY_INTRO_DEFAULT[OY_FULL_INTRO])!=="undefined")?1:(oy_data_payload-oy_time_offset));
                     });
                 }
-                if (OY_BLOCK_BOOT===true) oy_intro_initiate(OY_INTRO_BOOT);
+                if (OY_BLOCK_BOOT===true) {
+                    if (oy_state_current()===2) oy_intro_initiate(OY_INTRO_BOOT);
+                }
                 else {
                     if (OY_BLOCK_HASH===null) {
                         let oy_intro_default = oy_calc_shuffle(Object.keys(OY_INTRO_DEFAULT));
