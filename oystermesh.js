@@ -1210,11 +1210,15 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         if (OY_BLOCK_HASH===null||oy_time_offset<OY_BLOCK_PEER_SPACE[0]-(OY_BLOCK_BUFFER_CLEAR[0]+OY_MESH_BUFFER[0])||oy_time_offset>OY_BLOCK_SECTORS[0][0]+OY_MESH_BUFFER[0]) return false;
 
         if (OY_LIGHT_STATE===false&&(OY_BLOCK_BOOT===true||typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined")) {
-            if (OY_FULL_INTRO!==false&&(OY_BLOCK_BOOT===true||OY_BLOCK[1][OY_SELF_PUBLIC][1]===1)) {
-                let oy_signal_carry = oy_signal_soak(oy_data_payload[4]);
-                if (!oy_signal_carry||oy_signal_carry[0]!==oy_data_payload[0][0]||typeof(OY_OFFER_COLLECT[oy_signal_carry[0]])!=="undefined"||!oy_key_verify(oy_data_payload[0][0], oy_data_payload[2], OY_BLOCK_HASH+oy_data_payload[3]+oy_data_payload[4])) return false;
-                OY_OFFER_COLLECT[oy_data_payload[0][0]] = [OY_OFFER_COUNTER, oy_data_payload[3], oy_data_payload[0], oy_data_payload[4]];//[[0]:priority_counter/broker_assign, [1]:oy_offer_rand, [2]:passport, [3]:signal_data]
-                OY_OFFER_COUNTER++;
+            if (OY_FULL_INTRO!==false&&((OY_BLOCK_BOOT===true&&OY_FULL_INTRO===OY_INTRO_BOOT)||OY_BLOCK[1][OY_SELF_PUBLIC][1]===1)) {
+                console.log("A"+OY_OFFER_COUNTER);
+                if (OY_OFFER_COUNTER<OY_INTRO_PRE_MAX) {
+                    console.log("B"+OY_OFFER_COUNTER);
+                    let oy_signal_carry = oy_signal_soak(oy_data_payload[4]);
+                    if (!oy_signal_carry||oy_signal_carry[0]!==oy_data_payload[0][0]||typeof(OY_OFFER_COLLECT[oy_signal_carry[0]])!=="undefined"||!oy_key_verify(oy_data_payload[0][0], oy_data_payload[2], OY_BLOCK_HASH+oy_data_payload[3]+oy_data_payload[4])) return false;
+                    OY_OFFER_COLLECT[oy_data_payload[0][0]] = [OY_OFFER_COUNTER, oy_data_payload[3], oy_data_payload[0], oy_data_payload[4]];//[[0]:priority_counter/broker_assign, [1]:oy_offer_rand, [2]:passport, [3]:signal_data]
+                    OY_OFFER_COUNTER++;
+                }
             }
             else {
                 if (oy_data_payload[1].length===0) {
