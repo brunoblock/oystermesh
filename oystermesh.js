@@ -3648,7 +3648,7 @@ function oy_block_engine() {
             if (OY_BLOCK_HASH===null||Object.keys(OY_NODES).length>=OY_NODE_MAX) return false;
 
             if (OY_FULL_INTRO===false) {
-                if (oy_peer_count()<OY_PEER_MAX||oy_peer_count(true)<OY_PEER_MAX) {
+                if (oy_peer_count()<OY_PEER_MAX||(OY_BLOCK_BOOT===false&&oy_peer_count(true)<OY_PEER_MAX)) {
                     let oy_offer_rand = oy_rand_gen(OY_MESH_SEQUENCE);
                     function oy_signal_local(oy_signal_data) {
                         let oy_signal_crypt = oy_signal_beam(oy_signal_data);
@@ -3702,7 +3702,7 @@ function oy_block_engine() {
 
             let oy_time_local = oy_time();
 
-            if (OY_BLOCK_HASH===null||oy_peer_count()<OY_PEER_INTRO||oy_peer_count(true)<OY_PEER_INTRO) {
+            if (OY_BLOCK_HASH===null||oy_peer_count()<=OY_PEER_INTRO||(OY_BLOCK_BOOT===false&&oy_peer_count(true)<=OY_PEER_INTRO)) {
                 let oy_intro_initiate = function(oy_intro_select) {
                     oy_intro_beam(oy_intro_select, "OY_INTRO_PRE", (OY_FULL_INTRO!==false&&typeof(OY_INTRO_DEFAULT[OY_FULL_INTRO])!=="undefined")?[OY_FULL_INTRO, oy_key_sign(OY_SELF_PRIVATE, OY_BLOCK_TIME.toString())]:null, function(oy_data_flag, oy_data_payload) {
                         if (oy_data_flag==="OY_INTRO_UNREADY") return false;
