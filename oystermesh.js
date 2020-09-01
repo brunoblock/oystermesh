@@ -3764,8 +3764,10 @@ function oy_block_engine() {
                     }
                     if (oy_peer_weak[0]!==null) oy_node_deny(oy_peer_weak[0], "OY_DENY_DEFLATE_DROP_F");
                 }
-                while (oy_peer_count(true)>OY_PEER_INFLATE) oy_light_deflate();
-                while (oy_peer_count()>OY_PEER_INFLATE) oy_full_deflate();
+                for (let i = 0;i<OY_PEER_INFLATE;i++) {
+                    if (oy_peer_count(true)>OY_PEER_INFLATE) oy_light_deflate();
+                    if (oy_peer_count()>OY_PEER_INFLATE) oy_full_deflate();
+                }
                 for (let i = 0;i<OY_PEER_DEFLATE;i++) {
                     if (oy_peer_count(true)>OY_PEER_MAX) oy_light_deflate();
                     if (oy_peer_count()>OY_PEER_MAX) oy_full_deflate();
