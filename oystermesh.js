@@ -29,7 +29,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 let OY_BLOCK_RANGE_MIN = 10;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
+const OY_BLOCK_BOOT_BUFFER = 3600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
@@ -751,16 +751,16 @@ function oy_work_verify_single(oy_block_time, oy_key_public, oy_block_hash, oy_w
 }
 
 function oy_log(oy_log_msg, oy_log_attn = 0) {
-    if (OY_PASSIVE_MODE===true) return false;
+    if (OY_PASSIVE_MODE===true) return true;
 
     if (OY_NODE_STATE===false&&typeof(oy_log_attn)!=="undefined"&&oy_log_attn===true) oy_log_msg = "<b>"+oy_log_msg+"</b>";
     if (OY_CONSOLE===undefined) {
         if (OY_NODE_STATE===true) {
             let oy_time_offset = (oy_time()-OY_BLOCK_TIME).toFixed(2);
-            if (oy_log_attn===0) console.log(chalk.white.bgCyan("["+OY_SELF_SHORT+"]["+oy_state_current()+"]["+oy_peer_count()+"|"+oy_peer_count(true)+"]["+oy_time_offset+"]")+oy_log_msg);
-            else if (oy_log_attn===1) console.log(chalk.white.bgCyan("["+OY_SELF_SHORT+"]["+oy_state_current()+"]["+oy_peer_count()+"|"+oy_peer_count(true)+"]["+oy_time_offset+"]")+chalk.hex('#00c9ff')(oy_log_msg));
-            else if (oy_log_attn===2) console.log(chalk.white.bgRed("["+OY_SELF_SHORT+"]["+oy_state_current()+"]["+oy_peer_count()+"|"+oy_peer_count(true)+"]["+oy_time_offset+"]")+chalk.white.bgMagenta(oy_log_msg));
-            else if (oy_log_attn===3) console.log(chalk.white.bgBlueBright("["+OY_SELF_SHORT+"]["+oy_state_current()+"]["+oy_peer_count()+"|"+oy_peer_count(true)+"]["+oy_time_offset+"]")+chalk.white.bgHex('#007bff')(oy_log_msg));
+            if (oy_log_attn===0) console.log(chalk.white.bgCyan("["+OY_SELF_SHORT+"]["+chalk.bolder(oy_state_current())+"]["+chalk.bolder(oy_peer_count())+"|"+chalk.bolder(oy_peer_count(true))+"]["+chalk.bolder(oy_time_offset)+"]")+oy_log_msg);
+            else if (oy_log_attn===1) console.log(chalk.white.bgCyan("["+OY_SELF_SHORT+"]["+chalk.bolder(oy_state_current())+"]["+chalk.bolder(oy_peer_count())+"|"+chalk.bolder(oy_peer_count(true))+"]["+chalk.bolder(oy_time_offset)+"]")+chalk.hex('#00c9ff')(oy_log_msg));
+            else if (oy_log_attn===2) console.log(chalk.white.bgRed("["+OY_SELF_SHORT+"]["+chalk.bolder(oy_state_current())+"]["+chalk.bolder(oy_peer_count())+"|"+chalk.bolder(oy_peer_count(true))+"]["+chalk.bolder(oy_time_offset)+"]")+chalk.white.bgMagenta(oy_log_msg));
+            else if (oy_log_attn===3) console.log(chalk.white.bgBlueBright("["+OY_SELF_SHORT+"]["+chalk.bolder(oy_state_current())+"]["+chalk.bolder(oy_peer_count())+"|"+chalk.bolder(oy_peer_count(true))+"]["+chalk.bolder(oy_time_offset)+"]")+chalk.white.bgHex('#007bff')(oy_log_msg));
         }
         else console.log(oy_log_msg);
     }
@@ -1655,9 +1655,11 @@ function oy_node_deny(oy_node_id, oy_deny_reason) {
         oy_log_debug("BLUE["+oy_deny_reason+"]["+JSON.stringify(OY_JUMP_ASSIGN)+"]");
         oy_block_jump_reset();
     }
-    if (oy_deny_reason!=="OY_DENY_TERMINATE_RETURN"&&oy_deny_reason.indexOf("OY_DENY_CONN")===-1) oy_data_beam(oy_node_id, "OY_PEER_TERMINATE", oy_deny_reason);
+    if (oy_deny_reason!=="OY_DENY_TERMINATE_RETURN"&&oy_deny_reason!=="OY_DENY_CONNECT_FAIL") {
+        oy_data_beam(oy_node_id, "OY_PEER_TERMINATE", oy_deny_reason);
+        oy_log("[DENY]["+chalk.bolder(oy_short(oy_node_id))+"]["+chalk.bolder(oy_node_state)+"]["+chalk.bolder(oy_deny_reason)+"]", 2);
+    }
     oy_node_reset(oy_node_id);
-    oy_log("[DENY]["+chalk.bolder(oy_short(oy_node_id))+"]["+chalk.bolder(oy_node_state)+"]["+chalk.bolder(oy_deny_reason)+"]", 2);
     return true;
 }
 
@@ -4402,7 +4404,7 @@ function oy_block_finish() {
 //initialize oyster mesh boot up sequence
 function oy_init(oy_console) {
     if (typeof(oy_console)==="function") {
-        console.log("Oyster console redirected to custom function");
+        console.log("[OYSTER][CONSOLE][REDIRECT]");
         OY_CONSOLE = oy_console;
     }
     if (OY_INIT===true) {
@@ -4412,7 +4414,7 @@ function oy_init(oy_console) {
     OY_INIT = true;
     if (OY_NODE_STATE===true) {
         chalk = require('chalk');
-        chalk.bolder = function(input) {return chalk.bold(input);}
+        chalk.bolder = function(input) {return (OY_NODE_STATE===true)?chalk.bold(input):input;}
         os = require('os');
         nacl = require('tweetnacl');
         nacl.util = require('tweetnacl-util');
@@ -4492,7 +4494,9 @@ function oy_init(oy_console) {
         return false;
     }
 
-    oy_log("[OYSTER]["+chalk.bolder(OY_MESH_DYNASTY)+"]["+chalk.bolder(OY_SELF_SHORT)+"]["+chalk.bolder(OY_FULL_INTRO)+"]", 1);
+    let oy_boot_msg = "[OYSTER]["+chalk.bolder(OY_MESH_DYNASTY)+"]["+chalk.bolder(OY_SELF_SHORT)+"]["+chalk.bolder(OY_FULL_INTRO)+"]";
+    if (OY_PASSIVE_MODE===true) console.log("[PASSIVE]"+oy_boot_msg);
+    else oy_log(oy_boot_msg, 1);
 
     if (OY_SIMULATOR_MODE===true) {
         if (OY_VERBOSE_MODE===true) oy_log("[OYSTER][SIMULATOR][LOAD]"+chalk.bolder(JSON.stringify([OY_SIMULATOR_SKEW, OY_LIGHT_MODE, OY_FULL_INTRO])), 1);
@@ -4584,7 +4588,8 @@ if (OY_NODE_STATE===true) {
                         OY_SELF_SHORT = oy_short(OY_SELF_PUBLIC);
                     }
                     for (let oy_var in oy_sim_data[1]) {
-                        if (oy_var==="OY_VERBOSE_MODE") OY_VERBOSE_MODE = oy_sim_data[1][oy_var];
+                        if (oy_var==="OY_PASSIVE_MODE") OY_PASSIVE_MODE = oy_sim_data[1][oy_var];
+                        else if (oy_var==="OY_VERBOSE_MODE") OY_VERBOSE_MODE = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_BLOCK_BOOT_MARK") OY_BLOCK_BOOT_MARK = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_INTRO_BOOT") OY_INTRO_BOOT = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_INTRO_DEFAULT") OY_INTRO_DEFAULT = oy_sim_data[1][oy_var];
