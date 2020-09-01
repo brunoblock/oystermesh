@@ -29,7 +29,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 let OY_BLOCK_RANGE_MIN = 10;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOT_BUFFER = 3600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
+const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
@@ -1200,7 +1200,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         if (OY_BLOCK_HASH===null||oy_time_offset<OY_BLOCK_PEER_SPACE[0]-(OY_BLOCK_BUFFER_CLEAR[0]+OY_MESH_BUFFER[0])||oy_time_offset>OY_BLOCK_SECTORS[0][0]+OY_MESH_BUFFER[0]) return false;
 
         if (OY_LIGHT_STATE===false&&(OY_BLOCK_BOOT===true||typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined")) {
-            if (OY_FULL_INTRO!==false&&((OY_BLOCK_BOOT===true&&OY_FULL_INTRO===OY_INTRO_BOOT)||OY_BLOCK[1][OY_SELF_PUBLIC][1]===1)) {
+            if (OY_FULL_INTRO!==false&&((OY_BLOCK_BOOT===true&&OY_FULL_INTRO===OY_INTRO_BOOT)||(typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined"&&OY_BLOCK[1][OY_SELF_PUBLIC][1]===1))) {
                 if (OY_OFFER_COUNTER<OY_INTRO_PRE_MAX) {
                     OY_OFFER_COUNTER++;
                     let oy_signal_carry = oy_signal_soak(oy_data_payload[4]);
@@ -1686,7 +1686,9 @@ function oy_node_connect(oy_node_id) {
             delete OY_COLD[oy_node_id];
         });
     }
-    catch(e) {}
+    catch(e) {
+        console.log(e);
+    }
     return true;
 }
 
@@ -1704,7 +1706,9 @@ function oy_node_disconnect(oy_node_id) {
             }
             return true;
         }
-        catch(e) {}
+        catch(e) {
+            console.log(e);
+        }
     }
     return false;
 }
@@ -2504,7 +2508,9 @@ function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
         if (OY_VERBOSE_MODE===true&&oy_data_flag!=="OY_BLOCK_SYNC") oy_log("[BEAM]["+chalk.bolder((oy_time()-OY_BLOCK_TIME).toFixed(2))+"]["+chalk.bolder(oy_short(oy_node_id))+"]["+chalk.bolder(oy_data_flag)+"]");
         return true;
     }
-    catch(e) {}
+    catch(e) {
+        console.log(e);
+    }
     oy_log("[ERROR]["+chalk.bolder(oy_data_flag)+"]["+chalk.bolder("OY_ERROR_BEAM_UNKNOWN")+"]", 2);
     return false;
 }
@@ -2573,8 +2579,7 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
        }
    }
    catch(e) {
-       console.log(e.error);
-       console.log(e.errorCode);
+       console.log(e);
    }
    oy_node_deny(oy_node_id, "OY_DENY_DATA_ERROR");
    return false;
@@ -2654,7 +2659,9 @@ function oy_intro_beam(oy_intro_select, oy_data_flag, oy_data_payload, oy_callba
                         }
                         else oy_callback(oy_data_flag, oy_data_payload);
                     }
-                    catch(e) {}
+                    catch(e) {
+                        console.log(e);
+                    }
                 }
             };
             ws.onerror = function() {
@@ -2668,11 +2675,13 @@ function oy_intro_beam(oy_intro_select, oy_data_flag, oy_data_payload, oy_callba
             }, OY_INTRO_TRIP[1]);
         }
     }
-    catch(e) {}
+    catch(e) {
+        console.log(e);
+    }
 }
 
 function oy_intro_soak(oy_soak_node, oy_soak_data) {
-    //try {
+    try {
         let oy_time_offset = oy_time()-OY_BLOCK_TIME;
         let [oy_data_flag, oy_data_payload] = JSON.parse(oy_soak_data);
 
@@ -2800,8 +2809,10 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
             }
             else oy_data_route("OY_LOGIC_FOLLOW", "OY_INTRO_OFFER_B", [[], OY_OFFER_BROKER[oy_signal_carry[0]][2], oy_key_sign(OY_SELF_PRIVATE, OY_OFFER_BROKER[oy_signal_carry[0]][1]+OY_OFFER_BROKER[oy_signal_carry[0]][3]+oy_data_payload), oy_data_payload]);
         }
-    //}
-    //catch(e) {}
+    }
+    catch(e) {
+        console.log(e);
+    }
     return true;
 }
 
@@ -4559,7 +4570,9 @@ if (OY_NODE_STATE===true) {
                         else OY_SIMULATOR_CALLBACK[oy_sim_misc[1]](oy_data_flag, oy_data_payload);
                         delete OY_SIMULATOR_CALLBACK[oy_sim_misc[1]];
                     }
-                    catch(e) {}
+                    catch(e) {
+                        console.log(e);
+                    }
                 }
             }
             else if (oy_sim_type===3) oy_node_initiate(oy_sim_node);
