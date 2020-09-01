@@ -647,13 +647,11 @@ function oy_worker_manager(oy_instance, oy_data) {
             }
             if (oy_nonce_select!==-1) oy_worker_process(0, oy_instance, [oy_work_self, oy_nonce_select, OY_WORK_BITS[oy_nonce_select], oy_block_metahash, OY_SELF_SHORT, oy_time_offset]);
         }
-        else {
-            if (typeof(OY_INTRO_SOLUTIONS[oy_work_nonce])!=="undefined") {
-                if (OY_INTRO_SOLUTIONS[oy_work_nonce]===null||oy_calc_grade(oy_work_solution, oy_block_metahash)>oy_calc_grade(OY_INTRO_SOLUTIONS[oy_work_nonce], oy_block_metahash)) OY_INTRO_SOLUTIONS[oy_work_nonce] = oy_work_solution;//TODO consider removing useless calc_grade comparison
-                if (Object.keys(OY_INTRO_SOLUTIONS).length>0&&Object.values(OY_INTRO_SOLUTIONS).indexOf(null)===-1) {
-                    oy_intro_beam(OY_INTRO_SELECT, "OY_INTRO_DONE", [true, OY_SELF_PUBLIC, oy_key_sign(OY_SELF_PRIVATE, JSON.stringify(OY_INTRO_SOLUTIONS)), OY_INTRO_SOLUTIONS], oy_intro_process);
-                    OY_INTRO_SOLUTIONS = {};
-                }
+        else if (typeof(OY_INTRO_SOLUTIONS[oy_work_nonce])!=="undefined") {
+            if (OY_INTRO_SOLUTIONS[oy_work_nonce]===null||oy_calc_grade(oy_work_solution, oy_block_metahash)>oy_calc_grade(OY_INTRO_SOLUTIONS[oy_work_nonce], oy_block_metahash)) OY_INTRO_SOLUTIONS[oy_work_nonce] = oy_work_solution;//TODO consider removing useless calc_grade comparison
+            if (Object.keys(OY_INTRO_SOLUTIONS).length>0&&Object.values(OY_INTRO_SOLUTIONS).indexOf(null)===-1) {
+                oy_intro_beam(OY_INTRO_SELECT, "OY_INTRO_DONE", [true, OY_SELF_PUBLIC, oy_key_sign(OY_SELF_PRIVATE, JSON.stringify(OY_INTRO_SOLUTIONS)), OY_INTRO_SOLUTIONS], oy_intro_process);
+                OY_INTRO_SOLUTIONS = {};
             }
         }
     }
@@ -3405,9 +3403,7 @@ function oy_block_engine() {
                                     OY_INTRO_SOLUTIONS = {};
                                     for (let i in oy_data_payload[1]) {
                                         OY_INTRO_SOLUTIONS[oy_data_payload[1][i][0]] = null;
-                                    }
-                                    for (let i in oy_data_payload) {
-                                        oy_worker_process(0, false, [false, oy_data_payload[1][i][0], oy_data_payload[1][i][1], oy_data_payload[0]])
+                                        oy_worker_process(0, false, [false, oy_data_payload[1][i][0], oy_data_payload[1][i][1], oy_data_payload[0]]);
                                     }
                                 }
                             });
