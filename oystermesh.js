@@ -3048,10 +3048,10 @@ function oy_block_boot_calc(oy_time) {
 function oy_block_reset(oy_reset_flag) {
     let oy_time_local = oy_time();
 
-    if (OY_BLOCK_HALT!==null&&oy_time_local-OY_BLOCK_HALT<OY_BLOCK_HALT_BUFFER) return false;//prevents duplicate calls of block_reset()
-
-    if (typeof(oy_reset_flag)==="undefined") oy_reset_flag = "OY_RESET_UNKNOWN";
+    if (typeof(oy_reset_flag)==="undefined") oy_reset_flag = "OY_RESET_EVENT";
     else if (oy_reset_flag.toString()==="[object Event]"&&typeof(oy_reset_flag.type)==="string") oy_reset_flag = "OY_RESET_"+(oy_reset_flag.type.toUpperCase().substr(3));
+
+    if ((OY_BLOCK_BOOT===true&&oy_reset_flag==="OY_RESET_EVENT")||(OY_BLOCK_HALT!==null&&oy_time_local-OY_BLOCK_HALT<OY_BLOCK_HALT_BUFFER)) return false;//adds boot safety and prevents duplicate calls of block_reset()
 
     OY_BLOCK_HALT = oy_time_local;
     OY_BLOCK_HASH = null;
