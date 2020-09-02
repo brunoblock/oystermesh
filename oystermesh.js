@@ -1214,7 +1214,16 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                 if (oy_data_payload[1].length===0) {
                     let oy_intro_select = [null, -1];
                     if (OY_BLOCK_BOOT===true) {
-                        if (typeof(OY_SYNC_MAP[0][OY_INTRO_DEFAULT[OY_INTRO_BOOT]])!=="undefined") oy_intro_select = [OY_SYNC_MAP[0][OY_INTRO_DEFAULT[OY_INTRO_BOOT]][1], OY_SYNC_MAP[0][OY_INTRO_DEFAULT[OY_INTRO_BOOT]][0]];
+                        if (typeof(OY_SYNC_MAP[0][OY_INTRO_DEFAULT[OY_INTRO_BOOT]])!=="undefined") {
+                            let oy_select_pass = true;
+                            for (let i in oy_data_payload[0]) {
+                                if (OY_SYNC_MAP[0][OY_INTRO_DEFAULT[OY_INTRO_BOOT]][1].indexOf(oy_data_payload[0][i])!==-1) {
+                                    oy_select_pass = false;
+                                    break;
+                                }
+                            }
+                            if (oy_select_pass===true) oy_intro_select = [OY_SYNC_MAP[0][OY_INTRO_DEFAULT[OY_INTRO_BOOT]][1], OY_SYNC_MAP[0][OY_INTRO_DEFAULT[OY_INTRO_BOOT]][0]];
+                        }
                     }
                     else {
                         for (let oy_key_public in OY_BLOCK[1]) {
