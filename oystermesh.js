@@ -657,7 +657,7 @@ function oy_worker_manager(oy_instance, oy_data) {
     else if (oy_work_type===1) {
         let [oy_data_payload, oy_sync_command, oy_work_grade] = oy_work_data;
 
-        if (oy_state_current()===2&&typeof(OY_BLOCK_SYNC[oy_data_payload[0][0]])!=="undefined"&&OY_BLOCK_SYNC[oy_data_payload[0][0]]!==false&&OY_BLOCK_SYNC[oy_data_payload[0][0]][1]===false&&oy_time_offset<OY_BLOCK_SECTORS[1][0]&&oy_block_command_scan(oy_sync_command, false)) {
+        if (oy_state_current()===2&&typeof(OY_BLOCK_SYNC[oy_data_payload[0][0]])!=="undefined"&&OY_BLOCK_SYNC[oy_data_payload[0][0]]!==false&&OY_BLOCK_SYNC[oy_data_payload[0][0]][1]===false&&typeof(OY_BLOCK_SYNC_PASS[OY_BLOCK_TIME])!=="undefined"&&oy_time_offset<OY_BLOCK_SECTORS[1][0]&&oy_block_command_scan(oy_sync_command, false)) {
             OY_BLOCK_SYNC[oy_data_payload[0][0]] = [oy_data_payload[2], oy_sync_command];
             OY_BLOCK_SYNC_PASS[OY_BLOCK_TIME][oy_data_payload[0][0]] = [JSON.parse(oy_data_payload[5]), JSON.parse(oy_data_payload[6]), 0];
             OY_BLOCK_WORK_GRADE[oy_data_payload[0][0]] = oy_work_grade;
@@ -3152,7 +3152,7 @@ function oy_block_engine() {
             }
         }
 
-        if (OY_BLOCK_HASH!==null) oy_log("[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_BLOCK_STABILITY.toFixed(2))+"ST]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2))+"L]["+chalk.bolder(OY_FULL_INTRO.toString())+"]["+chalk.bolder(oy_peer_full().toString())+"]["+chalk.bolder(((((OY_BLOCK_ELAPSED/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((OY_BLOCK_ELAPSED/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(OY_BLOCK_ELAPSED)+"S]["+JSON.stringify(OY_WORK_SOLUTIONS)+"]", 1);
+        if (OY_BLOCK_HASH!==null) oy_log("[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_BLOCK_STABILITY.toFixed(2))+"ST]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2))+"L]["+chalk.bolder(OY_FULL_INTRO.toString())+"]["+chalk.bolder(oy_peer_full().toString())+"]["+chalk.bolder(((((OY_BLOCK_ELAPSED/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((OY_BLOCK_ELAPSED/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(OY_BLOCK_ELAPSED)+"S]"+JSON.stringify(OY_WORK_SOLUTIONS), 1);
 
         OY_BLOCK_COMMAND_NONCE = 0;
         OY_BLOCK_SYNC = {};
