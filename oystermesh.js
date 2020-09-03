@@ -42,7 +42,7 @@ let OY_JUDGE_BUFFER_CURVE = 1.2;//allocation for curve
 let OY_SYNC_LAST_BUFFER = 2;
 let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 let OY_LIGHT_COMMIT = 0.4;
-let OY_PEER_CUT = 0.09;//minimum percentage threshold to be safe from being selected as a potential weakest peer, higher is less peers safe
+let OY_PEER_CUT = 0.05;//minimum percentage threshold to be safe from being selected as a potential weakest peer, higher is less peers safe
 let OY_PEER_MAX = [5, 3];//maximum mutual peers - [full node, light node]
 let OY_PEER_INFLATE = [7, 5];//cannot be larger than OY_NODE_MAX
 let OY_PEER_DEFLATE = [2, 3];
@@ -3643,12 +3643,10 @@ function oy_block_engine() {
             }
             else {
                 if (Object.keys(OY_BLOCK_SYNC).length>1&&typeof(OY_BLOCK_SYNC[OY_INTRO_DEFAULT[OY_INTRO_BOOT]])==="undefined") {
-                    oy_log("LEMON", 2);
                     for (let oy_peer_select in OY_PEERS) {
                         oy_node_deny(oy_peer_select, "OY_DENY_SELF_BOOT_INVALID");
                     }
                 }
-                else oy_log("ORANGE", 2);
                 OY_BLOCK_SYNC = {};
                 OY_SYNC_TALLY = {};
                 OY_SYNC_UNIQUE = {};
