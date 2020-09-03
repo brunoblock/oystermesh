@@ -1748,17 +1748,6 @@ function oy_node_boot(oy_boot_init) {
     return new SimplePeer(oy_boot_obj);
 }
 
-/*
-function oy_node_boost() {
-    if (OY_BOOST_RESERVE.length===0) return true;
-
-    while (OY_BOOST_RESERVE.length>0&&typeof(OY_PEERS[OY_BOOST_RESERVE[0]])!=="undefined") OY_BOOST_RESERVE.shift();
-    //console.log("BOOST: "+OY_BOOST_RESERVE[0]);
-    oy_node_initiate(OY_BOOST_RESERVE.shift());
-    oy_chrono(oy_node_boost, OY_NODE_ASSIGN_DELAY);
-}
-*/
-
 //respond to a node that is not mutually peered with self
 function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
     let oy_time_local = oy_time();
@@ -2148,6 +2137,7 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
                 for (let oy_peer_select in OY_PEERS) {
                     if (OY_PEERS[oy_peer_select][3]>oy_peer_weak[1]&&
                         OY_PEERS[oy_peer_select][0]<OY_BLOCK_TIME&&
+                        typeof(OY_PEER_SAFE[oy_peer_select])==="undefined"&&
                         OY_PEERS[oy_peer_select][9]<OY_PEER_CUT&&
                         oy_intro_default.indexOf(oy_peer_select)===-1&&
                         (oy_state_current()!==2||OY_LATENCY[oy_node_id][4]===2||OY_PEERS[oy_peer_select][1]!==2||typeof(OY_BLOCK[1][oy_peer_select])==="undefined")||OY_JUMP_ASSIGN[0]===oy_node_id) oy_peer_weak = [oy_peer_select, OY_PEERS[oy_peer_select][3]];
@@ -3184,7 +3174,6 @@ function oy_block_engine() {
         OY_OFFER_COLLECT = {};
         OY_OFFER_PICKUP = [];
         OY_OFFER_BROKER = {};
-        OY_PEER_SAFE = {};
         OY_PEER_OFFER = [null, null, null];
         OY_LIGHT_PROCESS = false;
         OY_BASE_BUILD = [];
@@ -3601,7 +3590,7 @@ function oy_block_engine() {
                     else OY_PEERS[oy_peer_select][9] = 0;
                 }
 
-                OY_PEER_SAFE = {};
+                let oy_safe_record = {};
                 for (let oy_peer_select in OY_SYNC_UNIQUE) {
                     let oy_peer_safe = true;
                     for (let oy_sync_select in OY_SYNC_UNIQUE[oy_peer_select]) {
@@ -3614,8 +3603,9 @@ function oy_block_engine() {
                         }
                         if (oy_peer_safe===false) break;
                     }
-                    if (oy_peer_safe===true) OY_PEER_SAFE[oy_peer_select] = true;
+                    if (oy_peer_safe===true) oy_safe_record[oy_peer_select] = true;
                 }
+                OY_PEER_SAFE = oy_clone_object(oy_safe_record);
                 oy_log("PEER_SAFE: "+Object.keys(OY_PEER_SAFE).length, 2);
 
                 for (let oy_command_hash in oy_command_check) {
@@ -3652,6 +3642,13 @@ function oy_block_engine() {
                 }
             }
             else {
+                if (typeof(OY_BLOCK_SYNC[OY_INTRO_DEFAULT[OY_INTRO_BOOT]])==="undefined") {
+                    oy_log("LEMON", 2);
+                    for (let oy_peer_select in OY_PEERS) {
+                        oy_node_deny(oy_peer_select, "OY_DENY_SELF_BOOT_INVALID");
+                    }
+                }
+                else oy_log("ORANGE", 2);
                 OY_BLOCK_SYNC = {};
                 OY_SYNC_TALLY = {};
                 OY_SYNC_UNIQUE = {};
