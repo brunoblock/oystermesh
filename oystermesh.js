@@ -2645,7 +2645,7 @@ function oy_intro_beam(oy_intro_select, oy_data_flag, oy_data_payload, oy_callba
         if (OY_VERBOSE_MODE===true) oy_log("[INTRO][BEAM]["+chalk.bolder(oy_data_flag)+"]["+chalk.bolder(oy_intro_select)+"]");
         if (OY_SIMULATOR_MODE===true) {
             let oy_sim_ref = oy_rand_gen(8);
-            OY_SIMULATOR_CALLBACK[oy_sim_ref] = oy_callback;
+            OY_SIMULATOR_CALLBACK[oy_sim_ref] = [oy_intro_select, oy_callback];
             parentPort.postMessage([1, oy_intro_select, JSON.stringify([oy_data_flag, oy_data_payload]), [oy_intro_select, oy_sim_ref]]);
         }
         else {
@@ -2658,17 +2658,15 @@ function oy_intro_beam(oy_intro_select, oy_data_flag, oy_data_payload, oy_callba
             ws.onmessage = function(oy_event) {
                 oy_response = true;
                 ws.close();
-                if (typeof(oy_callback)==="function") {
-                    try {
-                        let [oy_data_flag, oy_data_payload] = JSON.parse(oy_event.data);
-                        if (oy_data_flag==="OY_INTRO_UNREADY") {
-                            if (OY_BLOCK_BOOT===false&&oy_data_flag!=="OY_INTRO_TIME") oy_intro_punish(oy_intro_select);
-                        }
-                        else oy_callback(oy_data_flag, oy_data_payload);
+                try {
+                    let [oy_data_flag_sub, oy_data_payload_sub] = JSON.parse(oy_event.data);
+                    if (oy_data_flag_sub==="OY_INTRO_UNREADY") {
+                        if (OY_BLOCK_BOOT===false&&oy_data_flag!=="OY_INTRO_TIME") oy_intro_punish(oy_intro_select);
                     }
-                    catch(e) {
-                        console.log(e);
-                    }
+                    else if (typeof(oy_callback)==="function") oy_callback(oy_data_flag_sub, oy_data_payload_sub);
+                }
+                catch(e) {
+                    console.log(e);
                 }
             };
             ws.onerror = function() {
@@ -2820,7 +2818,7 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
     catch(e) {
         console.log(e);
     }
-    return true;
+    return false;
 }
 
 function oy_intro_punish(oy_intro_select) {
@@ -4575,22 +4573,22 @@ if (OY_NODE_STATE===true) {
     if (isMainThread) oy_init();
     else {
         parentPort.on('message', (oy_data) => {
-            let [oy_sim_type, oy_sim_node, oy_sim_data, oy_sim_misc] = oy_data;
+            let [oy_sim_type, oy_sim_node, oy_sim_data, oy_sim_intro] = oy_data;
 
             if (oy_sim_type===0) oy_data_soak(oy_sim_node, oy_sim_data);
             else if (oy_sim_type===1) {
                 let oy_soak_result = oy_intro_soak(oy_sim_node, oy_sim_data);
-                if (oy_soak_result!==false&&oy_sim_misc[0]===OY_FULL_INTRO) parentPort.postMessage([2, oy_sim_node, oy_soak_result, oy_sim_misc]);
+                if (oy_soak_result!==false&&oy_sim_intro[0]===OY_FULL_INTRO) parentPort.postMessage([2, oy_sim_node, oy_soak_result, oy_sim_intro]);
             }
             else if (oy_sim_type===2) {
-                if (typeof(OY_SIMULATOR_CALLBACK[oy_sim_misc[1]])==="function") {
+                if (typeof(OY_SIMULATOR_CALLBACK[oy_sim_intro[1]])!=="undefined") {
                     try {
                         let [oy_data_flag, oy_data_payload] = JSON.parse(oy_sim_data);
                         if (oy_data_flag==="OY_INTRO_UNREADY") {
-                            if (OY_BLOCK_BOOT===false&&oy_data_flag!=="OY_INTRO_TIME") oy_intro_punish(oy_sim_misc[0]);
+                            if (OY_BLOCK_BOOT===false) oy_intro_punish(OY_SIMULATOR_CALLBACK[oy_sim_intro[1]][0]);
                         }
-                        else OY_SIMULATOR_CALLBACK[oy_sim_misc[1]](oy_data_flag, oy_data_payload);
-                        delete OY_SIMULATOR_CALLBACK[oy_sim_misc[1]];
+                        else if (typeof(OY_SIMULATOR_CALLBACK[oy_sim_intro[1]][1])==="function") OY_SIMULATOR_CALLBACK[oy_sim_intro[1]][1](oy_data_flag, oy_data_payload);
+                        delete OY_SIMULATOR_CALLBACK[oy_sim_intro[1]];
                     }
                     catch(e) {
                         console.log(e);
