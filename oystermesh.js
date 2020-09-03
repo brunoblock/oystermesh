@@ -28,7 +28,7 @@ const OY_BLOCK_SNAPSHOT_KEEP = 120;//how many hashes of previous blocks to keep 
 const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. Higher means less chance duplicate block_reset() instances will clash
 const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
-let OY_BLOCK_RANGE_MIN = 10;//10, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
+let OY_BLOCK_RANGE_MIN = 100;//100, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
 const OY_BLOCK_BOOT_BUFFER = 3600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
@@ -43,9 +43,9 @@ let OY_SYNC_LAST_BUFFER = 2;
 let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 let OY_LIGHT_COMMIT = 0.4;
 let OY_PEER_CUT = 0.3;//minimum percentage threshold to be safe from being selected as a potential weakest peer, higher is less peers safe
-let OY_PEER_MAX = 6;//maximum mutual peers
-let OY_PEER_INFLATE = 9;//cannot be larger than OY_NODE_MAX
-let OY_PEER_DEFLATE = 2;
+let OY_PEER_MAX = [6, 4];//maximum mutual peers
+let OY_PEER_INFLATE = [9, 6];//cannot be larger than OY_NODE_MAX
+let OY_PEER_DEFLATE = [2, 3];
 let OY_PEER_INTRO = 3;
 let OY_PEER_SELF = 8;
 let OY_PEER_BOOT = 50;
@@ -1784,10 +1784,10 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_PEER_REQUEST") {
         //TODO timing validation
-        if (oy_node_id===OY_JUMP_ASSIGN[0]) oy_log_debug("JUMP_DEBUG_REQUEST: "+JSON.stringify([(oy_data_payload===2&&oy_peer_count()>OY_PEER_INFLATE), (oy_data_payload!==2&&oy_peer_count(true)>OY_PEER_INFLATE), (oy_state_current()===0&&oy_data_payload===0), OY_BLOCK_BOOT===null, (OY_BLOCK_BOOT===true&&oy_data_payload!==2), oy_data_payload]));
+        //if (oy_node_id===OY_JUMP_ASSIGN[0]) oy_log_debug("JUMP_DEBUG_REQUEST: "+JSON.stringify([(oy_data_payload===2&&oy_peer_count()>OY_PEER_INFLATE[0]), (oy_data_payload!==2&&oy_peer_count(true)>OY_PEER_INFLATE[1]), (oy_state_current()===0&&oy_data_payload===0), OY_BLOCK_BOOT===null, (OY_BLOCK_BOOT===true&&oy_data_payload!==2), oy_data_payload]));
         //(OY_JUMP_ASSIGN[0]!==oy_node_id&&oy_time_local-OY_BLOCK_TIME>OY_BLOCK_SECTORS[0][0])//TODO restore jump restriction with compatibility for new peering system
-        if ((oy_data_payload===2&&oy_peer_count()>=OY_PEER_INFLATE)||
-            ((oy_data_payload===0||oy_data_payload===1)&&(OY_BLOCK_BOOT===true||oy_peer_count(true)>=OY_PEER_INFLATE))||
+        if ((oy_data_payload===2&&oy_peer_count()>=OY_PEER_INFLATE[0])||
+            ((oy_data_payload===0||oy_data_payload===1)&&(OY_BLOCK_BOOT===true||oy_peer_count(true)>=OY_PEER_INFLATE[1]))||
             (oy_state_current()===0&&oy_data_payload===0)||
             OY_BLOCK_BOOT===null) {
             oy_data_beam(oy_node_id, "OY_PEER_UNREADY", "OY_DENY_PEER_UNREADY");
@@ -2137,7 +2137,7 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
                 }
             }
             //if (OY_JUMP_ASSIGN[0]===oy_node_id) oy_log_debug("JUMP_DEBUG_LATENCY_A: "+OY_LATENCY[oy_node_id][2]+" - "+oy_node_id);
-            if ((OY_LATENCY[oy_node_id][3]===2&&oy_peer_count()<OY_PEER_INFLATE)||((OY_LATENCY[oy_node_id][3]===0||OY_LATENCY[oy_node_id][3]===1)&&oy_peer_count(true)<OY_PEER_INFLATE)||OY_JUMP_ASSIGN[0]===oy_node_id) {//TODO test system without jump bypass once jumping works
+            if ((OY_LATENCY[oy_node_id][3]===2&&oy_peer_count()<OY_PEER_INFLATE[0])||((OY_LATENCY[oy_node_id][3]===0||OY_LATENCY[oy_node_id][3]===1)&&oy_peer_count(true)<OY_PEER_INFLATE[1])||OY_JUMP_ASSIGN[0]===oy_node_id) {//TODO test system without jump bypass once jumping works
                 if (OY_JUMP_ASSIGN[0]===oy_node_id) oy_log_debug("JUMP_DEBUG_LATENCY_B: "+OY_LATENCY[oy_node_id][2]+" - "+oy_node_id);//TODO update jumpy map upon JUMP_DROP to lock out old peers - might need delay for 2+ splits
                 oy_accept_response();
             }
@@ -3143,8 +3143,8 @@ function oy_block_engine() {
 
         if (OY_FULL_INTRO!==false&&OY_FULL_INTRO===OY_INTRO_BOOT) {
             if (OY_BLOCK_BOOT===true) {
-                OY_PEER_MAX = OY_PEER_BOOT;
-                OY_PEER_INFLATE = OY_PEER_BOOT;
+                OY_PEER_MAX = [OY_PEER_BOOT, 0];
+                OY_PEER_INFLATE = [OY_PEER_BOOT, 0];
                 OY_PEER_SELF = OY_PEER_BOOT;
                 OY_NODE_MAX = OY_PEER_BOOT*2;
             }
@@ -3156,7 +3156,7 @@ function oy_block_engine() {
                 if (OY_BLOCK_ELAPSED<=OY_BLOCK_BOOT_BUFFER) {
                     let oy_local_max = Math.ceil(OY_PEER_BOOT/(OY_BLOCK_BOOT_BUFFER/OY_BLOCK_SECTORS[5][0]));
                     let oy_drop_counter = 0;
-                    while (oy_peer_count()>OY_PEER_MAX||oy_peer_count(true)>OY_PEER_MAX) {
+                    while (oy_peer_count()>OY_PEER_MAX[0]||oy_peer_count(true)>OY_PEER_MAX[1]) {
                         if (oy_drop_counter===oy_local_max) break;
                         let oy_peer_weak = [null, -1];
                         for (let oy_peer_select in OY_PEERS) {
@@ -3346,7 +3346,7 @@ function oy_block_engine() {
             if (OY_BLOCK_HASH===null||Object.keys(OY_NODES).length>=OY_NODE_MAX) return false;
 
             if (OY_FULL_INTRO===false) {
-                if (oy_peer_count()<OY_PEER_MAX||(OY_BLOCK_BOOT===false&&oy_peer_count(true)<OY_PEER_MAX)) {
+                if (oy_peer_count()<OY_PEER_MAX[0]||(OY_BLOCK_BOOT===false&&oy_peer_count(true)<OY_PEER_MAX[1])) {
                     let oy_offer_rand = oy_rand_gen(OY_MESH_SEQUENCE);
                     function oy_signal_local(oy_signal_data) {
                         let oy_signal_crypt = oy_signal_beam(oy_signal_data);
@@ -3782,13 +3782,17 @@ function oy_block_engine() {
                     }
                     if (oy_peer_weak[0]!==null) oy_node_deny(oy_peer_weak[0], "OY_DENY_DEFLATE_DROP_F");
                 }
-                for (let i = 0;i<OY_PEER_INFLATE;i++) {
-                    if (oy_peer_count(true)>OY_PEER_INFLATE) oy_light_deflate();
-                    if (oy_peer_count()>OY_PEER_INFLATE) oy_full_deflate();
+                for (let i = 0;i<OY_PEER_INFLATE[0];i++) {
+                    if (oy_peer_count()>OY_PEER_INFLATE[0]) oy_full_deflate();
                 }
-                for (let i = 0;i<OY_PEER_DEFLATE;i++) {
-                    if (oy_peer_count(true)>OY_PEER_MAX) oy_light_deflate();
-                    if (oy_peer_count()>OY_PEER_MAX) oy_full_deflate();
+                for (let i = 0;i<OY_PEER_INFLATE[1];i++) {
+                    if (oy_peer_count(true)>OY_PEER_INFLATE[1]) oy_light_deflate();
+                }
+                for (let i = 0;i<OY_PEER_DEFLATE[0];i++) {
+                    if (oy_peer_count()>OY_PEER_MAX[0]) oy_full_deflate();
+                }
+                for (let i = 0;i<OY_PEER_DEFLATE[1];i++) {
+                    if (oy_peer_count(true)>OY_PEER_MAX[1]) oy_light_deflate();
                 }
             }, OY_BLOCK_BUFFER_CLEAR[1]);
         }, OY_BLOCK_SECTORS[4][1]);
@@ -4497,7 +4501,7 @@ function oy_init(oy_console) {
         oy_log("[ERROR]["+chalk.bolder("LIGHT_INTRO_INVALID")+"]", 2);
         return false;
     }
-    if (OY_PEER_INFLATE>=OY_NODE_MAX) {
+    if (OY_PEER_INFLATE[0]+OY_PEER_INFLATE[1]>=OY_NODE_MAX) {
         oy_log("[ERROR]["+chalk.bolder("PEER_INFLATE_INVALID")+"]", 2);
         return false;
     }
