@@ -3642,7 +3642,7 @@ function oy_block_engine() {
                 }
             }
             else {
-                if (Object.keys(OY_BLOCK_SYNC).length>0&&typeof(OY_BLOCK_SYNC[OY_INTRO_DEFAULT[OY_INTRO_BOOT]])==="undefined") {
+                if (Object.keys(OY_BLOCK_SYNC).length>1&&typeof(OY_BLOCK_SYNC[OY_INTRO_DEFAULT[OY_INTRO_BOOT]])==="undefined") {
                     oy_log("LEMON", 2);
                     for (let oy_peer_select in OY_PEERS) {
                         oy_node_deny(oy_peer_select, "OY_DENY_SELF_BOOT_INVALID");
