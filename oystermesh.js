@@ -1327,7 +1327,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             }
             if (OY_SIMULATOR_MODE===true) {
                 OY_NODES[oy_signal_carry[0]] = true;
-                oy_signal_local(oy_rand_gen(128));
+                oy_signal_local(oy_rand_gen(4));
             }
             else {
                 OY_NODES[oy_signal_carry[0]] = oy_node_boot(false);
@@ -2644,7 +2644,7 @@ function oy_intro_beam(oy_intro_select, oy_data_flag, oy_data_payload, oy_callba
     try {
         if (OY_VERBOSE_MODE===true) oy_log("[INTRO][BEAM]["+chalk.bolder(oy_data_flag)+"]["+chalk.bolder(oy_intro_select)+"]");
         if (OY_SIMULATOR_MODE===true) {
-            let oy_sim_ref = oy_rand_gen(8);
+            let oy_sim_ref = oy_rand_gen(3);
             OY_SIMULATOR_CALLBACK[oy_sim_ref] = [oy_data_flag, oy_intro_select, oy_callback];
             parentPort.postMessage([1, oy_intro_select, JSON.stringify([oy_data_flag, oy_data_payload]), [oy_intro_select, oy_sim_ref]]);
         }
@@ -2846,7 +2846,7 @@ function oy_intro_process(oy_data_flag, oy_data_payload) {
         }
         if (OY_SIMULATOR_MODE===true) {
             OY_NODES[oy_signal_carry[0]] = true;
-            oy_signal_local(oy_rand_gen(128));
+            oy_signal_local(oy_rand_gen(4));
         }
         else {
             OY_NODES[oy_signal_carry[0]] = oy_node_boot(false);
@@ -3344,7 +3344,7 @@ function oy_block_engine() {
                     }
                     if (OY_SIMULATOR_MODE===true) {
                         OY_PEER_OFFER = [oy_offer_rand, true, null];
-                        oy_signal_local(oy_rand_gen(128));
+                        oy_signal_local(oy_rand_gen(4));
                     }
                     else {
                         OY_PEER_OFFER = [oy_offer_rand, oy_node_boot(true), null];
@@ -3355,7 +3355,7 @@ function oy_block_engine() {
             else if (OY_BLOCK_RECORD_KEEP.length>1&&(OY_BLOCK_BOOT===false||OY_FULL_INTRO===OY_INTRO_BOOT)) {
                 for (let i = 0;i<OY_PEER_SELF;i++) {
                     let oy_offer_rand = oy_rand_gen(OY_MESH_SEQUENCE);
-                    if (OY_SIMULATOR_MODE===true) OY_INTRO_SELF[oy_offer_rand] = [true, oy_signal_beam(oy_rand_gen(128)), null];
+                    if (OY_SIMULATOR_MODE===true) OY_INTRO_SELF[oy_offer_rand] = [true, oy_signal_beam(oy_rand_gen(4)), null];
                     else {
                         OY_INTRO_SELF[oy_offer_rand] = [oy_node_boot(true), null, null];
                         OY_INTRO_SELF[oy_offer_rand][0].on("signal", function(oy_signal_data) {
@@ -3370,7 +3370,7 @@ function oy_block_engine() {
                 if (OY_SIMULATOR_MODE===true) {
                     OY_PEERS[oy_peer_select][10] = true;
                     OY_PEERS[oy_peer_select][11][0] = true;
-                    oy_data_beam(oy_peer_select, "OY_PEER_EXCHANGE_A", [oy_peer_map, oy_signal_beam(oy_rand_gen(128))]);
+                    oy_data_beam(oy_peer_select, "OY_PEER_EXCHANGE_A", [oy_peer_map, oy_signal_beam(oy_rand_gen(4))]);
                 }
                 else {
                     OY_PEERS[oy_peer_select][10] = oy_node_boot(true);
