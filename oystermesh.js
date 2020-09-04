@@ -555,6 +555,7 @@ function oy_worker_internal(oy_static_data) {
     }
 
     function oy_key_verify(oy_key_public, oy_key_signature, oy_key_data) {//DUPLICATED IN MAIN BLOCK
+        if (OY_SIMULATOR_MODE===true) return true;
         return nacl.sign.detached.verify(nacl.util.decodeUTF8(oy_key_data), nacl.util.decodeBase64(oy_key_signature), nacl.util.decodeBase64(oy_key_public.substr(1)+"="));
     }
 
@@ -669,7 +670,7 @@ function oy_worker_manager(oy_instance, oy_data) {
             if (typeof(OY_BLOCK_LEARN[oy_data_payload[0].length])!=="undefined"&&typeof(OY_BLOCK[1][oy_data_payload[0][0]])!=="undefined"&&OY_BLOCK[1][oy_data_payload[0][0]][1]===1) OY_BLOCK_LEARN[oy_data_payload[0].length].push(oy_time_offset);
 
             if (typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined"||OY_BLOCK_BOOT===true) {
-                oy_data_payload[1].push(oy_key_sign(OY_SELF_PRIVATE, oy_data_payload[2]));
+                oy_data_payload[1].push(oy_key_sign(OY_SELF_PRIVATE, oy_data_payload[2]));//TODO offset to worker
                 oy_data_route("OY_LOGIC_SYNC", "OY_BLOCK_SYNC", oy_data_payload);
             }
 
@@ -951,10 +952,12 @@ function oy_crypt_decrypt(oy_crypt_cipher, oy_crypt_pass) {
 }
 
 function oy_key_sign(oy_key_private, oy_key_data) {
+    if (OY_SIMULATOR_MODE===true) return oy_rand_gen(4);
     return nacl.util.encodeBase64(nacl.sign.detached(nacl.util.decodeUTF8(oy_key_data), nacl.util.decodeBase64(oy_key_private)));
 }
 
 function oy_key_verify(oy_key_public, oy_key_signature, oy_key_data) {//DUPLICATED IN WEB WORKER BLOCK
+    if (OY_SIMULATOR_MODE===true) return true;
     return nacl.sign.detached.verify(nacl.util.decodeUTF8(oy_key_data), nacl.util.decodeBase64(oy_key_signature), nacl.util.decodeBase64(oy_key_public.substr(1)+"="));
 }
 
@@ -1176,7 +1179,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                 if (oy_sync_pass===1) {
                     OY_BLOCK_SYNC[oy_data_payload[0][0]] = false;
                     if (typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined"||OY_BLOCK_BOOT===true) {
-                        oy_data_payload[1].push(oy_key_sign(OY_SELF_PRIVATE, oy_data_payload[2]));
+                        oy_data_payload[1].push(oy_key_sign(OY_SELF_PRIVATE, oy_data_payload[2]));//TODO stress AV
                         oy_data_route("OY_LOGIC_SYNC", "OY_BLOCK_SYNC", oy_data_payload);
                     }
                 }
@@ -4579,8 +4582,13 @@ if (OY_NODE_STATE===true) {
 
             if (oy_sim_type===0) oy_data_soak(oy_sim_node, oy_sim_data);
             else if (oy_sim_type===1) {
+                if (typeof(oy_sim_intro)==="undefined") {
+                    oy_log("LEMON");
+                    console.log(oy_data);
+                    process.exit();
+                }
                 let oy_soak_result = oy_intro_soak(oy_sim_node, oy_sim_data);
-                if (oy_soak_result!==false&&oy_sim_intro[0]===OY_FULL_INTRO) parentPort.postMessage([2, oy_sim_node, oy_soak_result, oy_sim_intro]);
+                if (oy_soak_result!==false&&typeof(oy_sim_intro)!=="undefined"&&oy_sim_intro[0]===OY_FULL_INTRO) parentPort.postMessage([2, oy_sim_node, oy_soak_result, oy_sim_intro]);
             }
             else if (oy_sim_type===2) {
                 if (typeof(OY_SIMULATOR_CALLBACK[oy_sim_intro[1]])!=="undefined") {
