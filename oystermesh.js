@@ -75,7 +75,7 @@ const OY_META_FEE = 0.0001*OY_AKOYA_DECIMALS;//meta fee per block per 99 charact
 const OY_NULLING_BUFFER = 0.001*OY_AKOYA_DECIMALS;
 let OY_WORKER_CORES_MIN = 1;
 let OY_WORKER_CORES_MAX = 1;
-const OY_LATENCY_SIZE = 80;//size of latency ping payload, larger is more accurate yet more taxing
+let OY_LATENCY_SIZE = 80;//size of latency ping payload, larger is more accurate yet more taxing
 const OY_LATENCY_LENGTH = 8;//length of rand sequence which is repeated for payload and signed for ID verification
 const OY_LATENCY_TRACK = 200;//how many latency measurements to keep at a time per peer
 let OY_LATENCY_GEO_MIN = 1;//minimum buffer for comparing latency with peers, higher means less likely weakest peer will get dropped and mesh is less geo-sensitive
@@ -4615,6 +4615,7 @@ if (OY_NODE_STATE===true) {
                         else if (oy_var==="OY_BLOCK_BOOT_MARK") OY_BLOCK_BOOT_MARK = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_INTRO_BOOT") OY_INTRO_BOOT = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_INTRO_DEFAULT") OY_INTRO_DEFAULT = oy_sim_data[1][oy_var];
+                        else if (oy_var==="OY_LATENCY_SIZE") OY_LATENCY_SIZE = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_LATENCY_GEO_MIN") OY_LATENCY_GEO_MIN = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_LATENCY_GEO_MULTI") OY_LATENCY_GEO_MULTI = oy_sim_data[1][oy_var];
                     }
