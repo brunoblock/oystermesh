@@ -29,7 +29,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 let OY_BLOCK_RANGE_MIN = 100;//100, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
+const OY_BLOCK_BOOT_BUFFER = 3600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
@@ -37,8 +37,9 @@ let OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventua
 const OY_BLOCK_PEER_SPACE = [15, 15000];
 let OY_BLOCK_RECORD_LIMIT = 20;
 let OY_BLOCK_RECORD_INTRO_BUFFER = 1.4;
-let OY_JUDGE_BUFFER_BASE = 1.8;
-let OY_JUDGE_BUFFER_CURVE = 1.2;//allocation for curve
+let OY_JUDGE_BUFFER_BASE = 1.9;
+let OY_JUDGE_BUFFER_CURVE = 1.15;//allocation for curve
+let OY_SYNC_HOP_MAX = 80;
 let OY_SYNC_LAST_BUFFER = 2;
 let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 let OY_LIGHT_COMMIT = 0.4;
@@ -1134,7 +1135,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_BLOCK_SYNC") {//OY_LOGIC_SYNC
         //oy_data_payload = [oy_passport_passive, oy_passport_crypt, oy_sync_crypt, oy_block_time, oy_command_flat, oy_identity_flat, oy_solutions_flat]
-        if (oy_state_current()!==2||oy_data_payload.length!==7||typeof(oy_data_payload[0])!=="object"||typeof(oy_data_payload[1])!=="object"||oy_data_payload[0].length===0||oy_data_payload[0].length!==oy_data_payload[1].length||!oy_key_check(oy_data_payload[0][0])||oy_data_payload[3]!==OY_BLOCK_TIME) {
+        if (oy_state_current()!==2||oy_data_payload.length!==7||typeof(oy_data_payload[0])!=="object"||typeof(oy_data_payload[1])!=="object"||oy_data_payload[0].length===0||oy_data_payload[0].length>OY_SYNC_HOP_MAX||oy_data_payload[0].length!==oy_data_payload[1].length||!oy_key_check(oy_data_payload[0][0])||oy_data_payload[3]!==OY_BLOCK_TIME) {
             oy_node_deny(oy_peer_id, "OY_DENY_SYNC_INVALID");
             return false;
         }
@@ -1169,7 +1170,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             OY_BLOCK_HASH!==null&&//check that there is a known meshblock hash
             oy_data_payload[3]===OY_BLOCK_TIME&&//check that the current timestamp is in the sync processing zone
             oy_time_local-OY_BLOCK_TIME<OY_BLOCK_SECTORS[1][0]&&//check that the current timestamp is in the sync processing zone
-            (true||OY_BLOCK_JUDGE===true||(typeof(OY_BLOCK_JUDGE[oy_data_payload[0].length])!=="undefined"&&(OY_BLOCK_JUDGE[oy_data_payload[0].length]===true||oy_time_local-OY_BLOCK_TIME<OY_BLOCK_JUDGE[oy_data_payload[0].length]))||OY_BLOCK_BOOT===true)) {
+            (OY_BLOCK_JUDGE===true||(typeof(OY_BLOCK_JUDGE[oy_data_payload[0].length])!=="undefined"&&(OY_BLOCK_JUDGE[oy_data_payload[0].length]===true||oy_time_local-OY_BLOCK_TIME<OY_BLOCK_JUDGE[oy_data_payload[0].length]))||OY_BLOCK_BOOT===true)) {
             if (oy_sync_pass!==2) {
                 if (oy_sync_pass===1) {
                     OY_BLOCK_SYNC[oy_data_payload[0][0]] = false;
@@ -2413,7 +2414,7 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_push_def
     if (oy_data_logic==="OY_LOGIC_SYNC") {
         //oy_data_payload[0] is oy_passport_passive
         //oy_data_payload[1] is oy_passport_crypt
-        if (OY_BLOCK_HASH===null) return false;
+        if (OY_BLOCK_HASH===null||oy_data_payload[0].length>=OY_SYNC_HOP_MAX) return false;
 
         oy_data_payload[0].push(OY_SELF_PUBLIC);
         for (let oy_peer_select in OY_PEERS) {
@@ -4562,10 +4563,6 @@ if (OY_NODE_STATE===true) {
 
             if (oy_sim_type===0) oy_data_soak(oy_sim_node, oy_sim_data);
             else if (oy_sim_type===1) {
-                if (typeof(oy_sim_intro)==="undefined") {
-                    oy_log("ORANGE1: "+oy_data.length+" <-> "+JSON.stringify(oy_data));
-                    throw new Error("ORANGE2");
-                }
                 let oy_soak_result = oy_intro_soak(oy_sim_node, oy_sim_data);
                 if (oy_soak_result!==false&&typeof(oy_sim_intro)!=="undefined"&&oy_sim_intro[0]===OY_FULL_INTRO) parentPort.postMessage([2, oy_sim_node, oy_soak_result, oy_sim_intro]);
             }
