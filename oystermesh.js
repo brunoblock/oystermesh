@@ -1714,11 +1714,7 @@ function oy_node_connect(oy_node_id) {
 function oy_node_disconnect(oy_node_id) {
     if (typeof(OY_NODES[oy_node_id])!=="undefined") {
         try {
-            if (OY_SIMULATOR_MODE===true) {
-                oy_node_reset(oy_node_id);
-                delete OY_NODES[oy_node_id];
-                parentPort.postMessage([4, null, ["OY_SIM_DROP", oy_node_id]]);
-            }
+            if (OY_SIMULATOR_MODE===true) oy_node_reset(oy_node_id);
             else {
                 oy_node_reset(oy_node_id);
                 OY_COLD[oy_node_id] = true;
@@ -2057,7 +2053,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
             oy_node_deny(oy_node_id, "OY_DENY_JUMP_REJECT");
             oy_log_debug("TREE: "+JSON.stringify([OY_JUMP_ASSIGN, oy_data_payload]));
         }
-        else oy_node_disconnect(oy_node_id);
+        else oy_node_reset(oy_node_id);
         oy_log("[END]["+chalk.bolder(oy_short(oy_node_id))+"]["+chalk.bolder("N")+"]["+chalk.bolder(oy_data_payload)+"]", 2);
     }
     else oy_node_deny(oy_node_id, "OY_DENY_DATA_INCOHERENT");
