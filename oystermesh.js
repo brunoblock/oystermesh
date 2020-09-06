@@ -1718,6 +1718,7 @@ function oy_node_disconnect(oy_node_id) {
                 OY_COLD[oy_node_id] = true;
                 OY_NODES[oy_node_id].destroy();
             }
+            if (OY_VERBOSE_MODE===true) oy_log("[DISCONNECT]["+chalk.bolder(oy_node_id)+"]");
             return true;
         }
         catch(e) {
@@ -2483,7 +2484,7 @@ function oy_data_direct(oy_data_flag) {
 //send data
 function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
     if (typeof(OY_NODES[oy_node_id])==="undefined") {
-        oy_log("[ERROR]["+chalk.bolder(oy_short(oy_node_id))+"]["+chalk.bolder(oy_data_flag)+"]["+chalk.bolder("OY_ERROR_BEAM_NODE_EMPTY")+"]", 2);
+        oy_log("[ERROR]["+chalk.bolder(oy_short(oy_node_id))+"]["+chalk.bolder("OY_ERROR_BEAM_NODE_EMPTY")+"]["+chalk.bolder(oy_data_flag)+"]", 2);
         return false;
     }
 
@@ -2525,7 +2526,7 @@ function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
 function oy_data_soak(oy_node_id, oy_data_raw) {
    try {
        if (typeof(OY_NODES[oy_node_id])==="undefined") {
-           oy_log("[ERROR]["+chalk.bolder(oy_short(oy_node_id))+"]["+chalk.bolder(JSON.parse(oy_data_raw)[0])+"]["+chalk.bolder("OY_ERROR_SOAK_NODE_EMPTY")+"]", 2);
+           oy_log("[ERROR]["+chalk.bolder(oy_short(oy_node_id))+"]["+chalk.bolder("OY_ERROR_SOAK_NODE_EMPTY")+"]["+chalk.bolder(JSON.parse(oy_data_raw)[0])+"]", 2);
            return false;
        }
        if (oy_data_raw.length>OY_DATA_MAX) {
