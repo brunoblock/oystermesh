@@ -1779,10 +1779,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
         if ((oy_data_payload===2&&oy_peer_count()>=OY_PEER_INFLATE[0])||
             ((oy_data_payload===0||oy_data_payload===1)&&(OY_BLOCK_BOOT===true||oy_peer_count(true)>=OY_PEER_INFLATE[1]))||
             (oy_state_current()===0&&oy_data_payload===0)||
-            OY_BLOCK_BOOT===null) {
-            oy_data_beam(oy_node_id, "OY_PEER_UNREADY", "OY_DENY_PEER_UNREADY");
-            oy_node_disconnect(oy_node_id);
-        }
+            OY_BLOCK_BOOT===null) oy_data_beam(oy_node_id, "OY_PEER_UNREADY", "OY_DENY_PEER_UNREADY");
         else oy_latency_test(oy_node_id, "OY_PEER_REQUEST", oy_data_payload);
     }
     else if (oy_data_flag==="OY_LATENCY_DECLINE") oy_node_deny(oy_node_id, "OY_DENY_LATENCY_DECLINE");
