@@ -1673,7 +1673,7 @@ function oy_node_deny(oy_node_id, oy_deny_reason) {
         oy_data_beam(oy_node_id, "OY_PEER_TERMINATE", oy_deny_reason);
         oy_log("[DENY]["+chalk.bolder(oy_short(oy_node_id))+"]["+chalk.bolder(oy_node_state)+"]["+chalk.bolder(oy_deny_reason)+"]", 2);
     }
-    oy_node_disconnect(oy_node_id);
+    oy_node_reset(oy_node_id);
     return true;
 }
 
