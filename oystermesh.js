@@ -1752,10 +1752,6 @@ function oy_node_initiate(oy_node_id) {
     return true;
 }
 
-function oy_node_assign() {
-    if (OY_BLOCK_BOOT===null) return false;
-}
-
 function oy_node_boot(oy_boot_init) {
     let oy_boot_obj = {initiator:oy_boot_init, trickle:false};
     if (OY_NODE_STATE===true) oy_boot_obj.wrtc = wrtc;
@@ -3127,8 +3123,6 @@ function oy_block_reset(oy_reset_flag) {
 
     oy_event_dispatch("oy_block_reset");
     oy_event_dispatch("oy_state_blank");
-
-    oy_node_assign();
 }
 
 function oy_block_engine() {
@@ -3329,7 +3323,7 @@ function oy_block_engine() {
             oy_chrono(function() {
                 //oy_log("[SYNC][BROADCAST]["+(oy_time()-OY_BLOCK_TIME).toFixed(2)+"]", 2);
                 oy_data_route("OY_LOGIC_SYNC", "OY_BLOCK_SYNC", [[], [oy_key_sign(OY_SELF_PRIVATE, oy_sync_crypt)], oy_sync_crypt, OY_BLOCK_TIME, oy_command_flat, oy_identity_flat, oy_solutions_flat]);
-            }, OY_MESH_BUFFER[1]);//TODO clock skew for peer_request
+            }, OY_BLOCK_BUFFER_CLEAR[1]+OY_MESH_BUFFER[1]);
         }
 
         for (let oy_command_hash in OY_BLOCK_COMMAND) {
@@ -4534,9 +4528,7 @@ function oy_init(oy_console) {
     if (oy_time_local<OY_BLOCK_BOOT_MARK) OY_BLOCK_BOOT = null;
     else OY_BLOCK_BOOT = oy_time_local-OY_BLOCK_BOOT_MARK<OY_BLOCK_BOOT_BUFFER;
 
-    oy_node_assign();
     oy_block_engine();
-
     oy_event_dispatch("oy_state_blank");
 
     if (OY_FULL_INTRO!==false&&OY_SIMULATOR_MODE===false) {
