@@ -843,7 +843,7 @@ function oy_calc_avg(oy_array) {//DUPLICATED IN WEB WORKER BLOCK
     return oy_sum/oy_array.length;
 }
 
-function oy_calc_median(oy_array){
+function oy_calc_median(oy_array) {
     if (typeof(oy_array)!=="object"||oy_array.length===0) return false;
 
     let oy_array_clone = oy_array.slice();
@@ -1091,7 +1091,7 @@ function oy_peer_cut() {
         if (OY_PEERS[oy_peer_select][1]===2) oy_cut_keep.push(OY_PEERS[oy_peer_select][9]);
     }
     let oy_cut_local = oy_calc_median(oy_cut_keep);
-    if (!oy_cut_local) oy_cut_local = 1;
+    if (oy_cut_local===false) oy_cut_local = 1;
     oy_log("PEER_CUT: "+oy_cut_local+" <-> "+JSON.stringify(oy_cut_keep));
     return oy_cut_local;
 }
@@ -2149,7 +2149,7 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
                 for (let oy_peer_select in OY_PEERS) {
                     if (OY_PEERS[oy_peer_select][3]>oy_peer_weak[1]&&
                         OY_PEERS[oy_peer_select][0]<OY_BLOCK_TIME&&
-                        OY_PEERS[oy_peer_select][9]<oy_cut_local&&
+                        OY_PEERS[oy_peer_select][9]<=oy_cut_local&&
                         oy_intro_default.indexOf(oy_peer_select)===-1&&
                         (oy_state_current()!==2||OY_LATENCY[oy_node_id][4]===2||OY_PEERS[oy_peer_select][1]!==2||typeof(OY_BLOCK[1][oy_peer_select])==="undefined")||OY_JUMP_ASSIGN[0]===oy_node_id) oy_peer_weak = [oy_peer_select, OY_PEERS[oy_peer_select][3]];
                 }
@@ -3766,7 +3766,7 @@ function oy_block_engine() {
                     for (let oy_peer_select in OY_PEERS) {
                         if (OY_PEERS[oy_peer_select][1]===2&&
                             OY_PEERS[oy_peer_select][0]<OY_BLOCK_TIME&&
-                            OY_PEERS[oy_peer_select][9]<oy_cut_local&&
+                            OY_PEERS[oy_peer_select][9]<=oy_cut_local&&
                             oy_intro_default.indexOf(oy_peer_select)===-1&&
                             OY_PEERS[oy_peer_select][3]>oy_peer_weak[1]) oy_peer_weak = [oy_peer_select, OY_PEERS[oy_peer_select][3]];
                     }
