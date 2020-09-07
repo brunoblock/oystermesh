@@ -50,7 +50,7 @@ let OY_PEER_INTRO = 3;
 let OY_PEER_SELF = 8;
 let OY_PEER_BOOT = 50;
 let OY_NODE_MAX = 40;
-const OY_INTRO_PRE_MAX = 100;
+const OY_INTRO_PRE_MAX = 200;
 const OY_INTRO_TRIP = [0.8, 800];
 const OY_WORK_MATCH = 4;//lower is more bandwidth/memory bound, higher is more CPU bound
 const OY_WORK_MAX = 10000;//10000
@@ -1226,7 +1226,20 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                 if (oy_data_payload[1].length===0) {
                     let oy_intro_select = [null, -1];
                     if (OY_BLOCK_BOOT===true) {
-                        if (typeof(OY_SYNC_MAP[0][OY_INTRO_DEFAULT[OY_INTRO_BOOT]])!=="undefined") {
+                        if (typeof(OY_SYNC_MAP[1][OY_INTRO_DEFAULT[OY_INTRO_BOOT]])!=="undefined") {
+                            let oy_select_pass = true;
+                            for (let i in oy_data_payload[0]) {
+                                if (OY_SYNC_MAP[1][OY_INTRO_DEFAULT[OY_INTRO_BOOT]][1].indexOf(oy_data_payload[0][i])!==-1) {
+                                    oy_select_pass = false;
+                                    break;
+                                }
+                            }
+                            if (oy_select_pass===true) {
+                                oy_log("SYNC_MAP_A1: "+OY_SYNC_MAP[1][OY_INTRO_DEFAULT[OY_INTRO_BOOT]][0]);
+                                oy_intro_select = [OY_SYNC_MAP[1][OY_INTRO_DEFAULT[OY_INTRO_BOOT]][1], OY_SYNC_MAP[1][OY_INTRO_DEFAULT[OY_INTRO_BOOT]][0]];
+                            }
+                        }
+                        if (oy_intro_select[0]===null&&typeof(OY_SYNC_MAP[0][OY_INTRO_DEFAULT[OY_INTRO_BOOT]])!=="undefined") {
                             let oy_select_pass = true;
                             for (let i in oy_data_payload[0]) {
                                 if (OY_SYNC_MAP[0][OY_INTRO_DEFAULT[OY_INTRO_BOOT]][1].indexOf(oy_data_payload[0][i])!==-1) {
@@ -1234,20 +1247,47 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                                     break;
                                 }
                             }
-                            if (oy_select_pass===true) oy_intro_select = [OY_SYNC_MAP[0][OY_INTRO_DEFAULT[OY_INTRO_BOOT]][1], OY_SYNC_MAP[0][OY_INTRO_DEFAULT[OY_INTRO_BOOT]][0]];
+                            if (oy_select_pass===true) {
+                                oy_log("SYNC_MAP_A2: "+OY_SYNC_MAP[0][OY_INTRO_DEFAULT[OY_INTRO_BOOT]][0]);
+                                oy_intro_select = [OY_SYNC_MAP[0][OY_INTRO_DEFAULT[OY_INTRO_BOOT]][1], OY_SYNC_MAP[0][OY_INTRO_DEFAULT[OY_INTRO_BOOT]][0]];
+                            }
                         }
                     }
                     else {
                         for (let oy_key_public in OY_BLOCK[1]) {
-                            if (OY_BLOCK[1][oy_key_public][1]===1&&OY_BLOCK[1][oy_key_public][6]!==0&&typeof(OY_SYNC_MAP[0][oy_key_public])!=="undefined"&&(OY_SYNC_MAP[0][oy_key_public][0]<oy_intro_select[1]||oy_intro_select[1]===-1)) {
-                                let oy_select_pass = true;
-                                for (let i in oy_data_payload[0]) {
-                                    if (OY_SYNC_MAP[0][oy_key_public][1].indexOf(oy_data_payload[0][i])!==-1) {
-                                        oy_select_pass = false;
-                                        break;
+                            if (OY_BLOCK[1][oy_key_public][1]===1&&OY_BLOCK[1][oy_key_public][6]!==0) {
+                                if (typeof(OY_SYNC_MAP[1][oy_key_public])!=="undefined"&&(OY_SYNC_MAP[1][oy_key_public][0]<oy_intro_select[1]||oy_intro_select[1]===-1)) {
+                                    let oy_select_pass = true;
+                                    for (let i in oy_data_payload[0]) {
+                                        if (OY_SYNC_MAP[1][oy_key_public][1].indexOf(oy_data_payload[0][i])!==-1) {
+                                            oy_select_pass = false;
+                                            break;
+                                        }
+                                    }
+                                    if (oy_select_pass===true) {
+                                        oy_log("SYNC_MAP_B1: "+OY_SYNC_MAP[1][oy_key_public][0]);
+                                        oy_intro_select = [OY_SYNC_MAP[1][oy_key_public][1], OY_SYNC_MAP[1][oy_key_public][0]];
                                     }
                                 }
-                                if (oy_select_pass===true) oy_intro_select = [OY_SYNC_MAP[0][oy_key_public][1], OY_SYNC_MAP[0][oy_key_public][0]];
+                            }
+                        }
+                        if (oy_intro_select[0]===null) {
+                            for (let oy_key_public in OY_BLOCK[1]) {
+                                if (OY_BLOCK[1][oy_key_public][1]===1&&OY_BLOCK[1][oy_key_public][6]!==0) {
+                                    if (typeof(OY_SYNC_MAP[0][oy_key_public])!=="undefined"&&(OY_SYNC_MAP[0][oy_key_public][0]<oy_intro_select[1]||oy_intro_select[1]===-1)) {
+                                        let oy_select_pass = true;
+                                        for (let i in oy_data_payload[0]) {
+                                            if (OY_SYNC_MAP[0][oy_key_public][1].indexOf(oy_data_payload[0][i])!==-1) {
+                                                oy_select_pass = false;
+                                                break;
+                                            }
+                                        }
+                                        if (oy_select_pass===true) {
+                                            oy_log("SYNC_MAP_B2: "+OY_SYNC_MAP[1][oy_key_public][0]);
+                                            oy_intro_select = [OY_SYNC_MAP[0][oy_key_public][1], OY_SYNC_MAP[0][oy_key_public][0]];
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
