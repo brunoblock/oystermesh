@@ -29,7 +29,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 let OY_BLOCK_RANGE_MIN = 100;//100, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOT_BUFFER = 3600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
+const OY_BLOCK_BOOT_BUFFER = 1800;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
@@ -1103,7 +1103,10 @@ function oy_peer_count(oy_light_mode = false) {
 
 //process data sequence received from mutual peer oy_peer_id
 function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
-    if (typeof(OY_PEERS[oy_peer_id])==="undefined"||(OY_PEERS[oy_peer_id][1]===0&&oy_data_flag!=="OY_PEER_LATENCY"&&oy_data_flag!=="OY_PEER_LIGHT")) return false;//TODO add deny
+    if (typeof(OY_PEERS[oy_peer_id])==="undefined"||(OY_PEERS[oy_peer_id][1]===0&&oy_data_flag!=="OY_PEER_LATENCY"&&oy_data_flag!=="OY_PEER_LIGHT")) {
+        oy_node_deny(oy_peer_id, "OY_DENY_PROCESS_INVALID");
+        return false;
+    }
 
     let oy_time_local = oy_time();
     if (oy_data_flag==="OY_BLOCK_COMMAND") {//OY_LOGIC_UPSTREAM
@@ -1428,7 +1431,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             }
 
             oy_log("[MESHBLOCK][BASE]["+chalk.bolder(OY_BLOCK_HASH)+"]", 1);
-            oy_log_debug("BASE MESHBLOCK HASH "+OY_BLOCK_HASH);//TODO temp
+            //oy_log_debug("BASE MESHBLOCK HASH "+OY_BLOCK_HASH);//TODO temp
 
             OY_LIGHT_STATE = true;
             OY_DIVE_STATE = false;
@@ -1503,7 +1506,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         if (oy_dive_count>=OY_BLOCK[0][2]*OY_LIGHT_COMMIT) oy_block_light();
     }
     else if (oy_data_flag==="OY_PEER_LIGHT") {//peer as a blank or full node is converting into a light node
-        if (OY_PEERS[oy_peer_id][1]===1) {
+        if (OY_PEERS[oy_peer_id][1]===1&&OY_BLOCK_TIME>OY_PEERS[oy_peer_id][0]) {
             oy_node_deny(oy_peer_id, "OY_DENY_LIGHT_MISALIGN");
             return false;
         }
@@ -1518,7 +1521,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         return true;
     }
     else if (oy_data_flag==="OY_PEER_FULL") {//peer as a light node is converting into a full node
-        if (OY_PEERS[oy_peer_id][0]<OY_BLOCK_TIME&&OY_PEERS[oy_peer_id][1]===2) {
+        if (OY_PEERS[oy_peer_id][1]===2&&OY_BLOCK_TIME>OY_PEERS[oy_peer_id][0]) {
             oy_node_deny(oy_peer_id, "OY_DENY_FULL_MISALIGN");
             return false;
         }
@@ -2157,9 +2160,9 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
     else oy_node_deny(oy_node_id, "OY_DENY_LATENCY_INVALID");
 }
 
-function oy_state_current(oy_seek_mode) {
+function oy_state_current(oy_seek_mode = false) {
     if (OY_BLOCK_HASH!==null) {
-        if (OY_LIGHT_STATE===false||(typeof(oy_seek_mode)!=="undefined"&&oy_seek_mode===true&&OY_LIGHT_MODE===false)) return 2;//full node
+        if (OY_LIGHT_STATE===false||(oy_seek_mode===true&&OY_LIGHT_MODE===false)) return 2;//full node
         return 1;//light node
     }
     return 0;//blank node
@@ -3263,7 +3266,6 @@ function oy_block_engine() {
             }
         }
         if (OY_LIGHT_STATE===false&&OY_BLOCK_HASH!==null&&OY_WORK_SOLUTIONS.indexOf(null)===-1&&(oy_peer_full()||OY_BLOCK_BOOT===true)) {
-
             if (OY_WORK_SOLUTIONS.length!==OY_BLOCK[0][3]) {
                 oy_log("[ERROR]["+chalk.bolder("WORK_MISMATCH")+"]["+chalk.bolder(OY_WORK_SOLUTIONS.length)+"]["+chalk.bolder(OY_BLOCK[0][3])+"]", 2);
                 throw new Error("OY_ERROR_FATAL");
