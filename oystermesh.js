@@ -43,7 +43,6 @@ let OY_SYNC_HOP_MAX = 80;
 let OY_SYNC_LAST_BUFFER = 2;
 let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 let OY_LIGHT_COMMIT = 0.4;
-let OY_PEER_CUT = 0.12;//minimum percentage threshold to be safe from being selected as a potential weakest peer, higher is less peers safe
 let OY_PEER_MAX = [5, 3];//maximum mutual peers - [full node, light node]
 let OY_PEER_INFLATE = [7, 5];//cannot be larger than OY_NODE_MAX
 let OY_PEER_DEFLATE = [2, 3];
@@ -1084,6 +1083,17 @@ function oy_peer_full() {
         }
     }
     return false;
+}
+
+function oy_peer_cut() {
+    let oy_cut_keep = [];
+    for (let oy_peer_select in OY_PEERS) {
+        if (OY_PEERS[oy_peer_select][1]===2) oy_cut_keep.push(OY_PEERS[oy_peer_select][9]);
+    }
+    let oy_cut_local = oy_calc_median(oy_cut_keep);
+    if (!oy_cut_local) oy_cut_local = 1;
+    oy_log("PEER_CUT: "+oy_cut_local+" <-> "+JSON.stringify(oy_cut_keep));
+    return oy_cut_local;
 }
 
 function oy_peer_count(oy_light_mode = false) {
@@ -2133,12 +2143,13 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
             }
             else {
                 if (OY_JUMP_ASSIGN[0]===oy_node_id) oy_log_debug("JUMP_DEBUG_LATENCY_C: "+OY_LATENCY[oy_node_id][2]+" "+oy_node_id);
+                let oy_cut_local = oy_peer_cut();
                 let oy_intro_default = Object.values(OY_INTRO_DEFAULT);
                 let oy_peer_weak = [null, -1];
                 for (let oy_peer_select in OY_PEERS) {
                     if (OY_PEERS[oy_peer_select][3]>oy_peer_weak[1]&&
                         OY_PEERS[oy_peer_select][0]<OY_BLOCK_TIME&&
-                        OY_PEERS[oy_peer_select][9]<OY_PEER_CUT&&
+                        OY_PEERS[oy_peer_select][9]<oy_cut_local&&
                         oy_intro_default.indexOf(oy_peer_select)===-1&&
                         (oy_state_current()!==2||OY_LATENCY[oy_node_id][4]===2||OY_PEERS[oy_peer_select][1]!==2||typeof(OY_BLOCK[1][oy_peer_select])==="undefined")||OY_JUMP_ASSIGN[0]===oy_node_id) oy_peer_weak = [oy_peer_select, OY_PEERS[oy_peer_select][3]];
                 }
@@ -3742,19 +3753,20 @@ function oy_block_engine() {
                     for (let oy_peer_select in OY_PEERS) {
                         if (OY_PEERS[oy_peer_select][1]===1&&
                             OY_PEERS[oy_peer_select][0]<OY_BLOCK_TIME&&
-                            OY_PEERS[oy_peer_select][9]<OY_PEER_CUT&&
+                            OY_PEERS[oy_peer_select][9]!==1&&
                             oy_intro_default.indexOf(oy_peer_select)===-1&&
                             OY_PEERS[oy_peer_select][3]>oy_peer_weak[1]) oy_peer_weak = [oy_peer_select, OY_PEERS[oy_peer_select][3]];
                     }
                     if (oy_peer_weak[0]!==null) oy_node_deny(oy_peer_weak[0], "OY_DENY_DEFLATE_DROP_L");
                 }
                 let oy_full_deflate = function() {
+                    let oy_cut_local = oy_peer_cut();
                     let oy_intro_default = Object.values(OY_INTRO_DEFAULT);
                     let oy_peer_weak = [null, -1];
                     for (let oy_peer_select in OY_PEERS) {
                         if (OY_PEERS[oy_peer_select][1]===2&&
                             OY_PEERS[oy_peer_select][0]<OY_BLOCK_TIME&&
-                            OY_PEERS[oy_peer_select][9]<OY_PEER_CUT&&
+                            OY_PEERS[oy_peer_select][9]<oy_cut_local&&
                             oy_intro_default.indexOf(oy_peer_select)===-1&&
                             OY_PEERS[oy_peer_select][3]>oy_peer_weak[1]) oy_peer_weak = [oy_peer_select, OY_PEERS[oy_peer_select][3]];
                     }
