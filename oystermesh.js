@@ -1669,32 +1669,21 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
 //reports peership data to top, leads to seeing mesh big picture, mesh stability development, not required for mesh operation
 function oy_peer_report() {
-    //console.log("REPORT: "+OY_REPORT_HASH+" "+(oy_time()-OY_BLOCK_TIME));
-    let oy_xhttp = new XMLHttpRequest();
-    oy_xhttp.onreadystatechange = function() {
-        if (this.readyState===4&&this.status===200) {
-            if (this.responseText.substr(0, 5)==="ERROR"||this.responseText.length===0) {
-                oy_log("[TOP][REPORT][ERROR]["+chalk.bolder(this.responseText)+"]", 2);
-                return false;
-            }
-            if (this.responseText!=="OY_REPORT_SUCCESS") oy_log("[TOP][REPORT][FAIL]", 2);
-        }
-    };
-
     let oy_report_pass = false;
     let oy_peers_thin = {};
     for (let oy_peer_select in OY_PEERS) {
         oy_report_pass = true;
-        oy_peers_thin[oy_peer_select] = OY_PEERS[oy_peer_select].slice();
-        oy_peers_thin[oy_peer_select][4] = null;
-        oy_peers_thin[oy_peer_select][6] = null;
-        oy_peers_thin[oy_peer_select][8] = null;
-        oy_peers_thin[oy_peer_select][10] = null;
+        oy_peers_thin[oy_hash_gen(oy_peer_select).substr(0, OY_SHORT_LENGTH)] = 0;
     }
 
     if (oy_report_pass===true) {
-        oy_xhttp.open("POST", "https://top.oyster.org/oy_peer_report", true);
-        oy_xhttp.send(JSON.stringify([OY_SELF_PUBLIC, oy_state_current(), oy_peers_thin, {}]));
+        let ws = new websock("wss://top.oyster.org:5050");
+        ws.onopen = function() {
+            ws.send(JSON.stringify([oy_hash_gen(OY_SELF_PUBLIC).substr(0, OY_SHORT_LENGTH), oy_state_current(), oy_peers_thin]));
+        };
+        ws.onerror = function() {
+            oy_log("[ERROR]["+chalk.bolder("PEER_REPORT_UNKNOWN")+"]", 2);
+        };
     }
 }
 
@@ -4465,8 +4454,8 @@ function oy_init(oy_console) {
         XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
         globalThis.Blob = require("cross-blob");
         isMainThread = require('worker_threads').isMainThread;
+        websock = require('ws');
         if (OY_SIMULATOR_MODE===false) {
-            websock = require('ws');
             SimplePeer = require('simple-peer');
             wrtc = require('wrtc');
         }
