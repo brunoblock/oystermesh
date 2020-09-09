@@ -3280,7 +3280,7 @@ function oy_block_engine() {
         //BLOCK SEED--------------------------------------------------
 
         if (OY_LIGHT_STATE===false) {//TODO merge if condition with block below
-            let oy_array_length = (OY_BLOCK_BOOT===true||OY_BLOCK[0][2]===null)?OY_SYNC_HOP_MAX:Math.floor(Math.sqrt(OY_BLOCK[0][2]))-OY_JUDGE_RESTRICT;
+            let oy_array_length = (OY_BLOCK_BOOT===true||OY_BLOCK[0][2]===null)?OY_SYNC_HOP_MAX:Math.ceil(Math.sqrt(OY_BLOCK[0][2]));
             OY_BLOCK_LEARN = [null];
             for (let i = 0;i<oy_array_length;i++) {
                 OY_BLOCK_LEARN.push([]);
