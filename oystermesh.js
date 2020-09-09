@@ -50,6 +50,7 @@ let OY_PEER_INTRO = 3;
 let OY_PEER_SELF = 8;
 let OY_PEER_BOOT = 50;
 let OY_NODE_MAX = 40;
+const OY_INTRO_INITIATE = 3;
 const OY_INTRO_PRE_MAX = 200;
 const OY_INTRO_TRIP = [0.8, 800];
 const OY_WORK_MATCH = 4;//lower is more bandwidth/memory bound, higher is more CPU bound
@@ -1182,7 +1183,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             OY_BLOCK_HASH!==null&&//check that there is a known meshblock hash
             oy_data_payload[3]===OY_BLOCK_TIME&&//check that the current timestamp is in the sync processing zone
             oy_time_local-OY_BLOCK_TIME<OY_BLOCK_SECTORS[1][0]&&//check that the current timestamp is in the sync processing zone
-            (OY_BLOCK_JUDGE===true||(typeof(OY_BLOCK_JUDGE[oy_data_payload[0].length])!=="undefined"&&(OY_BLOCK_JUDGE[oy_data_payload[0].length]===true||oy_time_local-OY_BLOCK_TIME<OY_BLOCK_JUDGE[oy_data_payload[0].length]))||OY_BLOCK_BOOT===true)) {
+            (true||OY_BLOCK_JUDGE===true||(typeof(OY_BLOCK_JUDGE[oy_data_payload[0].length])!=="undefined"&&(OY_BLOCK_JUDGE[oy_data_payload[0].length]===true||oy_time_local-OY_BLOCK_TIME<OY_BLOCK_JUDGE[oy_data_payload[0].length]))||OY_BLOCK_BOOT===true)) {
             if (oy_sync_pass!==2) {
                 if (oy_sync_pass===1) {
                     OY_BLOCK_SYNC[oy_data_payload[0][0]] = false;
@@ -1762,7 +1763,8 @@ function oy_node_initiate(oy_node_id) {
     //let oy_time_local = oy_time();
 
     //(oy_state_current()!==0&&OY_JUMP_ASSIGN[0]!==oy_node_id&&oy_time_local-OY_BLOCK_TIME>OY_BLOCK_SECTORS[0][0])//TODO restore jump restriction whilst being compatible with new peering system
-    if (typeof(OY_PEERS[oy_node_id])!=="undefined"||typeof(OY_PROPOSED[oy_node_id])!=="undefined"||typeof(OY_PEERS_PRE[oy_node_id])!=="undefined"||typeof(OY_LATENCY[oy_node_id])!=="undefined"||(Object.keys(OY_NODES).length>=OY_NODE_MAX&&OY_JUMP_ASSIGN[0]!==oy_node_id)||oy_node_id===OY_SELF_PUBLIC||OY_BLOCK_BOOT===null||(OY_LIGHT_MODE===true&&OY_BLOCK_BOOT===true)) return false;
+    let oy_intro_default = Object.values(OY_INTRO_DEFAULT);
+    if (typeof(OY_PEERS[oy_node_id])!=="undefined"||typeof(OY_PROPOSED[oy_node_id])!=="undefined"||typeof(OY_PEERS_PRE[oy_node_id])!=="undefined"||typeof(OY_LATENCY[oy_node_id])!=="undefined"||(Object.keys(OY_NODES).length>=OY_NODE_MAX&&OY_JUMP_ASSIGN[0]!==oy_node_id&&oy_intro_default.indexOf(oy_node_id)===-1)||oy_node_id===OY_SELF_PUBLIC||OY_BLOCK_BOOT===null||(OY_LIGHT_MODE===true&&OY_BLOCK_BOOT===true)) return false;
     OY_PROPOSED[oy_node_id] = true;
     oy_data_beam(oy_node_id, "OY_PEER_REQUEST", oy_state_current(true));
     return true;
@@ -2149,14 +2151,14 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
                 }
             }
             //if (OY_JUMP_ASSIGN[0]===oy_node_id) oy_log_debug("JUMP_DEBUG_LATENCY_A: "+OY_LATENCY[oy_node_id][2]+" - "+oy_node_id);
-            if ((OY_LATENCY[oy_node_id][3]===2&&oy_peer_count()<((typeof(OY_PEER_EXCHANGE[oy_node_id])!=="undefined")?OY_PEER_MAX[0]:OY_PEER_INFLATE[0]))||((OY_LATENCY[oy_node_id][3]===0||OY_LATENCY[oy_node_id][3]===1)&&oy_peer_count(true)<((typeof(OY_PEER_EXCHANGE[oy_node_id])!=="undefined")?OY_PEER_MAX[1]:OY_PEER_INFLATE[1]))||OY_JUMP_ASSIGN[0]===oy_node_id) {//TODO test system without jump bypass once jumping works
+            let oy_intro_default = Object.values(OY_INTRO_DEFAULT);
+            if ((OY_LATENCY[oy_node_id][3]===2&&oy_peer_count()<((typeof(OY_PEER_EXCHANGE[oy_node_id])!=="undefined")?OY_PEER_MAX[0]:OY_PEER_INFLATE[0]))||((OY_LATENCY[oy_node_id][3]===0||OY_LATENCY[oy_node_id][3]===1)&&oy_peer_count(true)<((typeof(OY_PEER_EXCHANGE[oy_node_id])!=="undefined")?OY_PEER_MAX[1]:OY_PEER_INFLATE[1]))||OY_JUMP_ASSIGN[0]===oy_node_id||oy_intro_default.indexOf(oy_node_id)!==-1) {//TODO test system without jump bypass once jumping works
                 if (OY_JUMP_ASSIGN[0]===oy_node_id) oy_log_debug("JUMP_DEBUG_LATENCY_B: "+OY_LATENCY[oy_node_id][2]+" - "+oy_node_id);//TODO update jumpy map upon JUMP_DROP to lock out old peers - might need delay for 2+ splits
                 oy_accept_response();
             }
             else {
                 if (OY_JUMP_ASSIGN[0]===oy_node_id) oy_log_debug("JUMP_DEBUG_LATENCY_C: "+OY_LATENCY[oy_node_id][2]+" "+oy_node_id);
                 let oy_cut_local = oy_peer_cut();
-                let oy_intro_default = Object.values(OY_INTRO_DEFAULT);
                 let oy_peer_weak = [null, -1];
                 for (let oy_peer_select in OY_PEERS) {
                     if (OY_PEERS[oy_peer_select][3]>oy_peer_weak[1]&&
@@ -3448,7 +3450,7 @@ function oy_block_engine() {
                 }
                 else {
                     if (OY_BLOCK_HASH===null) {
-                        let oy_intro_default = oy_calc_shuffle(Object.keys(OY_INTRO_DEFAULT));
+                        let oy_intro_default = oy_calc_shuffle(Object.keys(OY_INTRO_DEFAULT)).slice(0, OY_INTRO_INITIATE);
                         for (let i in oy_intro_default) {
                             oy_intro_initiate(oy_intro_default[i]);
                         }
