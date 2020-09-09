@@ -39,6 +39,7 @@ let OY_BLOCK_RECORD_LIMIT = 20;
 let OY_BLOCK_RECORD_INTRO_BUFFER = 1.4;
 let OY_JUDGE_BUFFER_BASE = 1.8;
 let OY_JUDGE_BUFFER_CURVE = 1.2;//allocation for curve
+let OY_JUDGE_UNIFORM = 3;
 let OY_SYNC_HOP_MAX = 80;
 let OY_SYNC_LAST_BUFFER = 2;
 let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
@@ -3280,7 +3281,7 @@ function oy_block_engine() {
         //BLOCK SEED--------------------------------------------------
 
         if (OY_LIGHT_STATE===false) {//TODO merge if condition with block below
-            let oy_array_length = (OY_BLOCK_BOOT===true||OY_BLOCK[0][2]===null)?OY_SYNC_HOP_MAX:Math.floor(Math.sqrt(OY_BLOCK[0][2]));
+            let oy_array_length = (OY_BLOCK_BOOT===true||OY_BLOCK[0][2]===null)?OY_SYNC_HOP_MAX:Math.floor(Math.sqrt(OY_BLOCK[0][2]))-OY_JUDGE_UNIFORM;
             OY_BLOCK_LEARN = [null];
             for (let i = 0;i<oy_array_length;i++) {
                 OY_BLOCK_LEARN.push([]);
