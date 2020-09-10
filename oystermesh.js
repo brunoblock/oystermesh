@@ -40,9 +40,6 @@ const OY_BLOCK_PEER_SPACE = [15, 15000];
 let OY_BLOCK_RECORD_LIMIT = 20;
 let OY_BLOCK_RECORD_INTRO_BUFFER = 1.4;
 let OY_BLOCK_STRICT_CURVE = 5;
-//let OY_JUDGE_STRICT = 6;
-//let OY_JUDGE_BUFFER_BASE = 1.8;
-//let OY_JUDGE_BUFFER_CURVE = 1.2;//allocation for curve
 let OY_SYNC_HOP_MAX = 80;
 let OY_SYNC_LAST_BUFFER = 2;
 let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
@@ -83,8 +80,7 @@ let OY_WORKER_CORES_MAX = 1;
 let OY_LATENCY_SIZE = 80;//size of latency ping payload, larger is more accurate yet more taxing
 const OY_LATENCY_LENGTH = 8;//length of rand sequence which is repeated for payload and signed for ID verification
 const OY_LATENCY_TRACK = 200;//how many latency measurements to keep at a time per peer
-let OY_LATENCY_GEO_MIN = 1.2;
-let OY_LATENCY_GEO_DIVISOR = 20;//factor for comparing latency with peers, applies to full nodes only, lower means less likely weakest peer will get dropped and mesh is less geo-sensitive
+let OY_LATENCY_GEO = 1.2;
 const OY_DATA_MAX = 250000;//max size of data that can be sent to another node
 const OY_DATA_CHUNK = 125000;//chunk size by which data is split up and sent per transmission
 const OY_DATA_PURGE = 10;//how many handles to delete if indexedDB limit is reached
@@ -2172,8 +2168,7 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
                         oy_intro_default.indexOf(oy_peer_select)===-1&&
                         (oy_state_current()!==2||OY_LATENCY[oy_node_id][4]===2||OY_PEERS[oy_peer_select][1]!==2||typeof(OY_BLOCK[1][oy_peer_select])==="undefined")||OY_JUMP_ASSIGN[0]===oy_node_id) oy_peer_weak = [oy_peer_select, OY_PEERS[oy_peer_select][3]];
                 }
-                oy_log("GEO: "+Math.max(OY_LATENCY_GEO_MIN, ((OY_SYNC_LAST[0]===0)?0:OY_LATENCY_GEO_DIVISOR/OY_SYNC_LAST[0])));
-                if (oy_peer_weak[0]!==null&&oy_latency_result*Math.max(OY_LATENCY_GEO_MIN, ((OY_SYNC_LAST[0]===0)?0:OY_LATENCY_GEO_DIVISOR/OY_SYNC_LAST[0]))<oy_peer_weak[1]) {
+                if (oy_peer_weak[0]!==null&&oy_latency_result*OY_LATENCY_GEO<oy_peer_weak[1]) {
                     if (OY_JUMP_ASSIGN[0]===oy_node_id) oy_log_debug("JUMP_DEBUG_LATENCY_D: "+oy_node_id);
                     oy_node_deny(oy_peer_weak[0], "OY_DENY_LATENCY_DROP");
                     oy_accept_response();
@@ -3287,15 +3282,6 @@ function oy_block_engine() {
         }
         //BLOCK SEED--------------------------------------------------
 
-        /*
-        if (OY_LIGHT_STATE===false) {//TODO merge if condition with block below
-            let oy_array_length = (OY_BLOCK_BOOT===true||OY_BLOCK[0][2]===null)?OY_SYNC_HOP_MAX:Math.ceil(Math.sqrt(OY_BLOCK[0][2]))+OY_JUDGE_STRICT;
-            OY_BLOCK_LEARN = [null];
-            for (let i = 0;i<oy_array_length;i++) {
-                OY_BLOCK_LEARN.push([]);
-            }
-        }
-        */
         if (OY_LIGHT_STATE===false&&OY_BLOCK_HASH!==null&&OY_WORK_SOLUTIONS.indexOf(null)===-1&&(oy_peer_full()||OY_BLOCK_BOOT===true)) {
             if (OY_WORK_SOLUTIONS.length!==OY_BLOCK[0][3]) {
                 oy_log("[ERROR]["+chalk.bolder("WORK_MISMATCH")+"]["+chalk.bolder(OY_WORK_SOLUTIONS.length)+"]["+chalk.bolder(OY_BLOCK[0][3])+"]", 2);
@@ -3653,9 +3639,8 @@ function oy_block_engine() {
                 oy_mesh_range = OY_BLOCK[0][2];
 
                 if (oy_dive_state_prev===true) {
-                    let oy_intro_default = Object.values(OY_INTRO_DEFAULT);
                     for (let oy_peer_select in OY_PEERS) {
-                        if (OY_PEERS[oy_peer_select][1]===2&&OY_PEERS[oy_peer_select][0]<OY_BLOCK_TIME&&typeof(OY_BLOCK[1][oy_peer_select])==="undefined"&&oy_intro_default.indexOf(oy_peer_select)===-1) oy_node_deny(oy_peer_select, "OY_DENY_FULL_DIVE");
+                        if (OY_PEERS[oy_peer_select][1]===2&&OY_PEERS[oy_peer_select][0]<OY_BLOCK_TIME&&typeof(OY_BLOCK[1][oy_peer_select])==="undefined") oy_node_deny(oy_peer_select, "OY_DENY_FULL_DIVE");
                     }
                 }
             }
@@ -3724,29 +3709,7 @@ function oy_block_engine() {
                 console.log((oy_curve_factor+(oy_curve_increment*(i))));
             }
 
-            oy_log("LATENCY: "+JSON.stringify(Object.values(OY_BLOCK_LATENCY))+"\nSTRICT: "+OY_BLOCK_STRICT.length+" "+JSON.stringify(OY_BLOCK_STRICT));
-            //OY_BLOCK_STRICT = [];//TODO temp
-            /*
-            OY_BLOCK_JUDGE = [null];
-            let oy_hop_active = 0;
-            for (let i in OY_BLOCK_LEARN) {
-                if (i!==0&&OY_BLOCK_LEARN[i]!==null&&OY_BLOCK_LEARN[i].length!==0) oy_hop_active++;
-            }
-            for (let i in OY_BLOCK_LEARN) {
-                if (i===0||OY_BLOCK_LEARN[i]===null) continue;
-                if (OY_BLOCK_LEARN[i].length===0) OY_BLOCK_JUDGE.push(true);
-                else OY_BLOCK_JUDGE.push(oy_calc_avg(OY_BLOCK_LEARN[i])*OY_JUDGE_BUFFER_BASE*Math.pow(1+(OY_JUDGE_BUFFER_CURVE/oy_hop_active), parseInt(i)));
-            }
-
-            let oy_judge_last = null;
-            for (let oy_pointer = OY_BLOCK_JUDGE.length-1; oy_pointer>0; oy_pointer--) {
-                if (OY_BLOCK_JUDGE[oy_pointer]===true) {
-                    if (oy_judge_last!==null) OY_BLOCK_JUDGE[oy_pointer] = oy_judge_last;
-                }
-                else oy_judge_last = OY_BLOCK_JUDGE[oy_pointer];
-            }
-            */
-            //oy_log("JUDGE: "+JSON.stringify(OY_BLOCK_JUDGE));
+            oy_log("STRICT: "+OY_BLOCK_STRICT.length+" "+JSON.stringify(OY_BLOCK_STRICT));
 
             if (OY_BLOCK_BOOT===true) OY_SYNC_LAST = [0, 0];
             else {
@@ -4651,8 +4614,7 @@ if (OY_NODE_STATE===true) {
                         else if (oy_var==="OY_INTRO_BOOT") OY_INTRO_BOOT = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_INTRO_DEFAULT") OY_INTRO_DEFAULT = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_LATENCY_SIZE") OY_LATENCY_SIZE = oy_sim_data[1][oy_var];
-                        else if (oy_var==="OY_LATENCY_GEO_MIN") OY_LATENCY_GEO_MIN = oy_sim_data[1][oy_var];
-                        else if (oy_var==="OY_LATENCY_GEO_DIVISOR") OY_LATENCY_GEO_DIVISOR = oy_sim_data[1][oy_var];
+                        else if (oy_var==="OY_LATENCY_GEO") OY_LATENCY_GEO = oy_sim_data[1][oy_var];
                     }
                     oy_init();
                 }
