@@ -31,7 +31,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 let OY_BLOCK_RANGE_MIN = 10;//100, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
+const OY_BLOCK_BOOT_BUFFER = 3600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
@@ -49,7 +49,8 @@ let OY_PEER_INFLATE = [7, 5];//cannot be larger than OY_NODE_MAX
 let OY_PEER_DEFLATE = [2, 3];
 let OY_PEER_INTRO = 3;
 let OY_PEER_SELF = 8;
-let OY_PEER_BOOT = 25;
+let OY_PEER_BOOT_CORE = 25;//max peers of boot node during boot phase
+let OY_PEER_BOOT_SCALE = 4;//maximum hops away from boot node allowed during boot phase
 let OY_NODE_MAX = 40;
 const OY_INTRO_INITIATE = 3;
 const OY_INTRO_PRE_MAX = 200;
@@ -3155,10 +3156,10 @@ function oy_block_engine() {
 
         if (OY_FULL_INTRO!==false&&OY_FULL_INTRO===OY_INTRO_BOOT) {
             if (OY_BLOCK_BOOT===true) {
-                OY_PEER_MAX = [OY_PEER_BOOT, 0];
-                OY_PEER_INFLATE = [OY_PEER_BOOT, 0];
-                OY_PEER_SELF = OY_PEER_BOOT;
-                OY_NODE_MAX = OY_PEER_BOOT*2;
+                OY_PEER_MAX = [OY_PEER_BOOT_CORE, 0];
+                OY_PEER_INFLATE = [OY_PEER_BOOT_CORE, 0];
+                OY_PEER_SELF = OY_PEER_BOOT_CORE;
+                OY_NODE_MAX = OY_PEER_BOOT_CORE*2;
             }
             else {
                 OY_PEER_MAX = OY_PEER_BOOT_RESTORE[0];
@@ -3166,7 +3167,7 @@ function oy_block_engine() {
                 OY_PEER_SELF = OY_PEER_BOOT_RESTORE[2];
                 OY_NODE_MAX = OY_PEER_BOOT_RESTORE[3];
                 if (OY_BLOCK_ELAPSED<=OY_BLOCK_BOOT_BUFFER) {
-                    let oy_local_max = Math.ceil(OY_PEER_BOOT/(OY_BLOCK_BOOT_BUFFER/OY_BLOCK_SECTORS[5][0]));
+                    let oy_local_max = Math.ceil(OY_PEER_BOOT_CORE/(OY_BLOCK_BOOT_BUFFER/OY_BLOCK_SECTORS[5][0]));
                     let oy_drop_counter = 0;
                     while (oy_peer_count()>OY_PEER_MAX[0]||oy_peer_count(true)>OY_PEER_MAX[1]) {
                         if (oy_drop_counter===oy_local_max) break;
@@ -3487,7 +3488,7 @@ function oy_block_engine() {
                 return false;
             }
             if (OY_BLOCK[0][4]!==OY_BLOCK_BOOT_MARK) {
-                oy_block_reset("OY_RESET_BOOT_INVALID");
+                oy_block_reset("OY_RESET_BOOT_MISMATCH");
                 oy_block_continue = false;
                 return false;
             }
@@ -3645,7 +3646,7 @@ function oy_block_engine() {
                 }
             }
             else {
-                if (Object.keys(OY_BLOCK_SYNC).length>1&&(typeof(OY_BLOCK_SYNC[OY_INTRO_DEFAULT[OY_INTRO_BOOT]])==="undefined"||(typeof(OY_SYNC_MAP[1][OY_INTRO_DEFAULT[OY_INTRO_BOOT]])!=="undefined"&&OY_SYNC_MAP[1][OY_INTRO_DEFAULT[OY_INTRO_BOOT]][0]>4))) {
+                if (Object.keys(OY_BLOCK_SYNC).length>1&&(typeof(OY_BLOCK_SYNC[OY_INTRO_DEFAULT[OY_INTRO_BOOT]])==="undefined"||(typeof(OY_SYNC_MAP[1][OY_INTRO_DEFAULT[OY_INTRO_BOOT]])!=="undefined"&&OY_SYNC_MAP[1][OY_INTRO_DEFAULT[OY_INTRO_BOOT]][0]>OY_PEER_BOOT_SCALE))) {
                     for (let oy_peer_select in OY_PEERS) {
                         oy_node_deny(oy_peer_select, "OY_DENY_SELF_BOOT_INVALID");
                     }
@@ -3702,11 +3703,9 @@ function oy_block_engine() {
             let oy_hop_latency = OY_BLOCK_STRICT[OY_BLOCK_STRICT.length-1]/OY_BLOCK_STRICT.length;
             let oy_curve_increment = (OY_BLOCK_STRICT_CURVE/100)/OY_BLOCK_STRICT.length;
             let oy_curve_factor = (1-(OY_BLOCK_STRICT_CURVE/100))+oy_curve_increment;
-            console.log(oy_curve_factor, oy_curve_increment);
             for (let i in OY_BLOCK_STRICT) {
                 if (i===0) continue;
                 OY_BLOCK_STRICT[i] = oy_hop_latency*i*Math.min(1, (oy_curve_factor+(oy_curve_increment*(i))));
-                console.log((oy_curve_factor+(oy_curve_increment*(i))));
             }
 
             oy_log("STRICT: "+OY_BLOCK_STRICT.length+" "+JSON.stringify(OY_BLOCK_STRICT));
