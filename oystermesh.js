@@ -53,7 +53,7 @@ let OY_PEER_BOOT_CORE = 25;//max peers of boot node during boot phase
 let OY_PEER_BOOT_SCALE = 4;//maximum hops away from boot node allowed during boot phase
 let OY_NODE_MAX = 40;
 const OY_INTRO_INITIATE = 3;
-const OY_INTRO_PRE_MAX = 200;
+const OY_INTRO_PRE_MAX = 2000;
 const OY_INTRO_TRIP = [0.8, 800];
 const OY_WORK_MATCH = 4;//lower is more bandwidth/memory bound, higher is more CPU bound
 const OY_WORK_MAX = 10000;//10000
@@ -3356,7 +3356,7 @@ function oy_block_engine() {
             if (OY_BLOCK_HASH===null||Object.keys(OY_NODES).length>=OY_NODE_MAX) return false;
 
             if (OY_FULL_INTRO===false) {
-                if (oy_peer_count()+oy_peer_count(true)>0&&(oy_peer_count()<OY_PEER_MAX[0]||(OY_BLOCK_BOOT===false&&oy_peer_count(true)<OY_PEER_MAX[1]))) {
+                if (oy_peer_count()+oy_peer_count(true)>0&&(oy_peer_count()<=OY_PEER_INFLATE[0]||(OY_BLOCK_BOOT===false&&oy_peer_count(true)<=OY_PEER_INFLATE[1]))) {
                     let oy_offer_rand = oy_rand_gen(OY_MESH_SEQUENCE);
                     function oy_signal_local(oy_signal_data) {
                         let oy_signal_crypt = oy_signal_beam(oy_signal_data);
