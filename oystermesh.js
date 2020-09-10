@@ -3564,7 +3564,7 @@ function oy_block_engine() {
 
             OY_BLOCK_RECORD = oy_time();
 
-            let oy_mesh_range_prev = null
+            let oy_mesh_range = null;
             let oy_command_execute = [];
             if (OY_BLOCK_BOOT===false||OY_BLOCK_TIME-OY_BLOCK_BOOT_MARK>=OY_BLOCK_BOOT_BUFFER-OY_BLOCK_SECTORS[5][0]) {
                 for (let oy_key_public in OY_BLOCK_SYNC) {
@@ -3650,6 +3650,7 @@ function oy_block_engine() {
 
                 //oy_mesh_range_prev = OY_BLOCK[0][2];//TODO remove
                 if (!oy_block_range(Object.keys(OY_BLOCK[1]).length)) return false;//block_range will invoke block_reset if necessary
+                oy_mesh_range = OY_BLOCK[0][2];
 
                 if (oy_dive_state_prev===true) {
                     for (let oy_peer_select in OY_PEERS) {
@@ -3663,6 +3664,7 @@ function oy_block_engine() {
                         oy_node_deny(oy_peer_select, "OY_DENY_SELF_BOOT_INVALID");
                     }
                 }
+                oy_mesh_range = Object.keys(OY_BLOCK_SYNC).length;
                 OY_BLOCK_SYNC = {};
                 OY_SYNC_TALLY = {};
             }
@@ -3706,10 +3708,10 @@ function oy_block_engine() {
                 }
             }
 
-            OY_BLOCK_STRICT = new Array(Math.ceil(OY_BLOCK[0][2]*OY_MESH_SECURITY));
+            OY_BLOCK_STRICT = new Array(Math.ceil(oy_mesh_range*OY_MESH_SECURITY));
             OY_BLOCK_STRICT.fill(null);
 
-            let oy_edge_latency = Math.sqrt(OY_BLOCK[0][2])*oy_calc_median(Object.values(OY_BLOCK_LATENCY));
+            let oy_edge_latency = Math.sqrt(oy_mesh_range)*oy_calc_median(Object.values(OY_BLOCK_LATENCY));
             OY_BLOCK_STRICT[OY_BLOCK_STRICT.length-1] = OY_BLOCK_SECTORS[1][0]-oy_edge_latency;
             let oy_hop_latency = OY_BLOCK_STRICT[OY_BLOCK_STRICT.length-1]/OY_BLOCK_STRICT.length;
             for (let i in OY_BLOCK_STRICT) {
@@ -3717,7 +3719,7 @@ function oy_block_engine() {
                 OY_BLOCK_STRICT[i] = oy_hop_latency*i;//TODO add curve
             }
 
-            oy_log("STRICT: "+OY_BLOCK_STRICT[i]);
+            oy_log("LATENCY: "+JSON.stringify(Object.values(OY_BLOCK_LATENCY))+"\nSTRICT: "+OY_BLOCK_STRICT.length+" "+JSON.stringify(OY_BLOCK_STRICT));
             OY_BLOCK_STRICT = [];//TODO temp
             /*
             OY_BLOCK_JUDGE = [null];
