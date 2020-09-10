@@ -20,7 +20,7 @@ const OY_MESH_FULLFILL_CHANCE = 0.2;//probability that data is stored whilst ful
 const OY_MESH_SOURCE = 3;//node in route passport (from destination) that is assigned with defining the source variable//TODO remove?
 const OY_MESH_SEQUENCE = 8;
 let OY_MESH_SCALE = 1000;//core trilemma variable, maximum amount of full nodes. Higher is more scalable and less secure
-let OY_MESH_SECURITY = 0.4;//core trilemma variable, amount of rogue full nodes required to sucessfully attack the mesh, higher is more secure and less scalable
+let OY_MESH_SECURITY = 0.4;//core trilemma variable, amount of rogue full nodes required to successfully attack the mesh, higher is more secure and less scalable
 const OY_BLOCK_LOOP = [20, 60];//a lower value means increased accuracy for detecting the start of the next meshblock
 const OY_BLOCK_STABILITY_TRIGGER = 3;//mesh range history minimum to trigger reliance on real stability value
 const OY_BLOCK_STABILITY_LIMIT = 12;//mesh range history to keep to calculate meshblock stability, time is effectively value x 20 seconds
@@ -39,7 +39,7 @@ let OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventua
 const OY_BLOCK_PEER_SPACE = [15, 15000];
 let OY_BLOCK_RECORD_LIMIT = 20;
 let OY_BLOCK_RECORD_INTRO_BUFFER = 1.4;
-
+let OY_BLOCK_STRICT_CURVE = 5;
 //let OY_JUDGE_STRICT = 6;
 //let OY_JUDGE_BUFFER_BASE = 1.8;
 //let OY_JUDGE_BUFFER_CURVE = 1.2;//allocation for curve
@@ -671,7 +671,7 @@ function oy_worker_manager(oy_instance, oy_data) {
             if (oy_time_offset>OY_SYNC_LAST[1]) OY_SYNC_LAST[1] = oy_time_offset;
             if (typeof(OY_SYNC_MAP[1][oy_data_payload[0][0]])==="undefined") OY_SYNC_MAP[1][oy_data_payload[0][0]] = [oy_data_payload[0].length, oy_data_payload[0]];
 
-            if (typeof(OY_BLOCK_LATENCY[oy_data_payload[0][0]])!=="undefined"&&typeof(OY_BLOCK[1][oy_data_payload[0][0]])!=="undefined"&&OY_BLOCK[1][oy_data_payload[0][0]][1]===1) OY_BLOCK_LATENCY[oy_data_payload[0][0]] = (oy_time_offset-OY_BLOCK_BUFFER_CLEAR[0])/oy_data_payload[0].length;
+            if (typeof(OY_BLOCK_LATENCY[oy_data_payload[0][0]])==="undefined"&&((typeof(OY_BLOCK[1][oy_data_payload[0][0]])!=="undefined"&&OY_BLOCK[1][oy_data_payload[0][0]][1]===1)||OY_BLOCK_BOOT===true)) OY_BLOCK_LATENCY[oy_data_payload[0][0]] = (oy_time_offset-OY_BLOCK_BUFFER_CLEAR[0])/oy_data_payload[0].length;
 
             if (typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined"||OY_BLOCK_BOOT===true) {
                 oy_data_payload[1].push(oy_key_sign(OY_SELF_PRIVATE, oy_data_payload[2]));//TODO offset to worker
@@ -3708,19 +3708,22 @@ function oy_block_engine() {
                 }
             }
 
-            OY_BLOCK_STRICT = new Array(Math.ceil(oy_mesh_range*OY_MESH_SECURITY));
+            OY_BLOCK_STRICT = new Array(Math.max(1, Math.ceil(oy_mesh_range*OY_MESH_SECURITY)));
             OY_BLOCK_STRICT.fill(null);
 
             let oy_edge_latency = Math.sqrt(oy_mesh_range)*oy_calc_median(Object.values(OY_BLOCK_LATENCY));
             OY_BLOCK_STRICT[OY_BLOCK_STRICT.length-1] = OY_BLOCK_SECTORS[1][0]-oy_edge_latency;
             let oy_hop_latency = OY_BLOCK_STRICT[OY_BLOCK_STRICT.length-1]/OY_BLOCK_STRICT.length;
+            let oy_curve_factor = 1-(OY_BLOCK_STRICT_CURVE/100);
+            let oy_curve_increment = (OY_BLOCK_STRICT_CURVE/100)/OY_BLOCK_STRICT.length;
             for (let i in OY_BLOCK_STRICT) {
                 if (i===0) continue;
-                OY_BLOCK_STRICT[i] = oy_hop_latency*i;//TODO add curve
+                OY_BLOCK_STRICT[i] = oy_hop_latency*i*Math.min(1, (oy_curve_factor+(oy_curve_increment*(i+1))));
+                console.log((oy_curve_factor+(oy_curve_increment*(i+1))));
             }
 
             oy_log("LATENCY: "+JSON.stringify(Object.values(OY_BLOCK_LATENCY))+"\nSTRICT: "+OY_BLOCK_STRICT.length+" "+JSON.stringify(OY_BLOCK_STRICT));
-            OY_BLOCK_STRICT = [];//TODO temp
+            //OY_BLOCK_STRICT = [];//TODO temp
             /*
             OY_BLOCK_JUDGE = [null];
             let oy_hop_active = 0;
