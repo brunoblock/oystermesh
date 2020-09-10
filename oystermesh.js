@@ -52,7 +52,7 @@ let OY_PEER_INFLATE = [7, 5];//cannot be larger than OY_NODE_MAX
 let OY_PEER_DEFLATE = [2, 3];
 let OY_PEER_INTRO = 3;
 let OY_PEER_SELF = 8;
-let OY_PEER_BOOT = 50;
+let OY_PEER_BOOT = 25;
 let OY_NODE_MAX = 40;
 const OY_INTRO_INITIATE = 3;
 const OY_INTRO_PRE_MAX = 200;
@@ -3653,13 +3653,14 @@ function oy_block_engine() {
                 oy_mesh_range = OY_BLOCK[0][2];
 
                 if (oy_dive_state_prev===true) {
+                    let oy_intro_default = Object.values(OY_INTRO_DEFAULT);
                     for (let oy_peer_select in OY_PEERS) {
-                        if (OY_PEERS[oy_peer_select][1]===2&&OY_PEERS[oy_peer_select][0]<OY_BLOCK_TIME&&typeof(OY_BLOCK[1][oy_peer_select])==="undefined") oy_node_deny(oy_peer_select, "OY_DENY_FULL_DIVE");
+                        if (OY_PEERS[oy_peer_select][1]===2&&OY_PEERS[oy_peer_select][0]<OY_BLOCK_TIME&&typeof(OY_BLOCK[1][oy_peer_select])==="undefined"&&oy_intro_default.indexOf(oy_peer_select)===-1) oy_node_deny(oy_peer_select, "OY_DENY_FULL_DIVE");
                     }
                 }
             }
             else {
-                if (Object.keys(OY_BLOCK_SYNC).length>1&&(typeof(OY_BLOCK_SYNC[OY_INTRO_DEFAULT[OY_INTRO_BOOT]])==="undefined"||(typeof(OY_SYNC_MAP[1][OY_INTRO_DEFAULT[OY_INTRO_BOOT]])!=="undefined"&&OY_SYNC_MAP[1][OY_INTRO_DEFAULT[OY_INTRO_BOOT]][0]>7))) {
+                if (Object.keys(OY_BLOCK_SYNC).length>1&&(typeof(OY_BLOCK_SYNC[OY_INTRO_DEFAULT[OY_INTRO_BOOT]])==="undefined"||(typeof(OY_SYNC_MAP[1][OY_INTRO_DEFAULT[OY_INTRO_BOOT]])!=="undefined"&&OY_SYNC_MAP[1][OY_INTRO_DEFAULT[OY_INTRO_BOOT]][0]>4))) {
                     for (let oy_peer_select in OY_PEERS) {
                         oy_node_deny(oy_peer_select, "OY_DENY_SELF_BOOT_INVALID");
                     }
