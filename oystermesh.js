@@ -39,7 +39,7 @@ let OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventua
 const OY_BLOCK_PEER_SPACE = [15, 15000];
 let OY_BLOCK_RECORD_LIMIT = 20;
 let OY_BLOCK_RECORD_INTRO_BUFFER = 1.4;
-let OY_BLOCK_STRICT_CURVE = 15;
+let OY_BLOCK_STRICT_CURVE = 50;
 let OY_SYNC_BROADCAST_BUFFER = 140;
 let OY_SYNC_LAST_BUFFER = 2;
 let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
@@ -1189,7 +1189,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         }
 
         let oy_time_offset = oy_time_local-OY_BLOCK_TIME;
-        if (OY_LIGHT_STATE===false&&//check that self is running block_sync as a full node
+        if (oy_sync_pass===0&&
+            OY_LIGHT_STATE===false&&//check that self is running block_sync as a full node
             OY_BLOCK_HASH!==null&&//check that there is a known meshblock hash
             oy_data_payload[3]===OY_BLOCK_TIME&&//check that the current timestamp is in the sync processing zone
             oy_time_offset<OY_BLOCK_SECTORS[1][0]) {
