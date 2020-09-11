@@ -19,8 +19,8 @@ const OY_MESH_DEPOSIT_CHANCE = 0.5;//probability that self will deposit pushed d
 const OY_MESH_FULLFILL_CHANCE = 0.2;//probability that data is stored whilst fulfilling a pull request, this makes data intelligently migrate and recommit overtime
 const OY_MESH_SOURCE = 3;//node in route passport (from destination) that is assigned with defining the source variable//TODO remove?
 const OY_MESH_SEQUENCE = 8;
-let OY_MESH_SCALE = 1000;//core trilemma variable, maximum amount of full nodes. Higher is more scalable and less secure
-let OY_MESH_SECURITY = 0.4;//core trilemma variable, amount of rogue full nodes required to successfully attack the mesh, higher is more secure and less scalable
+//let OY_MESH_SCALE = 1000;//core trilemma variable, maximum amount of full nodes. Higher is more scalable and less secure
+let OY_MESH_SECURITY = 0.25;//core trilemma variable, amount of rogue full nodes required to successfully attack the mesh, higher is more secure and less scalable
 const OY_BLOCK_LOOP = [20, 60];//a lower value means increased accuracy for detecting the start of the next meshblock
 const OY_BLOCK_STABILITY_TRIGGER = 3;//mesh range history minimum to trigger reliance on real stability value
 const OY_BLOCK_STABILITY_LIMIT = 12;//mesh range history to keep to calculate meshblock stability, time is effectively value x 20 seconds
@@ -39,8 +39,7 @@ let OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventua
 const OY_BLOCK_PEER_SPACE = [15, 15000];
 let OY_BLOCK_RECORD_LIMIT = 20;
 let OY_BLOCK_RECORD_INTRO_BUFFER = 1.4;
-let OY_BLOCK_STRICT_CURVE = 5;
-let OY_SYNC_HOP_MAX = 80;
+let OY_BLOCK_STRICT_CURVE = 2;
 let OY_SYNC_LAST_BUFFER = 2;
 let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 let OY_LIGHT_COMMIT = 0.4;
@@ -1149,7 +1148,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_BLOCK_SYNC") {//OY_LOGIC_SYNC
         //oy_data_payload = [oy_passport_passive, oy_passport_crypt, oy_sync_crypt, oy_block_time, oy_command_flat, oy_identity_flat, oy_solutions_flat]
-        if (oy_state_current()!==2||oy_data_payload.length!==7||typeof(oy_data_payload[0])!=="object"||typeof(oy_data_payload[1])!=="object"||oy_data_payload[0].length===0||oy_data_payload[0].length>OY_SYNC_HOP_MAX||oy_data_payload[0].length!==oy_data_payload[1].length||!oy_key_check(oy_data_payload[0][0])||oy_data_payload[3]!==OY_BLOCK_TIME) {
+        if (oy_state_current()!==2||oy_data_payload.length!==7||typeof(oy_data_payload[0])!=="object"||typeof(oy_data_payload[1])!=="object"||oy_data_payload[0].length===0||oy_data_payload[0].length!==oy_data_payload[1].length||!oy_key_check(oy_data_payload[0][0])||oy_data_payload[3]!==OY_BLOCK_TIME) {
             oy_node_deny(oy_peer_id, "OY_DENY_SYNC_INVALID");
             return false;
         }
@@ -1280,6 +1279,9 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                                 }
                             }
                         }
+                        //if (oy_intro_select[0]!==null&&) {
+
+                        //}
                     }
                     if (oy_intro_select[0]!==null) {
                         oy_data_payload[1] = oy_intro_select[0];
@@ -2445,7 +2447,7 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_push_def
     if (oy_data_logic==="OY_LOGIC_SYNC") {
         //oy_data_payload[0] is oy_passport_passive
         //oy_data_payload[1] is oy_passport_crypt
-        if (OY_BLOCK_HASH===null||oy_data_payload[0].length>=OY_SYNC_HOP_MAX) return false;
+        if (OY_BLOCK_HASH===null) return false;
 
         oy_data_payload[0].push(OY_SELF_PUBLIC);
         for (let oy_peer_select in OY_PEERS) {
@@ -3336,7 +3338,7 @@ function oy_block_engine() {
             oy_chrono(function() {
                 //oy_log("[SYNC][BROADCAST]["+(oy_time()-OY_BLOCK_TIME).toFixed(2)+"]", 2);
                 oy_data_route("OY_LOGIC_SYNC", "OY_BLOCK_SYNC", [[], [oy_key_sign(OY_SELF_PRIVATE, oy_sync_crypt)], oy_sync_crypt, OY_BLOCK_TIME, oy_command_flat, oy_identity_flat, oy_solutions_flat]);
-            }, OY_BLOCK_BUFFER_CLEAR[1]+OY_MESH_BUFFER[1]);
+            }, 250);
         }
 
         for (let oy_command_hash in OY_BLOCK_COMMAND) {
