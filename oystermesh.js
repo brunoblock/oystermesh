@@ -31,7 +31,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 let OY_BLOCK_RANGE_MIN = 10;//100, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOT_BUFFER = 3600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
+const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
@@ -76,8 +76,8 @@ const OY_META_DATA_LIMIT = 131072;//max size of meta_data
 const OY_META_DAPP_RANGE = 9;//max amount of meshblock amendable dapps including 0
 const OY_META_FEE = 0.0001*OY_AKOYA_DECIMALS;//meta fee per block per 99 characters - 99 used instead of 100 for space savings on the meshblock
 const OY_NULLING_BUFFER = 0.001*OY_AKOYA_DECIMALS;
-let OY_WORKER_CORES_MIN = 1;
-let OY_WORKER_CORES_MAX = 1;
+let OY_WORKER_CORES_MIN = 2;
+let OY_WORKER_CORES_MAX = 2;
 let OY_LATENCY_SIZE = 80;//size of latency ping payload, larger is more accurate yet more taxing
 const OY_LATENCY_LENGTH = 8;//length of rand sequence which is repeated for payload and signed for ID verification
 const OY_LATENCY_TRACK = 200;//how many latency measurements to keep at a time per peer
@@ -421,18 +421,11 @@ if (OY_NODE_STATE===true) parentPort = require('worker_threads').parentPort;
 //VOID
 
 //WEB WORKER BLOCK
-function oy_worker_cores() {
-    let oy_core_count = -1;
-    if (OY_NODE_STATE===true) oy_core_count = os.cpus().length;
-    else if (window.navigator.hardwareConcurrency) oy_core_count = window.navigator.hardwareConcurrency;
-
-    return Math.min(OY_WORKER_CORES_MAX, Math.max(OY_WORKER_CORES_MIN, Math.floor(oy_core_count)));
-}
-
 function oy_worker_internal(oy_static_data) {
     let oy_static_thru = JSON.parse(decodeURI(oy_static_data));
     const OY_SIMULATOR_MODE = oy_static_thru[0];
     const OY_WORK_MATCH = oy_static_thru[1];
+    const OY_SELF_PRIVATE = oy_static_thru[2];
     const OY_NODE_STATE = typeof(window)==="undefined";
 
     let parentPort, nacl, keccak256;
@@ -600,10 +593,11 @@ function oy_worker_internal(oy_static_data) {
                         for (let i in oy_work_solutions) {
                             oy_grade_array.push(oy_calc_grade(oy_work_solutions[i], oy_block_metahash));
                         }
+                        oy_data_payload[1].push(oy_key_sign(OY_SELF_PRIVATE, oy_data_payload[2]));
                         if (OY_SIMULATOR_MODE===true) {
                             setTimeout(function() {
                                 oy_worker_respond([oy_work_type, [oy_data_payload, oy_sync_command, Math.floor(oy_calc_avg(oy_grade_array))]]);
-                            }, 50+Math.round(Math.random()*50));
+                            }, 10+Math.round(Math.random()*10));
                         }
                         else oy_worker_respond([oy_work_type, [oy_data_payload, oy_sync_command, Math.floor(oy_calc_avg(oy_grade_array))]]);
                     }
@@ -674,14 +668,19 @@ function oy_worker_manager(oy_instance, oy_data) {
 
             if (typeof(OY_BLOCK_LATENCY[oy_data_payload[0][0]])==="undefined"&&((typeof(OY_BLOCK[1][oy_data_payload[0][0]])!=="undefined"&&OY_BLOCK[1][oy_data_payload[0][0]][1]===1)||OY_BLOCK_BOOT===true)) OY_BLOCK_LATENCY[oy_data_payload[0][0]] = (oy_time_offset-OY_BLOCK_BUFFER_CLEAR[0])/oy_data_payload[0].length;
 
-            if (typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined"||OY_BLOCK_BOOT===true) {
-                oy_data_payload[1].push(oy_key_sign(OY_SELF_PRIVATE, oy_data_payload[2]));//TODO offset to worker
-                oy_data_route("OY_LOGIC_SYNC", "OY_BLOCK_SYNC", oy_data_payload);
-            }
+            if (typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined"||OY_BLOCK_BOOT===true) oy_data_route("OY_LOGIC_SYNC", "OY_BLOCK_SYNC", oy_data_payload);
 
             if (typeof(OY_BLOCK_MAP)==="function") OY_BLOCK_MAP(1);
         }
     }
+}
+
+function oy_worker_cores() {
+    let oy_core_count = -1;
+    if (OY_NODE_STATE===true) oy_core_count = os.cpus().length;
+    else if (window.navigator.hardwareConcurrency) oy_core_count = window.navigator.hardwareConcurrency;
+
+    return Math.min(OY_WORKER_CORES_MAX, Math.max(OY_WORKER_CORES_MIN, Math.floor(oy_core_count)));
 }
 
 function oy_worker_halt(oy_worker_type) {
@@ -698,8 +697,8 @@ function oy_worker_spawn(oy_worker_type) {
     if (OY_WORKER_THREADS[oy_worker_type]!==null) return false;
 
     let oy_worker_define;
-    if (OY_NODE_STATE===true) oy_worker_define = "("+oy_worker_internal.toString()+")(\""+encodeURI(JSON.stringify([OY_SIMULATOR_MODE, OY_WORK_MATCH]))+"\")";
-    else oy_worker_define = URL.createObjectURL(new Blob(["("+oy_worker_internal.toString()+")(\""+encodeURI(JSON.stringify([OY_SIMULATOR_MODE, OY_WORK_MATCH]))+"\")"], {type: 'text/javascript'}));
+    if (OY_NODE_STATE===true) oy_worker_define = "("+oy_worker_internal.toString()+")(\""+encodeURI(JSON.stringify([OY_SIMULATOR_MODE, OY_WORK_MATCH, OY_SELF_PRIVATE]))+"\")";
+    else oy_worker_define = URL.createObjectURL(new Blob(["("+oy_worker_internal.toString()+")(\""+encodeURI(JSON.stringify([OY_SIMULATOR_MODE, OY_WORK_MATCH, OY_SELF_PRIVATE]))+"\")"], {type: 'text/javascript'}));
 
     OY_WORKER_THREADS[oy_worker_type] = new Array(oy_worker_cores());
     OY_WORKER_THREADS[oy_worker_type].fill(null);
