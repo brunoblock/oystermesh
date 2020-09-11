@@ -1287,8 +1287,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                                 oy_log("BLUE: "+oy_intro_default[i]);
                                 if (typeof(OY_BLOCK[1][oy_intro_default[i]])!=="undefined"&&typeof(OY_SYNC_MAP[1][oy_intro_default[i]])!=="undefined") {
                                     let oy_select_pass = true;
-                                    for (let i in oy_data_payload[0]) {
-                                        if (OY_SYNC_MAP[1][oy_intro_default[i]][1].indexOf(oy_data_payload[0][i])!==-1) {
+                                    for (let x in oy_data_payload[0]) {
+                                        if (OY_SYNC_MAP[1][oy_intro_default[i]][1].indexOf(oy_data_payload[0][x])!==-1) {
                                             oy_select_pass = false;
                                             break;
                                         }
@@ -1301,8 +1301,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                                     oy_log("GREEN: "+oy_intro_default[i]);
                                     if (typeof(OY_BLOCK[1][oy_intro_default[i]])!=="undefined"&&typeof(OY_SYNC_MAP[0][oy_intro_default[i]])!=="undefined") {
                                         let oy_select_pass = true;
-                                        for (let i in oy_data_payload[0]) {
-                                            if (OY_SYNC_MAP[0][oy_intro_default[i]][1].indexOf(oy_data_payload[0][i])!==-1) {
+                                        for (let x in oy_data_payload[0]) {
+                                            if (OY_SYNC_MAP[0][oy_intro_default[i]][1].indexOf(oy_data_payload[0][x])!==-1) {
                                                 oy_select_pass = false;
                                                 break;
                                             }
@@ -3174,8 +3174,7 @@ function oy_block_reset(oy_reset_flag) {
         oy_node_deny(oy_peer_select, "OY_DENY_SELF_"+oy_reset_flag.substr(3));
     }
 
-    oy_log("[BLOCK][RESET]["+oy_reset_flag+"]", 2);
-    oy_log_debug("MESHBLOCK RESET["+OY_SELF_PUBLIC+"]["+oy_reset_flag+"]");//TODO temp
+    oy_log("[BLOCK][RESET]["+chalk.bolder(oy_reset_flag)+"]", 2);
 
     oy_event_dispatch("oy_block_reset");
     oy_event_dispatch("oy_state_blank");
