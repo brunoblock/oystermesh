@@ -40,7 +40,7 @@ const OY_BLOCK_PEER_SPACE = [15, 15000];
 let OY_BLOCK_RECORD_LIMIT = 20;
 let OY_BLOCK_RECORD_INTRO_BUFFER = 1.4;
 let OY_BLOCK_STRICT_CURVE = 10;
-let OY_SYNC_BROADCAST_BUFFER = 100;
+let OY_SYNC_BROADCAST_BUFFER = 140;
 let OY_SYNC_LAST_BUFFER = 2;
 let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 let OY_LIGHT_COMMIT = 0.4;
@@ -400,7 +400,7 @@ const OY_NODE_STATE = typeof(window)==="undefined";
 // DEPENDENCIES
 let chalk, os, nacl, keccak256, LZString, NodeEvent, perf, isMainThread, parentPort, websock, SimplePeer, wrtc;
 
-const fs = require("fs");//TODO temp
+let fs;//TODO temp
 
 if (OY_NODE_STATE===true) parentPort = require('worker_threads').parentPort;
 
@@ -4516,6 +4516,7 @@ function oy_init(oy_console) {
         globalThis.Blob = require("cross-blob");
         isMainThread = require('worker_threads').isMainThread;
         websock = require('ws');
+        fs = require("fs");//TODO temp
         if (OY_SIMULATOR_MODE===false) {
             SimplePeer = require('simple-peer');
             wrtc = require('wrtc');
