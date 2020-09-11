@@ -1196,10 +1196,9 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_time_offset<OY_BLOCK_SECTORS[1][0]) {
 
             if ((typeof(OY_BLOCK_STRICT[oy_data_payload[0].length])==="undefined"||oy_time_offset<OY_BLOCK_STRICT[oy_data_payload[0].length]+(OY_PEERS[oy_peer_id][3]/2))) {
-                oy_log("LEMON: "+OY_PEERS[oy_peer_id][3]);
             }
             else {
-                fs.appendFileSync("/dev/shm/oy_debug2.log", "["+OY_SELF_SHORT+"] STRICT FAIL: "+JSON.stringify([oy_data_payload[0].length, oy_time_offset, OY_BLOCK_STRICT[oy_data_payload[0].length], (OY_PEERS[oy_peer_id][3]/2)])+"\n");
+                fs.appendFileSync("/dev/shm/oy_debug2.log", "["+OY_SELF_SHORT+"] STRICT FAIL: "+JSON.stringify([oy_data_payload[0].length, oy_data_payload[2], oy_time_offset, OY_BLOCK_STRICT[oy_data_payload[0].length], (OY_PEERS[oy_peer_id][3]/2)])+"\n");
             }
         }
 
