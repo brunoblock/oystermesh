@@ -552,6 +552,11 @@ function oy_worker_internal(oy_static_data) {
         return oy_command_array;
     }
 
+    function oy_key_sign(oy_key_private, oy_key_data, oy_sim_force = false) {//DUPLICATED IN MAIN BLOCK
+        if (OY_SIMULATOR_MODE===true&&oy_sim_force===false) return oy_rand_gen(4);
+        return nacl.util.encodeBase64(nacl.sign.detached(nacl.util.decodeUTF8(oy_key_data), nacl.util.decodeBase64(oy_key_private)));
+    }
+
     function oy_key_verify(oy_key_public, oy_key_signature, oy_key_data, oy_sim_force = false) {//DUPLICATED IN MAIN BLOCK
         if (OY_SIMULATOR_MODE===true&&oy_sim_force===false) return true;
         return nacl.sign.detached.verify(nacl.util.decodeUTF8(oy_key_data), nacl.util.decodeBase64(oy_key_signature), nacl.util.decodeBase64(oy_key_public.substr(1)+"="));
@@ -597,7 +602,7 @@ function oy_worker_internal(oy_static_data) {
                         if (OY_SIMULATOR_MODE===true) {
                             setTimeout(function() {
                                 oy_worker_respond([oy_work_type, [oy_data_payload, oy_sync_command, Math.floor(oy_calc_avg(oy_grade_array))]]);
-                            }, 10+Math.round(Math.random()*10));
+                            }, 5+Math.round(Math.random()*5));
                         }
                         else oy_worker_respond([oy_work_type, [oy_data_payload, oy_sync_command, Math.floor(oy_calc_avg(oy_grade_array))]]);
                     }
@@ -955,7 +960,7 @@ function oy_crypt_decrypt(oy_crypt_cipher, oy_crypt_pass) {
     return oy_return;
 }
 
-function oy_key_sign(oy_key_private, oy_key_data, oy_sim_force = false) {
+function oy_key_sign(oy_key_private, oy_key_data, oy_sim_force = false) {//DUPLICATED IN WEB WORKER BLOCK
     if (OY_SIMULATOR_MODE===true&&oy_sim_force===false) return oy_rand_gen(4);
     return nacl.util.encodeBase64(nacl.sign.detached(nacl.util.decodeUTF8(oy_key_data), nacl.util.decodeBase64(oy_key_private)));
 }
