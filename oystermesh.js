@@ -1195,11 +1195,11 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_data_payload[3]===OY_BLOCK_TIME&&//check that the current timestamp is in the sync processing zone
             oy_time_offset<OY_BLOCK_SECTORS[1][0]) {
 
-            if ((typeof(OY_BLOCK_STRICT[oy_data_payload[0].length])==="undefined"||oy_time_offset<OY_BLOCK_STRICT[oy_data_payload[0].length])) {
-
+            if ((typeof(OY_BLOCK_STRICT[oy_data_payload[0].length])==="undefined"||oy_time_offset<OY_BLOCK_STRICT[oy_data_payload[0].length]+(OY_PEERS[oy_peer_id][3]/2))) {
+                oy_log("LEMON: "+OY_PEERS[oy_peer_id][3]);
             }
             else {
-                fs.appendFileSync("/dev/shm/oy_debug2.log", "["+OY_SELF_SHORT+"] STRICT FAIL: "+JSON.stringify([oy_data_payload[0].length, oy_time_offset, OY_BLOCK_STRICT[oy_data_payload[0].length]])+"\n");
+                fs.appendFileSync("/dev/shm/oy_debug2.log", "["+OY_SELF_SHORT+"] STRICT FAIL: "+JSON.stringify([oy_data_payload[0].length, oy_time_offset, OY_BLOCK_STRICT[oy_data_payload[0].length], (OY_PEERS[oy_peer_id][3]/2)])+"\n");
             }
         }
 
@@ -1208,7 +1208,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             OY_BLOCK_HASH!==null&&//check that there is a known meshblock hash
             oy_data_payload[3]===OY_BLOCK_TIME&&//check that the current timestamp is in the sync processing zone
             oy_time_offset<OY_BLOCK_SECTORS[1][0]&&//check that the current timestamp is in the sync processing zone
-            (typeof(OY_BLOCK_STRICT[oy_data_payload[0].length])==="undefined"||oy_time_offset<OY_BLOCK_STRICT[oy_data_payload[0].length])) {
+            (typeof(OY_BLOCK_STRICT[oy_data_payload[0].length])==="undefined"||oy_time_offset<OY_BLOCK_STRICT[oy_data_payload[0].length]+(OY_PEERS[oy_peer_id][3]/2))) {
             if ((oy_sync_pass===0||oy_sync_pass===2)&&oy_peer_id!==oy_data_payload[0][0]) {
                 if (typeof(OY_SYNC_UNIQUE[oy_peer_id])==="undefined") OY_SYNC_UNIQUE[oy_peer_id] = {};
                 if (typeof(OY_SYNC_UNIQUE[oy_peer_id][oy_data_payload[0][0]])==="undefined") OY_SYNC_UNIQUE[oy_peer_id][oy_data_payload[0][0]] = true;
@@ -3357,6 +3357,7 @@ function oy_block_engine() {
                 return false;
             }
 
+            /*
             if (OY_BLOCK_BOOT===false) {
                 let oy_latency_keep = [];
                 for (let oy_peer_select in OY_PEERS) {
@@ -3371,6 +3372,7 @@ function oy_block_engine() {
                     }
                 }
             }
+             */
 
             let oy_command_sort = [];
             for (let oy_command_hash in OY_BLOCK_COMMAND) {
