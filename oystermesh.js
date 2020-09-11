@@ -3471,17 +3471,6 @@ function oy_block_engine() {
         oy_chrono(function() {
             OY_BLOCK_DIFF = false;
 
-            if (OY_BLOCK[0][1]!==null&&OY_BLOCK[0][1]!==OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]) {
-                oy_block_reset("OY_RESET_MISSTEP");
-                oy_block_continue = false;
-                return false;
-            }
-            if (OY_BLOCK[0][4]!==OY_BLOCK_BOOT_MARK) {
-                oy_block_reset("OY_RESET_BOOT_MISMATCH");
-                oy_block_continue = false;
-                return false;
-            }
-
             let oy_time_local = oy_time();
             if (OY_BLOCK_HASH===null||oy_peer_count()<=OY_PEER_INTRO||(OY_BLOCK_BOOT===false&&oy_peer_count(true)<=OY_PEER_INTRO)) {
                 let oy_intro_initiate = function(oy_intro_select) {
@@ -3552,6 +3541,17 @@ function oy_block_engine() {
             if (OY_BLOCK_HASH===null) {
                 OY_BLOCK_CHALLENGE = {};
                 oy_log("[MESHBLOCK][SKIP]["+chalk.bolder(OY_BLOCK_TIME)+"]", 1);
+                oy_block_continue = false;
+                return false;
+            }
+            if (OY_BLOCK[0][1]!==null&&OY_BLOCK[0][1]!==OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]) {
+                oy_log("BLUE1: "+JSON.stringify([OY_BLOCK[0][1], OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]]));
+                oy_block_reset("OY_RESET_MISSTEP");
+                oy_block_continue = false;
+                return false;
+            }
+            if (OY_BLOCK[0][4]!==OY_BLOCK_BOOT_MARK) {
+                oy_block_reset("OY_RESET_BOOT_MISMATCH");
                 oy_block_continue = false;
                 return false;
             }
@@ -4069,6 +4069,7 @@ function oy_block_process(oy_command_execute, oy_full_flag, oy_jump_flag) {
     //MAINTAIN--------------------------------
     oy_block[0][0] = OY_MESH_DYNASTY;
     oy_block[0][1] = oy_block_time;
+    oy_log("BLUE2: "+oy_block_time);
     oy_block[0][4] = OY_BLOCK_BOOT_MARK;
     oy_block[0][5]++;
     oy_block[0][6]++;
