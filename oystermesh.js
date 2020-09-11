@@ -20,7 +20,7 @@ const OY_MESH_FULLFILL_CHANCE = 0.2;//probability that data is stored whilst ful
 const OY_MESH_SOURCE = 3;//node in route passport (from destination) that is assigned with defining the source variable//TODO remove?
 const OY_MESH_SEQUENCE = 8;
 //let OY_MESH_SCALE = 1000;//core trilemma variable, maximum amount of full nodes. Higher is more scalable and less secure
-let OY_MESH_SECURITY = 0.25;//core trilemma variable, amount of rogue full nodes required to successfully attack the mesh, higher is more secure and less scalable
+let OY_MESH_SECURITY = 0.4;//core trilemma variable, amount of rogue full nodes required to successfully attack the mesh, higher is more secure and less scalable
 const OY_BLOCK_LOOP = [20, 60];//a lower value means increased accuracy for detecting the start of the next meshblock
 const OY_BLOCK_STABILITY_TRIGGER = 3;//mesh range history minimum to trigger reliance on real stability value
 const OY_BLOCK_STABILITY_LIMIT = 12;//mesh range history to keep to calculate meshblock stability, time is effectively value x 20 seconds
@@ -40,6 +40,7 @@ const OY_BLOCK_PEER_SPACE = [15, 15000];
 let OY_BLOCK_RECORD_LIMIT = 20;
 let OY_BLOCK_RECORD_INTRO_BUFFER = 1.4;
 let OY_BLOCK_STRICT_CURVE = 2;
+let OY_SYNC_BROADCAST_BUFFER = 150;
 let OY_SYNC_LAST_BUFFER = 2;
 let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 let OY_LIGHT_COMMIT = 0.4;
@@ -1279,9 +1280,43 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                                 }
                             }
                         }
-                        //if (oy_intro_select[0]!==null&&) {
-
-                        //}
+                        if (oy_intro_select[0]!==null&&Object.values(OY_INTRO_DEFAULT).indexOf(oy_intro_select[0][0])===-1) {
+                            let oy_intro_select_sub = [null, -1];
+                            let oy_intro_default = oy_calc_shuffle(Object.values(OY_INTRO_DEFAULT));
+                            for (let i in oy_intro_default) {
+                                oy_log("BLUE: "+oy_intro_default[i]);
+                                if (typeof(OY_BLOCK[1][oy_intro_default[i]])!=="undefined"&&typeof(OY_SYNC_MAP[1][oy_intro_default[i]])!=="undefined") {
+                                    let oy_select_pass = true;
+                                    for (let i in oy_data_payload[0]) {
+                                        if (OY_SYNC_MAP[1][oy_intro_default[i]][1].indexOf(oy_data_payload[0][i])!==-1) {
+                                            oy_select_pass = false;
+                                            break;
+                                        }
+                                    }
+                                    if (oy_select_pass===true) oy_intro_select_sub = [OY_SYNC_MAP[1][oy_intro_default[i]][1], OY_SYNC_MAP[1][oy_intro_default[i]][0]];
+                                }
+                            }
+                            if (oy_intro_select_sub[0]===null) {
+                                for (let i in oy_intro_default) {
+                                    oy_log("GREEN: "+oy_intro_default[i]);
+                                    if (typeof(OY_BLOCK[1][oy_intro_default[i]])!=="undefined"&&typeof(OY_SYNC_MAP[0][oy_intro_default[i]])!=="undefined") {
+                                        let oy_select_pass = true;
+                                        for (let i in oy_data_payload[0]) {
+                                            if (OY_SYNC_MAP[0][oy_intro_default[i]][1].indexOf(oy_data_payload[0][i])!==-1) {
+                                                oy_select_pass = false;
+                                                break;
+                                            }
+                                        }
+                                        if (oy_select_pass===true) oy_intro_select_sub = [OY_SYNC_MAP[0][oy_intro_default[i]][1], OY_SYNC_MAP[0][oy_intro_default[i]][0]];
+                                    }
+                                }
+                            }
+                            if (oy_intro_select_sub[0]!==null) {
+                                oy_log("DUPLICATE OFFER_A: "+JSON.stringify(oy_intro_select_sub));
+                                oy_data_payload[1] = oy_intro_select_sub[0];
+                                oy_data_route("OY_LOGIC_FOLLOW", "OY_INTRO_OFFER_A", oy_data_payload);
+                            }
+                        }
                     }
                     if (oy_intro_select[0]!==null) {
                         oy_data_payload[1] = oy_intro_select[0];
@@ -3159,9 +3194,9 @@ function oy_block_engine() {
         if (OY_FULL_INTRO!==false&&OY_FULL_INTRO===OY_INTRO_BOOT) {
             if (OY_BLOCK_BOOT===true) {
                 OY_PEER_MAX = [OY_PEER_BOOT_CORE, 0];
-                OY_PEER_INFLATE = [OY_PEER_BOOT_CORE, 0];
+                OY_PEER_INFLATE = [OY_PEER_BOOT_CORE*2, 0];
                 OY_PEER_SELF = OY_PEER_BOOT_CORE;
-                OY_NODE_MAX = OY_PEER_BOOT_CORE*2;
+                OY_NODE_MAX = OY_PEER_BOOT_CORE*3;
             }
             else {
                 OY_PEER_MAX = OY_PEER_BOOT_RESTORE[0];
@@ -3338,7 +3373,7 @@ function oy_block_engine() {
             oy_chrono(function() {
                 //oy_log("[SYNC][BROADCAST]["+(oy_time()-OY_BLOCK_TIME).toFixed(2)+"]", 2);
                 oy_data_route("OY_LOGIC_SYNC", "OY_BLOCK_SYNC", [[], [oy_key_sign(OY_SELF_PRIVATE, oy_sync_crypt)], oy_sync_crypt, OY_BLOCK_TIME, oy_command_flat, oy_identity_flat, oy_solutions_flat]);
-            }, 250);
+            }, OY_SYNC_BROADCAST_BUFFER);
         }
 
         for (let oy_command_hash in OY_BLOCK_COMMAND) {
