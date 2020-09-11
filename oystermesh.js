@@ -31,7 +31,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 let OY_BLOCK_RANGE_MIN = 10;//100, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOT_BUFFER = 3600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
+const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
@@ -3194,9 +3194,9 @@ function oy_block_engine() {
         if (OY_FULL_INTRO!==false&&OY_FULL_INTRO===OY_INTRO_BOOT) {
             if (OY_BLOCK_BOOT===true) {
                 OY_PEER_MAX = [OY_PEER_BOOT_CORE, 0];
-                OY_PEER_INFLATE = [OY_PEER_BOOT_CORE*2, 0];
+                OY_PEER_INFLATE = [OY_PEER_BOOT_CORE+OY_PEER_DEFLATE[0], 0];
                 OY_PEER_SELF = OY_PEER_BOOT_CORE;
-                OY_NODE_MAX = OY_PEER_BOOT_CORE*3;
+                OY_NODE_MAX = OY_PEER_BOOT_CORE*2;
             }
             else {
                 OY_PEER_MAX = OY_PEER_BOOT_RESTORE[0];
