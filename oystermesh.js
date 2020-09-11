@@ -39,7 +39,7 @@ let OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventua
 const OY_BLOCK_PEER_SPACE = [15, 15000];
 let OY_BLOCK_RECORD_LIMIT = 20;
 let OY_BLOCK_RECORD_INTRO_BUFFER = 1.4;
-let OY_BLOCK_STRICT_CURVE = 50;
+let OY_BLOCK_STRICT_CURVE = 80;
 let OY_SYNC_BROADCAST_BUFFER = 140;
 let OY_SYNC_LAST_BUFFER = 2;
 let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
@@ -3802,7 +3802,7 @@ function oy_block_engine() {
             let oy_edge_latency = Math.sqrt(oy_mesh_range)*oy_calc_median(Object.values(OY_BLOCK_LATENCY));
             OY_BLOCK_STRICT[OY_BLOCK_STRICT.length-1] = OY_BLOCK_SECTORS[1][0]-oy_edge_latency;
             let oy_hop_latency = OY_BLOCK_STRICT[OY_BLOCK_STRICT.length-1]/OY_BLOCK_STRICT.length;
-            let oy_curve_increment = (OY_BLOCK_STRICT_CURVE/100)/OY_BLOCK_STRICT.length;
+            let oy_curve_increment = (OY_BLOCK_STRICT_CURVE/100)/Math.sqrt(oy_mesh_range);
             let oy_curve_factor = (1-(OY_BLOCK_STRICT_CURVE/100))+oy_curve_increment;
             for (let i in OY_BLOCK_STRICT) {
                 if (i===0) continue;
