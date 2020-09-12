@@ -31,7 +31,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 let OY_BLOCK_RANGE_MIN = 10;//100, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOT_BUFFER = 7200;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
+const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
@@ -3694,10 +3694,12 @@ function oy_block_engine() {
                 OY_PEER_SAFE = {};
                 for (let oy_peer_select in OY_SYNC_UNIQUE) {
                     let oy_peer_safe = true;
+                    let oy_safe_counter = 0;
                     for (let oy_sync_select in OY_SYNC_UNIQUE[oy_peer_select]) {
                         for (let oy_peer_other in OY_SYNC_UNIQUE) {
                             if (oy_peer_select===oy_peer_other) continue;
-                            if (typeof(OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])!=="undefined") {
+                            if (typeof(OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])!=="undefined") oy_safe_counter++;
+                            if (oy_safe_counter===2) {
                                 oy_peer_safe = false;
                                 break;
                             }
