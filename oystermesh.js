@@ -45,7 +45,7 @@ let OY_BLOCK_STRICT_FLOOR = 0.05;
 const OY_BLOCK_STRICT_DECREMENT = 0.1;
 let OY_SYNC_BROADCAST_BUFFER = [0.2, 200];
 let OY_SYNC_LAST_BUFFER = 2;
-let OY_SYNC_UNIQUE_DIFF = 4;//larger is more unique
+let OY_SYNC_UNIQUE_DIFF = 3;//larger is less unique
 let OY_SYNC_UNIQUE_HOP = 1;//larger is less unique
 let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 let OY_LIGHT_COMMIT = 0.4;
@@ -3702,25 +3702,27 @@ function oy_block_engine() {
 
                 OY_PEER_SAFE = {};
                 for (let oy_peer_select in OY_SYNC_UNIQUE) {
-                    let oy_peer_safe = true;
+                    let oy_peer_safe = false;
                     let oy_safe_counter = 0;
                     oy_log(oy_short(oy_peer_select));
                     for (let oy_sync_select in OY_SYNC_UNIQUE[oy_peer_select]) {
                         for (let oy_peer_other in OY_SYNC_UNIQUE) {
                             if (oy_peer_select===oy_peer_other) continue;
-                            if (typeof(OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])!=="undefined") oy_log("BLUE2:"+JSON.stringify([OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select], OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select], Math.abs(OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select]-OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select]), OY_SYNC_UNIQUE_HOP]));
-                            if (typeof(OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])!=="undefined"&&Math.abs(OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select]-OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])<OY_SYNC_UNIQUE_HOP) {
+                            //if (typeof(OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])!=="undefined") oy_log("BLUE2:"+JSON.stringify([OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select], OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select], Math.abs(OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select]-OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select]), OY_SYNC_UNIQUE_HOP]));
+                            if (typeof(OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])==="undefined"||Math.abs(OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select]-OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])>=OY_SYNC_UNIQUE_HOP) {
                                 oy_safe_counter++;
                                 oy_log(oy_short(oy_peer_select)+" - "+oy_short(oy_peer_other)+" - "+oy_short(oy_sync_select)+" - "+oy_safe_counter);
                             }
                             if (oy_safe_counter===OY_SYNC_UNIQUE_DIFF) {
-                                oy_peer_safe = false;
+                                oy_peer_safe = true;
                                 break;
                             }
                         }
-                        if (oy_peer_safe===false) break;
+                        if (oy_peer_safe===true) {
+                            OY_PEER_SAFE[oy_peer_select] = true;
+                            break;
+                        }
                     }
-                    if (oy_peer_safe===true) OY_PEER_SAFE[oy_peer_select] = true;
                 }
                 oy_log("PEER_SAFE: "+Object.keys(OY_PEER_SAFE).length+" - "+Object.keys(OY_SYNC_UNIQUE).length, 2);
                 if (Object.keys(OY_PEER_SAFE).length>0) {
