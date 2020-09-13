@@ -3730,7 +3730,7 @@ function oy_block_engine() {
                 oy_mesh_range = OY_BLOCK[0][2];
 
                 OY_PEER_SAFE = {};
-                let oy_mesh_threshold = oy_mesh_range*OY_SYNC_UNIQUE_DIFF
+                let oy_mesh_threshold = Math.floor(oy_mesh_range*OY_SYNC_UNIQUE_DIFF);
                 for (let oy_peer_select in OY_SYNC_UNIQUE) {
                     let oy_peer_safe = false;
                     let oy_safe_counter = 0;
