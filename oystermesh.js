@@ -31,7 +31,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 let OY_BLOCK_RANGE_MIN = 10;//100, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOT_BUFFER = 1200;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
+const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
@@ -1071,7 +1071,7 @@ function oy_peer_add(oy_peer_id, oy_state_flag) {
     if (oy_state_flag===null||typeof(OY_PEERS[oy_peer_id])!=="undefined"||oy_peer_id===OY_SELF_PUBLIC) return false;
 
     OY_PEERS[oy_peer_id] = oy_clone_object(OY_PEER_TEMPLATE);
-    if (OY_JUMP_ASSIGN[0]===oy_peer_id) OY_PEERS[oy_peer_id][0] = OY_BLOCK_NEXT;
+    if (oy_state_flag===2||OY_JUMP_ASSIGN[0]===oy_peer_id) OY_PEERS[oy_peer_id][0] = OY_BLOCK_NEXT;
     else OY_PEERS[oy_peer_id][0] = OY_BLOCK_TIME;
     OY_PEERS[oy_peer_id][1] = oy_state_flag;
     if (typeof(OY_INTRO_TAG[oy_peer_id])!=="undefined") OY_INTRO_TAG[oy_peer_id] = true;
@@ -1638,6 +1638,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
         delete OY_BLOCK_CHALLENGE[oy_peer_id];
         OY_PEERS[oy_peer_id][1] = 2;
+        OY_PEERS[oy_peer_id][0] = OY_BLOCK_NEXT;
         return true;
     }
     else if (oy_data_flag==="OY_PEER_LATENCY") {
