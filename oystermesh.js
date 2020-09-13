@@ -45,7 +45,7 @@ let OY_BLOCK_STRICT_FLOOR = 0.05;
 const OY_BLOCK_STRICT_DECREMENT = 0.1;
 let OY_SYNC_BROADCAST_BUFFER = [0.2, 200];
 let OY_SYNC_LAST_BUFFER = 2;
-let OY_SYNC_UNIQUE_DIFF = 3;//larger is more unique
+let OY_SYNC_UNIQUE_DIFF = 4;//larger is more unique
 let OY_SYNC_UNIQUE_HOP = 1;//larger is less unique
 let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 let OY_LIGHT_COMMIT = 0.4;
@@ -1220,7 +1220,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                     for (let oy_peer_select in OY_SYNC_UNIQUE) {
                         if (oy_peer_select===oy_peer_id) continue;
                         for (let oy_sync_select in OY_SYNC_UNIQUE[oy_peer_select]) {
-                            if (oy_sync_select===oy_data_payload[0][0]) oy_log("BLUE1"+JSON.stringify([oy_sync_select, OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select], oy_data_payload[0].length, OY_SYNC_UNIQUE_HOP]));
+                            if (oy_sync_select===oy_data_payload[0][0]) oy_log("BLUE1: "+JSON.stringify([oy_sync_select, OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select], oy_data_payload[0].length, Math.abs(OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select]-oy_data_payload[0].length)>=OY_SYNC_UNIQUE_HOP, OY_SYNC_UNIQUE_HOP]));
                             if (oy_sync_select===oy_data_payload[0][0]&&Math.abs(OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select]-oy_data_payload[0].length)>=OY_SYNC_UNIQUE_HOP) {
                                 oy_unique_pass = false;
                                 break;
