@@ -45,8 +45,8 @@ let OY_BLOCK_STRICT_FLOOR = 0.05;
 const OY_BLOCK_STRICT_DECREMENT = 0.1;
 let OY_SYNC_BROADCAST_BUFFER = [0.2, 200];
 let OY_SYNC_LAST_BUFFER = 2;
-let OY_SYNC_UNIQUE_DIFF = 3;//larger is less unique
-let OY_SYNC_UNIQUE_HOP = 1;//larger is less unique
+let OY_SYNC_UNIQUE_DIFF = 0.5;//larger is less unique/safe
+let OY_SYNC_UNIQUE_HOP = 1;//larger is less unique/safe
 let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 let OY_LIGHT_COMMIT = 0.4;
 let OY_PEER_MAX = [5, 3];//maximum mutual peers - [full node, light node]
@@ -3700,35 +3700,6 @@ function oy_block_engine() {
                     else OY_PEERS[oy_peer_select][9] = 0;
                 }
 
-                OY_PEER_SAFE = {};
-                for (let oy_peer_select in OY_SYNC_UNIQUE) {
-                    let oy_peer_safe = false;
-                    let oy_safe_counter = 0;
-                    oy_log(oy_short(oy_peer_select));
-                    for (let oy_sync_select in OY_SYNC_UNIQUE[oy_peer_select]) {
-                        for (let oy_peer_other in OY_SYNC_UNIQUE) {
-                            if (oy_peer_select===oy_peer_other) continue;
-                            //if (typeof(OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])!=="undefined") oy_log("BLUE2:"+JSON.stringify([OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select], OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select], Math.abs(OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select]-OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select]), OY_SYNC_UNIQUE_HOP]));
-                            if (typeof(OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])==="undefined"||Math.abs(OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select]-OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])>=OY_SYNC_UNIQUE_HOP) {
-                                oy_safe_counter++;
-                                oy_log(oy_short(oy_peer_select)+" - "+oy_short(oy_peer_other)+" - "+oy_short(oy_sync_select)+" - "+oy_safe_counter);
-                            }
-                            if (oy_safe_counter===OY_SYNC_UNIQUE_DIFF) {
-                                oy_peer_safe = true;
-                                break;
-                            }
-                        }
-                        if (oy_peer_safe===true) {
-                            OY_PEER_SAFE[oy_peer_select] = true;
-                            break;
-                        }
-                    }
-                }
-                oy_log("PEER_SAFE: "+Object.keys(OY_PEER_SAFE).length+" - "+Object.keys(OY_SYNC_UNIQUE).length, 2);
-                if (Object.keys(OY_PEER_SAFE).length>0) {
-                    fs.appendFileSync("/dev/shm/oy_debug.log", "["+OY_SELF_SHORT+"]["+(Date.now()/1000)+"] PEER SAFE: "+Object.keys(OY_PEER_SAFE).length+"\n");
-                }
-
                 for (let oy_command_hash in oy_command_check) {
                     if (typeof(OY_BLOCK[4][oy_command_check[oy_command_hash][1][0][2]])==="undefined"||OY_BLOCK[4][oy_command_check[oy_command_hash][1][0][2]]<oy_command_check[oy_command_hash][1][0][1][2]+OY_AKOYA_FEE) continue;//TODO check if fee buffer needs to be strict or not
                     OY_BLOCK[4][oy_command_check[oy_command_hash][1][0][2]] -= oy_command_check[oy_command_hash][1][0][1][2];
@@ -3756,6 +3727,36 @@ function oy_block_engine() {
                 //oy_mesh_range_prev = OY_BLOCK[0][2];//TODO remove
                 if (!oy_block_range(Object.keys(OY_BLOCK[1]).length)) return false;//block_range will invoke block_reset if necessary
                 oy_mesh_range = OY_BLOCK[0][2];
+
+                OY_PEER_SAFE = {};
+                let oy_mesh_threshold = oy_mesh_range*OY_SYNC_UNIQUE_DIFF
+                for (let oy_peer_select in OY_SYNC_UNIQUE) {
+                    let oy_peer_safe = false;
+                    let oy_safe_counter = 0;
+                    oy_log(oy_short(oy_peer_select));
+                    for (let oy_sync_select in OY_SYNC_UNIQUE[oy_peer_select]) {
+                        for (let oy_peer_other in OY_SYNC_UNIQUE) {
+                            if (oy_peer_select===oy_peer_other) continue;
+                            //if (typeof(OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])!=="undefined") oy_log("BLUE2:"+JSON.stringify([OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select], OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select], Math.abs(OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select]-OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select]), OY_SYNC_UNIQUE_HOP]));
+                            if (typeof(OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])==="undefined"||Math.abs(OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select]-OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])>=OY_SYNC_UNIQUE_HOP) {
+                                oy_safe_counter++;
+                                oy_log(oy_short(oy_peer_select)+" - "+oy_short(oy_peer_other)+" - "+oy_short(oy_sync_select)+" - "+oy_safe_counter);
+                            }
+                            if (oy_safe_counter===oy_mesh_threshold) {
+                                oy_peer_safe = true;
+                                break;
+                            }
+                        }
+                        if (oy_peer_safe===true) {
+                            OY_PEER_SAFE[oy_peer_select] = true;
+                            break;
+                        }
+                    }
+                }
+                oy_log("PEER_SAFE: "+Object.keys(OY_PEER_SAFE).length+" - "+Object.keys(OY_SYNC_UNIQUE).length+" - "+oy_mesh_threshold, 2);
+                if (Object.keys(OY_PEER_SAFE).length>0) {
+                    fs.appendFileSync("/dev/shm/oy_debug.log", "["+OY_SELF_SHORT+"]["+(Date.now()/1000)+"] PEER SAFE: "+Object.keys(OY_PEER_SAFE).length+"\n");
+                }
 
                 if (oy_dive_state_prev===true) {
                     for (let oy_peer_select in OY_PEERS) {
