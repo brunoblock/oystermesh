@@ -1203,7 +1203,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             if ((typeof(OY_BLOCK_STRICT[oy_data_payload[0].length])==="undefined"||oy_time_offset<OY_BLOCK_STRICT[oy_data_payload[0].length])) {
             }
             else {
-                fs.appendFileSync("/dev/shm/oy_debug2.log", "["+OY_SELF_SHORT+"] STRICT FAIL: "+JSON.stringify([oy_data_payload[0].length, oy_data_payload[2], oy_time_offset, OY_BLOCK_STRICT[oy_data_payload[0].length], OY_PEERS[oy_peer_id][3]])+"\n");
+                fs.appendFileSync("/dev/shm/oy_debug2.log", "["+OY_SELF_SHORT+"] STRICT FAIL: "+JSON.stringify([oy_data_payload[0].length, typeof(OY_PEER_SAFE[oy_peer_id])!=="undefined", Object.values(OY_INTRO_DEFAULT).indexOf(oy_peer_id)!==-1, oy_data_payload[2], oy_time_offset, OY_BLOCK_STRICT[oy_data_payload[0].length], OY_PEERS[oy_peer_id][3]])+"\n");
             }
         }
 
@@ -1212,7 +1212,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             OY_BLOCK_HASH!==null&&//check that there is a known meshblock hash
             oy_data_payload[3]===OY_BLOCK_TIME&&//check that the current timestamp is in the sync processing zone
             oy_time_offset<OY_BLOCK_SECTORS[1][0]&&//check that the current timestamp is in the sync processing zone
-            (typeof(OY_BLOCK_STRICT[oy_data_payload[0].length])==="undefined"||oy_time_offset<OY_BLOCK_STRICT[oy_data_payload[0].length]||(oy_data_payload[0].length===1&&Object.values(OY_INTRO_DEFAULT).indexOf(oy_peer_id)!==-1))) {
+            (typeof(OY_BLOCK_STRICT[oy_data_payload[0].length])==="undefined"||oy_time_offset<OY_BLOCK_STRICT[oy_data_payload[0].length]||(oy_data_payload[0].length===1&&(typeof(OY_PEER_SAFE[oy_peer_id])!=="undefined"||Object.values(OY_INTRO_DEFAULT).indexOf(oy_peer_id)!==-1)))) {
             if ((oy_sync_pass===0||oy_sync_pass===2)&&oy_peer_id!==oy_data_payload[0][0]) {
                 let oy_unique_pass = true;
                 for (let oy_peer_select in OY_SYNC_UNIQUE) {
