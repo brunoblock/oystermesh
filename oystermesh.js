@@ -31,7 +31,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 let OY_BLOCK_RANGE_MIN = 10;//100, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOT_BUFFER = 3600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
+const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
@@ -41,7 +41,7 @@ let OY_BLOCK_RECORD_LIMIT = 20;
 let OY_BLOCK_RECORD_INTRO_BUFFER = 1.4;
 let OY_BLOCK_STRICT_CURVE = 20;
 let OY_BLOCK_STRICT_ENTRY = 0.9;
-let OY_SYNC_BROADCAST_BUFFER = 140;
+let OY_SYNC_BROADCAST_BUFFER = [0.14, 140];
 let OY_SYNC_LAST_BUFFER = 2;
 let OY_SYNC_UNIQUE_DIFF = 3;//larger is more unique
 let OY_SYNC_UNIQUE_HOP = 2;//larger is less unique
@@ -674,7 +674,7 @@ function oy_worker_manager(oy_instance, oy_data) {
             if (oy_time_offset>OY_SYNC_LAST[1]) OY_SYNC_LAST[1] = oy_time_offset;
             if (typeof(OY_SYNC_MAP[1][oy_data_payload[0][0]])==="undefined") OY_SYNC_MAP[1][oy_data_payload[0][0]] = [oy_data_payload[0].length, oy_data_payload[0]];
 
-            if (typeof(OY_BLOCK_LATENCY[oy_data_payload[0][0]])==="undefined"&&((typeof(OY_BLOCK[1][oy_data_payload[0][0]])!=="undefined"&&OY_BLOCK[1][oy_data_payload[0][0]][1]===1)||OY_BLOCK_BOOT===true)) OY_BLOCK_LATENCY[oy_data_payload[0][0]] = (oy_time_offset-OY_SYNC_BROADCAST_BUFFER)/oy_data_payload[0].length;
+            if (typeof(OY_BLOCK_LATENCY[oy_data_payload[0][0]])==="undefined"&&((typeof(OY_BLOCK[1][oy_data_payload[0][0]])!=="undefined"&&OY_BLOCK[1][oy_data_payload[0][0]][1]===1)||OY_BLOCK_BOOT===true)) OY_BLOCK_LATENCY[oy_data_payload[0][0]] = (oy_time_offset-OY_SYNC_BROADCAST_BUFFER[0])/oy_data_payload[0].length;
 
             if (typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined"||OY_BLOCK_BOOT===true) oy_data_route("OY_LOGIC_SYNC", "OY_BLOCK_SYNC", oy_data_payload);
 
@@ -3427,7 +3427,7 @@ function oy_block_engine() {
             oy_chrono(function() {
                 //oy_log("[SYNC][BROADCAST]["+(oy_time()-OY_BLOCK_TIME).toFixed(2)+"]", 2);
                 oy_data_route("OY_LOGIC_SYNC", "OY_BLOCK_SYNC", [[], [oy_key_sign(OY_SELF_PRIVATE, oy_sync_crypt)], oy_sync_crypt, OY_BLOCK_TIME, oy_command_flat, oy_identity_flat, oy_solutions_flat]);
-            }, OY_SYNC_BROADCAST_BUFFER);
+            }, OY_SYNC_BROADCAST_BUFFER[1]);
         }
 
         for (let oy_command_hash in OY_BLOCK_COMMAND) {
@@ -3815,7 +3815,7 @@ function oy_block_engine() {
             OY_BLOCK_STRICT.fill(null);
 
             let oy_block_latency = Object.values(OY_BLOCK_LATENCY);
-            let oy_mesh_diameter = Math.sqrt(oy_mesh_range)
+            let oy_mesh_diameter = Math.sqrt(oy_mesh_range);
             let oy_edge_latency = oy_mesh_diameter*oy_calc_median(oy_block_latency);
             OY_BLOCK_STRICT[OY_BLOCK_STRICT.length-1] = OY_BLOCK_SECTORS[1][0]-oy_edge_latency;
             let oy_hop_latency = OY_BLOCK_STRICT[OY_BLOCK_STRICT.length-1]/OY_BLOCK_STRICT.length;
