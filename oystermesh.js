@@ -1212,7 +1212,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             OY_BLOCK_HASH!==null&&//check that there is a known meshblock hash
             oy_data_payload[3]===OY_BLOCK_TIME&&//check that the current timestamp is in the sync processing zone
             oy_time_offset<OY_BLOCK_SECTORS[1][0]&&//check that the current timestamp is in the sync processing zone
-            (typeof(OY_BLOCK_STRICT[oy_data_payload[0].length])==="undefined"||oy_time_offset<OY_BLOCK_STRICT[oy_data_payload[0].length]||(oy_data_payload[0].length===1&&(typeof(OY_PEER_SAFE[oy_peer_id])!=="undefined"||Object.values(OY_INTRO_DEFAULT).indexOf(oy_peer_id)!==-1)))) {
+            (typeof(OY_BLOCK_STRICT[oy_data_payload[0].length])==="undefined"||oy_time_offset<OY_BLOCK_STRICT[oy_data_payload[0].length]||(oy_data_payload[0].length===1&&typeof(OY_BLOCK_STRICT[2])!=="undefined"&&oy_time_offset<OY_BLOCK_STRICT[2]&&(typeof(OY_PEER_SAFE[oy_peer_id])!=="undefined"||Object.values(OY_INTRO_DEFAULT).indexOf(oy_peer_id)!==-1)))) {
             if ((oy_sync_pass===0||oy_sync_pass===2)&&oy_peer_id!==oy_data_payload[0][0]) {
                 if (typeof(OY_SYNC_UNIQUE[oy_peer_id])==="undefined") OY_SYNC_UNIQUE[oy_peer_id] = {};
                 if (typeof(OY_SYNC_UNIQUE[oy_peer_id][oy_data_payload[0][0]])==="undefined") OY_SYNC_UNIQUE[oy_peer_id][oy_data_payload[0][0]] = oy_data_payload[0].length;
@@ -3701,11 +3701,15 @@ function oy_block_engine() {
                 for (let oy_peer_select in OY_SYNC_UNIQUE) {
                     let oy_peer_safe = true;
                     let oy_safe_counter = 0;
+                    oy_log(oy_peer_select);
                     for (let oy_sync_select in OY_SYNC_UNIQUE[oy_peer_select]) {
                         for (let oy_peer_other in OY_SYNC_UNIQUE) {
                             if (oy_peer_select===oy_peer_other) continue;
                             if (typeof(OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])!=="undefined") oy_log("BLUE2:"+JSON.stringify([OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select], OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select], Math.abs(OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select]-OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select]), OY_SYNC_UNIQUE_HOP]));
-                            if (typeof(OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])!=="undefined"&&Math.abs(OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select]-OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])<OY_SYNC_UNIQUE_HOP) oy_safe_counter++;
+                            if (typeof(OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])!=="undefined"&&Math.abs(OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select]-OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])<OY_SYNC_UNIQUE_HOP) {
+                                oy_safe_counter++;
+                                oy_log(oy_peer_select+" - "+oy_safe_counter);
+                            }
                             if (oy_safe_counter===OY_SYNC_UNIQUE_DIFF) {
                                 oy_peer_safe = false;
                                 break;
