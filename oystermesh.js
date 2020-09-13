@@ -40,8 +40,8 @@ const OY_BLOCK_PEER_SPACE = [15, 15000];
 let OY_BLOCK_RECORD_LIMIT = 20;
 let OY_BLOCK_RECORD_INTRO_BUFFER = 1.4;
 let OY_BLOCK_STRICT_CURVE = 20;
-let OY_BLOCK_STRICT_ENTRY = 0.9;
-let OY_SYNC_BROADCAST_BUFFER = [0.14, 140];
+let OY_BLOCK_STRICT_ENTRY = 1.5;
+let OY_SYNC_BROADCAST_BUFFER = [0.2, 200];
 let OY_SYNC_LAST_BUFFER = 2;
 let OY_SYNC_UNIQUE_DIFF = 3;//larger is more unique
 let OY_SYNC_UNIQUE_HOP = 2;//larger is less unique
@@ -3822,6 +3822,7 @@ function oy_block_engine() {
             let oy_curve_increment = (OY_BLOCK_STRICT_CURVE/100)/oy_mesh_diameter;
             let oy_curve_factor = (1-(OY_BLOCK_STRICT_CURVE/100))+oy_curve_increment;
             for (let i in OY_BLOCK_STRICT) {
+                i = parseInt(i);
                 if (i===0) continue;
                 OY_BLOCK_STRICT[i] = oy_hop_latency*i*Math.min(1, (oy_curve_factor+(oy_curve_increment*(i))));
             }
@@ -3833,15 +3834,17 @@ function oy_block_engine() {
             while (oy_entry_cut>0) {
                 let oy_cut_pass = true;
                 for (let i in OY_BLOCK_STRICT) {
+                    i = parseInt(i);
                     if (i===0) continue;
                     if (i>oy_mesh_diameter) break;
-                    if (oy_latency_max*oy_entry_cut>=OY_BLOCK_STRICT[i]) oy_cut_pass = false;
+                    console.log([oy_latency_max, oy_entry_cut, i, OY_BLOCK_STRICT[i]]);
+                    if (oy_latency_max*i*oy_entry_cut*OY_BLOCK_STRICT_ENTRY>=OY_BLOCK_STRICT[i]) oy_cut_pass = false;
                 }
                 if (oy_cut_pass===true) break;
                 oy_entry_cut -= OY_BLOCK_STRICT_DECREMENT;
             }
 
-            if (OY_BLOCK_STRICT.length>1) OY_BLOCK_STRICT[1] *= OY_BLOCK_STRICT_ENTRY*oy_entry_cut;
+            if (OY_BLOCK_STRICT.length>1) OY_BLOCK_STRICT[1] *= oy_entry_cut;
 
             oy_log("STRICT: "+OY_BLOCK_STRICT.length+" - "+oy_entry_cut+" - "+JSON.stringify(OY_BLOCK_STRICT));
 
