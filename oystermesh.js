@@ -45,7 +45,7 @@ let OY_BLOCK_STRICT_FLOOR = 0.05;
 const OY_BLOCK_STRICT_DECREMENT = 0.1;
 let OY_SYNC_BROADCAST_BUFFER = [0.2, 200];
 let OY_SYNC_LAST_BUFFER = 2;
-let OY_SYNC_UNIQUE_DIFF = 0.5;//larger is less unique/safe
+let OY_SYNC_UNIQUE_DIFF = 2.5;//larger is less unique/safe
 let OY_SYNC_UNIQUE_HOP = 1;//larger is less unique/safe
 let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 let OY_LIGHT_COMMIT = 0.4;
@@ -3756,7 +3756,7 @@ function oy_block_engine() {
                 }
                 oy_log("PEER_SAFE: "+Object.keys(OY_PEER_SAFE).length+" - "+Object.keys(OY_SYNC_UNIQUE).length+" - "+oy_mesh_threshold, 2);
                 if (Object.keys(OY_PEER_SAFE).length>0) {
-                    fs.appendFileSync("/dev/shm/oy_debug.log", "["+OY_SELF_SHORT+"]["+(Date.now()/1000)+"] PEER SAFE: "+Object.keys(OY_PEER_SAFE).length+"\n");
+                    fs.appendFileSync("/dev/shm/oy_debug.log", "["+OY_SELF_SHORT+"] PEER SAFE: "+Object.keys(OY_PEER_SAFE).length+" - "+((Object.keys(OY_PEER_SAFE).length/Object.keys(OY_PEERS).length)*100).toFixed(2)+"\n");
                 }
 
                 if (oy_dive_state_prev===true) {
