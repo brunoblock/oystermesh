@@ -45,7 +45,7 @@ let OY_BLOCK_STRICT_FLOOR = 0.05;
 const OY_BLOCK_STRICT_DECREMENT = 0.1;
 let OY_SYNC_BROADCAST_BUFFER = [0.2, 200];
 let OY_SYNC_LAST_BUFFER = 2;
-let OY_SYNC_UNIQUE_DIFF = 3;//larger is more unique
+let OY_SYNC_UNIQUE_DIFF = 4;//larger is more unique
 let OY_SYNC_UNIQUE_HOP = 1;//larger is less unique
 let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 let OY_LIGHT_COMMIT = 0.4;
@@ -58,7 +58,7 @@ let OY_PEER_BOOT_CORE = 20;//max peers of boot node during boot phase
 let OY_PEER_BOOT_SCALE = 3;//maximum hops away from boot node allowed during boot phase
 let OY_NODE_MAX = 40;
 const OY_INTRO_INITIATE = 3;
-const OY_INTRO_PRE_MAX = 500;
+const OY_INTRO_PRE_MAX = 800;
 const OY_INTRO_TRIP = [0.8, 800];
 const OY_WORK_MATCH = 4;//lower is more bandwidth/memory bound, higher is more CPU bound
 const OY_WORK_MAX = 10000;//10000
@@ -1212,7 +1212,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             OY_BLOCK_HASH!==null&&//check that there is a known meshblock hash
             oy_data_payload[3]===OY_BLOCK_TIME&&//check that the current timestamp is in the sync processing zone
             oy_time_offset<OY_BLOCK_SECTORS[1][0]&&//check that the current timestamp is in the sync processing zone
-            (typeof(OY_BLOCK_STRICT[oy_data_payload[0].length])==="undefined"||oy_time_offset<OY_BLOCK_STRICT[oy_data_payload[0].length]||(oy_data_payload[0].length===1&&typeof(OY_BLOCK_STRICT[2])!=="undefined"&&oy_time_offset<OY_BLOCK_STRICT[2]&&(typeof(OY_PEER_SAFE[oy_peer_id])!=="undefined"||Object.values(OY_INTRO_DEFAULT).indexOf(oy_peer_id)!==-1)))) {
+            (typeof(OY_BLOCK_STRICT[oy_data_payload[0].length])==="undefined"||oy_time_offset<OY_BLOCK_STRICT[oy_data_payload[0].length]||(oy_data_payload[0].length===1&&oy_time_offset<OY_BLOCK_STRICT[0]&&(typeof(OY_PEER_SAFE[oy_peer_id])!=="undefined"||Object.values(OY_INTRO_DEFAULT).indexOf(oy_peer_id)!==-1)))) {
             if ((oy_sync_pass===0||oy_sync_pass===2)&&oy_peer_id!==oy_data_payload[0][0]) {
                 if (typeof(OY_SYNC_UNIQUE[oy_peer_id])==="undefined") OY_SYNC_UNIQUE[oy_peer_id] = {};
                 if (typeof(OY_SYNC_UNIQUE[oy_peer_id][oy_data_payload[0][0]])==="undefined") OY_SYNC_UNIQUE[oy_peer_id][oy_data_payload[0][0]] = oy_data_payload[0].length;
@@ -2804,7 +2804,10 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
             let oy_work_queue = null;
             if (typeof(OY_INTRO_PASS[oy_soak_node])==="undefined") {
                 if (OY_BLOCK_FINISH===false) return JSON.stringify(["OY_INTRO_UNREADY", 2]);
-                if (oy_data_payload===true&&(oy_time_offset<(OY_INTRO_MARKER/1000)-OY_MESH_BUFFER[0]||oy_time_offset>(OY_INTRO_MARKER/1000)+OY_INTRO_TRIP[0]+OY_MESH_BUFFER[0])) return false;
+                if (oy_data_payload===true&&(oy_time_offset<(OY_INTRO_MARKER/1000)-OY_MESH_BUFFER[0]||oy_time_offset>(OY_INTRO_MARKER/1000)+OY_INTRO_TRIP[0]+OY_MESH_BUFFER[0])) {
+                    oy_log("LEMON: "+JSON.stringify([oy_time_offset, (OY_INTRO_MARKER/1000)-OY_MESH_BUFFER[0], (OY_INTRO_MARKER/1000)+OY_INTRO_TRIP[0]+OY_MESH_BUFFER[0]]));
+                    return false;
+                }
                 if (typeof(OY_INTRO_ALLOCATE[oy_soak_node])!=="undefined"||(oy_data_payload!==false&&oy_data_payload!==true)) {
                     OY_INTRO_BAN[oy_soak_node] = true;
                     delete OY_INTRO_ALLOCATE[oy_soak_node];
@@ -3701,14 +3704,14 @@ function oy_block_engine() {
                 for (let oy_peer_select in OY_SYNC_UNIQUE) {
                     let oy_peer_safe = true;
                     let oy_safe_counter = 0;
-                    oy_log(oy_peer_select);
+                    oy_log(oy_short(oy_peer_select));
                     for (let oy_sync_select in OY_SYNC_UNIQUE[oy_peer_select]) {
                         for (let oy_peer_other in OY_SYNC_UNIQUE) {
                             if (oy_peer_select===oy_peer_other) continue;
                             if (typeof(OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])!=="undefined") oy_log("BLUE2:"+JSON.stringify([OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select], OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select], Math.abs(OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select]-OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select]), OY_SYNC_UNIQUE_HOP]));
                             if (typeof(OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])!=="undefined"&&Math.abs(OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select]-OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])<OY_SYNC_UNIQUE_HOP) {
                                 oy_safe_counter++;
-                                oy_log(oy_peer_select+" - "+oy_safe_counter);
+                                oy_log(oy_short(oy_peer_select)+" - "+oy_short(oy_peer_other)+" - "+oy_short(oy_sync_select)+" - "+oy_safe_counter);
                             }
                             if (oy_safe_counter===OY_SYNC_UNIQUE_DIFF) {
                                 oy_peer_safe = false;
@@ -3719,7 +3722,7 @@ function oy_block_engine() {
                     }
                     if (oy_peer_safe===true) OY_PEER_SAFE[oy_peer_select] = true;
                 }
-                oy_log("PEER_SAFE: "+Object.keys(OY_PEER_SAFE).length, 2);
+                oy_log("PEER_SAFE: "+Object.keys(OY_PEER_SAFE).length+" - "+Object.keys(OY_SYNC_UNIQUE).length, 2);
                 if (Object.keys(OY_PEER_SAFE).length>0) {
                     fs.appendFileSync("/dev/shm/oy_debug.log", "["+OY_SELF_SHORT+"]["+(Date.now()/1000)+"] PEER SAFE: "+Object.keys(OY_PEER_SAFE).length+"\n");
                 }
@@ -3809,7 +3812,7 @@ function oy_block_engine() {
                 }
             }
 
-            OY_BLOCK_STRICT = new Array(Math.max(1, Math.ceil(oy_mesh_range*OY_MESH_SECURITY)));
+            OY_BLOCK_STRICT = new Array(Math.max(2, Math.ceil(oy_mesh_range*OY_MESH_SECURITY)));
             OY_BLOCK_STRICT.fill(null);
 
             let oy_block_latency = Object.values(OY_BLOCK_LATENCY);
@@ -3824,6 +3827,7 @@ function oy_block_engine() {
                 if (i===0) continue;
                 OY_BLOCK_STRICT[i] = oy_hop_latency*i*Math.min(1, (oy_curve_factor+(oy_curve_increment*(i))));
             }
+            OY_BLOCK_STRICT[0] = OY_BLOCK_STRICT[1];
 
             let oy_latency_max = Math.max.apply(Math, oy_block_latency);
             let oy_entry_cut = 1;
