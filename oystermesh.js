@@ -20,7 +20,7 @@ const OY_MESH_FULLFILL_CHANCE = 0.2;//probability that data is stored whilst ful
 const OY_MESH_SOURCE = 3;//node in route passport (from destination) that is assigned with defining the source variable//TODO remove?
 const OY_MESH_SEQUENCE = 8;
 //let OY_MESH_SCALE = 1000;//core trilemma variable, maximum amount of full nodes. Higher is more scalable and less secure
-let OY_MESH_SECURITY = 0.3;//core trilemma variable, amount of rogue full nodes required to successfully attack the mesh, higher is more secure and less scalable
+let OY_MESH_SECURITY = 0.4;//core trilemma variable, amount of rogue full nodes required to successfully attack the mesh, higher is more secure and less scalable
 const OY_BLOCK_LOOP = [20, 60];//a lower value means increased accuracy for detecting the start of the next meshblock
 const OY_BLOCK_STABILITY_TRIGGER = 3;//mesh range history minimum to trigger reliance on real stability value
 const OY_BLOCK_STABILITY_LIMIT = 12;//mesh range history to keep to calculate meshblock stability, time is effectively value x 20 seconds
@@ -39,14 +39,14 @@ let OY_BLOCK_BUFFER_SPACE = [12, 12000];//lower value means full node is eventua
 const OY_BLOCK_PEER_SPACE = [15, 15000];
 let OY_BLOCK_RECORD_LIMIT = 20;
 let OY_BLOCK_RECORD_INTRO_BUFFER = 1.4;
-let OY_BLOCK_STRICT_CURVE = 20;
-let OY_BLOCK_STRICT_ENTRY = 2.5;
-let OY_BLOCK_STRICT_FLOOR = 0.25;
+let OY_BLOCK_STRICT_CURVE = 30;
+let OY_BLOCK_STRICT_ENTRY = 6.5;
+let OY_BLOCK_STRICT_FLOOR = 0.05;
 const OY_BLOCK_STRICT_DECREMENT = 0.1;
 let OY_SYNC_BROADCAST_BUFFER = [0.2, 200];
 let OY_SYNC_LAST_BUFFER = 2;
 let OY_SYNC_UNIQUE_DIFF = 3;//larger is more unique
-let OY_SYNC_UNIQUE_HOP = 2;//larger is less unique
+let OY_SYNC_UNIQUE_HOP = 1;//larger is less unique
 let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 let OY_LIGHT_COMMIT = 0.4;
 let OY_PEER_MAX = [5, 3];//maximum mutual peers - [full node, light node]
@@ -3838,7 +3838,10 @@ function oy_block_engine() {
                     if (i===0) continue;
                     if (i>oy_mesh_diameter) break;
                     console.log([oy_latency_max, oy_entry_cut, i, OY_BLOCK_STRICT[i]]);
-                    if (oy_latency_max*i*oy_entry_cut*OY_BLOCK_STRICT_ENTRY>=OY_BLOCK_STRICT[i]) oy_cut_pass = false;
+                    if (oy_latency_max*i*oy_entry_cut*OY_BLOCK_STRICT_ENTRY>=OY_BLOCK_STRICT[i]) {
+                        oy_cut_pass = false;
+                        break;
+                    }
                 }
                 if (oy_cut_pass===true) break;
                 oy_entry_cut -= OY_BLOCK_STRICT_DECREMENT;
