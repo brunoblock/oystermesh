@@ -40,7 +40,9 @@ const OY_BLOCK_PEER_SPACE = [15, 15000];
 let OY_BLOCK_RECORD_LIMIT = 20;
 let OY_BLOCK_RECORD_INTRO_BUFFER = 1.4;
 let OY_BLOCK_STRICT_CURVE = 20;
-let OY_BLOCK_STRICT_ENTRY = 1.5;
+let OY_BLOCK_STRICT_ENTRY = 2.5;
+let OY_BLOCK_STRICT_FLOOR = 0.25;
+const OY_BLOCK_STRICT_DECREMENT = 0.1;
 let OY_SYNC_BROADCAST_BUFFER = [0.2, 200];
 let OY_SYNC_LAST_BUFFER = 2;
 let OY_SYNC_UNIQUE_DIFF = 3;//larger is more unique
@@ -1210,7 +1212,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             OY_BLOCK_HASH!==null&&//check that there is a known meshblock hash
             oy_data_payload[3]===OY_BLOCK_TIME&&//check that the current timestamp is in the sync processing zone
             oy_time_offset<OY_BLOCK_SECTORS[1][0]&&//check that the current timestamp is in the sync processing zone
-            (typeof(OY_BLOCK_STRICT[oy_data_payload[0].length])==="undefined"||oy_time_offset<OY_BLOCK_STRICT[oy_data_payload[0].length])) {
+            (typeof(OY_BLOCK_STRICT[oy_data_payload[0].length])==="undefined"||oy_time_offset<OY_BLOCK_STRICT[oy_data_payload[0].length]||(oy_data_payload[0].length===1&&Object.values(OY_INTRO_DEFAULT).indexOf(oy_peer_id)!==-1))) {
             if ((oy_sync_pass===0||oy_sync_pass===2)&&oy_peer_id!==oy_data_payload[0][0]) {
                 let oy_unique_pass = true;
                 for (let oy_peer_select in OY_SYNC_UNIQUE) {
@@ -3827,11 +3829,9 @@ function oy_block_engine() {
                 OY_BLOCK_STRICT[i] = oy_hop_latency*i*Math.min(1, (oy_curve_factor+(oy_curve_increment*(i))));
             }
 
-            const OY_BLOCK_STRICT_DECREMENT = 0.1;
-
             let oy_latency_max = Math.max.apply(Math, oy_block_latency);
             let oy_entry_cut = 1;
-            while (oy_entry_cut>0) {
+            while (oy_entry_cut>OY_BLOCK_STRICT_FLOOR) {
                 let oy_cut_pass = true;
                 for (let i in OY_BLOCK_STRICT) {
                     i = parseInt(i);
