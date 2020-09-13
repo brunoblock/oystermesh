@@ -31,7 +31,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 let OY_BLOCK_RANGE_MIN = 10;//100, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOT_BUFFER = 9600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
+const OY_BLOCK_BOOT_BUFFER = 1200;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
@@ -45,7 +45,7 @@ let OY_BLOCK_STRICT_FLOOR = 0.05;
 const OY_BLOCK_STRICT_DECREMENT = 0.1;
 let OY_SYNC_BROADCAST_BUFFER = [0.2, 200];
 let OY_SYNC_LAST_BUFFER = 2;
-let OY_SYNC_UNIQUE_DIFF = 4;//larger is more unique
+let OY_SYNC_UNIQUE_DIFF = 3;//larger is more unique
 let OY_SYNC_UNIQUE_HOP = 1;//larger is less unique
 let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 let OY_LIGHT_COMMIT = 0.4;
@@ -1215,21 +1215,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             (typeof(OY_BLOCK_STRICT[oy_data_payload[0].length])==="undefined"||oy_time_offset<OY_BLOCK_STRICT[oy_data_payload[0].length]||(oy_data_payload[0].length===1&&(typeof(OY_PEER_SAFE[oy_peer_id])!=="undefined"||Object.values(OY_INTRO_DEFAULT).indexOf(oy_peer_id)!==-1)))) {
             if ((oy_sync_pass===0||oy_sync_pass===2)&&oy_peer_id!==oy_data_payload[0][0]) {
                 if (typeof(OY_SYNC_UNIQUE[oy_peer_id])==="undefined") OY_SYNC_UNIQUE[oy_peer_id] = {};
-                if (typeof(OY_SYNC_UNIQUE[oy_peer_id][oy_data_payload[0][0]])==="undefined") {
-                    let oy_unique_pass = true;
-                    for (let oy_peer_select in OY_SYNC_UNIQUE) {
-                        if (oy_peer_select===oy_peer_id) continue;
-                        for (let oy_sync_select in OY_SYNC_UNIQUE[oy_peer_select]) {
-                            if (oy_sync_select===oy_data_payload[0][0]) oy_log("BLUE1: "+JSON.stringify([oy_sync_select, OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select], oy_data_payload[0].length, Math.abs(OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select]-oy_data_payload[0].length)>=OY_SYNC_UNIQUE_HOP, OY_SYNC_UNIQUE_HOP]));
-                            if (oy_sync_select===oy_data_payload[0][0]&&Math.abs(OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select]-oy_data_payload[0].length)>=OY_SYNC_UNIQUE_HOP) {
-                                oy_unique_pass = false;
-                                break;
-                            }
-                        }
-                        if (oy_unique_pass===false) break;
-                    }
-                    if (oy_unique_pass===true) OY_SYNC_UNIQUE[oy_peer_id][oy_data_payload[0][0]] = oy_data_payload[0].length;
-                }
+                if (typeof(OY_SYNC_UNIQUE[oy_peer_id][oy_data_payload[0][0]])==="undefined") OY_SYNC_UNIQUE[oy_peer_id][oy_data_payload[0][0]] = oy_data_payload[0].length;
             }
             if (oy_sync_pass!==2) {
                 if (oy_sync_pass===1) {
@@ -3718,7 +3704,8 @@ function oy_block_engine() {
                     for (let oy_sync_select in OY_SYNC_UNIQUE[oy_peer_select]) {
                         for (let oy_peer_other in OY_SYNC_UNIQUE) {
                             if (oy_peer_select===oy_peer_other) continue;
-                            if (typeof(OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])!=="undefined") oy_safe_counter++;
+                            if (typeof(OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])!=="undefined") oy_log("BLUE2:"+JSON.stringify([OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select], OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select], Math.abs(OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select]-OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select]), OY_SYNC_UNIQUE_HOP]));
+                            if (typeof(OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])!=="undefined"&&Math.abs(OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select]-OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])<OY_SYNC_UNIQUE_HOP) oy_safe_counter++;
                             if (oy_safe_counter===OY_SYNC_UNIQUE_DIFF) {
                                 oy_peer_safe = false;
                                 break;
