@@ -34,7 +34,7 @@ let OY_BLOCK_RANGE_MIN = 10;//100, minimum syncs/dives required to not locally r
 const OY_BLOCK_BOOT_BUFFER = 3600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_PEER_SPACE = [15, 15000];
-const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
+const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [55, 55000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 let OY_BLOCK_RECORD_LIMIT = 20;
 let OY_BLOCK_RECORD_INTRO_BUFFER = 1.4;
@@ -50,7 +50,7 @@ let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and s
 let OY_LIGHT_COMMIT = 0.4;
 let OY_PEER_MAX = [5, 3];//maximum mutual peers - [full node, light node]
 let OY_PEER_INFLATE = [7, 5];//cannot be larger than OY_NODE_MAX
-let OY_PEER_DEFLATE = [2, 3];
+let OY_PEER_DEFLATE = [1, 2];
 let OY_PEER_INTRO = 3;
 let OY_PEER_SELF = 8;
 let OY_PEER_BOOT_CORE = 20;//max peers of boot node during boot phase
@@ -1637,7 +1637,6 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
         delete OY_BLOCK_CHALLENGE[oy_peer_id];
         OY_PEERS[oy_peer_id][1] = 2;
-        OY_PEERS[oy_peer_id][0] = OY_BLOCK_NEXT;
         return true;
     }
     else if (oy_data_flag==="OY_PEER_LATENCY") {
@@ -3029,7 +3028,7 @@ function oy_block_command(oy_key_private, oy_command_array, oy_callback_confirm)
     if (OY_BLOCK_HASH===null) return false;
 
     let oy_time_offset = oy_time()-OY_BLOCK_TIME;
-    if (oy_time_offset>(OY_BLOCK_SECTORS[0][0]-OY_BLOCK_BUFFER_CLEAR[0])) oy_command_array[1][0] = OY_BLOCK_NEXT;//TODO verify timing
+    if (oy_time_offset>(OY_BLOCK_SECTORS[0][0])) oy_command_array[1][0] = OY_BLOCK_NEXT;//TODO verify timing
     else oy_command_array[1][0] = OY_BLOCK_TIME;
     oy_command_array[1][1] = parseInt(OY_BLOCK_COMMAND_NONCE);//TODO no referencing to prevent race condition
     let oy_command_flat = JSON.stringify(oy_command_array);
