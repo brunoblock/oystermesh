@@ -3255,9 +3255,10 @@ function oy_block_engine() {
         }
 
         if (OY_BLOCK_HASH!==null) {
+            let oy_status_log = "[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_BLOCK_STABILITY.toFixed(2))+"ST]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2))+"LA]["+chalk.bolder(OY_SYNC_LONG[0])+"LO]["+chalk.bolder(OY_FULL_INTRO.toString())+"]["+chalk.bolder(oy_peer_full().toString())+"]["+chalk.bolder(((((OY_BLOCK_ELAPSED/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((OY_BLOCK_ELAPSED/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(OY_BLOCK_ELAPSED)+"S]"+JSON.stringify(OY_WORK_SOLUTIONS);
             oy_chrono(function() {
-                oy_log("[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_BLOCK_STABILITY.toFixed(2))+"ST]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2))+"LA]["+chalk.bolder(OY_SYNC_LONG[0].toFixed(2))+"LO]["+chalk.bolder(OY_FULL_INTRO.toString())+"]["+chalk.bolder(oy_peer_full().toString())+"]["+chalk.bolder(((((OY_BLOCK_ELAPSED/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((OY_BLOCK_ELAPSED/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(OY_BLOCK_ELAPSED)+"S]"+JSON.stringify(OY_WORK_SOLUTIONS), 1);
-            }, (OY_LIGHT_STATE===false)?1:100);
+                oy_log(oy_status_log, 1);
+            }, (OY_LIGHT_STATE===false)?1:250);
         }
 
         OY_BLOCK_COMMAND_NONCE = 0;
