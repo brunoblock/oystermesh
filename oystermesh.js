@@ -3733,15 +3733,10 @@ function oy_block_engine() {
                 for (let oy_peer_select in OY_SYNC_UNIQUE) {
                     let oy_peer_safe = false;
                     let oy_safe_counter = 0;
-                    oy_log(oy_short(oy_peer_select));
                     for (let oy_sync_select in OY_SYNC_UNIQUE[oy_peer_select]) {
                         for (let oy_peer_other in OY_SYNC_UNIQUE) {
                             if (oy_peer_select===oy_peer_other) continue;
-                            //if (typeof(OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])!=="undefined") oy_log("BLUE2:"+JSON.stringify([OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select], OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select], Math.abs(OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select]-OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select]), OY_SYNC_UNIQUE_HOP]));
-                            if (typeof(OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])==="undefined"||Math.abs(OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select]-OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])>OY_SYNC_UNIQUE_HOP) {
-                                oy_safe_counter++;
-                                oy_log(oy_short(oy_peer_select)+" - "+oy_short(oy_peer_other)+" - "+oy_short(oy_sync_select)+" - "+oy_safe_counter);
-                            }
+                            if (typeof(OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])==="undefined"||Math.abs(OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select]-OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])>OY_SYNC_UNIQUE_HOP) oy_safe_counter++;
                             if (oy_safe_counter===oy_mesh_threshold) {
                                 oy_peer_safe = true;
                                 break;
@@ -3753,9 +3748,8 @@ function oy_block_engine() {
                         }
                     }
                 }
-                oy_log("PEER_SAFE: "+Object.keys(OY_PEER_SAFE).length+" - "+Object.keys(OY_SYNC_UNIQUE).length+" - "+oy_mesh_threshold, 2);
                 if (Object.keys(OY_PEER_SAFE).length>0) {
-                    fs.appendFileSync("/dev/shm/oy_debug.log", "["+OY_SELF_SHORT+"] PEER SAFE: "+Object.keys(OY_PEER_SAFE).length+" - "+((Object.keys(OY_PEER_SAFE).length/Object.keys(OY_PEERS).length)*100).toFixed(2)+"\n");
+                    fs.appendFileSync("/dev/shm/oy_debug.log", "["+OY_SELF_SHORT+"] PEER SAFE: "+Object.keys(OY_PEER_SAFE).length+" - "+Object.keys(OY_PEERS).length+" - "+((Object.keys(OY_PEER_SAFE).length/Object.keys(OY_PEERS).length)*100).toFixed(2)+"\n");
                 }
 
                 if (oy_dive_state_prev===true) {
