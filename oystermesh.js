@@ -52,7 +52,7 @@ let OY_PEER_MAX = [5, 3];//maximum mutual peers - [full node, light node]
 let OY_PEER_INFLATE = [7, 5];//cannot be larger than OY_NODE_MAX
 let OY_PEER_DEFLATE = [1, 2];
 let OY_PEER_INTRO = 3;
-let OY_PEER_SELF = 8;
+let OY_PEER_SELF = 5;
 let OY_PEER_BOOT_CORE = 20;//max peers of boot node during boot phase
 let OY_PEER_BOOT_SCALE = 3;//maximum hops away from boot node allowed during boot phase
 let OY_NODE_MAX = 40;
@@ -3529,7 +3529,8 @@ function oy_block_engine() {
                     }
                 }
                 else if (OY_BLOCK_RECORD_KEEP.length>1&&(OY_BLOCK_BOOT===false||OY_FULL_INTRO===OY_INTRO_BOOT)) {
-                    for (let i = 0;i<OY_PEER_INFLATE[0]-oy_peer_count();i++) {
+                    let oy_self_limit = Math.min(OY_PEER_SELF, OY_PEER_INFLATE[0]-oy_peer_count());
+                    for (let i = 0;i<oy_self_limit;i++) {
                         let oy_offer_rand = oy_rand_gen(OY_MESH_SEQUENCE);
                         if (OY_SIMULATOR_MODE===true) OY_INTRO_SELF[oy_offer_rand] = [true, oy_signal_beam(oy_rand_gen(4)), null];
                         else {
