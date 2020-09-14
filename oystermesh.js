@@ -31,7 +31,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 let OY_BLOCK_RANGE_MIN = 10;//100, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
+const OY_BLOCK_BOOT_BUFFER = 3600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_PEER_SPACE = [15, 15000];
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
@@ -39,7 +39,7 @@ let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 let OY_BLOCK_RECORD_LIMIT = 20;
 let OY_BLOCK_RECORD_INTRO_BUFFER = 1.4;
 let OY_BLOCK_STRICT_CURVE = 20;
-let OY_BLOCK_STRICT_ENTRY = 1.5;
+let OY_BLOCK_STRICT_ENTRY = 2.2;
 let OY_BLOCK_STRICT_FLOOR = 0.05;
 const OY_BLOCK_STRICT_DECREMENT = 0.1;
 let OY_SYNC_BROADCAST_BUFFER = [0.2, 200];
@@ -3817,7 +3817,7 @@ function oy_block_engine() {
             let oy_edge_latency = oy_mesh_diameter*oy_calc_median(oy_block_latency);
             OY_BLOCK_STRICT[OY_BLOCK_STRICT.length-1] = OY_BLOCK_SECTORS[1][0]-oy_edge_latency;
             let oy_hop_latency = OY_BLOCK_STRICT[OY_BLOCK_STRICT.length-1]/OY_BLOCK_STRICT.length;
-            let oy_curve_increment = (OY_BLOCK_STRICT_CURVE/100)/oy_mesh_diameter;
+            let oy_curve_increment = (OY_BLOCK_STRICT_CURVE/100)/oy_mesh_range;
             let oy_curve_factor = (1-(OY_BLOCK_STRICT_CURVE/100))+oy_curve_increment;
             for (let i in OY_BLOCK_STRICT) {
                 i = parseInt(i);
