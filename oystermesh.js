@@ -3255,7 +3255,7 @@ function oy_block_engine() {
         }
 
         if (OY_BLOCK_HASH!==null) {
-            let oy_status_log = "[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_BLOCK_STABILITY.toFixed(2))+"ST]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2))+"LA]["+chalk.bolder(OY_SYNC_LONG[0])+"LO]["+chalk.bolder(OY_FULL_INTRO.toString())+"]["+chalk.bolder(oy_peer_full().toString())+"]["+chalk.bolder(((((OY_BLOCK_ELAPSED/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((OY_BLOCK_ELAPSED/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(OY_BLOCK_ELAPSED)+"S]"+JSON.stringify(OY_WORK_SOLUTIONS);
+            let oy_status_log = "[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2))+"LA]["+chalk.bolder(OY_SYNC_LONG[0]+"/"+Math.sqrt(OY_BLOCK[0][2]))+"LO]["+chalk.bolder(OY_BLOCK_STABILITY.toFixed(2).padStart(6, ""))+"ST]["+chalk.bolder(OY_FULL_INTRO.toString())+"]["+chalk.bolder(oy_peer_full().toString())+"]["+chalk.bolder(((((OY_BLOCK_ELAPSED/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((OY_BLOCK_ELAPSED/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(OY_BLOCK_ELAPSED)+"S]"+JSON.stringify(OY_WORK_SOLUTIONS).substr(0, 20);
             oy_chrono(function() {
                 oy_log(oy_status_log, 1);
             }, (OY_LIGHT_STATE===false)?1:250);
@@ -3819,8 +3819,7 @@ function oy_block_engine() {
             OY_BLOCK_STRICT.fill(null);
 
             let oy_block_latency = Object.values(OY_BLOCK_LATENCY);
-            let oy_mesh_diameter = Math.sqrt(oy_mesh_range);
-            let oy_edge_latency = oy_mesh_diameter*oy_calc_median(oy_block_latency);//TODO consider using SYNC_LONG for mesh diameter
+            let oy_edge_latency = OY_SYNC_LONG[0]*oy_calc_median(oy_block_latency);//TODO consider using SYNC_LONG for mesh diameter
             OY_BLOCK_STRICT[OY_BLOCK_STRICT.length-1] = OY_BLOCK_SECTORS[2][0]-oy_edge_latency;
             let oy_hop_latency = OY_BLOCK_STRICT[OY_BLOCK_STRICT.length-1]/OY_BLOCK_STRICT.length;
             let oy_curve_increment = (OY_BLOCK_STRICT_CURVE/100)/OY_BLOCK_STRICT.length;
@@ -3839,7 +3838,7 @@ function oy_block_engine() {
                 for (let i in OY_BLOCK_STRICT) {
                     i = parseInt(i);
                     if (i<=1) continue;
-                    if (i>oy_mesh_diameter) break;
+                    if (i>OY_SYNC_LONG[0]) break;
                     console.log([oy_latency_max, oy_entry_cut, i, OY_BLOCK_STRICT[i]]);
                     if (oy_latency_max*i*oy_entry_cut*OY_BLOCK_STRICT_ENTRY>=OY_BLOCK_STRICT[i]) {
                         oy_cut_pass = false;
