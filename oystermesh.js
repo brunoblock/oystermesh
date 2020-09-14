@@ -44,8 +44,8 @@ let OY_BLOCK_STRICT_FLOOR = 0.05;
 const OY_BLOCK_STRICT_DECREMENT = 0.1;
 let OY_SYNC_BROADCAST_BUFFER = [0.2, 200];
 let OY_SYNC_LAST_BUFFER = 2;
-let OY_SYNC_UNIQUE_DIFF = 2.5;//larger is less unique/safe
-let OY_SYNC_UNIQUE_HOP = 2;//larger is less unique/safe
+let OY_SYNC_UNIQUE_DIFF = 4.5;//larger is less unique/safe
+let OY_SYNC_UNIQUE_HOP = 1;//larger is less unique/safe
 let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 let OY_LIGHT_COMMIT = 0.4;
 let OY_PEER_MAX = [5, 3];//maximum mutual peers - [full node, light node]
@@ -3238,11 +3238,11 @@ function oy_block_engine() {
                 if (OY_BLOCK_ELAPSED<=OY_BLOCK_BOOT_BUFFER) {
                     let oy_local_max = Math.ceil(OY_PEER_BOOT_CORE/(OY_BLOCK_BOOT_BUFFER/OY_BLOCK_SECTORS[5][0]));
                     let oy_drop_counter = 0;
-                    while (oy_peer_count()>OY_PEER_MAX[0]||oy_peer_count(true)>OY_PEER_MAX[1]) {
+                    while (oy_peer_count()>OY_PEER_INFLATE[0]) {
                         if (oy_drop_counter===oy_local_max) break;
                         let oy_peer_weak = [null, -1];
                         for (let oy_peer_select in OY_PEERS) {
-                            if (OY_PEERS[oy_peer_select][3]>oy_peer_weak[1]) oy_peer_weak = [oy_peer_select, OY_PEERS[oy_peer_select][3]];
+                            if (OY_PEERS[oy_peer_select][1]===2&&OY_PEERS[oy_peer_select][3]>oy_peer_weak[1]) oy_peer_weak = [oy_peer_select, OY_PEERS[oy_peer_select][3]];
                         }
                         if (oy_peer_weak[0]==null) break;
                         oy_node_deny(oy_peer_weak[0], "OY_DENY_BOOT_DROP");
@@ -3570,7 +3570,6 @@ function oy_block_engine() {
                 return false;
             }
             if (OY_BLOCK[0][1]!==null&&OY_BLOCK[0][1]!==OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]) {
-                oy_log("BLUE1: "+JSON.stringify([OY_BLOCK[0][1], OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]]));
                 oy_block_reset("OY_RESET_MISSTEP");
                 oy_block_continue = false;
                 return false;
