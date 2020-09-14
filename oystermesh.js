@@ -31,7 +31,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 let OY_BLOCK_RANGE_MIN = 10;//100, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
+const OY_BLOCK_BOOT_BUFFER = 1600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[30, 30000], [50, 50000], [51, 51000], [52, 52000], [58, 58000], [60, 60000]];//timing definitions for the meshblock
 let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
@@ -46,7 +46,7 @@ const OY_BLOCK_STRICT_DECREMENT = 0.1;
 let OY_SYNC_BROADCAST_BUFFER = [0.2, 200];
 let OY_SYNC_LAST_BUFFER = 2;
 let OY_SYNC_UNIQUE_DIFF = 2.5;//larger is less unique/safe
-let OY_SYNC_UNIQUE_HOP = 1;//larger is less unique/safe
+let OY_SYNC_UNIQUE_HOP = 2;//larger is less unique/safe
 let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 let OY_LIGHT_COMMIT = 0.4;
 let OY_PEER_MAX = [5, 3];//maximum mutual peers - [full node, light node]
@@ -3739,7 +3739,7 @@ function oy_block_engine() {
                         for (let oy_peer_other in OY_SYNC_UNIQUE) {
                             if (oy_peer_select===oy_peer_other) continue;
                             //if (typeof(OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])!=="undefined") oy_log("BLUE2:"+JSON.stringify([OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select], OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select], Math.abs(OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select]-OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select]), OY_SYNC_UNIQUE_HOP]));
-                            if (typeof(OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])==="undefined"||Math.abs(OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select]-OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])>=OY_SYNC_UNIQUE_HOP) {
+                            if (typeof(OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])==="undefined"||Math.abs(OY_SYNC_UNIQUE[oy_peer_select][oy_sync_select]-OY_SYNC_UNIQUE[oy_peer_other][oy_sync_select])>OY_SYNC_UNIQUE_HOP) {
                                 oy_safe_counter++;
                                 oy_log(oy_short(oy_peer_select)+" - "+oy_short(oy_peer_other)+" - "+oy_short(oy_sync_select)+" - "+oy_safe_counter);
                             }
