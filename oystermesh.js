@@ -386,6 +386,7 @@ let OY_BLOCK_HASH_JUMP = null;
 let OY_BLOCK_TIME_JUMP = null;
 let OY_BLOCK_NEXT_JUMP = null;
 let OY_SYNC_LAST = [0, 0];
+let OY_SYNC_LONG = [0, 0];
 let OY_SYNC_MAP = [{}, {}];
 let OY_SYNC_TALLY = {};
 let OY_SYNC_UNIQUE = {};
@@ -672,6 +673,7 @@ function oy_worker_manager(oy_instance, oy_data) {
 
             if (typeof(OY_SYNC_TALLY[oy_data_payload[0][0]])==="undefined") OY_SYNC_TALLY[oy_data_payload[0][0]] = oy_data_payload[0][oy_data_payload[0].length-1];
             if (oy_time_offset>OY_SYNC_LAST[1]) OY_SYNC_LAST[1] = oy_time_offset;
+            if (oy_data_payload[0].length>OY_SYNC_LONG[1]) OY_SYNC_LONG[1] = oy_data_payload[0].length;
             if (typeof(OY_SYNC_MAP[1][oy_data_payload[0][0]])==="undefined") OY_SYNC_MAP[1][oy_data_payload[0][0]] = [oy_data_payload[0].length, oy_data_payload[0]];
 
             if (typeof(OY_BLOCK_LATENCY[oy_data_payload[0][0]])==="undefined"&&((typeof(OY_BLOCK[1][oy_data_payload[0][0]])!=="undefined"&&OY_BLOCK[1][oy_data_payload[0][0]][1]===1)||OY_BLOCK_BOOT===true)) OY_BLOCK_LATENCY[oy_data_payload[0][0]] = (oy_time_offset-OY_SYNC_BROADCAST_BUFFER[0])/oy_data_payload[0].length;
@@ -3190,6 +3192,7 @@ function oy_block_reset(oy_reset_flag) {
     OY_SYNC_TALLY = {};
     OY_SYNC_UNIQUE = {};
     OY_SYNC_LAST = [0, 0];
+    OY_SYNC_LONG = [0, 0];
     OY_SYNC_MAP = [{}, {}];
     OY_PEER_EXCHANGE = {};
     OY_PEER_SAFE = {};
@@ -3251,7 +3254,11 @@ function oy_block_engine() {
             }
         }
 
-        if (OY_BLOCK_HASH!==null) oy_log("[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_BLOCK_STABILITY.toFixed(2))+"ST]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2))+"L]["+chalk.bolder(OY_FULL_INTRO.toString())+"]["+chalk.bolder(oy_peer_full().toString())+"]["+chalk.bolder(((((OY_BLOCK_ELAPSED/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((OY_BLOCK_ELAPSED/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(OY_BLOCK_ELAPSED)+"S]"+JSON.stringify(OY_WORK_SOLUTIONS), 1);
+        if (OY_BLOCK_HASH!==null) {
+            oy_chrono(function() {
+                oy_log("[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_BLOCK_STABILITY.toFixed(2))+"ST]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2))+"LA]["+chalk.bolder(OY_SYNC_LONG[0].toFixed(2))+"LO]["+chalk.bolder(OY_FULL_INTRO.toString())+"]["+chalk.bolder(oy_peer_full().toString())+"]["+chalk.bolder(((((OY_BLOCK_ELAPSED/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((OY_BLOCK_ELAPSED/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(OY_BLOCK_ELAPSED)+"S]"+JSON.stringify(OY_WORK_SOLUTIONS), 1);
+            }, (OY_LIGHT_STATE===false)?1:100);
+        }
 
         OY_BLOCK_COMMAND_NONCE = 0;
         OY_BLOCK_SYNC = {};
@@ -3815,7 +3822,7 @@ function oy_block_engine() {
             let oy_edge_latency = oy_mesh_diameter*oy_calc_median(oy_block_latency);//TODO consider using SYNC_LONG for mesh diameter
             OY_BLOCK_STRICT[OY_BLOCK_STRICT.length-1] = OY_BLOCK_SECTORS[2][0]-oy_edge_latency;
             let oy_hop_latency = OY_BLOCK_STRICT[OY_BLOCK_STRICT.length-1]/OY_BLOCK_STRICT.length;
-            let oy_curve_increment = (OY_BLOCK_STRICT_CURVE/100)/oy_mesh_range;
+            let oy_curve_increment = (OY_BLOCK_STRICT_CURVE/100)/OY_BLOCK_STRICT.length;
             let oy_curve_factor = (1-(OY_BLOCK_STRICT_CURVE/100))+oy_curve_increment;
             for (let i in OY_BLOCK_STRICT) {
                 i = parseInt(i);
@@ -3846,12 +3853,11 @@ function oy_block_engine() {
 
             oy_log("STRICT: "+OY_BLOCK_STRICT.length+" - "+oy_entry_cut+" - "+JSON.stringify(OY_BLOCK_STRICT));
 
-            if (OY_BLOCK_BOOT===true) OY_SYNC_LAST = [0, 0];
-            else {
-                OY_SYNC_LAST.shift();
-                OY_SYNC_LAST.push(0);
-            }
 
+            OY_SYNC_LAST.shift();
+            OY_SYNC_LAST.push(0);
+            OY_SYNC_LONG.shift();
+            OY_SYNC_LONG.push(0);
             OY_SYNC_MAP.shift();
             OY_SYNC_MAP.push({});
 
@@ -3863,6 +3869,7 @@ function oy_block_engine() {
                     OY_LIGHT_STATE = true;
                     OY_DIVE_STATE = false;
                     OY_SYNC_LAST = [0, 0];
+                    OY_SYNC_LONG = [0, 0];
                     OY_SYNC_MAP = [{}, {}];
                     OY_PEER_SAFE = {};
 
