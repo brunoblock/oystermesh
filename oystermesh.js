@@ -38,20 +38,19 @@ let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 let OY_BLOCK_RECORD_LIMIT = 20;
 let OY_BLOCK_RECORD_INTRO_BUFFER = 1.4;
 let OY_BLOCK_STRICT_CURVE = 10;//bigger curve is more secure, less scalable
-let OY_BLOCK_STRICT_ENTRY = 2.8;//higher is stricter cut entry
+let OY_BLOCK_STRICT_ENTRY = 2.6;//higher is stricter cut entry
 let OY_BLOCK_STRICT_FLOOR = 0.05;
 const OY_BLOCK_STRICT_DECREMENT = 0.1;
 let OY_SYNC_BROADCAST_BUFFER = [0.2, 200];
-let OY_SYNC_LAST_BUFFER = 2;
-let OY_SYNC_UNIQUE_DIFF = 1.2;//lower is more unique/safe
+let OY_SYNC_UNIQUE_DIFF = 1.4;//lower is more unique/safe
 let OY_SYNC_UNIQUE_HOP = 2;//lower is generally more unique/safe, sweet spot defines bridge distinction
 let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 let OY_LIGHT_COMMIT = 0.4;
 let OY_PEER_MAX = [5, 3];//maximum mutual peers - [full node, light node]
 let OY_PEER_INFLATE = [7, 5];//cannot be larger than OY_NODE_MAX
-let OY_PEER_DEFLATE = [1, 2];
+let OY_PEER_DEFLATE = [2, 3];
 let OY_PEER_INTRO = 3;
-let OY_PEER_SELF = 5;
+let OY_PEER_SELF = 3;
 let OY_PEER_BOOT_CORE = 20;//max peers of boot node during boot phase
 let OY_PEER_BOOT_SCALE = 3;//maximum hops away from boot node allowed during boot phase
 let OY_NODE_MAX = 40;
@@ -2220,7 +2219,7 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
             //if (OY_JUMP_ASSIGN[0]===oy_node_id) oy_log_debug("JUMP_DEBUG_LATENCY_A: "+OY_LATENCY[oy_node_id][2]+" - "+oy_node_id);
             let oy_intro_default = Object.values(OY_INTRO_DEFAULT);
             if ((OY_LATENCY[oy_node_id][3]===2&&oy_peer_count()<((typeof(OY_PEER_EXCHANGE[oy_node_id])!=="undefined")?OY_PEER_MAX[0]:OY_PEER_INFLATE[0]))||((OY_LATENCY[oy_node_id][3]===0||OY_LATENCY[oy_node_id][3]===1)&&oy_peer_count(true)<((typeof(OY_PEER_EXCHANGE[oy_node_id])!=="undefined")?OY_PEER_MAX[1]:OY_PEER_INFLATE[1]))||OY_JUMP_ASSIGN[0]===oy_node_id||oy_intro_default.indexOf(oy_node_id)!==-1) {//TODO test system without jump bypass once jumping works
-                if (OY_JUMP_ASSIGN[0]===oy_node_id) oy_log_debug("JUMP_DEBUG_LATENCY_B: "+OY_LATENCY[oy_node_id][2]+" - "+oy_node_id);//TODO update jumpy map upon JUMP_DROP to lock out old peers - might need delay for 2+ splits
+                //if (OY_JUMP_ASSIGN[0]===oy_node_id) oy_log_debug("JUMP_DEBUG_LATENCY_B: "+OY_LATENCY[oy_node_id][2]+" - "+oy_node_id);//TODO update jumpy map upon JUMP_DROP to lock out old peers - might need delay for 2+ splits
                 oy_accept_response();
             }
             else {
@@ -3255,7 +3254,7 @@ function oy_block_engine() {
         }
 
         if (OY_BLOCK_HASH!==null) {
-            let oy_status_log = "[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2))+"LA]["+chalk.bolder(OY_SYNC_LONG[0]+"/"+Math.ceil(Math.sqrt(OY_BLOCK[0][2])))+"LO]["+chalk.bolder(OY_BLOCK_STABILITY.toFixed(2).padStart(6, "0"))+"ST]["+chalk.bolder(OY_FULL_INTRO.toString())+"]["+chalk.bolder(oy_peer_full().toString())+"]["+chalk.bolder(((((OY_BLOCK_ELAPSED/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((OY_BLOCK_ELAPSED/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(OY_BLOCK_ELAPSED)+"S]"+JSON.stringify(OY_WORK_SOLUTIONS).substr(0, 20);
+            let oy_status_log = "[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2).padStart(5, "0"))+"LA]["+chalk.bolder(OY_SYNC_LONG[0].padStart(2, "0"))+"/"+chalk.bolder(Math.ceil(Math.sqrt(OY_BLOCK[0][2])).padStart(2, "0"))+"LO]["+chalk.bolder(OY_BLOCK_STABILITY.toFixed(2).padStart(6, "0"))+"ST]["+chalk.bolder(OY_FULL_INTRO.toString())+"]["+chalk.bolder(oy_peer_full().toString())+"]["+chalk.bolder(((((OY_BLOCK_ELAPSED/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((OY_BLOCK_ELAPSED/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(OY_BLOCK_ELAPSED)+"S]"+JSON.stringify(OY_WORK_SOLUTIONS).substr(0, 20);
             oy_chrono(function() {
                 oy_log(oy_status_log, 1);
             }, (OY_LIGHT_STATE===false)?1:250);
@@ -4069,10 +4068,6 @@ function oy_block_light() {
     if (OY_LIGHT_MODE===false&&OY_LIGHT_STATE===true&&OY_BLOCK[0][1]===OY_BLOCK_TIME&&oy_peer_full()) {
         OY_LIGHT_STATE = false;
         OY_BLOCK_STRICT = [];
-
-        //let oy_last_calc = (oy_time()-OY_BLOCK_TIME)+OY_SYNC_LAST_BUFFER;
-        //if (oy_last_calc>OY_BLOCK_SECTORS[0][0]&&oy_last_calc<OY_BLOCK_SECTORS[1][0]) OY_SYNC_LAST = [oy_last_calc, oy_last_calc];
-        //else OY_SYNC_LAST = [0, 0];
 
         oy_event_dispatch("oy_state_full");
         oy_worker_spawn(1);
