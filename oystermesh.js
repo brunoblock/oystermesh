@@ -44,7 +44,7 @@ let OY_BLOCK_STRICT_FLOOR = 0.05;
 const OY_BLOCK_STRICT_DECREMENT = 0.1;
 let OY_SYNC_BROADCAST_BUFFER = [0.2, 200];
 let OY_SYNC_LAST_BUFFER = 2;
-let OY_SYNC_UNIQUE_DIFF = 4.5;//larger is less unique/safe
+let OY_SYNC_UNIQUE_DIFF = 3.5;//larger is less unique/safe
 let OY_SYNC_UNIQUE_HOP = 1;//larger is less unique/safe
 let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 let OY_LIGHT_COMMIT = 0.4;
@@ -3529,7 +3529,7 @@ function oy_block_engine() {
                     }
                 }
                 else if (OY_BLOCK_RECORD_KEEP.length>1&&(OY_BLOCK_BOOT===false||OY_FULL_INTRO===OY_INTRO_BOOT)) {
-                    for (let i = 0;i<OY_PEER_SELF;i++) {
+                    for (let i = 0;i<OY_PEER_INFLATE[0]-oy_peer_count();i++) {
                         let oy_offer_rand = oy_rand_gen(OY_MESH_SEQUENCE);
                         if (OY_SIMULATOR_MODE===true) OY_INTRO_SELF[oy_offer_rand] = [true, oy_signal_beam(oy_rand_gen(4)), null];
                         else {
