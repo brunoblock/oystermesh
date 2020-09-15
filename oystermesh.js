@@ -3236,20 +3236,6 @@ function oy_block_engine() {
                 OY_PEER_INFLATE = OY_PEER_BOOT_RESTORE[1];
                 OY_PEER_SELF = OY_PEER_BOOT_RESTORE[2];
                 OY_NODE_MAX = OY_PEER_BOOT_RESTORE[3];
-                if (OY_BLOCK_ELAPSED<=OY_BLOCK_BOOT_BUFFER) {
-                    let oy_local_max = Math.ceil(OY_PEER_BOOT_CORE/(OY_BLOCK_BOOT_BUFFER/OY_BLOCK_SECTORS[5][0]));
-                    let oy_drop_counter = 0;
-                    while (oy_peer_count()>OY_PEER_INFLATE[0]) {
-                        if (oy_drop_counter===oy_local_max) break;
-                        let oy_peer_weak = [null, -1];
-                        for (let oy_peer_select in OY_PEERS) {
-                            if (OY_PEERS[oy_peer_select][1]===2&&OY_PEERS[oy_peer_select][3]>oy_peer_weak[1]) oy_peer_weak = [oy_peer_select, OY_PEERS[oy_peer_select][3]];
-                        }
-                        if (oy_peer_weak[0]==null) break;
-                        oy_node_deny(oy_peer_weak[0], "OY_DENY_BOOT_DROP");
-                        oy_drop_counter++;
-                    }
-                }
             }
         }
 
@@ -3902,7 +3888,7 @@ function oy_block_engine() {
                         )&&
                         OY_PEERS[oy_peer_select][3]>oy_peer_weak[1]) oy_peer_weak = [oy_peer_select, OY_PEERS[oy_peer_select][3]];
                 }
-                if (oy_peer_weak[0]!==null) oy_node_deny(oy_peer_weak[0], "OY_DENY_DEFLATE_DROP_L");
+                if (oy_peer_weak[0]!==null) oy_node_deny(oy_peer_weak[0], "OY_DENY_DEFLATE_DROP_L"+((oy_deflate_force===true)?"F":""));
             }
             let oy_full_deflate = function(oy_deflate_force = false) {
                 let oy_cut_local = oy_peer_cut();
@@ -3918,7 +3904,7 @@ function oy_block_engine() {
                         )&&
                         OY_PEERS[oy_peer_select][3]>oy_peer_weak[1]) oy_peer_weak = [oy_peer_select, OY_PEERS[oy_peer_select][3]];
                 }
-                if (oy_peer_weak[0]!==null) oy_node_deny(oy_peer_weak[0], "OY_DENY_DEFLATE_DROP_F");
+                if (oy_peer_weak[0]!==null) oy_node_deny(oy_peer_weak[0], "OY_DENY_DEFLATE_DROP_F"+((oy_deflate_force===true)?"F":""));
             }
             for (let i = 0;i<OY_PEER_INFLATE[0];i++) {
                 if (oy_peer_count()>OY_PEER_INFLATE[0]) oy_full_deflate(true);
