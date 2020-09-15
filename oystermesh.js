@@ -37,20 +37,20 @@ const OY_BLOCK_SECTORS = [[15, 15000], [30, 30000], [55, 55000], [57, 57000], [5
 let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
 let OY_BLOCK_RECORD_LIMIT = 20;
 let OY_BLOCK_RECORD_INTRO_BUFFER = 1.4;
-let OY_BLOCK_STRICT_CURVE = 10;//bigger curve is more secure, less scalable
+let OY_BLOCK_STRICT_CURVE = 10;//steeper curve is more secure, less scalable
 let OY_BLOCK_STRICT_ENTRY = 2.6;//higher is stricter cut entry
 let OY_BLOCK_STRICT_FLOOR = 0.05;
 const OY_BLOCK_STRICT_DECREMENT = 0.1;
 let OY_SYNC_BROADCAST_BUFFER = [0.2, 200];
-let OY_SYNC_UNIQUE_DIFF = 1.1;//lower is more unique/safe
+let OY_SYNC_UNIQUE_DIFF = 1.3;//lower is more unique/safe
 let OY_SYNC_UNIQUE_HOP = 2;//lower is generally more unique/safe, sweet spot defines bridge distinction
 let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 let OY_LIGHT_COMMIT = 0.4;
-let OY_PEER_MAX = [5, 3];//maximum mutual peers - [full node, light node]
+let OY_PEER_MAX = [5, 4];//maximum mutual peers - [full node, light node]
 let OY_PEER_INFLATE = [7, 5];//cannot be larger than OY_NODE_MAX
-let OY_PEER_DEFLATE = [2, 3];
+let OY_PEER_DEFLATE = [1, 1];
 let OY_PEER_INTRO = 3;
-let OY_PEER_SELF = 3;
+let OY_PEER_SELF = 5;
 let OY_PEER_BOOT_CORE = 20;//max peers of boot node during boot phase
 let OY_PEER_BOOT_SCALE = 3;//maximum hops away from boot node allowed during boot phase
 let OY_NODE_MAX = 40;
@@ -1554,7 +1554,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         return true;
     }
     else if (oy_data_flag==="OY_PEER_DIFF") {//self as latch receives diff from source
-        //oy_data_payload = [oy_dive_public, oy_diff_crypt, oy_diff_hash, oy_diff_nonce_max, oy_diff_nonce, oy_diff_split]
+        //oy_data_payload = [oy_dive_public, oy_diff_crypt, oy_block_time, oy_diff_hash, oy_diff_nonce_max, oy_diff_nonce, oy_diff_split]
         //TODO payload validation
 
         let oy_diff_count = 0;
@@ -1562,22 +1562,23 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             if (OY_PEERS[oy_peer_select][1]!==0) oy_diff_count++;
         }
 
-        let oy_diff_reference = oy_data_payload[2]+oy_data_payload[3];
+        let oy_diff_reference = oy_data_payload[3]+oy_data_payload[4];
+        let oy_time_offset = oy_time()-OY_BLOCK_TIME;
         if (OY_BLOCK_DIFF===true||
             OY_LIGHT_STATE===false||
             OY_BLOCK_HASH===null||
-            //oy_time_local-OY_BLOCK_TIME<OY_BLOCK_SECTORS[0][0]||//TODO allow generous timing for light node scaling
-            //oy_time_local-OY_BLOCK_TIME>OY_BLOCK_SECTORS[2][0]||
+            (oy_data_payload[2]===OY_BLOCK_TIME&&oy_time_offset<OY_BLOCK_SECTORS[2][0]-OY_MESH_BUFFER[0])||
+            (oy_data_payload[2]===OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]&&oy_time_offset>OY_BLOCK_SECTORS[2][0]-OY_MESH_BUFFER[0])||
             (oy_diff_count>1&&typeof(OY_BLOCK[1][oy_data_payload[0]])==="undefined")||
-            (typeof(OY_LIGHT_BUILD[oy_diff_reference])!=="undefined"&&typeof(OY_LIGHT_BUILD[oy_diff_reference][3][oy_data_payload[4]])!=="undefined"&&typeof(OY_LIGHT_BUILD[oy_diff_reference][3][oy_data_payload[4]][0][oy_data_payload[0]])!=="undefined")) return false;//verify meshblock zone
+            (typeof(OY_LIGHT_BUILD[oy_diff_reference])!=="undefined"&&typeof(OY_LIGHT_BUILD[oy_diff_reference][3][oy_data_payload[5]])!=="undefined"&&typeof(OY_LIGHT_BUILD[oy_diff_reference][3][oy_data_payload[5]][0][oy_data_payload[0]])!=="undefined")) return false;
 
-        if (oy_data_payload[4]>oy_data_payload[3]||!oy_key_verify(oy_data_payload[0], oy_data_payload[1], oy_data_payload[2]+oy_data_payload[3]+oy_data_payload[4]+oy_data_payload[5])) {
+        if (oy_data_payload[5]>oy_data_payload[4]||!oy_key_verify(oy_data_payload[0], oy_data_payload[1], oy_data_payload[2]+oy_data_payload[3]+oy_data_payload[4]+oy_data_payload[5]+oy_data_payload[6])) {
             oy_node_deny(oy_peer_id, "OY_DENY_DIFF_INVALID");
             return false;
         }
 
         if (typeof(OY_LIGHT_BUILD[oy_diff_reference])==="undefined") {
-            OY_LIGHT_BUILD[oy_diff_reference] = [oy_data_payload[2], oy_data_payload[3], {}, new Array(oy_data_payload[3]+1), oy_peer_id];
+            OY_LIGHT_BUILD[oy_diff_reference] = [oy_data_payload[3], oy_data_payload[4], {}, new Array(oy_data_payload[4]+1), oy_peer_id];
             OY_LIGHT_BUILD[oy_diff_reference][3].fill([{}, {}]);
         }
 
@@ -1595,19 +1596,19 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             }
         }
 
-        OY_LIGHT_BUILD[oy_diff_reference][3][oy_data_payload[4]][0][oy_data_payload[0]] = true;
+        OY_LIGHT_BUILD[oy_diff_reference][3][oy_data_payload[5]][0][oy_data_payload[0]] = true;
 
-        let oy_split_hash = oy_hash_gen(oy_data_payload[5]);
-        if (typeof(OY_LIGHT_BUILD[oy_diff_reference][3][oy_data_payload[4]][1][oy_split_hash])==="undefined") OY_LIGHT_BUILD[oy_diff_reference][3][oy_data_payload[4]][1][oy_split_hash] = [oy_data_payload[5], {}];
-        OY_LIGHT_BUILD[oy_diff_reference][3][oy_data_payload[4]][1][oy_split_hash][1][oy_data_payload[0]] = true;
+        let oy_split_hash = oy_hash_gen(oy_data_payload[6]);
+        if (typeof(OY_LIGHT_BUILD[oy_diff_reference][3][oy_data_payload[5]][1][oy_split_hash])==="undefined") OY_LIGHT_BUILD[oy_diff_reference][3][oy_data_payload[5]][1][oy_split_hash] = [oy_data_payload[6], {}];
+        OY_LIGHT_BUILD[oy_diff_reference][3][oy_data_payload[5]][1][oy_split_hash][1][oy_data_payload[0]] = true;
 
-        for (let oy_peer_select in OY_PEERS) {//TODO should be downstream via data_route
+        for (let oy_peer_select in OY_PEERS) {
             if (OY_PEERS[oy_peer_select][1]===1&&oy_peer_select!==oy_peer_id) oy_data_beam(oy_peer_select, "OY_PEER_DIFF", oy_data_payload);
         }
 
         //if (OY_LIGHT_MODE===true&&OY_BOOST_BUILD.length<OY_BOOST_KEEP&&OY_BOOST_BUILD.indexOf(oy_data_payload[0])===-1&&typeof(OY_PEERS[oy_data_payload[0]])==="undefined"&&typeof(OY_NODES[oy_data_payload[0]])==="undefined") OY_BOOST_BUILD.push(oy_data_payload[0]);
 
-        if (oy_dive_count>=OY_BLOCK[0][2]*OY_LIGHT_COMMIT) oy_block_light();
+        if (oy_state_current(true)===1&&oy_data_payload[2]===OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]&&OY_BLOCK[0][1]===OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]&&oy_dive_count>=OY_BLOCK[0][2]*OY_LIGHT_COMMIT) oy_block_light();
     }
     else if (oy_data_flag==="OY_PEER_LIGHT") {//peer as a blank or full node is converting into a light node
         if (OY_PEERS[oy_peer_id][1]===1&&OY_BLOCK_TIME>OY_PEERS[oy_peer_id][0]) {
@@ -3793,9 +3794,9 @@ function oy_block_engine() {
                 }
 
                 for (let oy_diff_nonce in oy_diff_split) {
-                    let oy_diff_crypt = oy_key_sign(OY_SELF_PRIVATE, oy_diff_hash+oy_diff_nonce_max+oy_diff_nonce+oy_diff_split[oy_diff_nonce]);
+                    let oy_diff_crypt = oy_key_sign(OY_SELF_PRIVATE, OY_BLOCK_TIME+oy_diff_hash+oy_diff_nonce_max+oy_diff_nonce+oy_diff_split[oy_diff_nonce]);
                     for (let oy_peer_select in OY_PEERS) {
-                        if (OY_PEERS[oy_peer_select][1]===1) oy_data_beam(oy_peer_select, "OY_PEER_DIFF", [OY_SELF_PUBLIC, oy_diff_crypt, oy_diff_hash, oy_diff_nonce_max, parseInt(oy_diff_nonce), oy_diff_split[oy_diff_nonce]]);
+                        if (OY_PEERS[oy_peer_select][1]===1) oy_data_beam(oy_peer_select, "OY_PEER_DIFF", [OY_SELF_PUBLIC, oy_diff_crypt, OY_BLOCK_TIME, oy_diff_hash, oy_diff_nonce_max, parseInt(oy_diff_nonce), oy_diff_split[oy_diff_nonce]]);
                     }
                 }
             }
@@ -3824,7 +3825,6 @@ function oy_block_engine() {
                     i = parseInt(i);
                     if (i<=1) continue;
                     if (i>OY_SYNC_LONG[0]) break;
-                    console.log([oy_latency_max, oy_entry_cut, i, OY_BLOCK_STRICT[i]]);
                     if (oy_latency_max*i*oy_entry_cut*OY_BLOCK_STRICT_ENTRY>=OY_BLOCK_STRICT[i]) {
                         oy_cut_pass = false;
                         break;
@@ -3835,9 +3835,6 @@ function oy_block_engine() {
             }
 
             if (OY_BLOCK_STRICT.length>1) OY_BLOCK_STRICT[1] *= oy_entry_cut;
-
-            oy_log("STRICT: "+OY_BLOCK_STRICT.length+" - "+OY_SYNC_LONG[0]+" - "+oy_entry_cut+" - "+JSON.stringify(OY_BLOCK_STRICT));
-
 
             OY_SYNC_LAST.shift();
             OY_SYNC_LAST.push(0);
@@ -3870,7 +3867,7 @@ function oy_block_engine() {
 
         oy_chrono(function() {
             oy_block_challenge(0);
-            if (oy_block_continue===true&&OY_LIGHT_STATE===true&&Object.keys(OY_LIGHT_BUILD).length>0) oy_block_light();
+            if (oy_block_continue===true&&OY_LIGHT_STATE===true&&oy_state_current(true)===2&&Object.keys(OY_LIGHT_BUILD).length>0) oy_block_light();
         }, OY_BLOCK_SECTORS[3][1]);
 
         oy_chrono(function() {
@@ -3926,7 +3923,7 @@ function oy_block_engine() {
     }
 }
 
-function oy_block_challenge(oy_challenge_stage) {
+function oy_block_challenge(oy_challenge_stage) {//TODO modify for new light node scaling scheme
     if (oy_challenge_stage===0) {
         OY_BLOCK_CHALLENGE = {};
         for (let oy_peer_select in OY_PEERS) {
@@ -4029,12 +4026,6 @@ function oy_block_light() {
 
     if (!oy_block_process(oy_diff_track[1], false, false)) return false;//block_process will invoke block_reset if necessary
 
-    /*
-    for (let oy_key_public in OY_BLOCK[1]) {
-        if (OY_BOOST_BUILD.length<OY_BOOST_KEEP*OY_BOOST_BIAS&&typeof(oy_diff_track[0][oy_key_public])==="undefined"&&OY_BOOST_BUILD.indexOf(oy_key_public)===-1&&typeof(OY_PEERS[oy_key_public])==="undefined"&&typeof(OY_NODES[oy_key_public])==="undefined") OY_BOOST_BUILD.push(oy_key_public);
-    }
-    */
-
     OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK);
     OY_BLOCK_HASH = oy_hash_gen(OY_BLOCK_FLAT);
     OY_BLOCK_METAHASH = oy_hash_gen(OY_BLOCK_HASH);
@@ -4045,18 +4036,6 @@ function oy_block_light() {
 
     if (typeof(OY_BLOCK_MAP)==="function") OY_BLOCK_MAP(0);
     oy_event_dispatch("oy_block_trigger");
-
-    /*
-    let oy_dive_array = [];
-    for (let oy_key_public in OY_BLOCK[1]) {
-        if (typeof(OY_PEERS[oy_key_public])==="undefined"&&typeof(OY_NODES[oy_key_public])==="undefined"&&oy_key_public!==OY_SELF_PUBLIC) oy_dive_array.push(oy_key_public);
-    }
-    oy_calc_shuffle(oy_dive_array);
-    for (let i in oy_dive_array) {
-        if (OY_BOOST_BUILD.length>=OY_BOOST_KEEP*OY_BOOST_BIAS) break;
-        OY_BOOST_BUILD.push(oy_dive_array[i]);
-    }
-    */
 
     //LIGHT NODE -> FULL NODE
     if (OY_LIGHT_MODE===false&&OY_LIGHT_STATE===true&&OY_BLOCK[0][1]===OY_BLOCK_TIME&&oy_peer_full()) {
