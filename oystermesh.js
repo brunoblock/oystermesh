@@ -3890,43 +3890,51 @@ function oy_block_engine() {
         oy_chrono(function() {
             oy_block_challenge(1);
 
-            let oy_light_deflate = function() {
+            let oy_light_deflate = function(oy_deflate_force = false) {
                 let oy_intro_default = Object.values(OY_INTRO_DEFAULT);
                 let oy_peer_weak = [null, -1];
                 for (let oy_peer_select in OY_PEERS) {
                     if (OY_PEERS[oy_peer_select][1]===1&&
-                        OY_PEERS[oy_peer_select][0]<OY_BLOCK_TIME&&
-                        OY_PEERS[oy_peer_select][9]!==1&&
-                        oy_intro_default.indexOf(oy_peer_select)===-1&&
+                        (oy_deflate_force===true||
+                            (OY_PEERS[oy_peer_select][0]<OY_BLOCK_TIME&&
+                            OY_PEERS[oy_peer_select][9]!==1&&
+                            oy_intro_default.indexOf(oy_peer_select)===-1)
+                        )&&
                         OY_PEERS[oy_peer_select][3]>oy_peer_weak[1]) oy_peer_weak = [oy_peer_select, OY_PEERS[oy_peer_select][3]];
                 }
                 if (oy_peer_weak[0]!==null) oy_node_deny(oy_peer_weak[0], "OY_DENY_DEFLATE_DROP_L");
             }
-            let oy_full_deflate = function() {
+            let oy_full_deflate = function(oy_deflate_force = false) {
                 let oy_cut_local = oy_peer_cut();
                 let oy_intro_default = Object.values(OY_INTRO_DEFAULT);
                 let oy_peer_weak = [null, -1];
                 for (let oy_peer_select in OY_PEERS) {
                     if (OY_PEERS[oy_peer_select][1]===2&&
-                        OY_PEERS[oy_peer_select][0]<OY_BLOCK_TIME&&
-                        typeof(OY_PEER_SAFE[oy_peer_select])==="undefined"&&
-                        OY_PEERS[oy_peer_select][9]<=oy_cut_local&&
-                        oy_intro_default.indexOf(oy_peer_select)===-1&&
+                        (oy_deflate_force===true||
+                            (OY_PEERS[oy_peer_select][0]<OY_BLOCK_TIME&&
+                            typeof(OY_PEER_SAFE[oy_peer_select])==="undefined"&&
+                            OY_PEERS[oy_peer_select][9]<=oy_cut_local&&
+                            oy_intro_default.indexOf(oy_peer_select)===-1)
+                        )&&
                         OY_PEERS[oy_peer_select][3]>oy_peer_weak[1]) oy_peer_weak = [oy_peer_select, OY_PEERS[oy_peer_select][3]];
                 }
                 if (oy_peer_weak[0]!==null) oy_node_deny(oy_peer_weak[0], "OY_DENY_DEFLATE_DROP_F");
             }
             for (let i = 0;i<OY_PEER_INFLATE[0];i++) {
-                if (oy_peer_count()>OY_PEER_INFLATE[0]) oy_full_deflate();
+                if (oy_peer_count()>OY_PEER_INFLATE[0]) oy_full_deflate(true);
+                else break;
             }
             for (let i = 0;i<OY_PEER_INFLATE[1];i++) {
-                if (oy_peer_count(true)>OY_PEER_INFLATE[1]) oy_light_deflate();
+                if (oy_peer_count(true)>OY_PEER_INFLATE[1]) oy_light_deflate(true);
+                else break;
             }
             for (let i = 0;i<OY_PEER_DEFLATE[0];i++) {
                 if (oy_peer_count()>OY_PEER_MAX[0]) oy_full_deflate();
+                else break;
             }
             for (let i = 0;i<OY_PEER_DEFLATE[1];i++) {
                 if (oy_peer_count(true)>OY_PEER_MAX[1]) oy_light_deflate();
+                else break;
             }
         }, OY_BLOCK_SECTORS[4][1]);
     }
