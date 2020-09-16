@@ -298,7 +298,7 @@ let OY_SLOW_MOTION = 1;//run the mesh in slow motion for simulation purposes
 let OY_SIMULATOR_MODE = false;
 let OY_SIMULATOR_SKEW = 0;
 let OY_SIMULATOR_TIMINGS = null;
-let OY_SIMULATOR_SCALE = [0, true, null, null];//[scale_counter, applied, timings]
+let OY_SIMULATOR_SCALE = [0, true, null, null];//[scale_counter, applied, slow_factor, timings]
 let OY_SIMULATOR_ELAPSED = [0, null];
 let OY_SIMULATOR_CALLBACK = {};
 let OY_FULL_INTRO = false;//default is false, can be set here or via nodejs argv first parameter
@@ -3241,7 +3241,8 @@ function oy_block_engine() {
         OY_BLOCK_ELAPSED = Math.floor(oy_time()-OY_BLOCK_BOOT_MARK)-OY_BLOCK_BOOT_BUFFER;
 
         if (OY_SIMULATOR_MODE===true&&OY_SIMULATOR_SCALE[1]===false) {
-            //TODO slow motion management here
+            OY_SLOW_MOTION *= OY_SIMULATOR_SCALE[2];
+            OY_SIMULATOR_SCALE[1] = true;
         }
 
         if (OY_FULL_INTRO!==false&&OY_FULL_INTRO===OY_INTRO_BOOT) {
@@ -4750,14 +4751,14 @@ if (OY_NODE_STATE===true) {
                     oy_init();
                 }
                 else if (oy_sim_node==="OY_SIM_SLOW") {
-                    if (OY_SIMULATOR_SCALE[1]===false) {
+                    if (OY_SIMULATOR_SCALE[1]===false||OY_SIMULATOR_SCALE[0]+1!==oy_sim_data[0]) {
                         oy_log("[ERROR]["+chalk.bolder("SIM_SLOW_MISALIGN")+"]["+chalk.bolder(JSON.stringify(OY_SIMULATOR_SCALE))+"]["+chalk.bolder(JSON.stringify(oy_data))+"]", 2);
                         throw new Error("OY_ERROR_FATAL");
                     }
                     OY_SIMULATOR_SCALE[0]++;
                     OY_SIMULATOR_SCALE[1] = false;
-                    OY_SIMULATOR_SCALE[2] = oy_sim_data[0];
-                    OY_SIMULATOR_SCALE[3] = oy_sim_data[1];
+                    OY_SIMULATOR_SCALE[2] = oy_sim_data[1];
+                    OY_SIMULATOR_SCALE[3] = oy_sim_data[2];
                 }
             }
         });
