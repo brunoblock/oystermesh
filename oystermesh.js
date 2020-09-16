@@ -21,7 +21,7 @@ const OY_MESH_SOURCE = 3;//node in route passport (from destination) that is ass
 const OY_MESH_SEQUENCE = 8;
 //let OY_MESH_SCALE = 1000;//core trilemma variable, maximum amount of full nodes. Higher is more scalable and less secure
 let OY_MESH_SECURITY = 0.33;//core trilemma variable, amount of rogue full nodes required to successfully attack the mesh, higher is more secure and less scalable
-const OY_BLOCK_LOOP = [20, 60];//a lower value means increased accuracy for detecting the start of the next meshblock
+let OY_BLOCK_LOOP = [20, 60];//a lower value means increased accuracy for detecting the start of the next meshblock
 const OY_BLOCK_STABILITY_TRIGGER = 3;//mesh range history minimum to trigger reliance on real stability value
 const OY_BLOCK_STABILITY_LIMIT = 12;//mesh range history to keep to calculate meshblock stability, time is effectively value x 20 seconds
 const OY_BLOCK_EPOCH_MACRO = 40;//360, cadence in blocks to perform epoch processing - 6 hr interval
@@ -31,7 +31,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 let OY_BLOCK_RANGE_MIN = 10;//100, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOT_BUFFER = 3600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
+const OY_BLOCK_BOOT_BUFFER = 300;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[15, 15000], [30, 30000], [55, 55000], [57, 57000], [59, 59000], [60, 60000]];//timing definitions for the meshblock
 let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
@@ -294,8 +294,10 @@ let OY_DIVE_PAYOUT = false;
 let OY_DIVE_TEAM = false;
 let OY_DIVE_STATE = false;
 let OY_VERBOSE_MODE = true;
+let OY_SLOW_MOTION = 1;//run the mesh in slow motion for simulation purposes
 let OY_SIMULATOR_MODE = false;
 let OY_SIMULATOR_SKEW = 0;
+let OY_SIMULATOR_TIMINGS = null
 let OY_SIMULATOR_CALLBACK = {};
 let OY_FULL_INTRO = false;//default is false, can be set here or via nodejs argv first parameter
 let OY_INTRO_BOOT = "vnode1.oyster.org:8443";
@@ -427,8 +429,9 @@ if (OY_NODE_STATE===true) parentPort = require('worker_threads').parentPort;
 function oy_worker_internal(oy_static_data) {
     let oy_static_thru = JSON.parse(decodeURI(oy_static_data));
     const OY_SIMULATOR_MODE = oy_static_thru[0];
-    const OY_WORK_MATCH = oy_static_thru[1];
-    const OY_SELF_PRIVATE = oy_static_thru[2];
+    const OY_SIMULATOR_TIMINGS = oy_static_thru[1];
+    const OY_WORK_MATCH = oy_static_thru[2];
+    const OY_SELF_PRIVATE = oy_static_thru[3];
     const OY_NODE_STATE = typeof(window)==="undefined";
 
     let parentPort, nacl, keccak256;
@@ -583,7 +586,7 @@ function oy_worker_internal(oy_static_data) {
                 if (OY_SIMULATOR_MODE===true) {
                     setTimeout(function() {
                         oy_worker_respond(oy_response);
-                    }, 500+Math.round(Math.random()*500));
+                    }, OY_SIMULATOR_TIMINGS[0][0]+Math.round(Math.random()*OY_SIMULATOR_TIMINGS[0][1]));
                 }
                 else oy_worker_respond(oy_response);
             }
@@ -605,7 +608,7 @@ function oy_worker_internal(oy_static_data) {
                         if (OY_SIMULATOR_MODE===true) {
                             setTimeout(function() {
                                 oy_worker_respond([oy_work_type, [oy_data_payload, oy_sync_command, Math.floor(oy_calc_avg(oy_grade_array))]]);
-                            }, 5+Math.round(Math.random()*5));
+                            }, OY_SIMULATOR_TIMINGS[1][0]+Math.round(Math.random()*OY_SIMULATOR_TIMINGS[1][1]));
                         }
                         else oy_worker_respond([oy_work_type, [oy_data_payload, oy_sync_command, Math.floor(oy_calc_avg(oy_grade_array))]]);
                     }
@@ -706,8 +709,8 @@ function oy_worker_spawn(oy_worker_type) {
     if (OY_WORKER_THREADS[oy_worker_type]!==null) return false;
 
     let oy_worker_define;
-    if (OY_NODE_STATE===true) oy_worker_define = "("+oy_worker_internal.toString()+")(\""+encodeURI(JSON.stringify([OY_SIMULATOR_MODE, OY_WORK_MATCH, OY_SELF_PRIVATE]))+"\")";
-    else oy_worker_define = URL.createObjectURL(new Blob(["("+oy_worker_internal.toString()+")(\""+encodeURI(JSON.stringify([OY_SIMULATOR_MODE, OY_WORK_MATCH, OY_SELF_PRIVATE]))+"\")"], {type: 'text/javascript'}));
+    if (OY_NODE_STATE===true) oy_worker_define = "("+oy_worker_internal.toString()+")(\""+encodeURI(JSON.stringify([OY_SIMULATOR_MODE, OY_SIMULATOR_TIMINGS, OY_WORK_MATCH, OY_SELF_PRIVATE]))+"\")";
+    else oy_worker_define = URL.createObjectURL(new Blob(["("+oy_worker_internal.toString()+")(\""+encodeURI(JSON.stringify([OY_SIMULATOR_MODE, OY_SIMULATOR_TIMINGS, OY_WORK_MATCH, OY_SELF_PRIVATE]))+"\")"], {type: 'text/javascript'}));
 
     OY_WORKER_THREADS[oy_worker_type] = new Array(oy_worker_cores());
     OY_WORKER_THREADS[oy_worker_type].fill(null);
@@ -797,18 +800,20 @@ function oy_short(oy_message) {
 function oy_chrono(oy_chrono_callback, oy_chrono_duration) {
     let oy_chrono_elapsed = 0;
     let oy_chrono_last = perf.now();
+    let oy_chrono_interval = OY_CHRONO_ACCURACY*OY_SLOW_MOTION;
+    oy_chrono_duration *= OY_SLOW_MOTION;
 
     let oy_chrono_instance = function() {
         oy_chrono_elapsed += perf.now()-oy_chrono_last;
         if (oy_chrono_elapsed>=oy_chrono_duration) return oy_chrono_callback();
-        setTimeout(oy_chrono_instance, OY_CHRONO_ACCURACY);
+        setTimeout(oy_chrono_instance, oy_chrono_interval);
         oy_chrono_last = perf.now();
     };
     oy_chrono_instance();
 }
 
 function oy_time() {
-    return (Date.now()+OY_SIMULATOR_SKEW)/1000;
+    return ((Date.now()/OY_SLOW_MOTION)+OY_SIMULATOR_SKEW)/1000;
 }
 
 function oy_event_create(oy_event_name, oy_event_callback) {
@@ -4644,6 +4649,9 @@ function oy_init(oy_console) {
     if (oy_time_local<OY_BLOCK_BOOT_MARK) OY_BLOCK_BOOT = null;
     else OY_BLOCK_BOOT = oy_time_local-OY_BLOCK_BOOT_MARK<OY_BLOCK_BOOT_BUFFER;
 
+    OY_BLOCK_LOOP[0] *= OY_SLOW_MOTION;
+    OY_BLOCK_LOOP[1] *= OY_SLOW_MOTION;
+
     oy_block_engine();
     oy_event_dispatch("oy_state_blank");
 
@@ -4716,6 +4724,8 @@ if (OY_NODE_STATE===true) {
                     for (let oy_var in oy_sim_data[1]) {
                         if (oy_var==="OY_PASSIVE_MODE") OY_PASSIVE_MODE = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_VERBOSE_MODE") OY_VERBOSE_MODE = oy_sim_data[1][oy_var];
+                        else if (oy_var==="OY_SLOW_MOTION") OY_SLOW_MOTION = oy_sim_data[1][oy_var];
+                        else if (oy_var==="OY_SIMULATOR_TIMINGS") OY_SIMULATOR_TIMINGS = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_BLOCK_BOOT_MARK") OY_BLOCK_BOOT_MARK = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_INTRO_BOOT") OY_INTRO_BOOT = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_INTRO_DEFAULT") OY_INTRO_DEFAULT = oy_sim_data[1][oy_var];
