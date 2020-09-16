@@ -299,6 +299,7 @@ let OY_SIMULATOR_MODE = false;
 let OY_SIMULATOR_SKEW = 0;
 let OY_SIMULATOR_TIMINGS = null;
 let OY_SIMULATOR_SCALE = [0, true, null, null];//[scale_counter, applied, timings]
+let OY_SIMULATOR_ELAPSED = [0, null];
 let OY_SIMULATOR_CALLBACK = {};
 let OY_FULL_INTRO = false;//default is false, can be set here or via nodejs argv first parameter
 let OY_INTRO_BOOT = "vnode1.oyster.org:8443";
@@ -814,7 +815,15 @@ function oy_chrono(oy_chrono_callback, oy_chrono_duration) {
 }
 
 function oy_time() {
-    return ((Date.now()/OY_SLOW_MOTION)+OY_SIMULATOR_SKEW)/1000;
+    if (OY_SIMULATOR_MODE===true) {
+        let oy_time_local = Date.now()/1000;
+        let oy_time_append = ((oy_time_local-OY_SIMULATOR_ELAPSED[1])/OY_SLOW_MOTION);
+        OY_SIMULATOR_ELAPSED[0] += oy_time_append;
+        OY_SIMULATOR_ELAPSED[1] = oy_time_local;
+
+        return OY_BLOCK_BOOT_MARK+OY_SIMULATOR_ELAPSED[0]+OY_SIMULATOR_SKEW;
+    }
+    else return Date.now()/1000;
 }
 
 function oy_event_create(oy_event_name, oy_event_callback) {
@@ -4737,6 +4746,7 @@ if (OY_NODE_STATE===true) {
                         else if (oy_var==="OY_LATENCY_SIZE") OY_LATENCY_SIZE = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_LATENCY_GEO") OY_LATENCY_GEO = oy_sim_data[1][oy_var];
                     }
+                    OY_SIMULATOR_ELAPSED = [0, OY_BLOCK_BOOT_MARK];
                     oy_init();
                 }
                 else if (oy_sim_node==="OY_SIM_SLOW") {
