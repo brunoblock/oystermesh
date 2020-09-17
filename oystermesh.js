@@ -31,7 +31,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 let OY_BLOCK_RANGE_MIN = 10;//100, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOT_BUFFER = 300;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
+const OY_BLOCK_BOOT_BUFFER = 1800;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[15, 15000], [30, 30000], [55, 55000], [57, 57000], [59, 59000], [60, 60000]];//timing definitions for the meshblock
 let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
@@ -3244,9 +3244,14 @@ function oy_block_engine() {
         OY_BLOCK_ELAPSED = Math.floor(oy_time()-OY_BLOCK_BOOT_MARK)-OY_BLOCK_BOOT_BUFFER;
 
         if (OY_SIMULATOR_MODE===true&&OY_SIMULATOR_SCALE[1]===false) {
-            OY_SLOW_MOTION *= OY_SIMULATOR_SCALE[2];
+            OY_SLOW_MOTION *= OY_SIMULATOR_SCALE[3];
             OY_SLOW_MOTION = Math.min(OY_SIMULATOR_SCALE[2], OY_SLOW_MOTION);
             OY_SIMULATOR_SCALE[1] = true;
+            OY_SIMULATOR_TIMINGS = OY_SIMULATOR_SCALE[4];
+            oy_worker_halt(0);
+            oy_worker_halt(1);
+            oy_worker_spawn(0);
+            oy_worker_spawn(1);
         }
 
         if (OY_FULL_INTRO!==false&&OY_FULL_INTRO===OY_INTRO_BOOT) {
