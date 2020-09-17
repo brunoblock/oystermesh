@@ -3249,9 +3249,11 @@ function oy_block_engine() {
             OY_SIMULATOR_SCALE[1] = true;
             OY_SIMULATOR_TIMINGS = OY_SIMULATOR_SCALE[4];
             oy_worker_halt(0);
-            oy_worker_halt(1);
             oy_worker_spawn(0);
-            oy_worker_spawn(1);
+            if (OY_LIGHT_STATE===false) {
+                oy_worker_halt(1);
+                oy_worker_spawn(1);
+            }
         }
 
         if (OY_FULL_INTRO!==false&&OY_FULL_INTRO===OY_INTRO_BOOT) {
@@ -3782,7 +3784,7 @@ function oy_block_engine() {
             else {
                 if (Object.keys(OY_BLOCK_SYNC).length>1&&(typeof(OY_BLOCK_SYNC[OY_INTRO_DEFAULT[OY_INTRO_BOOT]])==="undefined"||(typeof(OY_SYNC_MAP[1][OY_INTRO_DEFAULT[OY_INTRO_BOOT]])!=="undefined"&&OY_SYNC_MAP[1][OY_INTRO_DEFAULT[OY_INTRO_BOOT]][0]>OY_PEER_BOOT_SCALE))) {
                     for (let oy_peer_select in OY_PEERS) {
-                        oy_node_deny(oy_peer_select, "OY_DENY_SELF_BOOT_INVALID");
+                        oy_node_deny(oy_peer_select, "OY_DENY_SELF_BOOT_LINK");
                     }
                 }
                 oy_mesh_range = Object.keys(OY_BLOCK_SYNC).length;
