@@ -31,7 +31,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 let OY_BLOCK_RANGE_MIN = 10;//100, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOT_BUFFER = 1800;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
+const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[15, 15000], [30, 30000], [55, 55000], [57, 57000], [59, 59000], [60, 60000]];//timing definitions for the meshblock
 let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
@@ -431,7 +431,7 @@ if (OY_NODE_STATE===true) parentPort = require('worker_threads').parentPort;
 function oy_worker_internal(oy_static_data) {
     let oy_static_thru = JSON.parse(decodeURI(oy_static_data));
     const OY_SIMULATOR_MODE = oy_static_thru[0];
-    const OY_SIMULATOR_TIMINGS = oy_static_thru[1];
+    let OY_SIMULATOR_TIMINGS = oy_static_thru[1];
     const OY_WORK_MATCH = oy_static_thru[2];
     const OY_SELF_PRIVATE = oy_static_thru[3];
     const OY_NODE_STATE = typeof(window)==="undefined";
@@ -617,6 +617,7 @@ function oy_worker_internal(oy_static_data) {
                 }
             }
         }
+        else if (oy_work_type===-1) OY_SIMULATOR_TIMINGS = oy_work_data;
     }
     if (OY_NODE_STATE===true) {
         parentPort.on('message', (oy_data) => {
@@ -802,7 +803,7 @@ function oy_short(oy_message) {
 function oy_chrono(oy_chrono_callback, oy_chrono_duration) {
     let oy_chrono_elapsed = 0;
     let oy_chrono_last = perf.now();
-    let oy_chrono_interval = OY_CHRONO_ACCURACY*OY_SLOW_MOTION;
+    let oy_chrono_interval = Math.ceil(OY_CHRONO_ACCURACY*OY_SLOW_MOTION);
     oy_chrono_duration *= OY_SLOW_MOTION;
 
     let oy_chrono_instance = function() {
@@ -3236,25 +3237,24 @@ function oy_block_engine() {
     if (oy_block_time_local!==OY_BLOCK_TIME&&(oy_block_time_local/10)%6===0) {
         OY_BLOCK_TIME = oy_block_time_local;
         OY_BLOCK_NEXT = OY_BLOCK_TIME+OY_BLOCK_SECTORS[5][0];
+        if (OY_SIMULATOR_MODE===true&&OY_SIMULATOR_SCALE[1]===false) {
+            OY_SLOW_MOTION *= OY_SIMULATOR_SCALE[3];
+            OY_SLOW_MOTION = Math.min(OY_SIMULATOR_SCALE[2], OY_SLOW_MOTION);
+            OY_SIMULATOR_SCALE[1] = true;
+            OY_SIMULATOR_TIMINGS = OY_SIMULATOR_SCALE[4];
+            for (let i in OY_WORKER_THREADS[0]) {
+                OY_WORKER_THREADS[0][i].postMessage([-1, OY_SIMULATOR_TIMINGS]);
+            }
+            for (let i in OY_WORKER_THREADS[1]) {
+                OY_WORKER_THREADS[1][i].postMessage([-1, OY_SIMULATOR_TIMINGS]);
+            }
+        }
         if (OY_BLOCK_TIME<OY_BLOCK_BOOT_MARK) {
             OY_BLOCK_BOOT = null;
             return null;
         }
         else OY_BLOCK_BOOT = OY_BLOCK_TIME-OY_BLOCK_BOOT_MARK<OY_BLOCK_BOOT_BUFFER;
         OY_BLOCK_ELAPSED = Math.floor(oy_time()-OY_BLOCK_BOOT_MARK)-OY_BLOCK_BOOT_BUFFER;
-
-        if (OY_SIMULATOR_MODE===true&&OY_SIMULATOR_SCALE[1]===false) {
-            OY_SLOW_MOTION *= OY_SIMULATOR_SCALE[3];
-            OY_SLOW_MOTION = Math.min(OY_SIMULATOR_SCALE[2], OY_SLOW_MOTION);
-            OY_SIMULATOR_SCALE[1] = true;
-            OY_SIMULATOR_TIMINGS = OY_SIMULATOR_SCALE[4];
-            oy_worker_halt(0);
-            oy_worker_spawn(0);
-            if (OY_LIGHT_STATE===false) {
-                oy_worker_halt(1);
-                oy_worker_spawn(1);
-            }
-        }
 
         if (OY_FULL_INTRO!==false&&OY_FULL_INTRO===OY_INTRO_BOOT) {
             if (OY_BLOCK_BOOT===true) {
@@ -3595,6 +3595,7 @@ function oy_block_engine() {
                 return false;
             }
             if (OY_BLOCK[0][1]!==null&&OY_BLOCK[0][1]!==OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]) {
+                oy_log("MISSTEP: "+JSON.stringify([OY_BLOCK[0][1], OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]]));
                 oy_block_reset("OY_RESET_MISSTEP");
                 oy_block_continue = false;
                 return false;
