@@ -21,7 +21,7 @@ const OY_MESH_SOURCE = 3;//node in route passport (from destination) that is ass
 const OY_MESH_SEQUENCE = 8;
 //let OY_MESH_SCALE = 1000;//core trilemma variable, maximum amount of full nodes. Higher is more scalable and less secure
 let OY_MESH_SECURITY = 0.33;//core trilemma variable, amount of rogue full nodes required to successfully attack the mesh, higher is more secure and less scalable
-let OY_BLOCK_LOOP = [20, 60];//a lower value means increased accuracy for detecting the start of the next meshblock
+let OY_BLOCK_LOOP = [10, 30];//a lower value means increased accuracy for detecting the start of the next meshblock
 const OY_BLOCK_STABILITY_TRIGGER = 3;//mesh range history minimum to trigger reliance on real stability value
 const OY_BLOCK_STABILITY_LIMIT = 12;//mesh range history to keep to calculate meshblock stability, time is effectively value x 20 seconds
 const OY_BLOCK_EPOCH_MACRO = 40;//360, cadence in blocks to perform epoch processing - 6 hr interval
@@ -381,6 +381,7 @@ let OY_BLOCK_RECORD = null;
 let OY_BLOCK_RECORD_KEEP = [];
 let OY_BLOCK_FINISH = false;
 let OY_BLOCK_JUMP_MAP = {};
+const OY_BLOCK_LOOP_RESTORE = OY_BLOCK_LOOP.slice();
 let OY_JUMP_ASSIGN = [null, null];//handle jump sessions
 let OY_JUMP_PRE = {};
 let OY_BLOCK_JUMP = null;
@@ -3242,6 +3243,8 @@ function oy_block_engine() {
             OY_SLOW_MOTION = Math.min(OY_SIMULATOR_SCALE[2], OY_SLOW_MOTION);
             OY_SIMULATOR_SCALE[1] = true;
             OY_SIMULATOR_TIMINGS = OY_SIMULATOR_SCALE[4];
+            OY_BLOCK_LOOP[0] = Math.ceil(OY_BLOCK_LOOP_RESTORE[0]*OY_SLOW_MOTION);
+            OY_BLOCK_LOOP[1] = Math.ceil(OY_BLOCK_LOOP_RESTORE[1]*OY_SLOW_MOTION);
             for (let i in OY_WORKER_THREADS[0]) {
                 OY_WORKER_THREADS[0][i].postMessage([-1, OY_SIMULATOR_TIMINGS]);
             }
@@ -4662,8 +4665,8 @@ function oy_init(oy_console) {
     if (oy_time_local<OY_BLOCK_BOOT_MARK) OY_BLOCK_BOOT = null;
     else OY_BLOCK_BOOT = oy_time_local-OY_BLOCK_BOOT_MARK<OY_BLOCK_BOOT_BUFFER;
 
-    OY_BLOCK_LOOP[0] *= OY_SLOW_MOTION;
-    OY_BLOCK_LOOP[1] *= OY_SLOW_MOTION;
+    OY_BLOCK_LOOP[0] = Math.ceil(OY_BLOCK_LOOP_RESTORE[0]*OY_SLOW_MOTION);
+    OY_BLOCK_LOOP[1] = Math.ceil(OY_BLOCK_LOOP_RESTORE[1]*OY_SLOW_MOTION);
 
     oy_block_engine();
     oy_event_dispatch("oy_state_blank");
