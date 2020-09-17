@@ -3387,23 +3387,6 @@ function oy_block_engine() {
                 return false;
             }
 
-            /*
-            if (OY_BLOCK_BOOT===false) {
-                let oy_latency_keep = [];
-                for (let oy_peer_select in OY_PEERS) {
-                    if (OY_PEERS[oy_peer_select][1]===2&&OY_BLOCK_TIME>OY_PEERS[oy_peer_select][0]) oy_latency_keep.push(OY_PEERS[oy_peer_select][3]/2);
-                }
-                if (oy_latency_keep.length>1) {
-                    let oy_latency_median = oy_calc_median(oy_latency_keep);
-                    if (!oy_latency_median||(typeof(OY_BLOCK_STRICT[1])!=="undefined"&&OY_BLOCK_STRICT[1]<oy_latency_median)) {
-                        fs.appendFileSync("/dev/shm/oy_debug2.log", "["+OY_SELF_SHORT+"] SYNC LATENCY: "+JSON.stringify([oy_latency_median, OY_BLOCK_STRICT])+"\n");
-                        oy_block_reset("OY_RESET_SYNC_LATENCY");
-                        return false;
-                    }
-                }
-            }
-             */
-
             let oy_command_sort = [];
             for (let oy_command_hash in OY_BLOCK_COMMAND) {
                 if (OY_BLOCK_COMMAND[oy_command_hash][0][1][0]===OY_BLOCK_TIME) {
@@ -3845,7 +3828,7 @@ function oy_block_engine() {
             for (let i in OY_BLOCK_STRICT) {
                 i = parseInt(i);
                 if (i===0) continue;
-                OY_BLOCK_STRICT[i] = oy_hop_latency*i*Math.min(1, (oy_curve_factor+(oy_curve_increment*(i))));
+                OY_BLOCK_STRICT[i] = (oy_hop_latency*i*Math.min(1, (oy_curve_factor+(oy_curve_increment*(i)))))+OY_SYNC_BROADCAST_BUFFER[0];
             }
             OY_BLOCK_STRICT[0] = OY_BLOCK_STRICT[1];
 
