@@ -3820,7 +3820,7 @@ function oy_block_engine() {
             OY_BLOCK_STRICT.fill(null);
 
             let oy_block_latency = Object.values(OY_BLOCK_LATENCY);
-            let oy_edge_latency = OY_SYNC_LONG[0]*oy_calc_median(oy_block_latency);//TODO consider using SYNC_LONG for mesh diameter
+            let oy_edge_latency = OY_SYNC_LONG[0]*oy_calc_median(oy_block_latency);
             OY_BLOCK_STRICT[OY_BLOCK_STRICT.length-1] = OY_BLOCK_SECTORS[2][0]-oy_edge_latency;
             let oy_hop_latency = OY_BLOCK_STRICT[OY_BLOCK_STRICT.length-1]/OY_BLOCK_STRICT.length;
             let oy_curve_increment = (OY_BLOCK_STRICT_CURVE/100)/OY_BLOCK_STRICT.length;
@@ -3828,7 +3828,7 @@ function oy_block_engine() {
             for (let i in OY_BLOCK_STRICT) {
                 i = parseInt(i);
                 if (i===0) continue;
-                OY_BLOCK_STRICT[i] = (oy_hop_latency*i*Math.min(1, (oy_curve_factor+(oy_curve_increment*(i)))))+OY_SYNC_BROADCAST_BUFFER[0];
+                OY_BLOCK_STRICT[i] = (oy_hop_latency*i*Math.min(1, (oy_curve_factor+(oy_curve_increment*(i)))));
             }
             OY_BLOCK_STRICT[0] = OY_BLOCK_STRICT[1];
 
@@ -3840,7 +3840,7 @@ function oy_block_engine() {
                     i = parseInt(i);
                     if (i<=1) continue;
                     if (i>OY_SYNC_LONG[0]) break;
-                    if (oy_latency_max*i*oy_entry_cut*OY_BLOCK_STRICT_ENTRY>=OY_BLOCK_STRICT[i]) {
+                    if (oy_latency_max*i*oy_entry_cut*OY_BLOCK_STRICT_ENTRY>=OY_BLOCK_STRICT[i]+OY_SYNC_BROADCAST_BUFFER[0]) {
                         oy_cut_pass = false;
                         break;
                     }
@@ -3850,6 +3850,9 @@ function oy_block_engine() {
             }
 
             if (OY_BLOCK_STRICT.length>1) OY_BLOCK_STRICT[1] *= oy_entry_cut;
+            for (let i in OY_BLOCK_STRICT) {
+                OY_BLOCK_STRICT[i] += OY_SYNC_BROADCAST_BUFFER[0];
+            }
 
             OY_SYNC_LAST.shift();
             OY_SYNC_LAST.push(0);
