@@ -42,7 +42,7 @@ let OY_BLOCK_STRICT_ENTRY = 2.6;//higher is stricter cut entry
 let OY_BLOCK_STRICT_FLOOR = 0.05;
 const OY_BLOCK_STRICT_DECREMENT = 0.1;
 let OY_SYNC_BROADCAST_BUFFER = [0.3, 300];
-let OY_SYNC_UNIQUE_DIFF = 1.3;//lower is more unique/safe
+let OY_SYNC_UNIQUE_DIFF = 1.4;//lower is more unique/safe
 let OY_SYNC_UNIQUE_HOP = 2;//lower is generally more unique/safe, sweet spot defines bridge distinction
 let OY_LIGHT_CHUNK = 52000;//chunk size by which the meshblock is split up and sent per light transmission
 let OY_LIGHT_COMMIT = 0.4;
@@ -4756,6 +4756,8 @@ if (OY_NODE_STATE===true) {
                         else if (oy_var==="OY_INTRO_DEFAULT") OY_INTRO_DEFAULT = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_LATENCY_SIZE") OY_LATENCY_SIZE = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_LATENCY_GEO") OY_LATENCY_GEO = oy_sim_data[1][oy_var];
+                        else if (oy_var==="OY_SYNC_UNIQUE_DIFF") OY_SYNC_UNIQUE_DIFF = oy_sim_data[1][oy_var];
+                        else if (oy_var==="OY_SYNC_UNIQUE_HOP") OY_SYNC_UNIQUE_HOP = oy_sim_data[1][oy_var];
                     }
                     OY_SIMULATOR_ELAPSED = [0, OY_BLOCK_BOOT_MARK];
                     oy_init();
