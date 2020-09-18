@@ -295,6 +295,7 @@ let OY_DIVE_TEAM = false;
 let OY_DIVE_STATE = false;
 let OY_VERBOSE_MODE = true;
 let OY_SLOW_MOTION = 1;//run the mesh in slow motion for simulation purposes
+let OY_SLOW_TRIGGER = null;
 let OY_SIMULATOR_MODE = false;
 let OY_SIMULATOR_SKEW = 0;
 let OY_SIMULATOR_TIMINGS = null;
@@ -3253,10 +3254,7 @@ function oy_block_engine() {
                     OY_WORKER_THREADS[1][i].postMessage([-1, OY_SIMULATOR_TIMINGS]);
                 }
             }
-            else {
-                OY_SIMULATOR_SCALE[2] = false;
-                oy_log("SIM_BUFFER_RELEASE");
-            }
+            else OY_SIMULATOR_SCALE[2] = false;
         }
         if (OY_BLOCK_TIME<OY_BLOCK_BOOT_MARK) {
             OY_BLOCK_BOOT = null;
@@ -4713,7 +4711,8 @@ if (OY_NODE_STATE===true) {
 
             if (oy_sim_type===0) {
                 let oy_perf_origin = (perf.now()-parseInt(oy_sim_data.substr(0, 12)))/OY_SLOW_MOTION;
-                if (OY_SIMULATOR_SCALE[2]===false&&oy_perf_origin>500) parentPort.postMessage([4, "OY_SIM_BOTTLE", oy_perf_origin]);
+                console.log(oy_perf_origin);
+                if (OY_SIMULATOR_SCALE[2]===false&&oy_perf_origin>OY_SLOW_TRIGGER[1]) parentPort.postMessage([4, "OY_SIM_BOTTLE", [1, oy_perf_origin]]);
                 oy_data_soak(oy_sim_node, oy_sim_data.substr(12));
             }
             else if (oy_sim_type===1) {
@@ -4751,6 +4750,7 @@ if (OY_NODE_STATE===true) {
                         if (oy_var==="OY_PASSIVE_MODE") OY_PASSIVE_MODE = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_VERBOSE_MODE") OY_VERBOSE_MODE = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_SLOW_MOTION") OY_SLOW_MOTION = oy_sim_data[1][oy_var];
+                        else if (oy_var==="OY_SLOW_TRIGGER") OY_SLOW_TRIGGER = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_SIMULATOR_TIMINGS") OY_SIMULATOR_TIMINGS = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_BLOCK_BOOT_MARK") OY_BLOCK_BOOT_MARK = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_INTRO_BOOT") OY_INTRO_BOOT = oy_sim_data[1][oy_var];
