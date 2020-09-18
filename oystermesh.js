@@ -4711,7 +4711,6 @@ if (OY_NODE_STATE===true) {
 
             if (oy_sim_type===0) {
                 let oy_perf_origin = (perf.now()-parseInt(oy_sim_data.substr(0, 12)))/OY_SLOW_MOTION;
-                console.log(oy_perf_origin);
                 if (OY_SIMULATOR_SCALE[2]===false&&oy_perf_origin>OY_SLOW_TRIGGER[1]) parentPort.postMessage([4, "OY_SIM_BOTTLE", [1, oy_perf_origin]]);
                 oy_data_soak(oy_sim_node, oy_sim_data.substr(12));
             }
