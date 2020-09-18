@@ -298,7 +298,7 @@ let OY_SLOW_MOTION = 1;//run the mesh in slow motion for simulation purposes
 let OY_SIMULATOR_MODE = false;
 let OY_SIMULATOR_SKEW = 0;
 let OY_SIMULATOR_TIMINGS = null;
-let OY_SIMULATOR_SCALE = [0, true, null, null, null];//[scale_counter, applied, slow_max, slow_factor, timings]
+let OY_SIMULATOR_SCALE = [0, true, false, null, null, null];//[scale_counter, applied, buffer, slow_max, slow_factor, timings]
 let OY_SIMULATOR_ELAPSED = [0, null];
 let OY_SIMULATOR_CALLBACK = {};
 let OY_FULL_INTRO = false;//default is false, can be set here or via nodejs argv first parameter
@@ -2620,7 +2620,7 @@ function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
             oy_log("[COOL]["+chalk.bolder(oy_short(oy_node_id))+"]["+chalk.bolder(oy_data_flag)+"]");
             return true;
         }
-        if (OY_SIMULATOR_MODE===true) parentPort.postMessage([0, oy_node_id, oy_data_raw]);
+        if (OY_SIMULATOR_MODE===true) parentPort.postMessage([0, oy_node_id, String(perf.now()).padStart(12, "0")+oy_data_raw]);
         else OY_NODES[oy_node_id].send(oy_data_raw);//send the JSON-converted data array to the destination node
         if (OY_VERBOSE_MODE===true&&oy_data_flag!=="OY_BLOCK_SYNC") oy_log("[BEAM]["+chalk.bolder((oy_time()-OY_BLOCK_TIME).toFixed(2))+"]["+chalk.bolder(oy_short(oy_node_id))+"]["+chalk.bolder(oy_data_flag)+"]");
         return true;
@@ -3238,18 +3238,24 @@ function oy_block_engine() {
     if (oy_block_time_local!==OY_BLOCK_TIME&&(oy_block_time_local/10)%6===0) {
         OY_BLOCK_TIME = oy_block_time_local;
         OY_BLOCK_NEXT = OY_BLOCK_TIME+OY_BLOCK_SECTORS[5][0];
-        if (OY_SIMULATOR_MODE===true&&OY_SIMULATOR_SCALE[1]===false) {
-            OY_SLOW_MOTION *= OY_SIMULATOR_SCALE[3];
-            OY_SLOW_MOTION = Math.min(OY_SIMULATOR_SCALE[2], OY_SLOW_MOTION);
-            OY_SIMULATOR_SCALE[1] = true;
-            OY_SIMULATOR_TIMINGS = OY_SIMULATOR_SCALE[4];
-            OY_BLOCK_LOOP[0] = Math.ceil(OY_BLOCK_LOOP_RESTORE[0]*OY_SLOW_MOTION);
-            OY_BLOCK_LOOP[1] = Math.ceil(OY_BLOCK_LOOP_RESTORE[1]*OY_SLOW_MOTION);
-            for (let i in OY_WORKER_THREADS[0]) {
-                OY_WORKER_THREADS[0][i].postMessage([-1, OY_SIMULATOR_TIMINGS]);
+        if (OY_SIMULATOR_MODE===true) {
+            if (OY_SIMULATOR_SCALE[1]===false) {
+                OY_SLOW_MOTION *= OY_SIMULATOR_SCALE[4];
+                OY_SLOW_MOTION = Math.min(OY_SIMULATOR_SCALE[3], OY_SLOW_MOTION);
+                OY_SIMULATOR_SCALE[1] = true;
+                OY_SIMULATOR_TIMINGS = OY_SIMULATOR_SCALE[5];
+                OY_BLOCK_LOOP[0] = Math.ceil(OY_BLOCK_LOOP_RESTORE[0]*OY_SLOW_MOTION);
+                OY_BLOCK_LOOP[1] = Math.ceil(OY_BLOCK_LOOP_RESTORE[1]*OY_SLOW_MOTION);
+                for (let i in OY_WORKER_THREADS[0]) {
+                    OY_WORKER_THREADS[0][i].postMessage([-1, OY_SIMULATOR_TIMINGS]);
+                }
+                for (let i in OY_WORKER_THREADS[1]) {
+                    OY_WORKER_THREADS[1][i].postMessage([-1, OY_SIMULATOR_TIMINGS]);
+                }
             }
-            for (let i in OY_WORKER_THREADS[1]) {
-                OY_WORKER_THREADS[1][i].postMessage([-1, OY_SIMULATOR_TIMINGS]);
+            else {
+                OY_SIMULATOR_SCALE[2] = false;
+                oy_log("SIM_BUFFER_RELEASE");
             }
         }
         if (OY_BLOCK_TIME<OY_BLOCK_BOOT_MARK) {
@@ -4705,7 +4711,11 @@ if (OY_NODE_STATE===true) {
         parentPort.on('message', (oy_data) => {
             let [oy_sim_type, oy_sim_node, oy_sim_data, oy_sim_intro] = oy_data;
 
-            if (oy_sim_type===0) oy_data_soak(oy_sim_node, oy_sim_data);
+            if (oy_sim_type===0) {
+                let oy_perf_origin = (perf.now()-parseInt(oy_sim_data.substr(0, 12)))/OY_SLOW_MOTION;
+                if (OY_SIMULATOR_SCALE[2]===false&&oy_perf_origin>500) parentPort.postMessage([4, "OY_SIM_BOTTLE", oy_perf_origin]);
+                oy_data_soak(oy_sim_node, oy_sim_data.substr(12));
+            }
             else if (oy_sim_type===1) {
                 let oy_soak_result = oy_intro_soak(oy_sim_node, oy_sim_data);
                 if (oy_soak_result!==false&&typeof(oy_sim_intro)!=="undefined"&&oy_sim_intro[0]===OY_FULL_INTRO) parentPort.postMessage([2, oy_sim_node, oy_soak_result, oy_sim_intro]);
@@ -4758,9 +4768,10 @@ if (OY_NODE_STATE===true) {
                     }
                     OY_SIMULATOR_SCALE[0]++;
                     OY_SIMULATOR_SCALE[1] = false;
-                    OY_SIMULATOR_SCALE[2] = oy_sim_data[1];
-                    OY_SIMULATOR_SCALE[3] = oy_sim_data[2];
-                    OY_SIMULATOR_SCALE[4] = oy_sim_data[3];
+                    OY_SIMULATOR_SCALE[2] = true;
+                    OY_SIMULATOR_SCALE[3] = oy_sim_data[1];
+                    OY_SIMULATOR_SCALE[4] = oy_sim_data[2];
+                    OY_SIMULATOR_SCALE[5] = oy_sim_data[3];
                 }
             }
         });
