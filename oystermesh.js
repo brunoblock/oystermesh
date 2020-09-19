@@ -612,7 +612,7 @@ function oy_worker_internal(oy_static_data) {
                         if (OY_SIMULATOR_MODE===true) {
                             setTimeout(function() {
                                 oy_worker_respond([oy_work_type, [oy_data_payload, oy_sync_command, Math.floor(oy_calc_avg(oy_grade_array))]]);
-                            }, OY_SIMULATOR_TIMINGS[1][0]+Math.round(Math.random()*OY_SIMULATOR_TIMINGS[1][1]));
+                            }, OY_SIMULATOR_TIMINGS[1][0]+(OY_SIMULATOR_TIMINGS[1][1]*oy_data_payload[0].length));
                         }
                         else oy_worker_respond([oy_work_type, [oy_data_payload, oy_sync_command, Math.floor(oy_calc_avg(oy_grade_array))]]);
                     }
