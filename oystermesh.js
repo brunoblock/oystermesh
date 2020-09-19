@@ -4712,7 +4712,7 @@ if (OY_NODE_STATE===true) {
             if (oy_sim_type===0) {
                 let oy_origin_delay = parseInt(oy_sim_data.substr(0, 5));
                 let oy_origin_perf = (perf.now()-parseInt(oy_sim_data.substr(5, 12)));
-                if (OY_SIMULATOR_SCALE[2]===false&&oy_origin_perf-oy_origin_delay>OY_SLOW_TRIGGER[1]) parentPort.postMessage([4, "OY_SIM_BOTTLE", [1, [oy_origin_perf-oy_origin_delay, oy_origin_perf, oy_origin_delay]]]);
+                if (OY_SIMULATOR_SCALE[2]===false&&(oy_origin_perf-oy_origin_delay)/OY_SLOW_MOTION>OY_SLOW_TRIGGER[1]) parentPort.postMessage([4, "OY_SIM_BOTTLE", [1, [(oy_origin_perf-oy_origin_delay)/OY_SLOW_MOTION, OY_SLOW_MOTION, oy_origin_perf, oy_origin_delay]]]);
                 oy_data_soak(oy_sim_node, oy_sim_data.substr(17));
             }
             else if (oy_sim_type===1) {
