@@ -31,7 +31,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 let OY_BLOCK_RANGE_MIN = 10;//100, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOT_BUFFER = 3600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
+const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[15, 15000], [30, 30000], [55, 55000], [57, 57000], [59, 59000], [60, 60000]];//timing definitions for the meshblock
 let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
@@ -1217,10 +1217,9 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_data_payload[3]===OY_BLOCK_TIME&&//check that the current timestamp is in the sync processing zone
             oy_time_offset<OY_BLOCK_SECTORS[2][0]) {
 
-            if ((typeof(OY_BLOCK_STRICT[oy_data_payload[0].length])==="undefined"||oy_time_offset<OY_BLOCK_STRICT[oy_data_payload[0].length])) {
-            }
+            if ((typeof(OY_BLOCK_STRICT[oy_data_payload[0].length])==="undefined"||oy_time_offset<OY_BLOCK_STRICT[oy_data_payload[0].length])) {}
             else {
-                fs.appendFileSync("/dev/shm/oy_debug2.log", "["+OY_SELF_SHORT+"] STRICT FAIL: "+JSON.stringify([oy_data_payload[0].length, typeof(OY_PEER_SAFE[oy_peer_id])!=="undefined", Object.values(OY_INTRO_DEFAULT).indexOf(oy_peer_id)!==-1, oy_data_payload[2], oy_time_offset, OY_BLOCK_STRICT[oy_data_payload[0].length], OY_PEERS[oy_peer_id][3]])+"\n");
+                fs.appendFileSync("/dev/shm/oy_debug2.log", "["+OY_SELF_SHORT+"] STRICT FAIL: "+JSON.stringify([oy_data_payload[0].length, typeof(OY_PEER_SAFE[oy_peer_id])!=="undefined", Object.values(OY_INTRO_DEFAULT).indexOf(oy_peer_id)!==-1, oy_data_payload[2], oy_time_offset, OY_BLOCK_STRICT[oy_data_payload[0].length], OY_PEERS[oy_peer_id][3], typeof(OY_BLOCK_STRICT[oy_data_payload[0].length]), OY_BLOCK_STRICT.length, OY_BLOCK_STRICT])+"\n");
             }
         }
 
@@ -3240,6 +3239,7 @@ function oy_block_engine() {
         OY_BLOCK_TIME = oy_block_time_local;
         OY_BLOCK_NEXT = OY_BLOCK_TIME+OY_BLOCK_SECTORS[5][0];
         if (OY_SIMULATOR_MODE===true) {
+            OY_SLOW_MOTION *= 0.999;
             if (OY_SIMULATOR_SCALE[1]===false) {
                 OY_SLOW_MOTION *= OY_SIMULATOR_SCALE[4];
                 OY_SLOW_MOTION = Math.min(OY_SIMULATOR_SCALE[3], OY_SLOW_MOTION);
@@ -3279,7 +3279,7 @@ function oy_block_engine() {
         }
 
         if (OY_BLOCK_HASH!==null) {
-            let oy_status_log = "[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2).padStart(5, "0"))+"LA]["+chalk.bolder(String(OY_SYNC_LONG[0]).padStart(2, "0"))+"/"+chalk.bolder(String(Math.ceil(Math.sqrt(OY_BLOCK[0][2]))).padStart(2, "0"))+"LO]["+chalk.bolder(OY_BLOCK_STABILITY.toFixed(2).padStart(6, "0"))+"ST]["+chalk.bolder(String(OY_SLOW_MOTION))+"SM]["+chalk.bolder(OY_FULL_INTRO.toString())+"]["+chalk.bolder(oy_peer_full().toString())+"]["+chalk.bolder(((((OY_BLOCK_ELAPSED/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((OY_BLOCK_ELAPSED/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(OY_BLOCK_ELAPSED)+"S]"+JSON.stringify(OY_WORK_SOLUTIONS).substr(0, 20);
+            let oy_status_log = "[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2).padStart(5, "0"))+"LA]["+chalk.bolder(String(OY_SYNC_LONG[0]).padStart(2, "0"))+"/"+chalk.bolder(String(Math.ceil(Math.sqrt(OY_BLOCK[0][2]))).padStart(2, "0"))+"LO]["+chalk.bolder(OY_BLOCK_STABILITY.toFixed(2).padStart(6, "0"))+"ST]["+chalk.bolder(OY_SLOW_MOTION.toFixed(2))+"SM]["+chalk.bolder(OY_FULL_INTRO.toString())+"]["+chalk.bolder(oy_peer_full().toString())+"]["+chalk.bolder(((((OY_BLOCK_ELAPSED/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((OY_BLOCK_ELAPSED/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(OY_BLOCK_ELAPSED)+"S]"+JSON.stringify(OY_WORK_SOLUTIONS).substr(0, 20);
             oy_chrono(function() {
                 oy_log(oy_status_log, 1);
             }, (OY_LIGHT_STATE===false)?1:250);
