@@ -299,7 +299,7 @@ let OY_SLOW_TRIGGER = null;
 let OY_SIMULATOR_MODE = false;
 let OY_SIMULATOR_SKEW = 0;
 let OY_SIMULATOR_TIMINGS = null;
-let OY_SIMULATOR_SCALE = [0, true, false, null, null, null];//[scale_counter, applied, buffer, slow_max, slow_factor, timings]
+let OY_SIMULATOR_SCALE = [0, true, false, null, null];//[scale_counter, applied, buffer, slow_max, slow_factor]
 let OY_SIMULATOR_ELAPSED = [0, null];
 let OY_SIMULATOR_CALLBACK = {};
 let OY_FULL_INTRO = false;//default is false, can be set here or via nodejs argv first parameter
@@ -714,8 +714,12 @@ function oy_worker_spawn(oy_worker_type) {
     if (OY_WORKER_THREADS[oy_worker_type]!==null) return false;
 
     let oy_worker_define;
-    if (OY_NODE_STATE===true) oy_worker_define = "("+oy_worker_internal.toString()+")(\""+encodeURI(JSON.stringify([OY_SIMULATOR_MODE, OY_SIMULATOR_TIMINGS, OY_WORK_MATCH, OY_SELF_PRIVATE]))+"\")";
-    else oy_worker_define = URL.createObjectURL(new Blob(["("+oy_worker_internal.toString()+")(\""+encodeURI(JSON.stringify([OY_SIMULATOR_MODE, OY_SIMULATOR_TIMINGS, OY_WORK_MATCH, OY_SELF_PRIVATE]))+"\")"], {type: 'text/javascript'}));
+    if (OY_NODE_STATE===true) {
+        let oy_simulator_timings = null;
+        if (OY_SIMULATOR_MODE===true) oy_simulator_timings = [[Math.round(OY_SIMULATOR_TIMINGS[0][0]*OY_SLOW_MOTION), Math.round(OY_SIMULATOR_TIMINGS[0][1]*OY_SLOW_MOTION)], [Math.round(OY_SIMULATOR_TIMINGS[1][0]*OY_SLOW_MOTION), Math.round(OY_SIMULATOR_TIMINGS[1][1]*OY_SLOW_MOTION)]];
+        oy_worker_define = "("+oy_worker_internal.toString()+")(\""+encodeURI(JSON.stringify([OY_SIMULATOR_MODE, oy_simulator_timings, OY_WORK_MATCH, OY_SELF_PRIVATE]))+"\")";
+    }
+    else oy_worker_define = URL.createObjectURL(new Blob(["("+oy_worker_internal.toString()+")(\""+encodeURI(JSON.stringify([OY_SIMULATOR_MODE, null, OY_WORK_MATCH, OY_SELF_PRIVATE]))+"\")"], {type: 'text/javascript'}));
 
     OY_WORKER_THREADS[oy_worker_type] = new Array(oy_worker_cores());
     OY_WORKER_THREADS[oy_worker_type].fill(null);
@@ -2636,7 +2640,7 @@ function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
 function oy_data_soak(oy_node_id, oy_data_raw) {
    try {
        if (typeof(OY_NODES[oy_node_id])==="undefined") {
-           oy_log("[ERROR]["+chalk.bolder(oy_short(oy_node_id))+"]["+chalk.bolder("OY_ERROR_SOAK_NODE_EMPTY")+"]["+chalk.bolder(JSON.parse(oy_data_raw)[0])+"]", 2);
+           oy_log("[ERROR]["+chalk.bolder(oy_short(oy_node_id))+"]["+chalk.bolder("OY_ERROR_SOAK_NODE_EMPTY")+"]["+chalk.bolder(oy_data_raw.substr(0, 100))+"]", 2);
            return false;
        }
        if (oy_data_raw.length>OY_DATA_MAX) {
@@ -3239,22 +3243,24 @@ function oy_block_engine() {
         OY_BLOCK_TIME = oy_block_time_local;
         OY_BLOCK_NEXT = OY_BLOCK_TIME+OY_BLOCK_SECTORS[5][0];
         if (OY_SIMULATOR_MODE===true) {
-            OY_SLOW_MOTION *= 0.999;
             if (OY_SIMULATOR_SCALE[1]===false) {
                 OY_SLOW_MOTION *= OY_SIMULATOR_SCALE[4];
                 OY_SLOW_MOTION = Math.min(OY_SIMULATOR_SCALE[3], OY_SLOW_MOTION);
                 OY_SIMULATOR_SCALE[1] = true;
-                OY_SIMULATOR_TIMINGS = OY_SIMULATOR_SCALE[5];
-                OY_BLOCK_LOOP[0] = Math.ceil(OY_BLOCK_LOOP_RESTORE[0]*OY_SLOW_MOTION);
-                OY_BLOCK_LOOP[1] = Math.ceil(OY_BLOCK_LOOP_RESTORE[1]*OY_SLOW_MOTION);
-                for (let i in OY_WORKER_THREADS[0]) {
-                    OY_WORKER_THREADS[0][i].postMessage([-1, OY_SIMULATOR_TIMINGS]);
-                }
-                for (let i in OY_WORKER_THREADS[1]) {
-                    OY_WORKER_THREADS[1][i].postMessage([-1, OY_SIMULATOR_TIMINGS]);
-                }
             }
-            else OY_SIMULATOR_SCALE[2] = false;
+            else {
+                OY_SLOW_MOTION *= 0.999;
+                OY_SIMULATOR_SCALE[2] = false;
+            }
+            OY_BLOCK_LOOP[0] = Math.ceil(OY_BLOCK_LOOP_RESTORE[0]*OY_SLOW_MOTION);
+            OY_BLOCK_LOOP[1] = Math.ceil(OY_BLOCK_LOOP_RESTORE[1]*OY_SLOW_MOTION);
+            let oy_simulator_timings = [[Math.round(OY_SIMULATOR_TIMINGS[0][0]*OY_SLOW_MOTION), Math.round(OY_SIMULATOR_TIMINGS[0][1]*OY_SLOW_MOTION)], [Math.round(OY_SIMULATOR_TIMINGS[1][0]*OY_SLOW_MOTION), Math.round(OY_SIMULATOR_TIMINGS[1][1]*OY_SLOW_MOTION)]];
+            for (let i in OY_WORKER_THREADS[0]) {
+                OY_WORKER_THREADS[0][i].postMessage([-1, oy_simulator_timings]);
+            }
+            for (let i in OY_WORKER_THREADS[1]) {
+                OY_WORKER_THREADS[1][i].postMessage([-1, oy_simulator_timings]);
+            }
         }
         if (OY_BLOCK_TIME<OY_BLOCK_BOOT_MARK) {
             OY_BLOCK_BOOT = null;
@@ -4646,6 +4652,10 @@ function oy_init(oy_console) {
         oy_log("[ERROR]["+chalk.bolder("INTRO_BOOT_INVALID")+"]", 2);
         return false;
     }
+    if (OY_SIMULATOR_MODE===true&&(OY_NODE_STATE!==true||OY_SIMULATOR_TIMINGS===null)) {
+        oy_log("[ERROR]["+chalk.bolder("SIMULATOR_INVALID")+"]", 2);
+        return false;
+    }
 
     let oy_boot_msg = "[OYSTER]["+chalk.bolder(OY_MESH_DYNASTY)+"]["+chalk.bolder(OY_SELF_SHORT)+"]["+chalk.bolder(OY_FULL_INTRO)+"]";
     if (OY_PASSIVE_MODE===true) console.log("[PASSIVE]"+oy_boot_msg);
@@ -4773,7 +4783,6 @@ if (OY_NODE_STATE===true) {
                     OY_SIMULATOR_SCALE[2] = true;
                     OY_SIMULATOR_SCALE[3] = oy_sim_data[1];
                     OY_SIMULATOR_SCALE[4] = oy_sim_data[2];
-                    OY_SIMULATOR_SCALE[5] = oy_sim_data[3];
                 }
             }
         });
