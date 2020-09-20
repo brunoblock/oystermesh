@@ -3242,6 +3242,11 @@ function oy_block_engine() {
     if (oy_block_time_local!==OY_BLOCK_TIME&&(oy_block_time_local/10)%6===0) {
         OY_BLOCK_TIME = oy_block_time_local;
         OY_BLOCK_NEXT = OY_BLOCK_TIME+OY_BLOCK_SECTORS[5][0];
+        if (OY_BLOCK_TIME<OY_BLOCK_BOOT_MARK) {
+            OY_BLOCK_BOOT = null;
+            return null;
+        }
+        else OY_BLOCK_BOOT = OY_BLOCK_TIME-OY_BLOCK_BOOT_MARK<OY_BLOCK_BOOT_BUFFER;
         if (OY_SIMULATOR_MODE===true) {
             if (OY_SIMULATOR_SCALE[1]===false) {
                 OY_SLOW_MOTION *= OY_SIMULATOR_SCALE[4];
@@ -3262,11 +3267,6 @@ function oy_block_engine() {
                 OY_WORKER_THREADS[1][i].postMessage([-1, oy_simulator_timings]);
             }
         }
-        if (OY_BLOCK_TIME<OY_BLOCK_BOOT_MARK) {
-            OY_BLOCK_BOOT = null;
-            return null;
-        }
-        else OY_BLOCK_BOOT = OY_BLOCK_TIME-OY_BLOCK_BOOT_MARK<OY_BLOCK_BOOT_BUFFER;
         OY_BLOCK_ELAPSED = Math.floor(oy_time()-OY_BLOCK_BOOT_MARK)-OY_BLOCK_BOOT_BUFFER;
 
         if (OY_FULL_INTRO!==false&&OY_FULL_INTRO===OY_INTRO_BOOT) {
@@ -3285,7 +3285,7 @@ function oy_block_engine() {
         }
 
         if (OY_BLOCK_HASH!==null) {
-            let oy_status_log = "[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2).padStart(5, "0"))+"LA]["+chalk.bolder(String(OY_SYNC_LONG[0]).padStart(2, "0"))+"/"+chalk.bolder(String(Math.ceil(Math.sqrt(OY_BLOCK[0][2]))).padStart(2, "0"))+"LO]["+chalk.bolder(OY_BLOCK_STABILITY.toFixed(2).padStart(6, "0"))+"ST]["+chalk.bolder(OY_SLOW_MOTION.toFixed(2))+"SM]["+chalk.bolder(OY_FULL_INTRO.toString())+"]["+chalk.bolder(oy_peer_full().toString())+"]["+chalk.bolder(((((OY_BLOCK_ELAPSED/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((OY_BLOCK_ELAPSED/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(OY_BLOCK_ELAPSED)+"S]"+JSON.stringify(OY_WORK_SOLUTIONS).substr(0, 20);
+            let oy_status_log = "[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2).padStart(5, "0"))+"LA]["+chalk.bolder(String(OY_SYNC_LONG[0]).padStart(2, "0"))+"/"+chalk.bolder(String(Math.ceil(Math.sqrt(OY_BLOCK[0][2]))).padStart(2, "0"))+"LO]["+chalk.bolder(OY_BLOCK_STABILITY.toFixed(2).padStart(6, "0"))+"ST]["+chalk.bolder(OY_SLOW_MOTION.toFixed(2))+"SM]["+chalk.bolder(OY_FULL_INTRO.toString())+"]["+chalk.bolder(((((OY_BLOCK_ELAPSED/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((OY_BLOCK_ELAPSED/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(OY_BLOCK_ELAPSED)+"S]"+JSON.stringify(OY_WORK_SOLUTIONS).substr(0, 20);
             oy_chrono(function() {
                 oy_log(oy_status_log, 1);
             }, (OY_LIGHT_STATE===false)?1:250);
