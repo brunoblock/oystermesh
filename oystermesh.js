@@ -295,6 +295,7 @@ let OY_DIVE_TEAM = false;
 let OY_DIVE_STATE = false;
 let OY_VERBOSE_MODE = true;
 let OY_SLOW_MOTION = 1;//run the mesh in slow motion for simulation purposes
+let OY_SLOW_DEFLATE = null;
 let OY_SLOW_TRIGGER = null;
 let OY_SIMULATOR_MODE = false;
 let OY_SIMULATOR_SKEW = 0;
@@ -3254,7 +3255,7 @@ function oy_block_engine() {
                 OY_SIMULATOR_SCALE[1] = true;
             }
             else {
-                OY_SLOW_MOTION *= 0.999;
+                OY_SLOW_MOTION *= OY_SLOW_DEFLATE;
                 OY_SIMULATOR_SCALE[2] = false;
             }
             OY_BLOCK_LOOP[0] = Math.ceil(OY_BLOCK_LOOP_RESTORE[0]*OY_SLOW_MOTION);
@@ -4652,7 +4653,7 @@ function oy_init(oy_console) {
         oy_log("[ERROR]["+chalk.bolder("INTRO_BOOT_INVALID")+"]", 2);
         return false;
     }
-    if (OY_SIMULATOR_MODE===true&&(OY_NODE_STATE!==true||OY_SIMULATOR_TIMINGS===null)) {
+    if (OY_SIMULATOR_MODE===true&&(OY_NODE_STATE!==true||OY_SLOW_DEFLATE===null||OY_SLOW_TRIGGER===null||OY_SIMULATOR_TIMINGS===null)) {
         oy_log("[ERROR]["+chalk.bolder("SIMULATOR_INVALID")+"]", 2);
         return false;
     }
@@ -4663,7 +4664,7 @@ function oy_init(oy_console) {
 
     if (OY_SIMULATOR_MODE===true) {
         if (OY_VERBOSE_MODE===true) oy_log("[OYSTER][SIMULATOR][LOAD]"+chalk.bolder(JSON.stringify([OY_SIMULATOR_SKEW, OY_LIGHT_MODE, OY_FULL_INTRO])), 1);
-        parentPort.postMessage([6, OY_SELF_PUBLIC, OY_FULL_INTRO]);
+        parentPort.postMessage([6, OY_SELF_PUBLIC, OY_FULL_INTRO, (OY_LIGHT_MODE===false)?2:1]);
     }
 
     /*TODO nodejs DB integration
@@ -4760,6 +4761,7 @@ if (OY_NODE_STATE===true) {
                         if (oy_var==="OY_PASSIVE_MODE") OY_PASSIVE_MODE = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_VERBOSE_MODE") OY_VERBOSE_MODE = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_SLOW_MOTION") OY_SLOW_MOTION = oy_sim_data[1][oy_var];
+                        else if (oy_var==="OY_SLOW_DEFLATE") OY_SLOW_DEFLATE = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_SLOW_TRIGGER") OY_SLOW_TRIGGER = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_SIMULATOR_TIMINGS") OY_SIMULATOR_TIMINGS = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_BLOCK_BOOT_MARK") OY_BLOCK_BOOT_MARK = oy_sim_data[1][oy_var];
@@ -4771,6 +4773,11 @@ if (OY_NODE_STATE===true) {
                         else if (oy_var==="OY_SYNC_UNIQUE_HOP") OY_SYNC_UNIQUE_HOP = oy_sim_data[1][oy_var];
                     }
                     OY_SIMULATOR_ELAPSED = [0, OY_BLOCK_BOOT_MARK];
+                    process.on('uncaughtException', function(oy_error) {
+                        fs.appendFileSync("/dev/shm/oy_simulator/oy_fatal.log", "["+OY_SELF_SHORT+"][FATAL_ERROR]: "+oy_error+"\n");
+                        console.log("["+OY_SELF_SHORT+"][FATAL_ERROR]: "+oy_error);
+                        process.exit();
+                    });
                     oy_init();
                 }
                 else if (oy_sim_node==="OY_SIM_SLOW") {
