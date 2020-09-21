@@ -3832,12 +3832,12 @@ function oy_block_engine() {
                 }
             }
 
-            let oy_block_latency = Object.values(OY_BLOCK_LATENCY);
-            if (oy_block_latency.length===0) OY_BLOCK_STRICT = [];
+            if (oy_mesh_range<OY_BLOCK_RANGE_MIN) OY_BLOCK_STRICT = [];
             else {
                 OY_BLOCK_STRICT = new Array(Math.max(2, Math.ceil(oy_mesh_range*OY_MESH_SECURITY)));
                 OY_BLOCK_STRICT.fill(null);
 
+                let oy_block_latency = Object.values(OY_BLOCK_LATENCY);
                 let oy_edge_latency = OY_SYNC_LONG[0]*oy_calc_median(oy_block_latency);
                 OY_BLOCK_STRICT[OY_BLOCK_STRICT.length-1] = OY_BLOCK_SECTORS[2][0]-oy_edge_latency;
                 let oy_hop_latency = OY_BLOCK_STRICT[OY_BLOCK_STRICT.length-1]/OY_BLOCK_STRICT.length;
