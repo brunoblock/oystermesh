@@ -335,6 +335,7 @@ let OY_PEERS = {};
 let OY_PEERS_PRE = {};//tracks nodes that are almost peers, will become peers once PEER_AFFIRM is received from other node
 let OY_PEER_EXCHANGE = {};
 let OY_PEER_SAFE = {};
+let OY_PEER_STRIKE = {};
 let OY_PEER_OFFER = [null, null];
 const OY_PEER_BOOT_RESTORE = [OY_PEER_MAX, OY_PEER_INFLATE, OY_PEER_SELF, OY_NODE_MAX];
 let OY_NODES = {};//P2P connection handling for individual nodes
@@ -688,7 +689,7 @@ function oy_worker_manager(oy_instance, oy_data) {
 
             if (typeof(OY_BLOCK_LATENCY[oy_data_payload[0][0]])==="undefined"&&((typeof(OY_BLOCK[1][oy_data_payload[0][0]])!=="undefined"&&OY_BLOCK[1][oy_data_payload[0][0]][1]===1)||OY_BLOCK_BOOT===true)) OY_BLOCK_LATENCY[oy_data_payload[0][0]] = (oy_time_offset-OY_SYNC_BROADCAST_BUFFER[0])/oy_data_payload[0].length;
 
-            if (oy_data_payload[0].length>1&&typeof(OY_PEERS[oy_data_payload[0][0]])!=="undefined"&&typeof(OY_PEER_SAFE[oy_data_payload[0][0]])==="undefined") oy_node_deny(oy_data_payload[0][0], "OY_DENY_SYNC_ORDER");
+            if (oy_data_payload[0].length>1&&typeof(OY_PEERS[oy_data_payload[0][0]])!=="undefined"&&typeof(OY_PEER_SAFE[oy_data_payload[0][0]])==="undefined") OY_PEER_STRIKE[oy_data_payload[0][0]] = true;
 
             if (typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined"||OY_BLOCK_BOOT===true) oy_data_route("OY_LOGIC_SYNC", "OY_BLOCK_SYNC", oy_data_payload);
 
@@ -3220,6 +3221,7 @@ function oy_block_reset(oy_reset_flag) {
     OY_SYNC_MAP = [{}, {}];
     OY_PEER_EXCHANGE = {};
     OY_PEER_SAFE = {};
+    OY_PEER_STRIKE = {};
     OY_PEER_OFFER = [null, null, null];
     OY_OFFER_COUNTER = 0;
     OY_OFFER_COLLECT = {};
@@ -3308,6 +3310,7 @@ function oy_block_engine() {
         OY_OFFER_PICKUP = [];
         OY_OFFER_BROKER = {};
         OY_PEER_EXCHANGE = {};
+        OY_PEER_STRIKE = {};
         OY_PEER_OFFER = [null, null, null];
         OY_LIGHT_PROCESS = false;
         OY_BASE_BUILD = [];
@@ -3775,6 +3778,10 @@ function oy_block_engine() {
                     fs.appendFileSync("/dev/shm/oy_debug.log", "["+OY_SELF_SHORT+"] PEER SAFE: "+Object.keys(OY_PEER_SAFE).length+" - "+Object.keys(OY_PEERS).length+" - "+((Object.keys(OY_PEER_SAFE).length/Object.keys(OY_PEERS).length)*100).toFixed(2)+"\n");
                 }
 
+                for (let oy_key_public in OY_PEER_STRIKE) {
+                    if (typeof(OY_PEER_SAFE[oy_key_public])==="undefined") oy_node_deny(oy_key_public, "OY_DENY_FULL_STRIKE");
+                }
+
                 if (oy_dive_state_prev===true) {
                     for (let oy_peer_select in OY_PEERS) {
                         if (OY_PEERS[oy_peer_select][1]===2&&OY_PEERS[oy_peer_select][0]<OY_BLOCK_TIME&&typeof(OY_BLOCK[1][oy_peer_select])==="undefined") oy_node_deny(oy_peer_select, "OY_DENY_FULL_DIVE");
@@ -3891,6 +3898,7 @@ function oy_block_engine() {
                     OY_SYNC_LONG = [0, 0];
                     OY_SYNC_MAP = [{}, {}];
                     OY_PEER_SAFE = {};
+                    OY_PEER_STRIKE = {};
 
                     oy_event_dispatch("oy_state_light");
                     oy_worker_halt(1);
