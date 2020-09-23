@@ -31,7 +31,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 let OY_BLOCK_RANGE_MIN = 10;//100, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOT_BUFFER = 300;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
+const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[15, 15000], [30, 30000], [55, 55000], [57, 57000], [59, 59000], [60, 60000]];//timing definitions for the meshblock
 let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
@@ -866,8 +866,11 @@ function oy_event_create(oy_event_name, oy_event_callback) {
 
 function oy_event_dispatch(oy_event_name) {
     if (typeof(OY_EVENTS[oy_event_name])==="undefined") return false;
+
     if (OY_NODE_STATE===true) OY_EVENTS[oy_event_name].emit(oy_event_name);
     else document.dispatchEvent(OY_EVENTS[oy_event_name]);
+
+    if (OY_VERBOSE_MODE===true) oy_log("[EVENT]["+chalk.bolder(oy_event_name.toUpperCase())+"]")
 }
 
 function oy_event_hook(oy_event_name, oy_event_callback) {
@@ -3934,7 +3937,7 @@ function oy_block_verify(oy_block_hash, oy_dive_ledger) {
 }
 
 function oy_block_full(oy_full_direct) {
-    if (OY_BLOCK_PROCESS===true||OY_LIGHT_STATE===true||OY_BLOCK_BOOT===true) return false;
+    if (OY_BLOCK_PROCESS===true||OY_LIGHT_STATE===true||(oy_full_direct===false&&OY_BLOCK_BOOT===true)) return false;
     OY_BLOCK_PROCESS = true;
 
     if (OY_BLOCK_HASH===null) {
@@ -4030,14 +4033,20 @@ function oy_block_full(oy_full_direct) {
     if (!oy_block_range(Object.keys(OY_BLOCK[1]).length)) return false;//block_range will invoke block_reset if necessary
     if (!oy_block_process(oy_command_execute, true, (oy_full_direct===true)?0:1)) return false;//block_process will invoke block_reset if necessary
 
-    OY_BLOCK_HASH_PRE = oy_hash_gen(JSON.stringify(OY_BLOCK_PRE));
-    OY_BLOCK_METAHASH_PRE = oy_hash_gen(OY_BLOCK_HASH);
+    let oy_block_hash = oy_hash_gen(JSON.stringify(OY_BLOCK_PRE));
+    let oy_block_metahash = oy_hash_gen(OY_BLOCK_HASH);
 
-    oy_block_work(OY_BLOCK_HASH_PRE, OY_BLOCK_METAHASH_PRE);
+    oy_block_work(oy_block_hash, oy_block_metahash);
 
-    oy_log("[MESHBLOCK][PRE]["+chalk.bolder(OY_BLOCK_HASH_PRE)+"]", 1);
+    if (oy_full_direct===false) {
+        OY_BLOCK_HASH_PRE = oy_block_hash;
+        OY_BLOCK_METAHASH_PRE = oy_block_metahash;
+    }
+
+    if (oy_full_direct===false) oy_log("[MESHBLOCK][PRE]["+chalk.bolder(OY_BLOCK_HASH_PRE)+"]", 1);
 
     OY_BLOCK_PROCESS = false;
+    return true;
 }
 
 function oy_block_light(oy_light_lag) {
@@ -4121,7 +4130,6 @@ function oy_block_light(oy_light_lag) {
     OY_BLOCK_WEIGHT = new Blob([OY_BLOCK_FLAT]).size;
 
     oy_log("[MESHBLOCK][LIGHT]["+chalk.bolder(OY_BLOCK_HASH)+"]", 1);
-    oy_log_debug("LIGHT MESHBLOCK HASH "+OY_BLOCK_HASH+"\n"+OY_BLOCK_FLAT);
 
     if (typeof(OY_BLOCK_MAP)==="function") OY_BLOCK_MAP(0);
     oy_event_dispatch("oy_block_trigger");
@@ -4141,6 +4149,7 @@ function oy_block_light(oy_light_lag) {
     }
 
     oy_block_finish();
+    return true;
 }
 
 function oy_block_range(oy_mesh_range_new) {
