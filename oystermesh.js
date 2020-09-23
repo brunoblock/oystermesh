@@ -288,7 +288,7 @@ const OY_BLOCK_TRANSACTS = {
 let OY_LIGHT_MODE = false;//seek to stay permanently connected to the mesh as a light node/latch, manipulable by the user
 let OY_LIGHT_LEAN = false;
 let OY_LIGHT_STATE = true;//immediate status of being a light node/latch, not manipulable by the user
-let OY_DIVE_GRADE = false;
+let OY_DIVE_GRADE = true;
 let OY_DIVE_PAYOUT = false;
 let OY_DIVE_TEAM = false;
 let OY_DIVE_STATE = false;
@@ -359,6 +359,8 @@ let OY_BLOCK_STRICT = [];
 let OY_BLOCK_LATENCY = {};
 let OY_BLOCK_HASH = null;//hash of the most current block
 let OY_BLOCK_METAHASH = null;
+let OY_BLOCK_HASH_PRE = null;
+let OY_BLOCK_METAHASH_PRE = null;
 let OY_BLOCK_FLAT = null;
 let OY_BLOCK_COMPRESS = null;
 let OY_BLOCK_DIFF = false;
@@ -383,6 +385,7 @@ let OY_BLOCK_RECORD_KEEP = [];
 let OY_BLOCK_FINISH = false;
 let OY_BLOCK_JUMP_MAP = {};
 let OY_BLOCK_PRE = null;
+let OY_BLOCK_WORKHASH = null;
 let OY_BLOCK_PROCESS = false;
 const OY_BLOCK_LOOP_RESTORE = OY_BLOCK_LOOP.slice();
 let OY_JUMP_ASSIGN = [null, null];//handle jump sessions
@@ -638,13 +641,14 @@ function oy_worker_internal(oy_static_data) {
 function oy_worker_manager(oy_instance, oy_data) {
     let [oy_work_type, oy_work_data] = oy_data;
 
-    let oy_time_local = oy_time();
-    let oy_time_offset = oy_time_local-OY_BLOCK_TIME;
     if (oy_work_type===0) {
         let [oy_work_self, oy_work_nonce, oy_work_solution, oy_block_metahash] = oy_work_data;
 
+        let oy_time_offset = oy_time()-OY_BLOCK_TIME;
         if (oy_time_offset<OY_BLOCK_SECTORS[0][0]) return false;
         if (oy_work_self===true) {
+            if (OY_BLOCK_WORKHASH!==oy_block_metahash) return false;
+
             //oy_log("SOLUTION: "+oy_work_solution+" SOLUTIONS: "+JSON.stringify(OY_WORK_SOLUTIONS)+" BITS: "+JSON.stringify(OY_WORK_BITS)+" GRADES: "+JSON.stringify(OY_WORK_GRADES), 2);
             if (oy_work_nonce!==-1&&(OY_WORK_SOLUTIONS[oy_work_nonce]===null||oy_calc_grade(oy_work_solution, oy_block_metahash)>OY_WORK_GRADES[oy_work_nonce])) {
                 OY_WORK_SOLUTIONS[oy_work_nonce] = oy_work_solution;
@@ -682,6 +686,7 @@ function oy_worker_manager(oy_instance, oy_data) {
             OY_BLOCK_SYNC_PASS[OY_BLOCK_TIME][oy_data_payload[0][0]] = [JSON.parse(oy_data_payload[5]), JSON.parse(oy_data_payload[6]), 0];
             OY_BLOCK_WORK_GRADE[oy_data_payload[0][0]] = oy_work_grade;
 
+            let oy_time_offset = oy_time()-OY_BLOCK_TIME;
             if (typeof(OY_SYNC_TALLY[oy_data_payload[0][0]])==="undefined") OY_SYNC_TALLY[oy_data_payload[0][0]] = oy_data_payload[0][oy_data_payload[0].length-1];
             if (oy_time_offset>OY_SYNC_LAST[1]) OY_SYNC_LAST[1] = oy_time_offset;
             if (oy_data_payload[0].length>OY_SYNC_LONG[1]) OY_SYNC_LONG[1] = oy_data_payload[0].length;
@@ -693,9 +698,9 @@ function oy_worker_manager(oy_instance, oy_data) {
 
             if (typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined"||OY_BLOCK_BOOT===true) oy_data_route("OY_LOGIC_SYNC", "OY_BLOCK_SYNC", oy_data_payload);
 
-            if (OY_SYNC_LAST[0]>0&&oy_time()-OY_BLOCK_TIME>OY_SYNC_LAST[0]) {
+            if (OY_SYNC_LAST[0]>0&&oy_time_offset>OY_SYNC_LAST[0]) {
                 oy_chrono(function() {
-                    oy_block_full(false);
+                    if (OY_SYNC_LAST[1]===oy_time_offset) oy_block_full(false);
                 }, OY_SYNC_PREEMPT_BUFFER[1]);
             }
 
@@ -3215,6 +3220,9 @@ function oy_block_reset(oy_reset_flag) {
     OY_BLOCK_STRICT = [];
     OY_BLOCK = oy_clone_object(OY_BLOCK_TEMPLATE);
     OY_BLOCK_PRE = null;
+    OY_BLOCK_WORKHASH = null;
+    OY_BLOCK_HASH_PRE = null;
+    OY_BLOCK_METAHASH_PRE = null;
     OY_BLOCK_PROCESS = false;
     OY_DIFF_TRACK = [{}, []];
     OY_BASE_BUILD = [];
@@ -3310,6 +3318,9 @@ function oy_block_engine() {
         OY_BLOCK_LATENCY = {};
         OY_BLOCK_RECORD = null;
         OY_BLOCK_FINISH = false;
+        OY_BLOCK_WORKHASH = null;
+        OY_BLOCK_HASH_PRE = null;
+        OY_BLOCK_METAHASH_PRE = null;
         OY_SYNC_TALLY = {};
         OY_SYNC_UNIQUE = {};
         OY_OFFER_COUNTER = 0;
@@ -3468,7 +3479,7 @@ function oy_block_engine() {
 
         if (OY_FULL_INTRO!==false&&OY_BLOCK_RECORD_KEEP.length>1) {
             OY_DIVE_GRADE = true;
-            OY_INTRO_MARKER = Math.ceil(OY_BLOCK_SECTORS[2][1]+(Math.max(...OY_BLOCK_RECORD_KEEP)*1000*OY_BLOCK_RECORD_INTRO_BUFFER));
+            OY_INTRO_MARKER = Math.ceil((OY_SYNC_LAST[0]>0&&OY_SYNC_LAST[0]<OY_BLOCK_SECTORS[0][0]+OY_SYNC_PREEMPT_BUFFER[0])?OY_BLOCK_SECTORS[0][1]+OY_SYNC_PREEMPT_BUFFER[1]:OY_BLOCK_SECTORS[2][1]+(Math.max(...OY_BLOCK_RECORD_KEEP)*1000*OY_BLOCK_RECORD_INTRO_BUFFER));
         }
         else OY_INTRO_MARKER = null;
 
@@ -3720,14 +3731,20 @@ function oy_block_engine() {
             OY_SYNC_TALLY = {};
             OY_SYNC_UNIQUE = {};
 
-            OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK);
-            OY_BLOCK_HASH = oy_hash_gen(OY_BLOCK_FLAT);
-            OY_BLOCK_METAHASH = oy_hash_gen(OY_BLOCK_HASH);
+            if (OY_BLOCK_HASH_PRE===null) {
+                OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK);
+                OY_BLOCK_HASH = oy_hash_gen(OY_BLOCK_FLAT);
+                OY_BLOCK_METAHASH = oy_hash_gen(OY_BLOCK_HASH);
+            }
+            else {
+                OY_BLOCK = oy_clone_object(OY_BLOCK_PRE);
+                OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK);
+                OY_BLOCK_HASH = OY_BLOCK_HASH_PRE;
+                OY_BLOCK_METAHASH = OY_BLOCK_METAHASH_PRE;
+            }
             OY_BLOCK_WEIGHT = new Blob([OY_BLOCK_FLAT]).size;
 
             oy_log("[MESHBLOCK][FULL]["+chalk.bolder(OY_BLOCK_HASH)+"]", 1);
-            //oy_log_debug("FULL MESHBLOCK HASH "+OY_BLOCK_HASH);
-            //oy_log_debug("HASH: "+OY_BLOCK_HASH+"\nBLOCK: "+OY_BLOCK_FLAT);
 
             if (typeof(OY_BLOCK_MAP)==="function") OY_BLOCK_MAP(0);
             oy_event_dispatch("oy_block_trigger");
@@ -4014,6 +4031,13 @@ function oy_block_full(oy_full_direct) {
 
     if (!oy_block_range(Object.keys(OY_BLOCK[1]).length)) return false;//block_range will invoke block_reset if necessary
     if (!oy_block_process(oy_command_execute, true, 0)) return false;//block_process will invoke block_reset if necessary
+
+    OY_BLOCK_HASH_PRE = oy_hash_gen(JSON.stringify(OY_BLOCK_PRE));
+    OY_BLOCK_METAHASH_PRE = oy_hash_gen(OY_BLOCK_HASH);
+
+    oy_block_work(OY_BLOCK_HASH_PRE, OY_BLOCK_METAHASH_PRE);
+
+    oy_log("[MESHBLOCK][PRE]["+chalk.bolder(OY_BLOCK_HASH_PRE)+"]", 1);
 
     OY_BLOCK_PROCESS = false;
 }
@@ -4536,19 +4560,24 @@ function oy_block_process(oy_command_execute, oy_full_flag, oy_process_type) {
     return true;
 }
 
-function oy_block_finish() {
-    if (OY_LIGHT_STATE===false) {
-        OY_WORK_SOLUTIONS = new Array(OY_BLOCK[0][3]);
-        OY_WORK_GRADES = new Array(OY_BLOCK[0][3]);
-        OY_WORK_BITS = new Array(OY_BLOCK[0][3]);
-        OY_WORK_SOLUTIONS.fill(null);
-        OY_WORK_GRADES.fill(null);
-        OY_WORK_BITS.fill(null);
-        for (let i in OY_WORK_BITS) {
-            OY_WORK_BITS[i] = oy_hash_gen(OY_BLOCK_NEXT+OY_SELF_PUBLIC+OY_BLOCK_HASH+i).substr(0, OY_WORK_MATCH);
-        }
-        oy_worker_process(0, false, [true, -1, null, OY_BLOCK_METAHASH, OY_SELF_SHORT])
+function oy_block_work(oy_block_hash, oy_block_metahash) {
+    if (OY_BLOCK_WORKHASH!==null&&OY_BLOCK_WORKHASH===oy_block_metahash) return false;
+
+    OY_BLOCK_WORKHASH = oy_block_metahash;
+    OY_WORK_SOLUTIONS = new Array(OY_BLOCK[0][3]);
+    OY_WORK_GRADES = new Array(OY_BLOCK[0][3]);
+    OY_WORK_BITS = new Array(OY_BLOCK[0][3]);
+    OY_WORK_SOLUTIONS.fill(null);
+    OY_WORK_GRADES.fill(null);
+    OY_WORK_BITS.fill(null);
+    for (let i in OY_WORK_BITS) {
+        OY_WORK_BITS[i] = oy_hash_gen(OY_BLOCK_NEXT+OY_SELF_PUBLIC+oy_block_hash+i).substr(0, OY_WORK_MATCH);
     }
+    oy_worker_process(0, false, [true, -1, null, oy_block_metahash, OY_SELF_SHORT]);
+}
+
+function oy_block_finish() {
+    if (OY_LIGHT_STATE===false) oy_block_work(OY_BLOCK_HASH, OY_BLOCK_METAHASH);
     else {
         OY_WORK_SOLUTIONS = [null];
         OY_WORK_BITS = [null];
