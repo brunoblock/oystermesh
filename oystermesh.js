@@ -1642,9 +1642,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             if (OY_PEERS[oy_peer_select][1]===1&&oy_peer_select!==oy_peer_id) oy_data_beam(oy_peer_select, "OY_PEER_DIFF", oy_data_payload);
         }
 
-        //if (OY_LIGHT_MODE===true&&OY_BOOST_BUILD.length<OY_BOOST_KEEP&&OY_BOOST_BUILD.indexOf(oy_data_payload[0])===-1&&typeof(OY_PEERS[oy_data_payload[0]])==="undefined"&&typeof(OY_NODES[oy_data_payload[0]])==="undefined") OY_BOOST_BUILD.push(oy_data_payload[0]);
-
-        if (oy_state_current(true)===1&&oy_data_payload[2]===OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]&&OY_BLOCK[0][1]===OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]&&oy_dive_count>=OY_BLOCK[0][2]*OY_LIGHT_COMMIT) oy_block_light();
+        if (oy_state_current(true)===1&&oy_data_payload[2]===OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]&&OY_BLOCK[0][1]===OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]&&oy_dive_count>=OY_BLOCK[0][2]*OY_LIGHT_COMMIT) oy_block_light(true);
     }
     else if (oy_data_flag==="OY_PEER_LIGHT") {//peer as a blank or full node is converting into a light node
         if (OY_PEERS[oy_peer_id][1]===1&&OY_BLOCK_TIME>OY_PEERS[oy_peer_id][0]) {
@@ -2108,7 +2106,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
                     oy_jump_map[oy_clone_object(OY_BLOCK_TIME_JUMP)] = [oy_clone_object(OY_BLOCK_HASH_JUMP), oy_clone_object(OY_BLOCK_JUMP[2][1]), LZString.compressToUTF16(OY_BLOCK_FLAT_JUMP)];//TODO clone?
                 }
 
-                if (!oy_block_process(oy_command_execute, true, 2)) {
+                if (!oy_block_process(oy_command_execute, true, 3)) {
                     oy_node_deny(oy_node_id, "OY_DENY_JUMP_FAIL_I");
                     return false;
                 }
@@ -3665,7 +3663,7 @@ function oy_block_engine() {
                 return false;
             }
 
-            if (OY_LIGHT_STATE===true&&OY_BLOCK_DIFF===false) oy_block_light();
+            if (OY_LIGHT_STATE===true&&OY_BLOCK_DIFF===false) oy_block_light(true);
 
             OY_BLOCK_DIFF = false;
             if (OY_BLOCK_UPTIME===null) OY_BLOCK_UPTIME = oy_time();
@@ -3847,7 +3845,7 @@ function oy_block_engine() {
 
         oy_chrono(function() {
             oy_block_challenge(0);
-            if (OY_LIGHT_STATE===true&&oy_state_current(true)===2&&Object.keys(OY_LIGHT_BUILD).length>0&&oy_peer_full()) oy_block_light();
+            if (OY_LIGHT_STATE===true&&oy_state_current(true)===2&&Object.keys(OY_LIGHT_BUILD).length>0&&oy_peer_full()) oy_block_light(false);
         }, OY_BLOCK_SECTORS[3][1]);
 
         oy_chrono(function() {
@@ -3943,7 +3941,7 @@ function oy_block_full(oy_full_direct) {
         oy_block_reset("OY_RESET_FULL_HASH");
         return false;
     }
-    if (OY_BLOCK[0][1]!==null&&OY_BLOCK[0][1]!==OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]) {
+    if (OY_BLOCK[0][1]!==OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]) {
         oy_log("FULL_MISSTEP: "+JSON.stringify([OY_BLOCK[0][1], OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]]));
         oy_block_reset("OY_RESET_FULL_MISSTEP");
         return false;
@@ -4030,7 +4028,7 @@ function oy_block_full(oy_full_direct) {
     });
 
     if (!oy_block_range(Object.keys(OY_BLOCK[1]).length)) return false;//block_range will invoke block_reset if necessary
-    if (!oy_block_process(oy_command_execute, true, 0)) return false;//block_process will invoke block_reset if necessary
+    if (!oy_block_process(oy_command_execute, true, (oy_full_direct===true)?0:1)) return false;//block_process will invoke block_reset if necessary
 
     OY_BLOCK_HASH_PRE = oy_hash_gen(JSON.stringify(OY_BLOCK_PRE));
     OY_BLOCK_METAHASH_PRE = oy_hash_gen(OY_BLOCK_HASH);
@@ -4042,7 +4040,7 @@ function oy_block_full(oy_full_direct) {
     OY_BLOCK_PROCESS = false;
 }
 
-function oy_block_light() {
+function oy_block_light(oy_light_lag) {
     if (OY_LIGHT_STATE===false) return false;
 
     if (OY_BLOCK_HASH===null) {
@@ -4053,8 +4051,8 @@ function oy_block_light() {
         oy_block_reset("OY_RESET_LIGHT_NULL_A");
         return false;
     }
-    if (OY_BLOCK[0][1]!==null&&OY_BLOCK[0][1]!==OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]) {
-        oy_log("LIGHT_MISSTEP: "+JSON.stringify([OY_BLOCK[0][1], OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]]));
+    if ((oy_light_lag===true&&OY_BLOCK[0][1]!==OY_BLOCK_TIME-(OY_BLOCK_SECTORS[5][0]*2))||(oy_light_lag===false&&OY_BLOCK[0][1]!==OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0])) {
+        oy_log("LIGHT_MISSTEP: "+JSON.stringify([OY_BLOCK[0][1], OY_BLOCK_TIME, oy_light_lag]));
         oy_block_reset("OY_RESET_LIGHT_MISSTEP");
         return false;
     }
@@ -4115,7 +4113,7 @@ function oy_block_light() {
 
     OY_BLOCK[1] = oy_diff_track[0];
 
-    if (!oy_block_process(oy_diff_track[1], false, 0)) return false;//block_process will invoke block_reset if necessary
+    if (!oy_block_process(oy_diff_track[1], false, (oy_light_lag===true)?2:0)) return false;//block_process will invoke block_reset if necessary
 
     OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK);
     OY_BLOCK_HASH = oy_hash_gen(OY_BLOCK_FLAT);
