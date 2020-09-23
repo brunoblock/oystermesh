@@ -681,7 +681,7 @@ function oy_worker_manager(oy_instance, oy_data) {
     else if (oy_work_type===1) {
         let [oy_data_payload, oy_sync_command, oy_work_grade] = oy_work_data;
 
-        if (oy_state_current()===2&&typeof(OY_BLOCK_SYNC[oy_data_payload[0][0]])!=="undefined"&&OY_BLOCK_SYNC[oy_data_payload[0][0]]!==false&&OY_BLOCK_SYNC[oy_data_payload[0][0]][1]===false&&typeof(OY_BLOCK_SYNC_PASS[OY_BLOCK_TIME])!=="undefined"&&oy_data_payload[3]===OY_BLOCK_TIME&&oy_time_offset<OY_BLOCK_SECTORS[2][0]&&oy_block_command_scan(oy_sync_command, false)) {
+        if (oy_state_current()===2&&typeof(OY_BLOCK_SYNC[oy_data_payload[0][0]])!=="undefined"&&OY_BLOCK_SYNC[oy_data_payload[0][0]]!==false&&OY_BLOCK_SYNC[oy_data_payload[0][0]][1]===false&&typeof(OY_BLOCK_SYNC_PASS[OY_BLOCK_TIME])!=="undefined"&&oy_data_payload[3]===OY_BLOCK_TIME&&oy_time()-OY_BLOCK_TIME<OY_BLOCK_SECTORS[2][0]&&oy_block_command_scan(oy_sync_command, false)) {
             OY_BLOCK_SYNC[oy_data_payload[0][0]] = [oy_data_payload[2], oy_sync_command];
             OY_BLOCK_SYNC_PASS[OY_BLOCK_TIME][oy_data_payload[0][0]] = [JSON.parse(oy_data_payload[5]), JSON.parse(oy_data_payload[6]), 0];
             OY_BLOCK_WORK_GRADE[oy_data_payload[0][0]] = oy_work_grade;
