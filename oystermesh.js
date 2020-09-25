@@ -31,7 +31,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 let OY_BLOCK_RANGE_MIN = 10;//100, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOT_BUFFER = 3600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
+const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[15, 15000], [30, 30000], [55, 55000], [57, 57000], [59, 59000], [60, 60000]];//timing definitions for the meshblock
 let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
@@ -2839,7 +2839,7 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
 
             let oy_work_queue = null;
             if (typeof(OY_INTRO_PASS[oy_soak_node])==="undefined") {
-                if (OY_BLOCK_FINISH===false||OY_WORK_BITS.length<=1) return JSON.stringify(["OY_INTRO_UNREADY", 2]);
+                if ((OY_BLOCK_HASH_PRE===null&&OY_BLOCK_FINISH===false)||OY_WORK_BITS.length<=1) return JSON.stringify(["OY_INTRO_UNREADY", 2]);
                 if (oy_data_payload===true&&(oy_time_offset<(OY_INTRO_MARKER/1000)-OY_MESH_BUFFER[0]||oy_time_offset>(OY_INTRO_MARKER/1000)+OY_INTRO_TRIP[0]+OY_MESH_BUFFER[0])) {
                     oy_log("LEMON: "+JSON.stringify([oy_time_offset, (OY_INTRO_MARKER/1000)-OY_MESH_BUFFER[0], (OY_INTRO_MARKER/1000)+OY_INTRO_TRIP[0]+OY_MESH_BUFFER[0]]));
                     return false;
@@ -3477,7 +3477,7 @@ function oy_block_engine() {
             }
         }
 
-        if (OY_FULL_INTRO!==false&&OY_BLOCK_RECORD_KEEP.length>1) OY_INTRO_MARKER = Math.ceil((OY_SYNC_LAST[0]>0&&OY_SYNC_LAST[0]<OY_BLOCK_SECTORS[0][0]+OY_INTRO_ZONE[0]+OY_SYNC_PREEMPT_BUFFER[0])?OY_BLOCK_SECTORS[0][1]+OY_INTRO_ZONE[1]+OY_SYNC_PREEMPT_BUFFER[1]:OY_BLOCK_SECTORS[2][1]+(Math.max(...OY_BLOCK_RECORD_KEEP)*1000*OY_BLOCK_RECORD_INTRO_BUFFER));
+        if (OY_FULL_INTRO!==false&&OY_BLOCK_RECORD_KEEP.length>1) OY_INTRO_MARKER = Math.ceil(((OY_SYNC_LAST[0]>0&&OY_SYNC_LAST[0]<OY_BLOCK_SECTORS[1][0]+OY_INTRO_ZONE[0]&&OY_BLOCK_BOOT===false)?OY_BLOCK_SECTORS[1][1]+OY_INTRO_ZONE[1]:OY_BLOCK_SECTORS[2][1])+(Math.max(...OY_BLOCK_RECORD_KEEP)*1000*OY_BLOCK_RECORD_INTRO_BUFFER));
         else OY_INTRO_MARKER = null;
 
         oy_chrono(function() {
@@ -3488,12 +3488,12 @@ function oy_block_engine() {
                     oy_chrono(function() {
                         oy_intro_beam(oy_intro_select, "OY_INTRO_PRE", (OY_FULL_INTRO!==false&&typeof(OY_INTRO_DEFAULT[OY_FULL_INTRO])!=="undefined")?[OY_FULL_INTRO, oy_key_sign(OY_SELF_PRIVATE, OY_BLOCK_TIME.toString())]:null, function(oy_data_flag, oy_data_payload) {
                             if (oy_data_flag==="OY_INTRO_UNREADY") return false;
-                            if (oy_data_flag!=="OY_INTRO_TIME"||!Number.isInteger(oy_data_payload)||oy_data_payload<OY_BLOCK_SECTORS[0][1]+OY_INTRO_ZONE[1]||oy_data_payload>OY_BLOCK_SECTORS[4][1]) {
+                            if (oy_data_flag!=="OY_INTRO_TIME"||!Number.isInteger(oy_data_payload)||oy_data_payload<OY_BLOCK_SECTORS[1][1]+OY_INTRO_ZONE[1]||oy_data_payload>OY_BLOCK_SECTORS[4][1]) {
                                 oy_intro_punish(oy_intro_select);
                                 return false;
                             }
-                            let oy_time_offset = (oy_time()-OY_BLOCK_TIME)*1000;
-                            if (OY_INTRO_SELECT!==null||oy_data_payload<=oy_time_offset) return false;
+                            let oy_time_offset_mill = (oy_time()-OY_BLOCK_TIME)*1000;
+                            if (OY_INTRO_SELECT!==null||oy_data_payload<=oy_time_offset_mill) return false;
                             OY_INTRO_SELECT = oy_intro_select;
                             oy_chrono(function() {
                                 oy_intro_beam(oy_intro_select, "OY_INTRO_GET", true, function(oy_data_flag, oy_data_payload) {
@@ -3510,7 +3510,7 @@ function oy_block_engine() {
                                         }
                                     }
                                 });
-                            }, (OY_FULL_INTRO!==false&&typeof(OY_INTRO_DEFAULT[OY_FULL_INTRO])!=="undefined")?1:(oy_data_payload-oy_time_offset));
+                            }, (OY_FULL_INTRO!==false&&typeof(OY_INTRO_DEFAULT[OY_FULL_INTRO])!=="undefined")?((OY_BLOCK_SECTORS[1][1]+OY_BLOCK_BUFFER_CLEAR[1])-oy_time_offset_mill):(oy_data_payload-oy_time_offset_mill));
                         });
                     }, (OY_FULL_INTRO!==false&&typeof(OY_INTRO_DEFAULT[OY_FULL_INTRO])!=="undefined")?1:((OY_BLOCK_SECTORS[0][1]+OY_INTRO_ZONE[1])-((oy_time()-OY_BLOCK_TIME)*1000)));
                 }
