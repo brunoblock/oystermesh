@@ -53,11 +53,12 @@ let OY_PEER_DEFLATE = [1, 1];
 let OY_PEER_INTRO = 3;
 let OY_PEER_SELF = 5;
 let OY_PEER_BOOT_CORE = 20;//max peers of boot node during boot phase
-let OY_PEER_BOOT_SCALE = 2;//maximum hops away from boot node allowed during boot phase
+let OY_PEER_BOOT_SCALE = 3;//maximum hops away from boot node allowed during boot phase
 let OY_NODE_MAX = 40;
 const OY_INTRO_INITIATE = 3;
 const OY_INTRO_PRE_MAX = 800;
 const OY_INTRO_TRIP = [0.8, 800];
+const OY_INTRO_ZONE = [5, 5000];
 const OY_WORK_MATCH = 4;//lower is more bandwidth/memory bound, higher is more CPU bound
 const OY_WORK_MAX = 10000;//10000
 const OY_WORK_MIN = 3;
@@ -2828,7 +2829,7 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
         }
 
         if (oy_data_flag==="OY_INTRO_PRE") {
-            if ((typeof(OY_INTRO_PASS[oy_soak_node])==="undefined")&&(oy_time_offset<OY_BLOCK_SECTORS[1][0]-OY_MESH_BUFFER[0]||oy_time_offset>OY_BLOCK_SECTORS[1][0]+OY_INTRO_TRIP[0]+OY_MESH_BUFFER[0]||(typeof(OY_INTRO_PRE[oy_soak_node])==="undefined"&&Object.keys(OY_INTRO_PRE).length>=OY_INTRO_PRE_MAX))) return false;
+            if ((typeof(OY_INTRO_PASS[oy_soak_node])==="undefined")&&(oy_time_offset<(OY_BLOCK_SECTORS[0][0]+OY_INTRO_ZONE[0])-OY_MESH_BUFFER[0]||oy_time_offset>(OY_BLOCK_SECTORS[0][0]+OY_INTRO_ZONE[0])+OY_INTRO_TRIP[0]+OY_MESH_BUFFER[0]||(typeof(OY_INTRO_PRE[oy_soak_node])==="undefined"&&Object.keys(OY_INTRO_PRE).length>=OY_INTRO_PRE_MAX))) return false;
             OY_INTRO_PRE[oy_soak_node] = true;
             if (OY_VERBOSE_MODE===true) oy_log("[INTRO][SOAK]["+chalk.bolder(oy_data_flag)+"]["+chalk.bolder(oy_soak_node)+"]");
             return JSON.stringify(["OY_INTRO_TIME", OY_INTRO_MARKER]);
@@ -3476,10 +3477,7 @@ function oy_block_engine() {
             }
         }
 
-        if (OY_FULL_INTRO!==false&&OY_BLOCK_RECORD_KEEP.length>1) {
-            OY_DIVE_GRADE = true;
-            OY_INTRO_MARKER = Math.ceil((OY_SYNC_LAST[0]>0&&OY_SYNC_LAST[0]<OY_BLOCK_SECTORS[0][0]+OY_SYNC_PREEMPT_BUFFER[0])?OY_BLOCK_SECTORS[0][1]+OY_SYNC_PREEMPT_BUFFER[1]:OY_BLOCK_SECTORS[2][1]+(Math.max(...OY_BLOCK_RECORD_KEEP)*1000*OY_BLOCK_RECORD_INTRO_BUFFER));
-        }
+        if (OY_FULL_INTRO!==false&&OY_BLOCK_RECORD_KEEP.length>1) OY_INTRO_MARKER = Math.ceil((OY_SYNC_LAST[0]>0&&OY_SYNC_LAST[0]<OY_BLOCK_SECTORS[0][0]+OY_INTRO_ZONE[0]+OY_SYNC_PREEMPT_BUFFER[0])?OY_BLOCK_SECTORS[0][1]+OY_INTRO_ZONE[1]+OY_SYNC_PREEMPT_BUFFER[1]:OY_BLOCK_SECTORS[2][1]+(Math.max(...OY_BLOCK_RECORD_KEEP)*1000*OY_BLOCK_RECORD_INTRO_BUFFER));
         else OY_INTRO_MARKER = null;
 
         oy_chrono(function() {
@@ -3490,7 +3488,7 @@ function oy_block_engine() {
                     oy_chrono(function() {
                         oy_intro_beam(oy_intro_select, "OY_INTRO_PRE", (OY_FULL_INTRO!==false&&typeof(OY_INTRO_DEFAULT[OY_FULL_INTRO])!=="undefined")?[OY_FULL_INTRO, oy_key_sign(OY_SELF_PRIVATE, OY_BLOCK_TIME.toString())]:null, function(oy_data_flag, oy_data_payload) {
                             if (oy_data_flag==="OY_INTRO_UNREADY") return false;
-                            if (oy_data_flag!=="OY_INTRO_TIME"||!Number.isInteger(oy_data_payload)||oy_data_payload<OY_BLOCK_SECTORS[1][1]||oy_data_payload>OY_BLOCK_SECTORS[4][1]) {
+                            if (oy_data_flag!=="OY_INTRO_TIME"||!Number.isInteger(oy_data_payload)||oy_data_payload<OY_BLOCK_SECTORS[0][1]+OY_INTRO_ZONE[1]||oy_data_payload>OY_BLOCK_SECTORS[4][1]) {
                                 oy_intro_punish(oy_intro_select);
                                 return false;
                             }
@@ -3514,7 +3512,7 @@ function oy_block_engine() {
                                 });
                             }, (OY_FULL_INTRO!==false&&typeof(OY_INTRO_DEFAULT[OY_FULL_INTRO])!=="undefined")?1:(oy_data_payload-oy_time_offset));
                         });
-                    }, (OY_FULL_INTRO!==false&&typeof(OY_INTRO_DEFAULT[OY_FULL_INTRO])!=="undefined")?1:(OY_BLOCK_SECTORS[1][1]-((oy_time()-OY_BLOCK_TIME)*1000)));
+                    }, (OY_FULL_INTRO!==false&&typeof(OY_INTRO_DEFAULT[OY_FULL_INTRO])!=="undefined")?1:((OY_BLOCK_SECTORS[0][1]+OY_INTRO_ZONE[1])-((oy_time()-OY_BLOCK_TIME)*1000)));
                 }
                 if (OY_BLOCK_BOOT===true) {
                     if (oy_state_current()===2) oy_intro_initiate(OY_INTRO_BOOT);
