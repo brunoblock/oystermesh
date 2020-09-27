@@ -704,7 +704,6 @@ function oy_worker_manager(oy_instance, oy_data) {
             OY_SYNC_COUNTER++;
             let oy_sync_counter = OY_SYNC_COUNTER;
             oy_chrono(function() {
-                oy_log("RED2: "+JSON.stringify([OY_SYNC_COUNTER===oy_sync_counter, OY_SYNC_COUNTER, oy_sync_counter]));
                 if (OY_SYNC_COUNTER===oy_sync_counter&&OY_BLOCK_BOOT===false) oy_block_full();
             }, OY_SYNC_PREEMPT_BUFFER[1]);
 
@@ -1288,7 +1287,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         if (OY_BLOCK_HASH===null||oy_time_offset<OY_BLOCK_SECTORS[0][0]-(OY_BLOCK_BUFFER_CLEAR[0]+OY_MESH_BUFFER[0])||oy_time_offset>OY_BLOCK_SECTORS[1][0]+OY_MESH_BUFFER[0]) return false;
 
         if (OY_LIGHT_STATE===false&&(OY_BLOCK_BOOT===true||typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined")) {
-            if (OY_FULL_INTRO!==false&&((OY_BLOCK_BOOT===true&&OY_FULL_INTRO===OY_INTRO_BOOT)||(typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined"&&OY_BLOCK[1][OY_SELF_PUBLIC][1]===1))) {
+            if (OY_FULL_INTRO!==false&&((OY_BLOCK_BOOT===false&&(Object.values(OY_INTRO_DEFAULT).indexOf(OY_SELF_PUBLIC)!==-1||(typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined"&&OY_BLOCK[1][OY_SELF_PUBLIC][1]===1)))||(OY_BLOCK_BOOT===true&&OY_FULL_INTRO===OY_INTRO_BOOT))) {
                 if (OY_OFFER_COUNTER<OY_INTRO_PRE_MAX&&typeof(OY_OFFER_COLLECT[oy_data_payload[0][0]])==="undefined") {
                     let oy_signal_carry = oy_signal_soak(oy_data_payload[4]);
                     if (!oy_signal_carry||oy_signal_carry[0]!==oy_data_payload[0][0]||typeof(OY_OFFER_COLLECT[oy_signal_carry[0]])!=="undefined"||!oy_key_verify(oy_data_payload[0][0], oy_data_payload[2], OY_BLOCK_HASH+oy_data_payload[3]+oy_data_payload[4])) return false;
@@ -2830,7 +2829,6 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
         if (oy_data_flag==="OY_INTRO_PRE"&&oy_data_payload!==null&&typeof(oy_data_payload)==="object"&&typeof(OY_INTRO_DEFAULT[oy_data_payload[0]])!=="undefined"&&oy_key_verify(OY_INTRO_DEFAULT[oy_data_payload[0]], oy_data_payload[1], OY_BLOCK_TIME.toString())) OY_INTRO_PASS[oy_soak_node] = OY_INTRO_DEFAULT[oy_data_payload[0]];
         else if (typeof(OY_INTRO_PASS[oy_soak_node])==="undefined") {
             //if (typeof(OY_INTRO_BAN[oy_soak_node])!=="undefined") return false;
-            oy_log("BLUE1: "+JSON.stringify([oy_data_flag, Object.keys(OY_INTRO_ALLOCATE).length, OY_OFFER_PICKUP.length]));
             if (oy_state_current()!==2||OY_INTRO_MARKER===null||OY_BLOCK_RECORD_KEEP.length<=1||(typeof(OY_INTRO_ALLOCATE[oy_soak_node])==="undefined"&&Object.keys(OY_INTRO_ALLOCATE).length>=OY_OFFER_PICKUP.length+OY_PEER_SELF)||(OY_BLOCK_BOOT===false&&(typeof(OY_BLOCK[1][OY_SELF_PUBLIC])==="undefined"||OY_BLOCK[1][OY_SELF_PUBLIC][1]===0||OY_BLOCK[1][OY_SELF_PUBLIC][2]<OY_BLOCK[0][15]))) return JSON.stringify(["OY_INTRO_UNREADY", 1]);
         }
 
@@ -2868,7 +2866,7 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
         else if (oy_data_flag==="OY_INTRO_DONE") {
             if (typeof(OY_INTRO_PRE[oy_soak_node])==="undefined") return false;
 
-            if ((OY_BLOCK_FINISH===false&&typeof(OY_INTRO_PASS[oy_soak_node])==="undefined")||oy_data_payload===null||oy_data_payload.length!==4||(oy_data_payload[0]!==false&&oy_data_payload[0]!==true)||!oy_key_check(oy_data_payload[1])||(typeof(OY_INTRO_PASS[oy_soak_node])!=="undefined"&&Object.values(OY_INTRO_DEFAULT).indexOf(oy_data_payload[1])===-1)||(typeof(OY_INTRO_PASS[oy_soak_node])==="undefined"&&(typeof(oy_data_payload[3])!=="object"||Object.keys(oy_data_payload[3]).length!==Math.ceil(OY_BLOCK[0][3]/OY_WORK_INTRO)||!oy_key_verify(oy_data_payload[1], oy_data_payload[2], JSON.stringify(oy_data_payload[3]))))) {
+            if ((OY_BLOCK_HASH_PRE===null&&OY_BLOCK_FINISH===false&&typeof(OY_INTRO_PASS[oy_soak_node])==="undefined")||oy_data_payload===null||oy_data_payload.length!==4||(oy_data_payload[0]!==false&&oy_data_payload[0]!==true)||!oy_key_check(oy_data_payload[1])||(typeof(OY_INTRO_PASS[oy_soak_node])!=="undefined"&&Object.values(OY_INTRO_DEFAULT).indexOf(oy_data_payload[1])===-1)||(typeof(OY_INTRO_PASS[oy_soak_node])==="undefined"&&(typeof(oy_data_payload[3])!=="object"||Object.keys(oy_data_payload[3]).length!==Math.ceil(OY_BLOCK[0][3]/OY_WORK_INTRO)||!oy_key_verify(oy_data_payload[1], oy_data_payload[2], JSON.stringify(oy_data_payload[3]))))) {
                 OY_INTRO_BAN[oy_soak_node] = true;
                 return false;
             }
@@ -2921,7 +2919,7 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
 
             let oy_self_pass = false;
             let oy_signal_carry = oy_signal_soak(oy_data_payload);
-            if ((OY_BLOCK_FINISH===false&&typeof(OY_INTRO_PASS[oy_soak_node])==="undefined")||typeof(oy_data_payload)!=="string"||!oy_signal_carry||(typeof(OY_INTRO_PASS[oy_soak_node])!=="undefined"&&Object.values(OY_INTRO_DEFAULT).indexOf(oy_signal_carry[0])===-1)||(typeof(OY_INTRO_PASS[oy_soak_node])==="undefined"&&typeof(OY_INTRO_ALLOCATE[oy_soak_node])==="undefined")) {
+            if ((OY_BLOCK_HASH_PRE===null&&OY_BLOCK_FINISH===false&&typeof(OY_INTRO_PASS[oy_soak_node])==="undefined")||typeof(oy_data_payload)!=="string"||!oy_signal_carry||(typeof(OY_INTRO_PASS[oy_soak_node])!=="undefined"&&Object.values(OY_INTRO_DEFAULT).indexOf(oy_signal_carry[0])===-1)||(typeof(OY_INTRO_PASS[oy_soak_node])==="undefined"&&typeof(OY_INTRO_ALLOCATE[oy_soak_node])==="undefined")) {
                 OY_INTRO_BAN[oy_soak_node] = true;
                 delete OY_INTRO_ALLOCATE[oy_soak_node];
                 return false;
@@ -3732,7 +3730,12 @@ function oy_block_engine() {
                     }
                 }
                 oy_mesh_range = Object.keys(OY_BLOCK_SYNC).length;
+                OY_BLOCK_PRE = oy_clone_object(OY_BLOCK);
                 if (!oy_block_process([], 0)) return false;//block_process will invoke block_reset if necessary
+
+                OY_BLOCK_HASH_PRE = oy_hash_gen(JSON.stringify(OY_BLOCK_PRE));
+                OY_BLOCK_METAHASH_PRE = oy_hash_gen(OY_BLOCK_HASH_PRE);
+                oy_block_work(OY_BLOCK_HASH_PRE, OY_BLOCK_METAHASH_PRE, OY_BLOCK_PRE[0][3]);
             }
 
             OY_BLOCK_SYNC = {};
@@ -3746,15 +3749,15 @@ function oy_block_engine() {
                 return false;
             }
 
-            OY_BLOCK = oy_clone_object(OY_BLOCK_PRE);
+            OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK_PRE);
             OY_BLOCK_PRE = null;
+            OY_BLOCK = JSON.parse(OY_BLOCK_FLAT);
             OY_BLOCK_NEW = oy_clone_object(OY_BLOCK_NEW_PRE);
             OY_BLOCK_NEW_PRE = null;
-            OY_BLOCK_HASH_PRE = null;
-            OY_BLOCK_METAHASH_PRE = null;
-            OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK);
             OY_BLOCK_HASH = OY_BLOCK_HASH_PRE;
+            OY_BLOCK_HASH_PRE = null;
             OY_BLOCK_METAHASH = OY_BLOCK_METAHASH_PRE;
+            OY_BLOCK_METAHASH_PRE = null;
             OY_BLOCK_WEIGHT = new Blob([OY_BLOCK_FLAT]).size;
 
             oy_log("[MESHBLOCK][FULL]["+chalk.bolder(OY_BLOCK_HASH)+"]", 1);
@@ -3965,7 +3968,6 @@ function oy_block_work(oy_block_hash, oy_block_metahash, oy_block_difficulty) {
 }
 
 function oy_block_full() {
-    oy_log("RED3: "+JSON.stringify([OY_BLOCK_PROCESS, OY_LIGHT_STATE]));
     if (OY_BLOCK_PROCESS===true||OY_LIGHT_STATE===true) return false;
     OY_BLOCK_PROCESS = true;
 
@@ -4057,13 +4059,10 @@ function oy_block_full() {
     if (!oy_block_range(Object.keys(OY_BLOCK_PRE[1]).length, 0)) return false;//block_range will invoke block_reset if necessary
     if (!oy_block_process(oy_command_execute, 0)) return false;//block_process will invoke block_reset if necessary
 
-    let oy_block_hash = oy_hash_gen(JSON.stringify(OY_BLOCK_PRE));
-    let oy_block_metahash = oy_hash_gen(oy_block_hash);
+    OY_BLOCK_HASH_PRE = oy_hash_gen(JSON.stringify(OY_BLOCK_PRE));
+    OY_BLOCK_METAHASH_PRE = oy_hash_gen(OY_BLOCK_HASH_PRE);
+    oy_block_work(OY_BLOCK_HASH_PRE, OY_BLOCK_METAHASH_PRE, OY_BLOCK_PRE[0][3]);
 
-    oy_block_work(oy_block_hash, oy_block_metahash, OY_BLOCK_PRE[0][3]);
-
-    OY_BLOCK_HASH_PRE = oy_block_hash;
-    OY_BLOCK_METAHASH_PRE = oy_block_metahash;
     oy_log("[MESHBLOCK][PRE]["+chalk.bolder(OY_BLOCK_HASH_PRE)+"]", 1);
 
     OY_BLOCK_PROCESS = false;
