@@ -4893,7 +4893,6 @@ if (OY_NODE_STATE===true) {
                         else if (oy_var==="OY_VERBOSE_MODE") OY_VERBOSE_MODE = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_SLOW_MOTION") OY_SLOW_MOTION = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_SLOW_DEFLATE") OY_SLOW_DEFLATE = oy_sim_data[1][oy_var];
-                        else if (oy_var==="OY_SLOW_TRIGGER") OY_SLOW_TRIGGER = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_SIMULATOR_TIMINGS") OY_SIMULATOR_TIMINGS = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_BLOCK_BOOT_MARK") OY_BLOCK_BOOT_MARK = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_INTRO_BOOT") OY_INTRO_BOOT = oy_sim_data[1][oy_var];
