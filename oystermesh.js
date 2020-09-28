@@ -31,7 +31,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 let OY_BLOCK_RANGE_MIN = 10;//100, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
+const OY_BLOCK_BOOT_BUFFER = 3600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[15, 15000], [30, 30000], [55, 55000], [57, 57000], [59, 59000], [60, 60000]];//timing definitions for the meshblock
 let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
@@ -909,7 +909,7 @@ function oy_calc_median(oy_array) {
 
     let oy_array_clone = oy_array.slice();
 
-    oy_array_clone.sort(function(a,b) {
+    oy_array_clone.sort(function(a, b) {
         return a - b;
     });
 
@@ -3444,6 +3444,8 @@ function oy_block_engine() {
             OY_BLOCK_RECORD_KEEP = [1, 1];
             oy_event_dispatch("oy_state_full");
             oy_worker_spawn(1);
+
+            if (Object.values(OY_INTRO_DEFAULT).indexOf(OY_SELF_PUBLIC)!==-1) fs.appendFileSync("/dev/shm/oy_debug2.log", "["+OY_SELF_SHORT+"] INTRO DEFAULT BOOT: "+JSON.stringify([OY_BLOCK_HASH])+"\n");
         }
         //BLOCK SEED--------------------------------------------------
 
@@ -3509,12 +3511,12 @@ function oy_block_engine() {
                 //oy_log("[SYNC][BROADCAST]["+(oy_time()-OY_BLOCK_TIME).toFixed(2)+"]", 2);
                 oy_data_route("OY_LOGIC_SYNC", "OY_BLOCK_SYNC", [[], [oy_key_sign(OY_SELF_PRIVATE, oy_sync_crypt)], oy_sync_crypt, OY_BLOCK_TIME, oy_command_flat, oy_identity_flat, oy_solutions_flat, oy_peerage_flat]);
             }, OY_SYNC_BROADCAST_BUFFER[1]);
-            if (typeof(OY_BLOCK_STRICT[1])==="number") {
+            if (typeof(OY_BLOCK_STRICT[0])==="number") {
                 oy_chrono(function() {
                     for (let oy_key_public in OY_PEERS) {
                         if (OY_PEERS[oy_key_public][1]===2&&(typeof(OY_BLOCK_SYNC[oy_key_public])==="undefined"||OY_BLOCK_SYNC[oy_key_public]===false)) oy_node_deny(oy_key_public, "OY_DENY_SYNC_ABSENT");
                     }
-                }, Math.ceil(OY_BLOCK_STRICT[1]*1000)+OY_MESH_BUFFER[1]);
+                }, Math.ceil(OY_BLOCK_STRICT[0]*1000)+OY_MESH_BUFFER[1]);
             }
         }
         else if (OY_LIGHT_STATE===false&&OY_BLOCK_BOOT===false) {
