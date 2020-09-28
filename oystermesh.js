@@ -1439,7 +1439,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             if (OY_PEER_OFFER[0]===null||!oy_signal_carry||typeof(OY_NODES[oy_signal_carry[0]])!=="undefined"||!oy_key_verify(oy_data_payload[0][0], oy_data_payload[2], OY_PEER_OFFER[0]+OY_PEER_OFFER[2]+oy_data_payload[3])) return false;
             OY_NODES[oy_signal_carry[0]] = OY_PEER_OFFER[1];
             OY_PEER_OFFER = [null, null, null];
-            if (OY_SIMULATOR_MODE===true) parentPort.postMessage([3, oy_signal_carry[0], null]);
+            if (OY_SIMULATOR_MODE===true) parentPort.postMessage([3, oy_signal_carry[0], null, null, null]);
             else {
                 oy_node_connect(oy_signal_carry[0]);
                 OY_NODES[oy_signal_carry[0]].on("connect", function() {
@@ -1552,7 +1552,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             OY_PEER_EXCHANGE[oy_signal_carry[0]] = true;
             OY_NODES[oy_signal_carry[0]] = OY_PEERS[oy_peer_id][10];
             OY_PEERS[oy_peer_id][10] = null;
-            if (OY_SIMULATOR_MODE===true) parentPort.postMessage([3, oy_signal_carry[0], null]);
+            if (OY_SIMULATOR_MODE===true) parentPort.postMessage([3, oy_signal_carry[0], null, null, null]);
             else {
                 oy_node_connect(oy_signal_carry[0]);
                 OY_NODES[oy_signal_carry[0]].on("connect", function() {
@@ -2668,7 +2668,7 @@ function oy_data_beam(oy_node_id, oy_data_flag, oy_data_payload) {
             oy_log("[COOL]["+chalk.bolder(oy_short(oy_node_id))+"]["+chalk.bolder(oy_data_flag)+"]");
             return true;
         }
-        if (OY_SIMULATOR_MODE===true) parentPort.postMessage([0, oy_node_id, String(perf.now()).padStart(12, "0")+oy_data_raw]);
+        if (OY_SIMULATOR_MODE===true) parentPort.postMessage([0, oy_node_id, perf.now(), null, oy_data_raw]);
         else OY_NODES[oy_node_id].send(oy_data_raw);//send the JSON-converted data array to the destination node
         if (OY_VERBOSE_MODE===true&&oy_data_flag!=="OY_BLOCK_SYNC") oy_log("[BEAM]["+chalk.bolder(oy_short(oy_node_id))+"]["+chalk.bolder(oy_data_flag)+"]");
         return true;
@@ -2804,7 +2804,7 @@ function oy_intro_beam(oy_intro_select, oy_data_flag, oy_data_payload, oy_callba
         if (OY_SIMULATOR_MODE===true) {
             let oy_sim_ref = oy_rand_gen(3);
             OY_SIMULATOR_CALLBACK[oy_sim_ref] = [oy_data_flag, oy_intro_select, oy_callback];
-            parentPort.postMessage([1, oy_intro_select, JSON.stringify([oy_data_flag, oy_data_payload]), [oy_intro_select, oy_sim_ref]]);
+            parentPort.postMessage([1, oy_intro_select, perf.now(), null, JSON.stringify([oy_data_flag, oy_data_payload]), [oy_intro_select, oy_sim_ref]]);
         }
         else {
             let ws = new websock("wss://"+oy_intro_select);
@@ -2965,7 +2965,7 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
             if (typeof(OY_INTRO_PASS[oy_soak_node])==="undefined") OY_INTRO_ALLOCATE[oy_soak_node]++;
             if (oy_self_pass!==false) {
                 OY_NODES[oy_signal_carry[0]] = OY_INTRO_SELF[oy_self_pass][0];
-                if (OY_SIMULATOR_MODE===true) parentPort.postMessage([3, oy_signal_carry[0], null]);
+                if (OY_SIMULATOR_MODE===true) parentPort.postMessage([3, oy_signal_carry[0], null, null, null]);
                 else {
                     oy_node_connect(oy_signal_carry[0]);
                     OY_NODES[oy_signal_carry[0]].on("connect", function() {
@@ -4851,17 +4851,13 @@ if (OY_NODE_STATE===true) {
     if (isMainThread) oy_init();
     else {
         parentPort.on('message', (oy_data) => {
-            let [oy_sim_type, oy_sim_node, oy_sim_data, oy_sim_intro] = oy_data;
+            let [oy_sim_type, oy_sim_node, oy_sim_start, oy_sim_target, oy_sim_data, oy_sim_intro] = oy_data;
 
-            if (oy_sim_type===0) {
-                let oy_origin_delay = parseInt(oy_sim_data.substr(0, 5));
-                let oy_origin_perf = (perf.now()-parseInt(oy_sim_data.substr(5, 12)));
-                if (OY_SIMULATOR_SCALE[2]===false&&(oy_origin_perf-oy_origin_delay)/OY_SLOW_MOTION>OY_SLOW_TRIGGER[1]) parentPort.postMessage([4, "OY_SIM_BOTTLE", [1, [(oy_origin_perf-oy_origin_delay)/OY_SLOW_MOTION, OY_SLOW_MOTION, oy_origin_perf, oy_origin_delay]]]);
-                oy_data_soak(oy_sim_node, oy_sim_data.substr(17));
-            }
+            let oy_perf_origin = perf.now()-oy_sim_start;
+            if (oy_sim_type===0) oy_data_soak(oy_sim_node, oy_sim_data);
             else if (oy_sim_type===1) {
                 let oy_soak_result = oy_intro_soak(oy_sim_node, oy_sim_data);
-                if (oy_soak_result!==false&&typeof(oy_sim_intro)!=="undefined"&&oy_sim_intro[0]===OY_FULL_INTRO) parentPort.postMessage([2, oy_sim_node, oy_soak_result, oy_sim_intro]);
+                if (oy_soak_result!==false&&typeof(oy_sim_intro)!=="undefined"&&oy_sim_intro[0]===OY_FULL_INTRO) parentPort.postMessage([2, oy_sim_node, perf.now(), null, oy_soak_result, oy_sim_intro]);
             }
             else if (oy_sim_type===2) {
                 if (typeof(OY_SIMULATOR_CALLBACK[oy_sim_intro[1]])!=="undefined") {
@@ -4908,7 +4904,7 @@ if (OY_NODE_STATE===true) {
                     OY_SIMULATOR_ELAPSED = [0, OY_BLOCK_BOOT_MARK];
                     process.on('uncaughtException', function(oy_error) {
                         fs.appendFileSync("/dev/shm/oy_simulator/oy_fatal.log", "["+OY_SELF_SHORT+"][FATAL_ERROR]: "+oy_error+"\n");
-                        console.log("["+OY_SELF_SHORT+"][FATAL_ERROR]: "+JSON.stringify([oy_error, oy_error.stack]));
+                        console.log("["+OY_SELF_SHORT+"][FATAL_ERROR]["+Math.floor(Date.now()/1000)+"]: "+JSON.stringify([oy_error, oy_error.stack]));
                         process.exit();
                     });
                     oy_init();
@@ -4925,8 +4921,10 @@ if (OY_NODE_STATE===true) {
                     OY_SIMULATOR_SCALE[4] = oy_sim_data[2];
                 }
             }
+
+            if (oy_sim_type<=2&&OY_SIMULATOR_SCALE[2]===false&&(oy_perf_origin-oy_sim_target)/OY_SLOW_MOTION>OY_SLOW_TRIGGER) parentPort.postMessage([4, "OY_SIM_BOTTLE", null, null, [oy_sim_type, [(oy_perf_origin-oy_sim_target)/OY_SLOW_MOTION, OY_SLOW_MOTION, oy_perf_origin, oy_sim_target]]]);
         });
-        parentPort.postMessage([5, null, null]);
+        parentPort.postMessage([5, null, null, null, null]);
     }
 }
 
