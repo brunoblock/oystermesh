@@ -296,7 +296,6 @@ let OY_DIVE_STATE = false;
 let OY_VERBOSE_MODE = true;
 let OY_SLOW_MOTION = 1;//run the mesh in slow motion for simulation purposes
 let OY_SLOW_DEFLATE = null;
-let OY_SLOW_TRIGGER = null;
 let OY_SIMULATOR_MODE = false;
 let OY_SIMULATOR_SKEW = 0;
 let OY_SIMULATOR_TIMINGS = null;
@@ -4789,7 +4788,7 @@ function oy_init(oy_console) {
         oy_log("[ERROR]["+chalk.bolder("INTRO_BOOT_INVALID")+"]", 2);
         return false;
     }
-    if (OY_SIMULATOR_MODE===true&&(OY_NODE_STATE!==true||OY_SLOW_DEFLATE===null||OY_SLOW_TRIGGER===null||OY_SIMULATOR_TIMINGS===null)) {
+    if (OY_SIMULATOR_MODE===true&&(OY_NODE_STATE!==true||OY_SLOW_DEFLATE===null||OY_SIMULATOR_TIMINGS===null)) {
         oy_log("[ERROR]["+chalk.bolder("SIMULATOR_INVALID")+"]", 2);
         return false;
     }
