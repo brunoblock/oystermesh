@@ -4923,7 +4923,7 @@ if (OY_NODE_STATE===true) {
                 }
             }
 
-            if (oy_sim_type<=2&&OY_SIMULATOR_SCALE[2]===false&&(oy_perf_origin-oy_sim_target)/OY_SLOW_MOTION>OY_SLOW_TRIGGER) parentPort.postMessage([4, "OY_SIM_BOTTLE", null, null, [oy_sim_type, [(oy_perf_origin-oy_sim_target)/OY_SLOW_MOTION, OY_SLOW_MOTION, oy_perf_origin, oy_sim_target]]]);
+            if (oy_sim_type<=2&&OY_SIMULATOR_SCALE[2]===false&&(oy_perf_origin-oy_sim_target)/OY_SLOW_MOTION>OY_SLOW_TRIGGER&&(OY_FULL_INTRO!==OY_INTRO_BOOT||OY_BLOCK_ELAPSED>OY_BLOCK_BOOT_BUFFER)) parentPort.postMessage([4, "OY_SIM_BOTTLE", null, null, [oy_sim_type, [(oy_perf_origin-oy_sim_target)/OY_SLOW_MOTION, OY_SLOW_MOTION, oy_perf_origin, oy_sim_target]]]);
         });
         parentPort.postMessage([5, null, null, null, null]);
     }
