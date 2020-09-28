@@ -300,7 +300,7 @@ let OY_SLOW_TRIGGER = null;
 let OY_SIMULATOR_MODE = false;
 let OY_SIMULATOR_SKEW = 0;
 let OY_SIMULATOR_TIMINGS = null;
-let OY_SIMULATOR_SCALE = [0, true, false, null, null];//[scale_counter, applied, buffer, slow_max, slow_factor]
+let OY_SIMULATOR_SCALE = [0, true, false, null, null, null];//[scale_counter, applied, buffer, slow_min, slow_max, slow_factor]
 let OY_SIMULATOR_ELAPSED = [0, null];
 let OY_SIMULATOR_CALLBACK = {};
 let OY_FULL_INTRO = false;//default is false, can be set here or via nodejs argv first parameter
@@ -2744,6 +2744,7 @@ function oy_data_soak(oy_node_id, oy_data_raw) {
        }
    }
    catch(e) {
+       console.log([oy_node_id, oy_data_raw]);
        console.log(e);
    }
    oy_node_deny(oy_node_id, "OY_DENY_DATA_ERROR");
@@ -2979,6 +2980,7 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
         }
     }
     catch(e) {
+        console.log([oy_soak_node, oy_soak_data]);
         console.log(e);
     }
     return false;
@@ -3302,8 +3304,9 @@ function oy_block_engine() {
         else OY_BLOCK_BOOT = OY_BLOCK_TIME-OY_BLOCK_BOOT_MARK<OY_BLOCK_BOOT_BUFFER;
         if (OY_SIMULATOR_MODE===true) {
             if (OY_SIMULATOR_SCALE[1]===false) {
-                OY_SLOW_MOTION *= OY_SIMULATOR_SCALE[4];
-                OY_SLOW_MOTION = Math.min(OY_SIMULATOR_SCALE[3], OY_SLOW_MOTION);
+                OY_SLOW_MOTION *= OY_SIMULATOR_SCALE[5];
+                OY_SLOW_MOTION = Math.max(OY_SIMULATOR_SCALE[3], OY_SLOW_MOTION);
+                OY_SLOW_MOTION = Math.min(OY_SIMULATOR_SCALE[4], OY_SLOW_MOTION);
                 OY_SIMULATOR_SCALE[1] = true;
             }
             else {
@@ -4853,8 +4856,6 @@ if (OY_NODE_STATE===true) {
         parentPort.on('message', (oy_data) => {
             let [oy_sim_type, oy_sim_node, oy_sim_start, oy_sim_target, oy_sim_data, oy_sim_intro] = oy_data;
 
-            let oy_perf_origin;
-            if (oy_sim_type<=2) oy_perf_origin = perf.now()-oy_sim_start;
             if (oy_sim_type===0) oy_data_soak(oy_sim_node, oy_sim_data);
             else if (oy_sim_type===1) {
                 let oy_soak_result = oy_intro_soak(oy_sim_node, oy_sim_data);
@@ -4920,10 +4921,9 @@ if (OY_NODE_STATE===true) {
                     OY_SIMULATOR_SCALE[2] = true;
                     OY_SIMULATOR_SCALE[3] = oy_sim_data[1];
                     OY_SIMULATOR_SCALE[4] = oy_sim_data[2];
+                    OY_SIMULATOR_SCALE[5] = oy_sim_data[3];
                 }
             }
-
-            if (oy_sim_type<=2&&OY_SIMULATOR_SCALE[2]===false&&(oy_perf_origin-oy_sim_target)/OY_SLOW_MOTION>OY_SLOW_TRIGGER&&(OY_FULL_INTRO!==OY_INTRO_BOOT||OY_BLOCK_ELAPSED>OY_BLOCK_BOOT_BUFFER)) parentPort.postMessage([4, "OY_SIM_BOTTLE", null, null, [oy_sim_type, [(oy_perf_origin-oy_sim_target)/OY_SLOW_MOTION, OY_SLOW_MOTION, oy_perf_origin, oy_sim_target]]]);
         });
         parentPort.postMessage([5, null, null, null, null]);
     }
