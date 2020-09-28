@@ -3304,14 +3304,14 @@ function oy_block_engine() {
         if (OY_SIMULATOR_MODE===true) {
             if (OY_SIMULATOR_SCALE[1]===false) {
                 OY_SLOW_MOTION *= OY_SIMULATOR_SCALE[5];
-                OY_SLOW_MOTION = Math.max(OY_SIMULATOR_SCALE[3], OY_SLOW_MOTION);
-                OY_SLOW_MOTION = Math.min(OY_SIMULATOR_SCALE[4], OY_SLOW_MOTION);
                 OY_SIMULATOR_SCALE[1] = true;
             }
             else {
                 OY_SLOW_MOTION *= OY_SLOW_DEFLATE;
                 OY_SIMULATOR_SCALE[2] = false;
             }
+            OY_SLOW_MOTION = Math.max(OY_SIMULATOR_SCALE[3], OY_SLOW_MOTION);
+            OY_SLOW_MOTION = Math.min(OY_SIMULATOR_SCALE[4], OY_SLOW_MOTION);
             OY_BLOCK_LOOP[0] = Math.ceil(OY_BLOCK_LOOP_RESTORE[0]*OY_SLOW_MOTION);
             OY_BLOCK_LOOP[1] = Math.ceil(OY_BLOCK_LOOP_RESTORE[1]*OY_SLOW_MOTION);
             let oy_simulator_timings = [[Math.round(OY_SIMULATOR_TIMINGS[0][0]*OY_SLOW_MOTION), Math.round(OY_SIMULATOR_TIMINGS[0][1]*OY_SLOW_MOTION)], [Math.round(OY_SIMULATOR_TIMINGS[1][0]*OY_SLOW_MOTION), Math.round(OY_SIMULATOR_TIMINGS[1][1]*OY_SLOW_MOTION)]];
