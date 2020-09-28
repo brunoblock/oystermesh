@@ -4853,7 +4853,8 @@ if (OY_NODE_STATE===true) {
         parentPort.on('message', (oy_data) => {
             let [oy_sim_type, oy_sim_node, oy_sim_start, oy_sim_target, oy_sim_data, oy_sim_intro] = oy_data;
 
-            let oy_perf_origin = perf.now()-oy_sim_start;
+            let oy_perf_origin;
+            if (oy_sim_type<=2) oy_perf_origin = perf.now()-oy_sim_start;
             if (oy_sim_type===0) oy_data_soak(oy_sim_node, oy_sim_data);
             else if (oy_sim_type===1) {
                 let oy_soak_result = oy_intro_soak(oy_sim_node, oy_sim_data);
