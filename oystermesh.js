@@ -295,11 +295,14 @@ let OY_DIVE_TEAM = false;
 let OY_DIVE_STATE = false;
 let OY_VERBOSE_MODE = true;
 let OY_SLOW_MOTION = 1;//run the mesh in slow motion for simulation purposes
+let OY_SLOW_MIN = null;
+let OY_SLOW_MAX = null;
+let OY_SLOW_FACTOR = null;
 let OY_SLOW_DEFLATE = null;
 let OY_SIMULATOR_MODE = false;
 let OY_SIMULATOR_SKEW = 0;
 let OY_SIMULATOR_TIMINGS = null;
-let OY_SIMULATOR_SCALE = [0, true, false, null, null, null];//[scale_counter, applied, buffer, slow_min, slow_max, slow_factor]
+let OY_SIMULATOR_SCALE = [0, true, false];//[scale_counter, applied, buffer]
 let OY_SIMULATOR_ELAPSED = [0, null];
 let OY_SIMULATOR_CALLBACK = {};
 let OY_FULL_INTRO = false;//default is false, can be set here or via nodejs argv first parameter
@@ -3303,15 +3306,15 @@ function oy_block_engine() {
         else OY_BLOCK_BOOT = OY_BLOCK_TIME-OY_BLOCK_BOOT_MARK<OY_BLOCK_BOOT_BUFFER;
         if (OY_SIMULATOR_MODE===true) {
             if (OY_SIMULATOR_SCALE[1]===false) {
-                OY_SLOW_MOTION *= OY_SIMULATOR_SCALE[5];
+                OY_SLOW_MOTION *= OY_SLOW_FACTOR;
                 OY_SIMULATOR_SCALE[1] = true;
             }
             else {
                 OY_SLOW_MOTION *= OY_SLOW_DEFLATE;
                 OY_SIMULATOR_SCALE[2] = false;
             }
-            OY_SLOW_MOTION = Math.max(OY_SIMULATOR_SCALE[3], OY_SLOW_MOTION);
-            OY_SLOW_MOTION = Math.min(OY_SIMULATOR_SCALE[4], OY_SLOW_MOTION);
+            OY_SLOW_MOTION = Math.max(OY_SLOW_MIN, OY_SLOW_MOTION);
+            OY_SLOW_MOTION = Math.min(OY_SLOW_MAX, OY_SLOW_MOTION);
             OY_BLOCK_LOOP[0] = Math.ceil(OY_BLOCK_LOOP_RESTORE[0]*OY_SLOW_MOTION);
             OY_BLOCK_LOOP[1] = Math.ceil(OY_BLOCK_LOOP_RESTORE[1]*OY_SLOW_MOTION);
             let oy_simulator_timings = [[Math.round(OY_SIMULATOR_TIMINGS[0][0]*OY_SLOW_MOTION), Math.round(OY_SIMULATOR_TIMINGS[0][1]*OY_SLOW_MOTION)], [Math.round(OY_SIMULATOR_TIMINGS[1][0]*OY_SLOW_MOTION), Math.round(OY_SIMULATOR_TIMINGS[1][1]*OY_SLOW_MOTION)]];
@@ -4891,6 +4894,9 @@ if (OY_NODE_STATE===true) {
                         if (oy_var==="OY_PASSIVE_MODE") OY_PASSIVE_MODE = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_VERBOSE_MODE") OY_VERBOSE_MODE = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_SLOW_MOTION") OY_SLOW_MOTION = oy_sim_data[1][oy_var];
+                        else if (oy_var==="OY_SLOW_MIN") OY_SLOW_MIN = oy_sim_data[1][oy_var];
+                        else if (oy_var==="OY_SLOW_MAX") OY_SLOW_MAX = oy_sim_data[1][oy_var];
+                        else if (oy_var==="OY_SLOW_FACTOR") OY_SLOW_FACTOR = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_SLOW_DEFLATE") OY_SLOW_DEFLATE = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_SIMULATOR_TIMINGS") OY_SIMULATOR_TIMINGS = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_BLOCK_BOOT_MARK") OY_BLOCK_BOOT_MARK = oy_sim_data[1][oy_var];
@@ -4910,16 +4916,13 @@ if (OY_NODE_STATE===true) {
                     oy_init();
                 }
                 else if (oy_sim_node==="OY_SIM_SLOW") {
-                    if (OY_SIMULATOR_SCALE[1]===false||OY_SIMULATOR_SCALE[0]+1!==oy_sim_data[0]) {
+                    if (OY_SIMULATOR_SCALE[1]===false||OY_SIMULATOR_SCALE[0]+1!==oy_sim_data) {
                         oy_log("[ERROR]["+chalk.bolder("SIM_SLOW_MISALIGN")+"]["+chalk.bolder(JSON.stringify(OY_SIMULATOR_SCALE))+"]["+chalk.bolder(JSON.stringify(oy_data))+"]", 2);
                         throw new Error("OY_ERROR_FATAL");
                     }
                     OY_SIMULATOR_SCALE[0]++;
                     OY_SIMULATOR_SCALE[1] = false;
                     OY_SIMULATOR_SCALE[2] = true;
-                    OY_SIMULATOR_SCALE[3] = oy_sim_data[1];
-                    OY_SIMULATOR_SCALE[4] = oy_sim_data[2];
-                    OY_SIMULATOR_SCALE[5] = oy_sim_data[3];
                 }
             }
         });
