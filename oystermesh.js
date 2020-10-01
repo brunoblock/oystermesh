@@ -31,7 +31,7 @@ const OY_BLOCK_HALT_BUFFER = 5;//seconds between permitted block_reset() calls. 
 const OY_BLOCK_COMMAND_QUOTA = 20000;
 const OY_BLOCK_RANGE_KILL = 0.7;
 let OY_BLOCK_RANGE_MIN = 10;//100, minimum syncs/dives required to not locally reset the meshblock, higher means side meshes die easier
-const OY_BLOCK_BOOT_BUFFER = 600;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
+let OY_BLOCK_BOOT_BUFFER = 14400;//seconds grace period to ignore certain cloning/peering rules to bootstrap the network during a boot-up event
 const OY_BLOCK_BOOT_SEED = 1597807200;//timestamp to boot the mesh, node remains offline before this timestamp
 const OY_BLOCK_SECTORS = [[15, 15000], [30, 30000], [45, 45000], [50, 50000], [55, 55000], [60, 60000]];//timing definitions for the meshblock
 let OY_BLOCK_BUFFER_CLEAR = [0.5, 500];
@@ -1702,7 +1702,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_node_deny(oy_peer_id, "OY_DENY_BLOCK_NULL_A");
             return false;
         }
-        oy_data_payload[1] = oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+((oy_data_payload[0]===2||(oy_state_current()===1&&(OY_BLOCK_FINISH===false||OY_BLOCK_END===true)))?OY_BLOCK_HASH:((oy_data_payload[0]===1)?OY_BLOCK_HASH_PREV:"0000000000000000000000000000000000000000"))+oy_data_payload[1], true);
+        oy_data_payload[1] = oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+((oy_data_payload[0]===2||(oy_data_payload[0]===1&&oy_state_current()===1&&(OY_BLOCK_FINISH===false||OY_BLOCK_END===true)))?OY_BLOCK_HASH:((oy_data_payload[0]===1)?OY_BLOCK_HASH_PREV:"0000000000000000000000000000000000000000"))+oy_data_payload[1], true);
         oy_data_beam(oy_peer_id, "OY_LATENCY_RESPONSE", oy_data_payload);
         return true;
     }
@@ -1917,7 +1917,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
         if (typeof(OY_PROPOSED[oy_node_id])!=="undefined"||typeof(OY_PEERS_PRE[oy_node_id])!=="undefined") {
             if (oy_data_payload[0]!==0&&OY_BLOCK_HASH===null) oy_node_deny(oy_node_id, "OY_DENY_BLOCK_NULL_B");
             else {
-                oy_data_payload[1] = oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+((oy_data_payload[0]===2||(oy_state_current()===1&&(OY_BLOCK_FINISH===false||OY_BLOCK_END===true)))?OY_BLOCK_HASH:((oy_data_payload[0]===1)?OY_BLOCK_HASH_PREV:"0000000000000000000000000000000000000000"))+oy_data_payload[1], true);
+                oy_data_payload[1] = oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+((oy_data_payload[0]===2||(oy_data_payload[0]===1&&oy_state_current()===1&&(OY_BLOCK_FINISH===false||OY_BLOCK_END===true)))?OY_BLOCK_HASH:((oy_data_payload[0]===1)?OY_BLOCK_HASH_PREV:"0000000000000000000000000000000000000000"))+oy_data_payload[1], true);
                 oy_data_beam(oy_node_id, "OY_LATENCY_RESPONSE", oy_data_payload);
             }
         }
@@ -2241,9 +2241,9 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
         return false;
     }
     let oy_time_local = oy_time();
-    if (!oy_key_verify(oy_node_id, oy_data_payload[1], OY_MESH_DYNASTY+((OY_LATENCY[oy_node_id][3]===2||(oy_state_current()===1&&(OY_BLOCK_FINISH===false||OY_BLOCK_END===true)))?OY_BLOCK_HASH:((OY_LATENCY[oy_node_id][3]===1)?OY_BLOCK_HASH_PREV:"0000000000000000000000000000000000000000"))+OY_LATENCY[oy_node_id][0], true)) {
+    if (!oy_key_verify(oy_node_id, oy_data_payload[1], OY_MESH_DYNASTY+((OY_LATENCY[oy_node_id][3]===2||(OY_LATENCY[oy_node_id][3]===1&&oy_state_current()===1&&(OY_BLOCK_FINISH===false||OY_BLOCK_END===true)))?OY_BLOCK_HASH:((OY_LATENCY[oy_node_id][3]===1)?OY_BLOCK_HASH_PREV:"0000000000000000000000000000000000000000"))+OY_LATENCY[oy_node_id][0], true)) {
         let oy_latency_hold = oy_clone_object(OY_LATENCY[oy_node_id]);
-        oy_node_deny(oy_node_id, "OY_DENY_SIGN_FAIL_"+JSON.stringify([OY_LATENCY[oy_node_id][3], OY_LATENCY[oy_node_id], oy_state_current(), oy_state_current(true), OY_BLOCK_FINISH, OY_BLOCK_END, ((OY_LATENCY[oy_node_id][3]===2||(oy_state_current()===1&&(OY_BLOCK_FINISH===false||OY_BLOCK_END===true)))?OY_BLOCK_HASH:((OY_LATENCY[oy_node_id][3]===1)?OY_BLOCK_HASH_PREV:"0000000000000000000000000000000000000000"))]));
+        oy_node_deny(oy_node_id, "OY_DENY_SIGN_FAIL_"+JSON.stringify([OY_LATENCY[oy_node_id][3], OY_LATENCY[oy_node_id], oy_state_current(), oy_state_current(true), OY_BLOCK_FINISH, OY_BLOCK_END, ((OY_LATENCY[oy_node_id][3]===2||(OY_LATENCY[oy_node_id][3]===1&&oy_state_current()===1&&(OY_BLOCK_FINISH===false||OY_BLOCK_END===true)))?OY_BLOCK_HASH:((OY_LATENCY[oy_node_id][3]===1)?OY_BLOCK_HASH_PREV:"0000000000000000000000000000000000000000"))]));
         if (OY_JUMP_ASSIGN[0]===null&&typeof(OY_JUMP_PRE[oy_node_id])==="undefined"&&oy_latency_hold[3]===2&&Object.keys(OY_BLOCK_JUMP_MAP).length>1&&oy_latency_hold[2]==="OY_PEER_REQUEST") {
             OY_JUMP_PRE[oy_node_id] = false;
             oy_log_debug("JUMP_DEBUG: "+Object.keys(OY_BLOCK_JUMP_MAP).length);
@@ -4901,6 +4901,7 @@ if (OY_NODE_STATE===true) {
                         else if (oy_var==="OY_SLOW_DEFLATE") OY_SLOW_DEFLATE = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_SIMULATOR_TIMINGS") OY_SIMULATOR_TIMINGS = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_BLOCK_BOOT_MARK") OY_BLOCK_BOOT_MARK = oy_sim_data[1][oy_var];
+                        else if (oy_var==="OY_BLOCK_BOOT_BUFFER") OY_BLOCK_BOOT_BUFFER = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_INTRO_BOOT") OY_INTRO_BOOT = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_INTRO_DEFAULT") OY_INTRO_DEFAULT = oy_sim_data[1][oy_var];
                         else if (oy_var==="OY_LATENCY_SIZE") OY_LATENCY_SIZE = oy_sim_data[1][oy_var];
