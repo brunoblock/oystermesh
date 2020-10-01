@@ -1608,6 +1608,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                 for (let oy_peer_select in OY_PEERS) {
                     oy_data_beam(oy_peer_select, "OY_PEER_LIGHT", oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH, true));
                 }
+
+                oy_block_finish();
             }, (oy_time_offset>OY_BLOCK_SECTORS[2][0])?(OY_BLOCK_SECTORS[5][0]-oy_time_offset)*1000:0);
         }
         return true;
@@ -3903,7 +3905,6 @@ function oy_block_engine() {
 
         oy_chrono(function() {
             oy_block_challenge(0);
-            if (OY_LIGHT_STATE===true&&oy_state_current(true)===2&&Object.keys(OY_LIGHT_BUILD).length>0&&oy_peer_full()) oy_block_light(false);
         }, OY_BLOCK_SECTORS[3][1]);
 
         oy_chrono(function() {
@@ -3955,11 +3956,15 @@ function oy_block_engine() {
                 if (oy_peer_count(true)>OY_PEER_MAX[1]) oy_light_deflate();
                 else break;
             }
+
+            oy_chrono(function() {
+                if (OY_LIGHT_STATE===true&&oy_state_current(true)===2&&Object.keys(OY_LIGHT_BUILD).length>0&&oy_peer_full()) oy_block_light(false);
+            }, OY_BLOCK_BUFFER_CLEAR[1]);
         }, OY_BLOCK_SECTORS[4][1]);
     }
 }
 
-function oy_block_challenge(oy_challenge_stage) {//TODO modify for new light node scaling scheme
+function oy_block_challenge(oy_challenge_stage) {
     if (oy_challenge_stage===0) {
         OY_BLOCK_CHALLENGE = {};
         for (let oy_peer_select in OY_PEERS) {
