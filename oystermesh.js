@@ -104,7 +104,7 @@ const OY_DNS_OWNER_MIN = (OY_AKOYA_FEE+OY_DNS_FEE)*OY_DNS_AUCTION_MIN+(OY_AKOYA_
 //const OY_META_OWNER_MIN
 
 // TEMPLATE VARS
-//[[0]:peership block_time, [1]:latch flag, [2]:base sent, [3]:latency avg, [4]:latency history, [5]:data beam, [6]:data beam history, [7]:data soak, [8]:data soak history, [9]:mesh core cut, [10]:signal_object, [11]:[signal_init_beam, signal_init_soak, signal_broker_soak, signal_broker_beam, signal_broker_response, signal_responder_soak]]
+//[[0]:peership block_time, [1]:state flag, [2]:base sent, [3]:latency avg, [4]:latency history, [5]:data beam, [6]:data beam history, [7]:data soak, [8]:data soak history, [9]:mesh core cut, [10]:signal_object, [11]:[signal_init_beam, signal_init_soak, signal_broker_soak, signal_broker_beam, signal_broker_response, signal_responder_soak]]
 const OY_PEER_TEMPLATE = [null, null, false, 0, [], 0, [], 0, [], 0, null, [null, null, null, null, null, null]];//TODO put command counter in meshblock
 //the current meshblock - [[0]:[[0]:oy_mesh_dynasty, [1]:oy_block_timestamp, [2]:oy_mesh_range, [3]:oy_work_difficulty, [4]:oy_genesis_timestamp, [5]:oy_epoch_macro_count, [6]:oy_epoch_micro_count, [7]:oy_grade_total, [8]:oy_grade_current, [9]:oy_grade_avg, [10]:oy_grade_keep, [11]:oy_range_roll, [12]:oy_range_keep, [13]:oy_work_roll, [14]:oy_work_keep, [15]:oy_uptime_current],
 // [1]:oy_dive_sector, [2]:oy_snapshot_sector, [3]:oy_command_sector, [4]:oy_akoya_sector, [5]:oy_dns_sector, [6]:oy_auction_sector, [7]:oy_meta_sector]
@@ -350,7 +350,7 @@ let OY_LATENCY = {};//handle latency sessions
 let OY_PROPOSED = {};//nodes that have been recently proposed to for mutual peering
 let OY_PUSH_HOLD = {};//holds data contents ready for pushing to mesh
 let OY_PUSH_TALLY = {};//tracks data push nonces that were deposited on the mesh
-let OY_BASE_BUILD = [];
+let OY_BASE_BUILD = [[], []];
 let OY_JUMP_BUILD = [];
 let OY_LIGHT_BUILD = {};
 let OY_WORKER_THREADS = [null, null];
@@ -1563,12 +1563,13 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             return false;
         }
          */
-        if (OY_BLOCK_DIFF===true||OY_BLOCK_HASH!==null) return false;//TODO consider timing validation
-        OY_BASE_BUILD[oy_data_payload[1]] = oy_data_payload[2];//key is block_nonce and value is block_split
+        if (OY_BLOCK_DIFF===true||OY_BLOCK_HASH!==null||(OY_PEERS[oy_peer_id][1]!==2&&OY_PEERS[oy_peer_id][1]!==1)) return false;//TODO consider timing validation
+        let oy_base_pointer = OY_PEERS[oy_peer_id][1]-1;
+        OY_BASE_BUILD[oy_base_pointer][oy_data_payload[1]] = oy_data_payload[2];//key is block_nonce and value is block_split
         let oy_base_pass = true;
         let oy_nonce_count = -1;
-        for (let oy_block_nonce in OY_BASE_BUILD) {
-            if (typeof(OY_BASE_BUILD[oy_block_nonce])!=="undefined") oy_nonce_count++;
+        for (let oy_block_nonce in OY_BASE_BUILD[oy_base_pointer]) {
+            if (typeof(OY_BASE_BUILD[oy_base_pointer][oy_block_nonce])!=="undefined") oy_nonce_count++;
             else {
                 oy_base_pass = false;
                 break;
@@ -1579,8 +1580,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             OY_BLOCK_DIFF = true;
             oy_data_payload = null;
 
-            OY_BLOCK_FLAT = LZString.decompressFromUTF16(OY_BASE_BUILD.join(""));
-            OY_BASE_BUILD = [];
+            OY_BLOCK_FLAT = LZString.decompressFromUTF16(OY_BASE_BUILD[oy_base_pointer].join(""));
+            OY_BASE_BUILD = [[], []];
 
             if (!OY_BLOCK_FLAT) {
                 OY_BLOCK_DIFF = false;
@@ -1614,7 +1615,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                         oy_data_beam(oy_peer_select, "OY_PEER_LIGHT", oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH, true));
                     }
 
-                    oy_block_finish();
+                    if (oy_base_pointer===1) oy_block_finish();
                 }, (oy_time_offset>OY_BLOCK_SECTORS[2][0])?(OY_BLOCK_SECTORS[5][0]-oy_time_offset)*1000:0);
             }
         }
@@ -2577,7 +2578,7 @@ function oy_data_route(oy_data_logic, oy_data_flag, oy_data_payload, oy_push_def
     if (oy_data_logic==="OY_LOGIC_SYNC") {
         //oy_data_payload[0] is oy_passport_passive
         //oy_data_payload[1] is oy_passport_crypt
-        if (OY_BLOCK_HASH===null) return false;
+        if (oy_state_current()!==2) return false;
 
         oy_data_payload[0].push(OY_SELF_PUBLIC);
         for (let oy_peer_select in OY_PEERS) {
@@ -3261,7 +3262,7 @@ function oy_block_reset(oy_reset_flag) {
     OY_BLOCK_METAHASH_PRE = null;
     OY_BLOCK_PROCESS = false;
     OY_DIFF_TRACK = [{}, []];
-    OY_BASE_BUILD = [];
+    OY_BASE_BUILD = [[], []];
     OY_LIGHT_BUILD = {};
     OY_LIGHT_STATE = true;
     OY_DIVE_STATE = false;
@@ -3370,7 +3371,7 @@ function oy_block_engine() {
         OY_PEER_EXCHANGE = {};
         OY_PEER_STRIKE = {};
         OY_PEER_OFFER = [null, null, null];
-        OY_BASE_BUILD = [];
+        OY_BASE_BUILD = [[], []];
         OY_JUMP_PRE = {};
         oy_block_jump_reset();
 
