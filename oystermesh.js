@@ -2217,7 +2217,10 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
         else oy_node_reset(oy_node_id);
         oy_log("[END]["+chalk.bolder(oy_short(oy_node_id))+"]["+chalk.bolder("N")+"]["+chalk.bolder(oy_data_payload)+"]", (oy_data_payload==="OY_DENY_LATENCY_DROP"||oy_data_payload==="OY_DENY_LATENCY_WEAK")?3:2);
     }
-    else oy_node_deny(oy_node_id, "OY_DENY_DATA_INCOHERENT");
+    else {
+        oy_node_deny(oy_node_id, "OY_DENY_DATA_INCOHERENT");
+        console.log(["INCOHERENT", oy_data_flag, oy_data_payload, oy_node_id]);
+    }
 }
 
 //test latency performance between self and node
@@ -2247,8 +2250,12 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
         oy_node_deny(oy_node_id, "OY_DENY_LATENCY_NONE");
         return false;
     }
-    else if (OY_LATENCY[oy_node_id][2]==="OY_PEER_ROUTINE"&&typeof(OY_PEERS[oy_node_id])==="undefined") {
+    if (OY_LATENCY[oy_node_id][2]==="OY_PEER_ROUTINE"&&typeof(OY_PEERS[oy_node_id])==="undefined") {
         oy_node_deny(oy_node_id, "OY_DENY_LATENCY_PEER");
+        return false;
+    }
+    if (oy_state_current()<OY_LATENCY[oy_node_id][3]) {
+        oy_node_deny(oy_node_id, "OY_DENY_LATENCY_VOID");
         return false;
     }
     let oy_time_local = oy_time();
