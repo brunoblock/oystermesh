@@ -1713,7 +1713,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_node_deny(oy_peer_id, "OY_DENY_BLOCK_NULL_A");
             return false;
         }
-        oy_data_payload[1] = oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+((oy_data_payload[0]===2||(oy_data_payload[0]===1&&oy_state_current()===1))?OY_BLOCK_HASH:((OY_BLOCK_END===true&&OY_BLOCK_FINISH===true&&oy_data_payload[0]===1&&oy_state_current()===2)?OY_BLOCK_HASH_PREV:"0000000000000000000000000000000000000000"))+oy_data_payload[1], true);
+        oy_data_payload[1] = oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+((oy_data_payload[0]===2||(oy_data_payload[0]===1&&(OY_BLOCK_END===false||OY_BLOCK_FINISH===false||oy_state_current()===1)))?OY_BLOCK_HASH:((OY_BLOCK_END===true&&OY_BLOCK_FINISH===true&&oy_data_payload[0]===1&&oy_state_current()===2)?OY_BLOCK_HASH_PREV:"0000000000000000000000000000000000000000"))+oy_data_payload[1], true);
         oy_data_beam(oy_peer_id, "OY_LATENCY_RESPONSE", oy_data_payload);
         return true;
     }
@@ -1928,7 +1928,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
         if (typeof(OY_PROPOSED[oy_node_id])!=="undefined"||typeof(OY_PEERS_PRE[oy_node_id])!=="undefined") {
             if (oy_data_payload[0]!==0&&OY_BLOCK_HASH===null) oy_node_deny(oy_node_id, "OY_DENY_BLOCK_NULL_B");
             else {
-                oy_data_payload[1] = oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+((oy_data_payload[0]===2||(oy_data_payload[0]===1&&oy_state_current()===1))?OY_BLOCK_HASH:((OY_BLOCK_END===true&&OY_BLOCK_FINISH===true&&oy_data_payload[0]===1&&oy_state_current()===2)?OY_BLOCK_HASH_PREV:"0000000000000000000000000000000000000000"))+oy_data_payload[1], true);
+                oy_data_payload[1] = oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+((oy_data_payload[0]===2||(oy_data_payload[0]===1&&(OY_BLOCK_END===false||OY_BLOCK_FINISH===false||oy_state_current()===1)))?OY_BLOCK_HASH:((OY_BLOCK_END===true&&OY_BLOCK_FINISH===true&&oy_data_payload[0]===1&&oy_state_current()===2)?OY_BLOCK_HASH_PREV:"0000000000000000000000000000000000000000"))+oy_data_payload[1], true);
                 oy_data_beam(oy_node_id, "OY_LATENCY_RESPONSE", oy_data_payload);
             }
         }
@@ -2252,9 +2252,9 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
         return false;
     }
     let oy_time_local = oy_time();
-    if (!oy_key_verify(oy_node_id, oy_data_payload[1], OY_MESH_DYNASTY+((OY_LATENCY[oy_node_id][3]===2||(OY_LATENCY[oy_node_id][3]===1&&oy_state_current()===1))?OY_BLOCK_HASH:((OY_BLOCK_END===true&&OY_BLOCK_FINISH===true&&OY_LATENCY[oy_node_id][3]===1&&oy_state_current()===2)?OY_BLOCK_HASH_PREV:"0000000000000000000000000000000000000000"))+OY_LATENCY[oy_node_id][0], true)) {
+    if (!oy_key_verify(oy_node_id, oy_data_payload[1], OY_MESH_DYNASTY+((OY_LATENCY[oy_node_id][3]===2||(OY_LATENCY[oy_node_id][3]===1&&(OY_BLOCK_END===false||OY_BLOCK_FINISH===false||oy_state_current()===1)))?OY_BLOCK_HASH:((OY_BLOCK_END===true&&OY_BLOCK_FINISH===true&&OY_LATENCY[oy_node_id][3]===1&&oy_state_current()===2)?OY_BLOCK_HASH_PREV:"0000000000000000000000000000000000000000"))+OY_LATENCY[oy_node_id][0], true)) {
         let oy_latency_hold = oy_clone_object(OY_LATENCY[oy_node_id]);
-        oy_node_deny(oy_node_id, "OY_DENY_SIGN_FAIL_"+JSON.stringify([OY_LATENCY[oy_node_id][3], OY_LATENCY[oy_node_id], oy_state_current(), oy_state_current(true), OY_BLOCK_FINISH, OY_BLOCK_END, ((OY_LATENCY[oy_node_id][3]===2||(OY_LATENCY[oy_node_id][3]===1&&oy_state_current()===1))?OY_BLOCK_HASH:((OY_BLOCK_END===true&&OY_BLOCK_FINISH===true&&OY_LATENCY[oy_node_id][3]===1&&oy_state_current()===2)?OY_BLOCK_HASH_PREV:"0000000000000000000000000000000000000000"))]));
+        oy_node_deny(oy_node_id, "OY_DENY_SIGN_FAIL_"+JSON.stringify([OY_LATENCY[oy_node_id][3], OY_LATENCY[oy_node_id], oy_state_current(), oy_state_current(true), OY_BLOCK_FINISH, OY_BLOCK_END, ((OY_LATENCY[oy_node_id][3]===2||(OY_LATENCY[oy_node_id][3]===1&&(OY_BLOCK_END===false||OY_BLOCK_FINISH===false||oy_state_current()===1)))?OY_BLOCK_HASH:((OY_BLOCK_END===true&&OY_BLOCK_FINISH===true&&OY_LATENCY[oy_node_id][3]===1&&oy_state_current()===2)?OY_BLOCK_HASH_PREV:"0000000000000000000000000000000000000000"))]));
         if (OY_JUMP_ASSIGN[0]===null&&typeof(OY_JUMP_PRE[oy_node_id])==="undefined"&&oy_latency_hold[3]===2&&Object.keys(OY_BLOCK_JUMP_MAP).length>1&&oy_latency_hold[2]==="OY_PEER_REQUEST") {
             OY_JUMP_PRE[oy_node_id] = false;
             oy_log_debug("JUMP_DEBUG: "+Object.keys(OY_BLOCK_JUMP_MAP).length);
