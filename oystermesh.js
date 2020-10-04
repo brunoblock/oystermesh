@@ -1608,6 +1608,8 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                         return false;
                     }
 
+                    oy_block_finish();
+
                     oy_log("[MESHBLOCK][BASE]["+chalk.bolder(OY_BLOCK_HASH)+"]", 1);
 
                     OY_LIGHT_STATE = true;
@@ -1620,8 +1622,6 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                     for (let oy_peer_select in OY_PEERS) {
                         oy_data_beam(oy_peer_select, "OY_PEER_LIGHT", oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH, true));
                     }
-
-                    oy_block_finish();
                 }, (oy_time_offset>OY_BLOCK_SECTORS[2][0]-(OY_BLOCK_BUFFER_CLEAR[0]+OY_MESH_BUFFER[0]))?((OY_BLOCK_SECTORS[5][0]+OY_BLOCK_BUFFER_CLEAR[0])-oy_time_offset)*1000:0);
             }
         }
@@ -3869,6 +3869,8 @@ function oy_block_engine() {
             OY_BLOCK_METAHASH_PRE = null;
             OY_BLOCK_WEIGHT = new Blob([OY_BLOCK_FLAT]).size;
 
+            oy_block_finish();
+
             oy_log("[MESHBLOCK][FULL]["+chalk.bolder(OY_BLOCK_HASH)+"]", 1);
 
             if (typeof(OY_BLOCK_MAP)==="function") OY_BLOCK_MAP(0);
@@ -3949,8 +3951,6 @@ function oy_block_engine() {
             OY_SYNC_LONG.push(0);
             OY_SYNC_MAP.shift();
             OY_SYNC_MAP.push({});
-
-            oy_block_finish();
         }, OY_BLOCK_SECTORS[2][1]);
 
         oy_chrono(function() {
@@ -4254,6 +4254,8 @@ function oy_block_light(oy_light_lag) {
         return false;
     }
 
+    oy_block_finish();
+
     oy_log("[MESHBLOCK][LIGHT]["+chalk.bolder(OY_BLOCK_HASH)+"]", 1);
 
     if (typeof(OY_BLOCK_MAP)==="function") OY_BLOCK_MAP(0);
@@ -4272,8 +4274,6 @@ function oy_block_light(oy_light_lag) {
             oy_data_beam(oy_peer_select, "OY_PEER_FULL", oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH, true));
         }
     }
-
-    oy_block_finish();
     return true;
 }
 
