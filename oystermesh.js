@@ -4080,62 +4080,64 @@ function oy_block_full() {
     }
     */
 
-    OY_BLOCK_PRE[0][7] = 0;
-    let oy_dive_ledger = {};
-    for (let oy_key_public in OY_BLOCK_SYNC) {
-        //[[0]:work_grade, [1]:grade_top, [2]:uptime_count, [3]:transact_fee_payout, [4]:oy_dive_payout, [5]:oy_dive_team, [6]:oy_full_intro, [7]:work_solutions]
-        let [oy_dive_payout, oy_dive_team, oy_full_intro] = OY_BLOCK_SYNC_PASS[OY_BLOCK_TIME][oy_key_public][0];
-        oy_dive_ledger[oy_key_public] = [OY_BLOCK_WORK_GRADE[oy_key_public], 0, (typeof(OY_BLOCK_PRE[1][oy_key_public])!=="undefined"&&OY_BLOCK_PRE[1][oy_key_public][4]===((oy_dive_payout===false)?0:oy_dive_payout)&&OY_BLOCK_PRE[1][oy_key_public][5]===((oy_dive_team===false)?0:oy_dive_team)&&OY_BLOCK_PRE[1][oy_key_public][6]===((oy_full_intro===false)?0:oy_full_intro))?OY_BLOCK_PRE[1][oy_key_public][2]+1:1, 0, (oy_dive_payout===false)?0:oy_dive_payout, (oy_dive_team===false)?0:oy_dive_team, (oy_full_intro===false)?0:oy_full_intro, OY_BLOCK_SYNC_PASS[OY_BLOCK_TIME][oy_key_public][1]];
-        OY_BLOCK_PRE[0][7] += oy_dive_ledger[oy_key_public][0];
-    }
-
-    let oy_command_check = {};
-    for (let oy_key_public in OY_BLOCK_SYNC) {
-        for (let i in OY_BLOCK_SYNC[oy_key_public][1]) {
-            if (typeof(oy_command_check[OY_BLOCK_SYNC[oy_key_public][1][i][2]])==="undefined"||
-                oy_dive_ledger[oy_key_public][0]>oy_dive_ledger[oy_command_check[OY_BLOCK_SYNC[oy_key_public][1][i][2]][0]][0]||
-                oy_key_public.toLowerCase()<oy_command_check[OY_BLOCK_SYNC[oy_key_public][1][i][2]][0].toLowerCase()) oy_command_check[OY_BLOCK_SYNC[oy_key_public][1][i][2]] = [oy_key_public, OY_BLOCK_SYNC[oy_key_public][1][i]];//[[0]:oy_key_public, [1]:[oy_command_array, oy_command_crypt]
-        }
-    }
-
-    let oy_tally_total = 0;
-    let oy_tally_track = {};
-    for (let oy_node_id in OY_SYNC_TALLY) {
-        if (typeof(oy_tally_track[OY_SYNC_TALLY[oy_node_id]])==="undefined") oy_tally_track[OY_SYNC_TALLY[oy_node_id]] = 0;
-        oy_tally_track[OY_SYNC_TALLY[oy_node_id]]++;
-        oy_tally_total++;
-    }
-    for (let oy_node_id in oy_tally_track) {
-        oy_tally_track[oy_node_id] = oy_tally_track[oy_node_id]/oy_tally_total;
-    }
-    for (let oy_peer_select in OY_PEERS) {
-        if (typeof(oy_tally_track[oy_peer_select])!=="undefined") OY_PEERS[oy_peer_select][9] = oy_tally_track[oy_peer_select];
-        else OY_PEERS[oy_peer_select][9] = 0;
-    }
-
     let oy_command_execute = [];
-    for (let oy_command_hash in oy_command_check) {
-        if (typeof(OY_BLOCK_PRE[4][oy_command_check[oy_command_hash][1][0][2]])==="undefined"||OY_BLOCK_PRE[4][oy_command_check[oy_command_hash][1][0][2]]<oy_command_check[oy_command_hash][1][0][1][2]+OY_AKOYA_FEE) continue;//TODO check if fee buffer needs to be strict or not
-        OY_BLOCK_PRE[4][oy_command_check[oy_command_hash][1][0][2]] -= oy_command_check[oy_command_hash][1][0][1][2];
-        oy_dive_ledger[oy_command_check[oy_command_hash][0]][2] += oy_command_check[oy_command_hash][1][0][1][2];
-        OY_BLOCK_SYNC_PASS[OY_BLOCK_TIME][oy_command_check[oy_command_hash][0]][2] += oy_command_check[oy_command_hash][1][0][1][2];
-        oy_command_execute.push([oy_command_check[oy_command_hash][1][0], oy_command_check[oy_command_hash][1][1], oy_command_hash]);//[[0]:oy_command_array, [1]:oy_command_crypt, [2]:oy_command_hash]
-    }
-
-    OY_BLOCK_PRE[1] = oy_block_dive_sort(oy_dive_ledger);
-    oy_dive_ledger = null;
-    OY_DIVE_STATE = typeof(OY_BLOCK_PRE[1][OY_SELF_PUBLIC])!=="undefined";
-
-    oy_command_execute.sort(function(a, b) {
-        if (a[0][2]===b[0][2]) return a[0][1][1] - b[0][1][1];//if signer is same, sort by transact nonce
-        if (a[0][1][2]===b[0][1][2]) {//if fee is the same, sort by command_hash alphabetically
-            let x = a[2].toLowerCase();
-            let y = b[2].toLowerCase();
-
-            return x < y ? -1 : x > y ? 1 : 0;
+    if (OY_BLOCK_BOOT===false) {
+        OY_BLOCK_PRE[0][7] = 0;
+        let oy_dive_ledger = {};
+        for (let oy_key_public in OY_BLOCK_SYNC) {
+            //[[0]:work_grade, [1]:grade_top, [2]:uptime_count, [3]:transact_fee_payout, [4]:oy_dive_payout, [5]:oy_dive_team, [6]:oy_full_intro, [7]:work_solutions]
+            let [oy_dive_payout, oy_dive_team, oy_full_intro] = OY_BLOCK_SYNC_PASS[OY_BLOCK_TIME][oy_key_public][0];
+            oy_dive_ledger[oy_key_public] = [OY_BLOCK_WORK_GRADE[oy_key_public], 0, (typeof(OY_BLOCK_PRE[1][oy_key_public])!=="undefined"&&OY_BLOCK_PRE[1][oy_key_public][4]===((oy_dive_payout===false)?0:oy_dive_payout)&&OY_BLOCK_PRE[1][oy_key_public][5]===((oy_dive_team===false)?0:oy_dive_team)&&OY_BLOCK_PRE[1][oy_key_public][6]===((oy_full_intro===false)?0:oy_full_intro))?OY_BLOCK_PRE[1][oy_key_public][2]+1:1, 0, (oy_dive_payout===false)?0:oy_dive_payout, (oy_dive_team===false)?0:oy_dive_team, (oy_full_intro===false)?0:oy_full_intro, OY_BLOCK_SYNC_PASS[OY_BLOCK_TIME][oy_key_public][1]];
+            OY_BLOCK_PRE[0][7] += oy_dive_ledger[oy_key_public][0];
         }
-        return b[0][1][2] - a[0][1][2];//sort by fee
-    });
+
+        let oy_command_check = {};
+        for (let oy_key_public in OY_BLOCK_SYNC) {
+            for (let i in OY_BLOCK_SYNC[oy_key_public][1]) {
+                if (typeof(oy_command_check[OY_BLOCK_SYNC[oy_key_public][1][i][2]])==="undefined"||
+                    oy_dive_ledger[oy_key_public][0]>oy_dive_ledger[oy_command_check[OY_BLOCK_SYNC[oy_key_public][1][i][2]][0]][0]||
+                    oy_key_public.toLowerCase()<oy_command_check[OY_BLOCK_SYNC[oy_key_public][1][i][2]][0].toLowerCase()) oy_command_check[OY_BLOCK_SYNC[oy_key_public][1][i][2]] = [oy_key_public, OY_BLOCK_SYNC[oy_key_public][1][i]];//[[0]:oy_key_public, [1]:[oy_command_array, oy_command_crypt]
+            }
+        }
+
+        let oy_tally_total = 0;
+        let oy_tally_track = {};
+        for (let oy_node_id in OY_SYNC_TALLY) {
+            if (typeof(oy_tally_track[OY_SYNC_TALLY[oy_node_id]])==="undefined") oy_tally_track[OY_SYNC_TALLY[oy_node_id]] = 0;
+            oy_tally_track[OY_SYNC_TALLY[oy_node_id]]++;
+            oy_tally_total++;
+        }
+        for (let oy_node_id in oy_tally_track) {
+            oy_tally_track[oy_node_id] = oy_tally_track[oy_node_id]/oy_tally_total;
+        }
+        for (let oy_peer_select in OY_PEERS) {
+            if (typeof(oy_tally_track[oy_peer_select])!=="undefined") OY_PEERS[oy_peer_select][9] = oy_tally_track[oy_peer_select];
+            else OY_PEERS[oy_peer_select][9] = 0;
+        }
+
+        for (let oy_command_hash in oy_command_check) {
+            if (typeof(OY_BLOCK_PRE[4][oy_command_check[oy_command_hash][1][0][2]])==="undefined"||OY_BLOCK_PRE[4][oy_command_check[oy_command_hash][1][0][2]]<oy_command_check[oy_command_hash][1][0][1][2]+OY_AKOYA_FEE) continue;//TODO check if fee buffer needs to be strict or not
+            OY_BLOCK_PRE[4][oy_command_check[oy_command_hash][1][0][2]] -= oy_command_check[oy_command_hash][1][0][1][2];
+            oy_dive_ledger[oy_command_check[oy_command_hash][0]][2] += oy_command_check[oy_command_hash][1][0][1][2];
+            OY_BLOCK_SYNC_PASS[OY_BLOCK_TIME][oy_command_check[oy_command_hash][0]][2] += oy_command_check[oy_command_hash][1][0][1][2];
+            oy_command_execute.push([oy_command_check[oy_command_hash][1][0], oy_command_check[oy_command_hash][1][1], oy_command_hash]);//[[0]:oy_command_array, [1]:oy_command_crypt, [2]:oy_command_hash]
+        }
+
+        OY_BLOCK_PRE[1] = oy_block_dive_sort(oy_dive_ledger);
+        oy_dive_ledger = null;
+        OY_DIVE_STATE = typeof(OY_BLOCK_PRE[1][OY_SELF_PUBLIC])!=="undefined";
+
+        oy_command_execute.sort(function(a, b) {
+            if (a[0][2]===b[0][2]) return a[0][1][1] - b[0][1][1];//if signer is same, sort by transact nonce
+            if (a[0][1][2]===b[0][1][2]) {//if fee is the same, sort by command_hash alphabetically
+                let x = a[2].toLowerCase();
+                let y = b[2].toLowerCase();
+
+                return x < y ? -1 : x > y ? 1 : 0;
+            }
+            return b[0][1][2] - a[0][1][2];//sort by fee
+        });
+    }
 
     if (!oy_block_range(Object.keys(OY_BLOCK_PRE[1]).length, 0)) return false;//block_range will invoke block_reset if necessary
     if (!oy_block_process(oy_command_execute, 0)) return false;//block_process will invoke block_reset if necessary
