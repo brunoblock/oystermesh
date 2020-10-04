@@ -2225,7 +2225,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
         else oy_node_reset(oy_node_id);
         oy_log("[END]["+chalk.bolder(oy_short(oy_node_id))+"]["+chalk.bolder("N")+"]["+chalk.bolder(oy_data_payload)+"]", (oy_data_payload==="OY_DENY_LATENCY_DROP"||oy_data_payload==="OY_DENY_LATENCY_WEAK")?3:2);
     }
-    else if (oy_data_flag==="OY_PEER_EXCHANGE_B"||oy_data_flag==="OY_PEER_EXCHANGE_C"||oy_data_flag==="OY_PEER_EXCHANGE_D") return null;
+    else if (oy_data_flag==="OY_PEER_EXCHANGE_A"||oy_data_flag==="OY_PEER_EXCHANGE_B"||oy_data_flag==="OY_PEER_EXCHANGE_C"||oy_data_flag==="OY_PEER_EXCHANGE_D") return null;
     else {
         oy_node_deny(oy_node_id, "OY_DENY_DATA_INCOHERENT");
         console.log(["INCOHERENT", oy_data_flag, oy_data_payload, oy_node_id]);
@@ -3577,7 +3577,7 @@ function oy_block_engine() {
             let oy_status_log = "[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2).padStart(5, "0"))+"LA]["+chalk.bolder(String(OY_SYNC_LONG[0]).padStart(2, "0"))+"/"+chalk.bolder(String(Math.ceil(Math.sqrt(OY_BLOCK[0][2]))).padStart(2, "0"))+"LO]["+chalk.bolder(OY_BLOCK_STABILITY.toFixed(2).padStart(6, "0"))+"ST]["+chalk.bolder(OY_SLOW_MOTION.toFixed(2))+"SM]["+chalk.bolder(Math.max(...OY_BLOCK_RECORD_KEEP).toFixed(2).padStart(4, "0"))+"RE]["+chalk.bolder(((((OY_BLOCK_ELAPSED/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((OY_BLOCK_ELAPSED/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(OY_BLOCK_ELAPSED)+"S]["+chalk.bolder(OY_FULL_INTRO.toString())+"]";
             oy_chrono(function() {
                 if (OY_BLOCK_ELAPSED+OY_BLOCK_BOOT_BUFFER>0) oy_log(oy_status_log, 1);
-            }, (OY_LIGHT_STATE===false)?1:150);
+            }, (OY_LIGHT_STATE===false)?50:150);
         }
 
         oy_chrono(function() {
