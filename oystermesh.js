@@ -3448,7 +3448,6 @@ function oy_block_engine() {
         //BLOCK SEED--------------------------------------------------
         if (OY_LIGHT_MODE===false&&OY_BLOCK_TIME===OY_BLOCK_BOOT_MARK) {
             oy_log("[MESHBLOCK]["+chalk.bolder("BOOT_SEED")+"]", 1);
-            oy_log_debug("MESHBLOCK BOOT SEED");
             OY_BLOCK = oy_clone_object(OY_BLOCK_TEMPLATE);
             OY_BLOCK[0][0] = OY_MESH_DYNASTY;//dynasty
             OY_BLOCK[0][1] = OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0];
@@ -3586,7 +3585,7 @@ function oy_block_engine() {
         if (OY_BLOCK_HASH!==null) {
             if (OY_LIGHT_STATE===true&&OY_BLOCK_DIFF===false&&OY_LIGHT_ACTIVATE===true) oy_block_light(true);
 
-            let oy_status_log = "[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2).padStart(5, "0"))+"LA]["+chalk.bolder(String(OY_SYNC_LONG[0]).padStart(2, "0"))+"/"+chalk.bolder(String(Math.ceil(Math.sqrt(OY_BLOCK[0][2]))).padStart(2, "0"))+"LO]["+chalk.bolder(OY_BLOCK_STABILITY.toFixed(2).padStart(6, "0"))+"ST]["+chalk.bolder(OY_SLOW_MOTION.toFixed(2))+"SM]["+chalk.bolder(Math.floor(Math.max(...OY_BLOCK_RECORD_KEEP)*1000).padStart(4, "0"))+"RE]["+chalk.bolder(((((OY_BLOCK_ELAPSED/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((OY_BLOCK_ELAPSED/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(OY_BLOCK_ELAPSED)+"S]["+chalk.bolder(OY_FULL_INTRO.toString())+"]";
+            let oy_status_log = "[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2).padStart(5, "0"))+"LA]["+chalk.bolder(String(OY_SYNC_LONG[0]).padStart(2, "0"))+"/"+chalk.bolder(String(Math.ceil(Math.sqrt(OY_BLOCK[0][2]))).padStart(2, "0"))+"LO]["+chalk.bolder(OY_BLOCK_STABILITY.toFixed(2).padStart(6, "0"))+"ST]["+chalk.bolder(OY_SLOW_MOTION.toFixed(2))+"SM]["+chalk.bolder(String(Math.floor(Math.max(...OY_BLOCK_RECORD_KEEP)*1000)).padStart(4, "0"))+"RE]["+chalk.bolder(((((OY_BLOCK_ELAPSED/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((OY_BLOCK_ELAPSED/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(OY_BLOCK_ELAPSED)+"S]["+chalk.bolder(OY_FULL_INTRO.toString())+"]";
             oy_chrono(function() {
                 if (OY_BLOCK_ELAPSED+OY_BLOCK_BOOT_BUFFER>0) oy_log(oy_status_log, 1);
             }, (OY_LIGHT_STATE===false)?50:150);
