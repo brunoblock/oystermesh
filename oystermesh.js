@@ -3574,7 +3574,7 @@ function oy_block_engine() {
         if (OY_BLOCK_HASH!==null) {
             if (OY_LIGHT_STATE===true&&OY_BLOCK_DIFF===false&&OY_LIGHT_ACTIVATE===true) oy_block_light(true);
 
-            let oy_status_log = "[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2).padStart(5, "0"))+"LA]["+chalk.bolder(String(OY_SYNC_LONG[0]).padStart(2, "0"))+"/"+chalk.bolder(String(Math.ceil(Math.sqrt(OY_BLOCK[0][2]))).padStart(2, "0"))+"LO]["+chalk.bolder(OY_BLOCK_STABILITY.toFixed(2).padStart(6, "0"))+"ST]["+chalk.bolder(OY_SLOW_MOTION.toFixed(2))+"SM]["+chalk.bolder(Math.max(...OY_BLOCK_RECORD_KEEP).toFixed(2).padStart(4, "0"))+"RE]["+chalk.bolder(OY_FULL_INTRO.toString())+"]["+chalk.bolder(((((OY_BLOCK_ELAPSED/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((OY_BLOCK_ELAPSED/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(OY_BLOCK_ELAPSED)+"S]";
+            let oy_status_log = "[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2).padStart(5, "0"))+"LA]["+chalk.bolder(String(OY_SYNC_LONG[0]).padStart(2, "0"))+"/"+chalk.bolder(String(Math.ceil(Math.sqrt(OY_BLOCK[0][2]))).padStart(2, "0"))+"LO]["+chalk.bolder(OY_BLOCK_STABILITY.toFixed(2).padStart(6, "0"))+"ST]["+chalk.bolder(OY_SLOW_MOTION.toFixed(2))+"SM]["+chalk.bolder(Math.max(...OY_BLOCK_RECORD_KEEP).toFixed(2).padStart(4, "0"))+"RE]["+chalk.bolder(((((OY_BLOCK_ELAPSED/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((OY_BLOCK_ELAPSED/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(OY_BLOCK_ELAPSED)+"S]["+chalk.bolder(OY_FULL_INTRO.toString())+"]";
             oy_chrono(function() {
                 if (OY_BLOCK_ELAPSED+OY_BLOCK_BOOT_BUFFER>0) oy_log(oy_status_log, 1);
             }, (OY_LIGHT_STATE===false)?1:150);
@@ -3688,6 +3688,8 @@ function oy_block_engine() {
 
         oy_chrono(function() {
             if (OY_BLOCK_HASH===null) return false;
+
+            if (OY_LIGHT_STATE===false&&OY_BLOCK_HASH_PRE===null) oy_block_full();
 
             if (OY_LIGHT_STATE===true&&OY_BLOCK_DIFF===false) oy_block_light(true);
             else if (OY_FULL_INTRO!==false&&(OY_BLOCK_BOOT===true||(typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined"&&OY_BLOCK[1][OY_SELF_PUBLIC][1]===1))) {
@@ -4081,7 +4083,7 @@ function oy_block_full() {
     */
 
     let oy_command_execute = [];
-    if (OY_BLOCK_BOOT===false) {
+    if (OY_BLOCK_BOOT===false||OY_BLOCK_TIME-OY_BLOCK_BOOT_MARK>=OY_BLOCK_BOOT_BUFFER-OY_BLOCK_SECTORS[5][0]) {
         OY_BLOCK_PRE[0][7] = 0;
         let oy_dive_ledger = {};
         for (let oy_key_public in OY_BLOCK_SYNC) {
