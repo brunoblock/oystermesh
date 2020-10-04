@@ -3562,6 +3562,7 @@ function oy_block_engine() {
             OY_SYNC_MAP = [{}, {}];
             OY_PEER_SAFE = {};
             OY_PEER_STRIKE = {};
+            OY_DIFF_SPLIT = [];
 
             oy_event_dispatch("oy_state_light");
             oy_worker_halt(1);
@@ -3787,6 +3788,7 @@ function oy_block_engine() {
             OY_BLOCK_FINISH = false;
             OY_BLOCK_DIFF = false;
             OY_LIGHT_ACTIVATE = false;
+            OY_DIFF_SPLIT = [];
             if (OY_BLOCK_UPTIME===null) OY_BLOCK_UPTIME = oy_time();
 
             if (OY_LIGHT_STATE===true) return true;
@@ -3879,7 +3881,6 @@ function oy_block_engine() {
                     break;
                 }
             }
-            OY_DIFF_SPLIT = [];
             if (OY_BLOCK_UPTIME!==null&&oy_light_pass===true) {
                 let oy_diff_flat = LZString.compressToUTF16(JSON.stringify(OY_DIFF_TRACK));
                 let oy_diff_hash = oy_hash_gen(oy_diff_flat);
