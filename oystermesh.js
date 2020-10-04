@@ -1692,7 +1692,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         }
 
         if (OY_BLOCK_HASH!==null&&(OY_LIGHT_STATE===false||OY_BLOCK_FINISH===true)&&!oy_key_verify(oy_peer_id, oy_data_payload, OY_MESH_DYNASTY+OY_BLOCK_HASH, true)) {
-            oy_node_deny(oy_peer_id, "OY_DENY_LIGHT_FAIL");
+            oy_node_deny(oy_peer_id, "OY_DENY_LIGHT_FAIL_"+OY_BLOCK_HASH);
             return false;
         }
 
@@ -2285,7 +2285,7 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
     let oy_time_local = oy_time();
     if (!oy_key_verify(oy_node_id, oy_data_payload[1], OY_MESH_DYNASTY+oy_latency_sign(OY_LATENCY[oy_node_id][3])+OY_LATENCY[oy_node_id][0], true)) {
         let oy_latency_hold = oy_clone_object(OY_LATENCY[oy_node_id]);
-        oy_node_deny(oy_node_id, "OY_DENY_SIGN_FAIL_"+JSON.stringify([OY_LATENCY[oy_node_id][3], OY_LATENCY[oy_node_id], oy_state_current(), oy_state_current(true), OY_BLOCK_FINISH, OY_BLOCK_END, oy_latency_sign(OY_LATENCY[oy_node_id][3])]));
+        oy_node_deny(oy_node_id, "OY_DENY_SIGN_FAIL");
         if (OY_JUMP_ASSIGN[0]===null&&typeof(OY_JUMP_PRE[oy_node_id])==="undefined"&&oy_latency_hold[3]===2&&Object.keys(OY_BLOCK_JUMP_MAP).length>1&&oy_latency_hold[2]==="OY_PEER_REQUEST") {
             OY_JUMP_PRE[oy_node_id] = false;
             oy_log_debug("JUMP_DEBUG: "+Object.keys(OY_BLOCK_JUMP_MAP).length);
@@ -4970,7 +4970,7 @@ if (OY_NODE_STATE===true) {
                     }
                     OY_SIMULATOR_ELAPSED = [0, OY_BLOCK_BOOT_MARK];
                     process.on('uncaughtException', function(oy_error) {
-                        fs.appendFileSync("/dev/shm/oy_simulator/oy_fatal.log", "["+OY_SELF_SHORT+"][FATAL_ERROR]: "+oy_error+"\n");
+                        fs.appendFileSync("/dev/shm/oy_simulator/oy_fatal.log", "["+OY_SELF_SHORT+"][FATAL_ERROR]: "+JSON.stringify([oy_error, oy_error.stack])+"\n");
                         console.log("["+OY_SELF_SHORT+"][FATAL_ERROR]["+Math.floor(Date.now()/1000)+"]: "+JSON.stringify([oy_error, oy_error.stack]));
                         process.exit();
                     });
