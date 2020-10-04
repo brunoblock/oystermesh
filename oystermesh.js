@@ -707,7 +707,7 @@ function oy_worker_manager(oy_instance, oy_data) {
             OY_SYNC_COUNTER++;
             let oy_sync_counter = OY_SYNC_COUNTER;
             oy_chrono(function() {
-                if (OY_SYNC_COUNTER===oy_sync_counter&&OY_BLOCK_BOOT===false) oy_block_full();
+                if (OY_SYNC_COUNTER===oy_sync_counter) oy_block_full();
             }, OY_SYNC_PREEMPT_BUFFER[1]);
 
             if (typeof(OY_BLOCK_MAP)==="function") OY_BLOCK_MAP(1);
@@ -2897,10 +2897,7 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
             let oy_work_queue = null;
             if (typeof(OY_INTRO_PASS[oy_soak_node])==="undefined") {
                 if ((OY_BLOCK_HASH_PRE===null&&OY_BLOCK_FINISH===false)||OY_WORK_BITS.length<=1) return JSON.stringify(["OY_INTRO_UNREADY", 2]);
-                if (oy_data_payload===true&&(oy_time_offset<(OY_INTRO_MARKER/1000)-OY_MESH_BUFFER[0]||oy_time_offset>(OY_INTRO_MARKER/1000)+OY_INTRO_TRIP[0]+OY_MESH_BUFFER[0])) {
-                    oy_log("LEMON: "+JSON.stringify([oy_time_offset, (OY_INTRO_MARKER/1000)-OY_MESH_BUFFER[0], (OY_INTRO_MARKER/1000)+OY_INTRO_TRIP[0]+OY_MESH_BUFFER[0]]));
-                    return false;
-                }
+                if (oy_data_payload===true&&(oy_time_offset<(OY_INTRO_MARKER/1000)-OY_MESH_BUFFER[0]||oy_time_offset>(OY_INTRO_MARKER/1000)+OY_INTRO_TRIP[0]+OY_MESH_BUFFER[0])) return false;
                 if (typeof(OY_INTRO_ALLOCATE[oy_soak_node])!=="undefined"||(oy_data_payload!==false&&oy_data_payload!==true)) {
                     OY_INTRO_BAN[oy_soak_node] = true;
                     delete OY_INTRO_ALLOCATE[oy_soak_node];
@@ -3572,8 +3569,7 @@ function oy_block_engine() {
             }
         }
 
-        if (OY_BLOCK_STRICT.length>0) console.log([OY_BLOCK_STRICT[OY_BLOCK_STRICT.length-1]*1000, OY_SYNC_LAST[0]*1000]);
-        if (OY_FULL_INTRO!==false) OY_INTRO_MARKER = Math.ceil(Math.min((OY_BLOCK_STRICT.length>0&&OY_BLOCK_STRICT[OY_BLOCK_STRICT.length-1]>OY_BLOCK_SECTORS[1][0]&&OY_BLOCK_STRICT[OY_BLOCK_STRICT.length-1]<OY_BLOCK_SECTORS[2][0])?OY_BLOCK_STRICT[OY_BLOCK_STRICT.length-1]*1000:OY_BLOCK_SECTORS[1][1]+OY_INTRO_ZONE[1], ((OY_SYNC_LAST[0]>0&&OY_SYNC_LAST[0]<OY_BLOCK_SECTORS[1][0]+OY_INTRO_ZONE[0])?OY_BLOCK_SECTORS[1][1]+OY_INTRO_ZONE[1]:OY_BLOCK_SECTORS[2][1])));
+        if (OY_FULL_INTRO!==false) OY_INTRO_MARKER = Math.ceil(Math.min((OY_BLOCK_STRICT.length>0&&OY_BLOCK_STRICT[OY_BLOCK_STRICT.length-1]>OY_BLOCK_SECTORS[1][0]+OY_INTRO_ZONE[0]&&OY_BLOCK_STRICT[OY_BLOCK_STRICT.length-1]<OY_BLOCK_SECTORS[2][0])?OY_BLOCK_STRICT[OY_BLOCK_STRICT.length-1]*1000:OY_BLOCK_SECTORS[1][1]+OY_INTRO_ZONE[1], ((OY_SYNC_LAST[0]>0&&OY_SYNC_LAST[0]<OY_BLOCK_SECTORS[1][0]+OY_INTRO_ZONE[0])?OY_BLOCK_SECTORS[1][1]+OY_INTRO_ZONE[1]:OY_BLOCK_SECTORS[2][1])));
         else OY_INTRO_MARKER = null;
 
         if (OY_BLOCK_HASH!==null) {
