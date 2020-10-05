@@ -1631,23 +1631,33 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         //oy_data_payload = [oy_dive_public, oy_diff_crypt, oy_block_time, oy_diff_hash, oy_diff_nonce_max, oy_diff_nonce, oy_diff_split]
         //TODO payload validation
 
-        let oy_diff_count = 0;
-        for (let oy_peer_select in OY_PEERS) {
-            if (OY_PEERS[oy_peer_select][1]!==0) oy_diff_count++;
-        }
-
         let oy_diff_reference = oy_data_payload[3]+oy_data_payload[4];
         let oy_time_offset = oy_time()-OY_BLOCK_TIME;
-        if (OY_BLOCK_DIFF===true||
+        if (OY_LIGHT_ACTIVATE===true||
             OY_LIGHT_STATE===false||
+            OY_BLOCK_DIFF===true||
             OY_BLOCK_HASH===null||
+            (oy_data_payload[2]!==OY_BLOCK_TIME&&oy_data_payload[2]!==OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0])||
             (oy_data_payload[2]===OY_BLOCK_TIME&&oy_time_offset<OY_BLOCK_SECTORS[2][0]-OY_MESH_BUFFER[0])||
-            (oy_data_payload[2]===OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]&&oy_time_offset>OY_BLOCK_SECTORS[2][0]-OY_MESH_BUFFER[0])||
-            (oy_diff_count>1&&typeof(OY_BLOCK[1][oy_data_payload[0]])==="undefined")||
-            (typeof(OY_LIGHT_BUILD[oy_diff_reference])!=="undefined"&&typeof(OY_LIGHT_BUILD[oy_diff_reference][3][oy_data_payload[5]])!=="undefined"&&typeof(OY_LIGHT_BUILD[oy_diff_reference][3][oy_data_payload[5]][0][oy_data_payload[0]])!=="undefined")) return false;
+            (oy_data_payload[2]===OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]&&oy_time_offset>OY_BLOCK_SECTORS[1][0]-OY_MESH_BUFFER[0])||
+            (oy_state_current(true)===2&&oy_data_payload[2]!==OY_BLOCK_TIME)||
+            (typeof(OY_LIGHT_BUILD[oy_diff_reference])!=="undefined"&&typeof(OY_LIGHT_BUILD[oy_diff_reference][3][oy_data_payload[5]])!=="undefined"&&typeof(OY_LIGHT_BUILD[oy_diff_reference][3][oy_data_payload[5]][0][oy_data_payload[0]])!=="undefined")) {
+            oy_log("RED1: "+JSON.stringify([OY_LIGHT_ACTIVATE===true, OY_LIGHT_STATE===false, OY_BLOCK_DIFF===true, OY_BLOCK_HASH===null, (oy_data_payload[2]===OY_BLOCK_TIME&&oy_time_offset<OY_BLOCK_SECTORS[2][0]-OY_MESH_BUFFER[0]), (oy_data_payload[2]===OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]&&oy_time_offset>OY_BLOCK_SECTORS[1][0]-OY_MESH_BUFFER[0]), (oy_state_current(true)===2&&oy_data_payload[2]===OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]), (typeof(OY_LIGHT_BUILD[oy_diff_reference])!=="undefined"&&typeof(OY_LIGHT_BUILD[oy_diff_reference][3][oy_data_payload[5]])!=="undefined"&&typeof(OY_LIGHT_BUILD[oy_diff_reference][3][oy_data_payload[5]][0][oy_data_payload[0]])!=="undefined")]));
+            return false;
+        }
 
-        if (oy_data_payload[5]>oy_data_payload[4]||!oy_key_verify(oy_data_payload[0], oy_data_payload[1], oy_data_payload[2]+oy_data_payload[3]+oy_data_payload[4]+oy_data_payload[5]+oy_data_payload[6])) {
-            oy_node_deny(oy_peer_id, "OY_DENY_DIFF_INVALID");
+        if (oy_data_payload[5]>oy_data_payload[4]) {
+            oy_node_deny(oy_peer_id, "OY_DENY_DIFF_INVALID_A");
+            return false;
+        }
+
+        if (typeof(OY_BLOCK[1][oy_data_payload[0]])==="undefined") {
+            oy_node_deny(oy_peer_id, "OY_DENY_DIFF_INVALID_B");
+            return false;
+        }
+
+        if (!oy_key_verify(oy_data_payload[0], oy_data_payload[1], oy_data_payload[2]+oy_data_payload[3]+oy_data_payload[4]+oy_data_payload[5]+oy_data_payload[6])) {
+            oy_node_deny(oy_peer_id, "OY_DENY_DIFF_INVALID_C");
             return false;
         }
 
@@ -1680,8 +1690,9 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             if (OY_PEERS[oy_peer_select][1]===1&&oy_peer_select!==oy_peer_id) oy_data_beam(oy_peer_select, "OY_PEER_DIFF", oy_data_payload);
         }
 
-        if (oy_state_current(true)===1&&oy_dive_count>=OY_BLOCK[0][2]*OY_LIGHT_COMMIT) {
-            if (OY_BLOCK_END===false&&OY_BLOCK[0][1]===OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]&&oy_data_payload[2]===OY_BLOCK[0][1]) oy_block_light(true);
+        oy_log("RED2: "+JSON.stringify([oy_dive_count, OY_BLOCK[0][2]*OY_LIGHT_COMMIT]));
+        if (oy_dive_count>=OY_BLOCK[0][2]*OY_LIGHT_COMMIT) {
+            if (oy_state_current(true)===1&&OY_BLOCK_END===false&&OY_BLOCK[0][1]===OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]&&oy_data_payload[2]===OY_BLOCK[0][1]) oy_block_light(true);
             else OY_LIGHT_ACTIVATE = true;
         }
     }
