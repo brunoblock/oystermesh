@@ -877,8 +877,7 @@ function oy_event_dispatch(oy_event_name) {
     if (OY_NODE_STATE===true) OY_EVENTS[oy_event_name].emit(oy_event_name);
     else document.dispatchEvent(OY_EVENTS[oy_event_name]);
 
-    if (oy_event_name.substr(0, 9)==="oy_state_") oy_log("[STATE]["+chalk.bolder(oy_event_name.substr(9).toUpperCase())+"]", 1);
-    else if (OY_VERBOSE_MODE===true) oy_log("[EVENT]["+chalk.bolder(oy_event_name.toUpperCase())+"]");
+    if (OY_VERBOSE_MODE===true&&oy_event_name.substr(0, 9)!=="oy_state_") oy_log("[EVENT]["+chalk.bolder(oy_event_name.toUpperCase())+"]");
 }
 
 function oy_event_hook(oy_event_name, oy_event_callback) {
@@ -1615,7 +1614,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                     OY_LIGHT_STATE = true;
                     OY_DIVE_STATE = false;
 
-                    oy_event_dispatch("oy_state_light");
+                    oy_state_change("light", "blank");
 
                     for (let oy_peer_select in OY_PEERS) {
                         oy_data_beam(oy_peer_select, "OY_PEER_LIGHT", oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH, true));
@@ -2369,6 +2368,11 @@ function oy_state_current(oy_seek_mode = false) {
         return 1;//light node
     }
     return 0;//blank node
+}
+
+function oy_state_change(oy_state_new, oy_state_old) {
+    oy_log("[STATE]["+chalk.bolder(oy_state_old.toUpperCase())+"->"+chalk.bolder(oy_state_new.toUpperCase())+"]", 1);
+    oy_event_dispatch("oy_state_"+oy_state_new);
 }
 
 //measures data flow on the mesh in either beam or soak direction
@@ -3265,6 +3269,8 @@ function oy_block_reset(oy_reset_flag) {
 
     if ((OY_BLOCK_BOOT===true&&oy_reset_flag==="OY_RESET_EVENT")||(OY_BLOCK_HALT!==null&&oy_time_local-OY_BLOCK_HALT<OY_BLOCK_HALT_BUFFER)) return false;//adds boot safety and prevents duplicate calls of block_reset()
 
+    let oy_state_prev = oy_state_current();
+
     OY_BLOCK_HALT = oy_time_local;
     OY_BLOCK_HASH = null;
     OY_BLOCK_METAHASH = null;
@@ -3333,7 +3339,7 @@ function oy_block_reset(oy_reset_flag) {
     oy_log("[BLOCK][RESET]["+chalk.bolder(oy_reset_flag)+"]", 2);
 
     oy_event_dispatch("oy_block_reset");
-    oy_event_dispatch("oy_state_blank");
+    oy_state_change("blank", (oy_state_prev===2)?"full":((oy_state_prev===1)?"light":"blank"))
 }
 
 function oy_block_engine() {
@@ -3484,7 +3490,7 @@ function oy_block_engine() {
             OY_BLOCK_HASH_PREV = "0000000000000000000000000000000000000000";
             OY_BLOCK_HASH = oy_hash_gen(JSON.stringify(OY_BLOCK));
             OY_BLOCK_METAHASH = oy_hash_gen(OY_BLOCK_HASH);
-            oy_event_dispatch("oy_state_full");
+            oy_state_change("full", "boot");
             oy_worker_spawn(1);
 
             if (Object.values(OY_INTRO_DEFAULT).indexOf(OY_SELF_PUBLIC)!==-1) fs.appendFileSync("/dev/shm/oy_debug2.log", "["+OY_SELF_SHORT+"] INTRO DEFAULT BOOT: "+JSON.stringify([OY_BLOCK_HASH])+"\n");
@@ -3572,7 +3578,7 @@ function oy_block_engine() {
             OY_PEER_STRIKE = {};
             OY_DIFF_SPLIT = [];
 
-            oy_event_dispatch("oy_state_light");
+            oy_state_change("light", "full");
             oy_worker_halt(1);
 
             for (let oy_peer_select in OY_PEERS) {//TODO terminate any jump session
@@ -4268,7 +4274,7 @@ function oy_block_light(oy_light_lag) {
         OY_BLOCK_STRICT = [];
         OY_BLOCK_PRE = oy_clone_object(OY_BLOCK);
 
-        oy_event_dispatch("oy_state_full");
+        oy_state_change("full", "light");
         oy_worker_spawn(1);
 
         for (let oy_peer_select in OY_PEERS) {
@@ -4886,7 +4892,7 @@ function oy_init(oy_console) {
     OY_BLOCK_LOOP[1] = Math.ceil(OY_BLOCK_LOOP_RESTORE[1]*OY_SLOW_MOTION);
 
     oy_block_engine();
-    oy_event_dispatch("oy_state_blank");
+    oy_state_change("blank", "null");
 
     if (OY_FULL_INTRO!==false&&OY_SIMULATOR_MODE===false) {
         oy_log("[INTRO_MODE]["+chalk.bolder(OY_FULL_INTRO)+"]", 1);
