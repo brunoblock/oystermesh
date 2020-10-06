@@ -293,6 +293,7 @@ let OY_DIVE_GRADE = true;
 let OY_DIVE_PAYOUT = false;
 let OY_DIVE_TEAM = false;
 let OY_DIVE_STATE = false;
+let OY_DIVE_STATE_PREV = false;
 let OY_VERBOSE_MODE = true;
 let OY_SLOW_MOTION = 1;//run the mesh in slow motion for simulation purposes
 let OY_SLOW_MIN = null;
@@ -1613,6 +1614,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
                     OY_LIGHT_STATE = true;
                     OY_DIVE_STATE = false;
+                    OY_DIVE_STATE_PREV = false;
 
                     oy_state_change("light", "blank");
 
@@ -1702,7 +1704,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             return false;
         }
 
-        if (OY_PEERS[oy_peer_id][1]===2&&typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined") {
+        if (OY_PEERS[oy_peer_id][1]===2&&OY_DIVE_STATE_PREV===true) {
             OY_PEERS[oy_peer_id][1] = 1;
             for (let oy_diff_nonce in OY_DIFF_SPLIT) {
                 oy_data_beam(oy_peer_id, "OY_PEER_DIFF", OY_DIFF_SPLIT[oy_diff_nonce]);
@@ -2191,6 +2193,7 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
                 OY_BLOCK_FINISH = true;
                 OY_BLOCK_FLAT = null;
                 OY_DIVE_STATE = false;
+                OY_DIVE_STATE_PREV = false;
 
                 OY_BLOCK_JUMP = null;
                 OY_BLOCK_NEW_JUMP = null;
@@ -3314,6 +3317,7 @@ function oy_block_reset(oy_reset_flag) {
     OY_LIGHT_BUILD = {};
     OY_LIGHT_STATE = true;
     OY_DIVE_STATE = false;
+    OY_DIVE_STATE_PREV = false;
     OY_SYNC_TALLY = {};
     OY_SYNC_UNIQUE = {};
     OY_SYNC_LAST = [0, 0];
@@ -3571,6 +3575,7 @@ function oy_block_engine() {
             //FULL NODE -> LIGHT NODE
             OY_LIGHT_STATE = true;
             OY_DIVE_STATE = false;
+            OY_DIVE_STATE_PREV = false;
             OY_SYNC_LAST = [0, 0];
             OY_SYNC_LONG = [0, 0];
             OY_SYNC_MAP = [{}, {}];
@@ -3864,11 +3869,17 @@ function oy_block_engine() {
             OY_SYNC_TALLY = {};
             OY_SYNC_UNIQUE = {};
 
-            if (OY_BLOCK_PRE===null) fs.appendFileSync("/dev/shm/oy_debug.log", "["+OY_SELF_SHORT+"] BLOCK_PRE_NULL: "+JSON.stringify([OY_BLOCK_HASH_PRE, OY_BLOCK_DIFF, OY_BLOCK_PROCESS, OY_LIGHT_STATE, OY_BLOCK_HASH, OY_BLOCK, OY_BLOCK_BOOT, oy_state_current(), oy_state_current(true)])+"\n");
-            if (OY_BLOCK_PRE===null||OY_BLOCK_PRE[0][1]!==OY_BLOCK_TIME) {
+            if (OY_BLOCK_HASH===null||OY_BLOCK_PRE===null) {
+                oy_block_reset("OY_RESET_FULL_EMPTY");
+                return false;
+            }
+
+            if (OY_BLOCK_PRE[0][1]!==OY_BLOCK_TIME) {
                 oy_block_reset("OY_RESET_FULL_MISSTEP");
                 return false;
             }
+
+            OY_DIVE_STATE_PREV = typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined";
 
             OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK_PRE);
             OY_BLOCK_PRE = null;
@@ -3892,7 +3903,7 @@ function oy_block_engine() {
                     break;
                 }
             }
-            if (OY_BLOCK_UPTIME!==null&&oy_light_pass===true&&typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined") {
+            if (OY_BLOCK_UPTIME!==null&&oy_light_pass===true&&OY_DIVE_STATE_PREV===true) {
                 let oy_diff_flat = LZString.compressToUTF16(JSON.stringify(OY_DIFF_TRACK));
                 let oy_diff_hash = oy_hash_gen(oy_diff_flat);
                 let oy_diff_nonce_max = -1;
