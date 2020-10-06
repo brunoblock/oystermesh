@@ -1640,10 +1640,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             (oy_data_payload[2]===OY_BLOCK_TIME&&oy_time_offset<OY_BLOCK_SECTORS[2][0]-OY_MESH_BUFFER[0])||
             (oy_data_payload[2]===OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]&&oy_time_offset>OY_BLOCK_SECTORS[1][0]-OY_MESH_BUFFER[0])||
             (oy_state_current(true)===2&&oy_data_payload[2]!==OY_BLOCK_TIME)||
-            (typeof(OY_LIGHT_BUILD[oy_diff_reference])!=="undefined"&&typeof(OY_LIGHT_BUILD[oy_diff_reference][3][oy_data_payload[5]])!=="undefined"&&typeof(OY_LIGHT_BUILD[oy_diff_reference][3][oy_data_payload[5]][0][oy_data_payload[0]])!=="undefined")) {
-            oy_log("RED1: "+JSON.stringify([OY_LIGHT_ACTIVATE===true, OY_LIGHT_STATE===false, OY_BLOCK_DIFF===true, OY_BLOCK_HASH===null, (oy_data_payload[2]===OY_BLOCK_TIME&&oy_time_offset<OY_BLOCK_SECTORS[2][0]-OY_MESH_BUFFER[0]), (oy_data_payload[2]===OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]&&oy_time_offset>OY_BLOCK_SECTORS[1][0]-OY_MESH_BUFFER[0]), (oy_state_current(true)===2&&oy_data_payload[2]===OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]), (typeof(OY_LIGHT_BUILD[oy_diff_reference])!=="undefined"&&typeof(OY_LIGHT_BUILD[oy_diff_reference][3][oy_data_payload[5]])!=="undefined"&&typeof(OY_LIGHT_BUILD[oy_diff_reference][3][oy_data_payload[5]][0][oy_data_payload[0]])!=="undefined")]));
-            return false;
-        }
+            (typeof(OY_LIGHT_BUILD[oy_diff_reference])!=="undefined"&&typeof(OY_LIGHT_BUILD[oy_diff_reference][3][oy_data_payload[5]])!=="undefined"&&typeof(OY_LIGHT_BUILD[oy_diff_reference][3][oy_data_payload[5]][0][oy_data_payload[0]])!=="undefined")) return false;
 
         if (oy_data_payload[5]>oy_data_payload[4]) {
             oy_node_deny(oy_peer_id, "OY_DENY_DIFF_INVALID_B");
@@ -3861,8 +3858,8 @@ function oy_block_engine() {
             OY_SYNC_TALLY = {};
             OY_SYNC_UNIQUE = {};
 
-            if (OY_BLOCK_PRE[0][1]!==OY_BLOCK_TIME) {
-                oy_log("FULL_MISSTEP: "+JSON.stringify([OY_BLOCK_PRE[0][1], OY_BLOCK_TIME]));
+            if (OY_BLOCK_PRE===null) fs.appendFileSync("/dev/shm/oy_debug.log", "["+OY_SELF_SHORT+"] BLOCK_PRE_NULL: "+JSON.stringify([OY_BLOCK_HASH_PRE, OY_BLOCK_DIFF, OY_BLOCK_PROCESS, OY_LIGHT_STATE, OY_BLOCK_HASH, OY_BLOCK, OY_BLOCK_BOOT, oy_state_current(), oy_state_current(true)])+"\n");
+            if (OY_BLOCK_PRE===null||OY_BLOCK_PRE[0][1]!==OY_BLOCK_TIME) {
                 oy_block_reset("OY_RESET_FULL_MISSTEP");
                 return false;
             }
