@@ -3776,8 +3776,9 @@ function oy_block_engine() {
         }, OY_BLOCK_SECTORS[1][1]);
 
         oy_chrono(function() {
+            OY_BLOCK_FINISH = false;
+
             if (OY_BLOCK_HASH===null) {
-                OY_BLOCK_FINISH = false;
                 OY_BLOCK_CHALLENGE = {};
                 oy_block_continue = false;
                 oy_log("[MESHBLOCK][SKIP]["+chalk.bolder(OY_BLOCK_TIME)+"]", 1);
@@ -3795,7 +3796,6 @@ function oy_block_engine() {
             }
 
             OY_BLOCK_END = true;
-            OY_BLOCK_FINISH = false;
             OY_BLOCK_DIFF = false;
             OY_LIGHT_ACTIVATE = false;
             OY_DIFF_SPLIT = [];
