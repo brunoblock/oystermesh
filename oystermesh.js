@@ -1609,7 +1609,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                         return false;
                     }
 
-                    oy_log("[MESHBLOCK][BASE]["+chalk.bolder(OY_BLOCK_HASH)+"]", 1);
+                    oy_log("[MB][BASE]["+chalk.bolder(OY_BLOCK_HASH)+"]", 1);
 
                     OY_LIGHT_STATE = true;
                     OY_DIVE_STATE = false;
@@ -3464,7 +3464,7 @@ function oy_block_engine() {
 
         //BLOCK SEED--------------------------------------------------
         if (OY_LIGHT_MODE===false&&OY_BLOCK_TIME===OY_BLOCK_BOOT_MARK) {
-            oy_log("[MESHBLOCK]["+chalk.bolder("BOOT_SEED")+"]", 1);
+            oy_log("[MB]["+chalk.bolder("BOOT_SEED")+"]", 1);
             OY_BLOCK = oy_clone_object(OY_BLOCK_TEMPLATE);
             OY_BLOCK[0][0] = OY_MESH_DYNASTY;//dynasty
             OY_BLOCK[0][1] = OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0];
@@ -3603,7 +3603,7 @@ function oy_block_engine() {
         if (OY_BLOCK_HASH!==null) {
             if (OY_LIGHT_STATE===true&&OY_BLOCK_DIFF===false&&OY_LIGHT_ACTIVATE===true) oy_block_light(true);
 
-            let oy_status_log = "[MESHBLOCK][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2).padStart(5, "0"))+"LA]["+chalk.bolder(String(OY_SYNC_LONG[0]).padStart(2, "0"))+"/"+chalk.bolder(String(Math.ceil(Math.sqrt(OY_BLOCK[0][2]))).padStart(2, "0"))+"LO]["+chalk.bolder(OY_BLOCK_STABILITY.toFixed(2).padStart(6, "0"))+"ST]["+chalk.bolder(OY_SLOW_MOTION.toFixed(2))+"SM]["+chalk.bolder(String(Math.floor(Math.max(...OY_BLOCK_RECORD_KEEP)*1000)).padStart(4, "0"))+"RE]["+chalk.bolder((OY_WORKER_THREADS[0]===null)?0:OY_WORKER_THREADS[0].length)+"/"+chalk.bolder((OY_WORKER_THREADS[1]===null)?0:OY_WORKER_THREADS[1].length)+"]["+chalk.bolder(((((OY_BLOCK_ELAPSED/60)/60)/24)/365).toFixed(2))+"Y]["+chalk.bolder((((OY_BLOCK_ELAPSED/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(OY_BLOCK_ELAPSED)+"S]["+chalk.bolder(OY_FULL_INTRO.toString())+"]";
+            let oy_status_log = "[MB][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2).padStart(5, "0"))+"LA]["+chalk.bolder(String(OY_SYNC_LONG[0]).padStart(2, "0"))+"/"+chalk.bolder(String(Math.ceil(Math.sqrt(OY_BLOCK[0][2]))).padStart(2, "0"))+"LO]["+chalk.bolder(OY_BLOCK_STABILITY.toFixed(1).padStart(5, "0"))+"ST]["+chalk.bolder(OY_SLOW_MOTION.toFixed(1))+"SM]["+chalk.bolder(String(Math.floor(Math.max(...OY_BLOCK_RECORD_KEEP)*1000)).padStart(3, "0"))+"RE]["+chalk.bolder((OY_WORKER_THREADS[0]===null)?0:OY_WORKER_THREADS[0].length)+"/"+chalk.bolder((OY_WORKER_THREADS[1]===null)?0:OY_WORKER_THREADS[1].length)+"]["+chalk.bolder((((OY_BLOCK_ELAPSED/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(OY_BLOCK_ELAPSED)+"S]["+chalk.bolder(OY_FULL_INTRO.toString())+"]";
             oy_chrono(function() {
                 if (OY_BLOCK_ELAPSED+OY_BLOCK_BOOT_BUFFER>0) oy_log(oy_status_log, 1);
             }, (OY_LIGHT_STATE===false)?50:150);
@@ -3788,7 +3788,7 @@ function oy_block_engine() {
             if (OY_BLOCK_HASH===null) {
                 OY_BLOCK_CHALLENGE = {};
                 oy_block_continue = false;
-                oy_log("[MESHBLOCK][SKIP]["+chalk.bolder(OY_BLOCK_TIME)+"]", 1);
+                oy_log("[MB][SKIP]["+chalk.bolder(OY_BLOCK_TIME)+"]", 1);
                 return false;
             }
             if (OY_BLOCK[0][4]!==OY_BLOCK_BOOT_MARK) {
@@ -3893,7 +3893,7 @@ function oy_block_engine() {
             OY_BLOCK_FINISH = true;
             OY_DIVE_STATE = typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined";
 
-            oy_log("[MESHBLOCK][FULL]["+chalk.bolder(OY_BLOCK_HASH)+"]", 1);
+            oy_log("[MB][FULL]["+chalk.bolder(OY_BLOCK_HASH)+"]", 1);
 
             let oy_light_pass = false;
             for (let oy_peer_select in OY_PEERS) {
@@ -4184,7 +4184,7 @@ function oy_block_full() {
     OY_BLOCK_METAHASH_PRE = oy_hash_gen(OY_BLOCK_HASH_PRE);
     oy_block_work(OY_BLOCK_HASH_PRE, OY_BLOCK_METAHASH_PRE, OY_BLOCK_PRE[0][3]);
 
-    oy_log("[MESHBLOCK][PRE]["+chalk.bolder(OY_BLOCK_HASH_PRE)+"]", 1);
+    oy_log("[MB][PRE]["+chalk.bolder(OY_BLOCK_HASH_PRE)+"]", 1);
 
     OY_BLOCK_PROCESS = false;
     return true;
@@ -4274,7 +4274,7 @@ function oy_block_light(oy_light_lag) {
         return false;
     }
 
-    oy_log("[MESHBLOCK][LIGHT]["+chalk.bolder(OY_BLOCK_HASH)+"]", 1);
+    oy_log("[MB][LIGHT]["+chalk.bolder(OY_BLOCK_HASH)+"]", 1);
 
     //LIGHT NODE -> FULL NODE
     if (oy_light_lag===false&&OY_LIGHT_MODE===false&&OY_LIGHT_STATE===true&&OY_BLOCK[0][1]===OY_BLOCK_TIME&&oy_peer_full()) {
