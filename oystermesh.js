@@ -1600,7 +1600,6 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                     OY_BLOCK_FINISH = true;
 
                     if (OY_BLOCK[0][1]!==OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]) {
-                        oy_log("BASE_MISSTEP: "+JSON.stringify([OY_BLOCK[0][1], OY_BLOCK_TIME]));
                         oy_block_reset("OY_RESET_BASE_MISSTEP");
                         return false;
                     }
@@ -1700,7 +1699,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         }
 
         if (OY_BLOCK_HASH!==null&&(OY_LIGHT_STATE===false||OY_BLOCK_FINISH===true)&&!oy_key_verify(oy_peer_id, oy_data_payload, OY_MESH_DYNASTY+OY_BLOCK_HASH, true)) {
-            oy_node_deny(oy_peer_id, "OY_DENY_LIGHT_FAIL_"+OY_BLOCK_HASH);
+            oy_node_deny(oy_peer_id, "OY_DENY_LIGHT_FAIL");
             return false;
         }
 
@@ -4271,7 +4270,6 @@ function oy_block_light(oy_light_lag) {
     OY_BLOCK_FINISH = true;
 
     if ((oy_light_lag===true&&OY_BLOCK[0][1]!==OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0])||(oy_light_lag===false&&OY_BLOCK[0][1]!==OY_BLOCK_TIME)) {
-        oy_log("LIGHT_MISSTEP: "+JSON.stringify([OY_BLOCK[0][1], OY_BLOCK_TIME, oy_light_lag]));
         oy_block_reset("OY_RESET_LIGHT_MISSTEP");
         return false;
     }
