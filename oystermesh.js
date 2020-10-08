@@ -343,6 +343,7 @@ let OY_PEER_OFFER = [null, null];
 const OY_PEER_BOOT_RESTORE = [OY_PEER_MAX, OY_PEER_INFLATE, OY_PEER_SELF, OY_NODE_MAX];
 let OY_NODES = {};//P2P connection handling for individual nodes
 let OY_COLD = {};//tracking connection shutdowns to specific nodes
+let OY_DENY_CACHE = {};
 let OY_OFFER_COUNTER = 0;
 let OY_OFFER_COLLECT = {};
 let OY_OFFER_PICKUP = [];
@@ -1847,6 +1848,10 @@ function oy_deny_process(oy_deny_reason) {
 }
 
 function oy_node_deny(oy_node_id, oy_deny_reason) {
+    if (typeof(OY_DENY_CACHE[oy_node_id])==="undefined") OY_DENY_CACHE[oy_node_id] = {};
+    else if (typeof(OY_DENY_CACHE[oy_node_id][oy_deny_reason])==="undefined") OY_DENY_CACHE[oy_node_id][oy_deny_reason] = true;
+    else return true;
+
     let oy_node_state = "D";
     if (typeof(OY_PEERS[oy_node_id])!=="undefined") {
         oy_node_state = OY_PEERS[oy_node_id][1];
@@ -1922,7 +1927,7 @@ function oy_node_initiate(oy_node_id) {
 
     //(oy_state_current()!==0&&OY_JUMP_ASSIGN[0]!==oy_node_id&&oy_time_local-OY_BLOCK_TIME>OY_BLOCK_SECTORS[0][0])//TODO restore jump restriction whilst being compatible with new peering system
     let oy_intro_default = Object.values(OY_INTRO_DEFAULT);
-    if (typeof(OY_PEERS[oy_node_id])!=="undefined"||typeof(OY_PROPOSED[oy_node_id])!=="undefined"||typeof(OY_PEERS_PRE[oy_node_id])!=="undefined"||typeof(OY_LATENCY[oy_node_id])!=="undefined"||OY_BLOCK_END===true||oy_time_offset<OY_BLOCK_SECTORS[1][0]||oy_time_offset>OY_BLOCK_SECTORS[2][0]||(Object.keys(OY_NODES).length>=OY_NODE_MAX&&OY_JUMP_ASSIGN[0]!==oy_node_id&&oy_intro_default.indexOf(oy_node_id)===-1)||oy_node_id===OY_SELF_PUBLIC||OY_BLOCK_BOOT===null||(OY_LIGHT_MODE===true&&OY_BLOCK_BOOT===true)) return false;
+    if (typeof(OY_DENY_CACHE[oy_node_id])!=="undefined"||typeof(OY_PEERS[oy_node_id])!=="undefined"||typeof(OY_PROPOSED[oy_node_id])!=="undefined"||typeof(OY_PEERS_PRE[oy_node_id])!=="undefined"||typeof(OY_LATENCY[oy_node_id])!=="undefined"||OY_BLOCK_END===true||oy_time_offset<OY_BLOCK_SECTORS[1][0]||oy_time_offset>OY_BLOCK_SECTORS[2][0]||(Object.keys(OY_NODES).length>=OY_NODE_MAX&&OY_JUMP_ASSIGN[0]!==oy_node_id&&oy_intro_default.indexOf(oy_node_id)===-1)||oy_node_id===OY_SELF_PUBLIC||OY_BLOCK_BOOT===null||(OY_LIGHT_MODE===true&&OY_BLOCK_BOOT===true)) return false;
     OY_PROPOSED[oy_node_id] = true;
     oy_data_beam(oy_node_id, "OY_PEER_REQUEST", (OY_BLOCK_END===true)?oy_state_current(true):oy_state_current());
     return true;
@@ -1959,6 +1964,8 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
         else oy_data_beam(oy_node_id, "OY_LATENCY_DECLINE", null);
     }
     else if (oy_data_flag==="OY_PEER_REQUEST") {
+        if (typeof(OY_DENY_CACHE[oy_node_id])!=="undefined") return false;
+
         if (OY_BLOCK_END===true||oy_time_offset<OY_BLOCK_SECTORS[1][0]||oy_time_offset>OY_BLOCK_SECTORS[2][0]) {
             oy_node_deny(oy_node_id, "OY_DENY_PEER_TIME");
             return false;
@@ -3329,6 +3336,7 @@ function oy_block_reset(oy_reset_flag) {
     OY_PEER_SAFE = {};
     OY_PEER_STRIKE = {};
     OY_PEER_OFFER = [null, null, null];
+    OY_DENY_CACHE = {};
     OY_OFFER_COUNTER = 0;
     OY_OFFER_COLLECT = {};
     OY_OFFER_PICKUP = [];
@@ -3413,6 +3421,7 @@ function oy_block_engine() {
         OY_SYNC_TALLY = {};
         OY_SYNC_UNIQUE = {};
         OY_SYNC_COUNTER = 0;
+        OY_DENY_CACHE = {};
         OY_OFFER_COUNTER = 0;
         OY_OFFER_COLLECT = {};
         OY_OFFER_PICKUP = [];
