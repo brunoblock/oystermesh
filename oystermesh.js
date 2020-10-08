@@ -418,7 +418,6 @@ let OY_BLOCK_NEW_JUMP = {};
 let OY_BLOCK_CONFIRM = {};
 let OY_BLOCK_HALT = null;
 let OY_DIFF_TRACK = [{}, []];
-let OY_DIFF_SPLIT = [];
 let OY_LIGHT_ACTIVATE = false;
 let OY_REPORT_HASH = null;
 let OY_DB = null;
@@ -1705,13 +1704,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             return false;
         }
 
-        if (OY_PEERS[oy_peer_id][1]===2&&OY_DIVE_STATE_PREV===true) {
-            OY_PEERS[oy_peer_id][1] = 1;
-            for (let oy_diff_nonce in OY_DIFF_SPLIT) {
-                oy_data_beam(oy_peer_id, "OY_PEER_DIFF", OY_DIFF_SPLIT[oy_diff_nonce]);
-            }
-        }
-        else OY_PEERS[oy_peer_id][1] = 1;
+        OY_PEERS[oy_peer_id][1] = 1;
         return true;
     }
     else if (oy_data_flag==="OY_PEER_FULL") {//peer as a light node is converting into a full node
@@ -3319,7 +3312,6 @@ function oy_block_reset(oy_reset_flag) {
     OY_BLOCK_METAHASH_PRE = null;
     OY_BLOCK_PROCESS = false;
     OY_DIFF_TRACK = [{}, []];
-    OY_DIFF_SPLIT = [];
     OY_BASE_BUILD = [];
     OY_LIGHT_ACTIVATE = false;
     OY_LIGHT_BUILD = {};
@@ -3592,7 +3584,8 @@ function oy_block_engine() {
             OY_SYNC_MAP = [{}, {}];
             OY_PEER_SAFE = {};
             OY_PEER_STRIKE = {};
-            OY_DIFF_SPLIT = [];
+            OY_BLOCK_DIFF = true;
+            OY_BLOCK_FINISH = true;
 
             oy_state_change("light", "full");
             oy_worker_halt(1);
@@ -3817,7 +3810,6 @@ function oy_block_engine() {
 
             OY_BLOCK_DIFF = false;
             OY_LIGHT_ACTIVATE = false;
-            OY_DIFF_SPLIT = [];
             if (OY_BLOCK_UPTIME===null) OY_BLOCK_UPTIME = oy_time();
 
             if (OY_LIGHT_STATE===true) return true;
@@ -3923,12 +3915,8 @@ function oy_block_engine() {
                 }
 
                 for (let oy_diff_nonce in oy_diff_split) {
-                    OY_DIFF_SPLIT.push([OY_SELF_PUBLIC, oy_key_sign(OY_SELF_PRIVATE, OY_BLOCK_TIME+oy_diff_hash+oy_diff_nonce_max+oy_diff_nonce+oy_diff_split[oy_diff_nonce]), OY_BLOCK_TIME, oy_diff_hash, oy_diff_nonce_max, parseInt(oy_diff_nonce), oy_diff_split[oy_diff_nonce]]);
-                }
-
-                for (let oy_diff_nonce in OY_DIFF_SPLIT) {
                     for (let oy_peer_select in OY_PEERS) {
-                        if (OY_PEERS[oy_peer_select][1]===1) oy_data_beam(oy_peer_select, "OY_PEER_DIFF", OY_DIFF_SPLIT[oy_diff_nonce]);
+                        if (OY_PEERS[oy_peer_select][1]===1) oy_data_beam(oy_peer_select, "OY_PEER_DIFF", [OY_SELF_PUBLIC, oy_key_sign(OY_SELF_PRIVATE, OY_BLOCK_TIME+oy_diff_hash+oy_diff_nonce_max+oy_diff_nonce+oy_diff_split[oy_diff_nonce]), OY_BLOCK_TIME, oy_diff_hash, oy_diff_nonce_max, parseInt(oy_diff_nonce), oy_diff_split[oy_diff_nonce]]);
                     }
                 }
             }
@@ -4190,8 +4178,14 @@ function oy_block_full() {
         });
     }
 
-    if (!oy_block_range(Object.keys(OY_BLOCK_PRE[1]).length, 0)) return false;//block_range will invoke block_reset if necessary
-    if (!oy_block_process(oy_command_execute, 0)) return false;//block_process will invoke block_reset if necessary
+    if (!oy_block_range(Object.keys(OY_BLOCK_PRE[1]).length, 0)) {
+        OY_BLOCK_PROCESS = false;
+        return false;//block_range will invoke block_reset if necessary
+    }
+    if (!oy_block_process(oy_command_execute, 0)) {
+        OY_BLOCK_PROCESS = false;
+        return false;//block_process will invoke block_reset if necessary
+    }
 
     OY_BLOCK_HASH_PRE = oy_hash_gen(JSON.stringify(OY_BLOCK_PRE));
     OY_BLOCK_METAHASH_PRE = oy_hash_gen(OY_BLOCK_HASH_PRE);
