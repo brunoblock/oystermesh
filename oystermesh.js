@@ -59,6 +59,8 @@ const OY_INTRO_PRE_MAX = 800;
 const OY_INTRO_TRIP = [0.8, 800];
 const OY_INTRO_ZONE = [5, 5000];
 const OY_EXCHANGE_ZONE = [4, 4000];
+const OY_CHALLENGE_ZONE = [2.5, 2500];
+const OY_FULL_ZONE = [3.5, 3500];
 const OY_WORK_MATCH = 4;//lower is more bandwidth/memory bound, higher is more CPU bound
 const OY_WORK_MAX = 10000;//10000
 const OY_WORK_MIN = 3;
@@ -1177,6 +1179,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     }
 
     let oy_time_local = oy_time();
+    let oy_time_offset = oy_time_local-OY_BLOCK_TIME;
     if (oy_data_flag==="OY_BLOCK_COMMAND") {//OY_LOGIC_UPSTREAM
         //oy_data_payload = [oy_passport_passive, oy_command_array, oy_command_crypt]
         if (oy_data_payload.length!==4||typeof(oy_data_payload[0])!=="object") {
@@ -1257,7 +1260,6 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             return false;
         }
 
-        let oy_time_offset = oy_time_local-OY_BLOCK_TIME;
         if (oy_sync_pass===0&&
             OY_LIGHT_STATE===false&&//check that self is running block_sync as a full node
             OY_BLOCK_HASH!==null&&//check that there is a known meshblock hash
@@ -1305,7 +1307,6 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             oy_node_deny(oy_peer_id, "OY_DENY_OFFER_A_BLANK");
             return false;
         }
-        let oy_time_offset = oy_time()-OY_BLOCK_TIME;
         if (OY_BLOCK_HASH===null||oy_time_offset<OY_BLOCK_SECTORS[0][0]-(OY_BLOCK_BUFFER_CLEAR[0]+OY_MESH_BUFFER[0])||oy_time_offset>OY_BLOCK_SECTORS[1][0]+OY_MESH_BUFFER[0]) return false;
 
         if (OY_LIGHT_STATE===false&&(OY_DIVE_STATE===true||OY_BLOCK_BOOT===true)) {
@@ -1592,7 +1593,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                 OY_BLOCK_FLAT = null;
             }
             else {
-                let oy_time_offset = oy_time()-OY_BLOCK_TIME;
+                let oy_time_offset_sub = oy_time()-OY_BLOCK_TIME;
                 oy_chrono(function() {
                     OY_BLOCK = JSON.parse(OY_BLOCK_FLAT);
                     OY_BLOCK_HASH_PREV = (OY_BLOCK[2][1].length>0)?OY_BLOCK[2][1][OY_BLOCK[2][1].length-1]:"0000000000000000000000000000000000000000";
@@ -1624,7 +1625,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                     }
 
                     oy_block_finish();
-                }, (oy_time_offset>OY_BLOCK_SECTORS[2][0]-(OY_BLOCK_BUFFER_CLEAR[0]+OY_MESH_BUFFER[0]))?((OY_BLOCK_SECTORS[5][0]+OY_BLOCK_BUFFER_CLEAR[0])-oy_time_offset)*1000:0);
+                }, (oy_time_offset_sub>OY_BLOCK_SECTORS[2][0]-(OY_BLOCK_BUFFER_CLEAR[0]+OY_MESH_BUFFER[0]))?((OY_BLOCK_SECTORS[5][0]+OY_BLOCK_BUFFER_CLEAR[0])-oy_time_offset_sub)*1000:0);
             }
         }
         return true;
@@ -1634,7 +1635,6 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         //TODO payload validation
 
         let oy_diff_reference = oy_data_payload[3]+oy_data_payload[4];
-        let oy_time_offset = oy_time()-OY_BLOCK_TIME;
         if (OY_LIGHT_ACTIVATE===true||
             OY_LIGHT_STATE===false||
             OY_BLOCK_DIFF===true||
@@ -1695,7 +1695,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         }
     }
     else if (oy_data_flag==="OY_PEER_LIGHT") {//peer as a blank or full node is converting into a light node
-        if (OY_PEERS[oy_peer_id][1]===1&&OY_BLOCK_TIME>OY_PEERS[oy_peer_id][0]) {
+        if (OY_PEERS[oy_peer_id][1]===1) {//OY_BLOCK_TIME>OY_PEERS[oy_peer_id][0]
             oy_node_deny(oy_peer_id, "OY_DENY_LIGHT_MISALIGN");
             return false;
         }
@@ -1715,7 +1715,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         return true;
     }
     else if (oy_data_flag==="OY_PEER_FULL") {//peer as a light node is converting into a full node
-        if (OY_PEERS[oy_peer_id][1]===2&&OY_BLOCK_TIME>OY_PEERS[oy_peer_id][0]) {
+        if (OY_PEERS[oy_peer_id][1]!==1||OY_BLOCK_END===false||oy_time_offset<(OY_BLOCK_SECTORS[3][0]+OY_FULL_ZONE[0])-(OY_BLOCK_BUFFER_CLEAR[0]+OY_MESH_BUFFER[0])||oy_time_offset>OY_BLOCK_SECTORS[4][0]) {
             oy_node_deny(oy_peer_id, "OY_DENY_FULL_MISALIGN");
             return false;
         }
@@ -3990,12 +3990,18 @@ function oy_block_engine() {
             if (oy_block_continue===false) return false;
 
             oy_block_challenge(0);
+
+            oy_chrono(function() {
+                oy_block_challenge(1);
+            }, OY_CHALLENGE_ZONE[1]);
+
+            oy_chrono(function() {
+                if (OY_LIGHT_STATE===true&&oy_state_current(true)===2&&Object.keys(OY_LIGHT_BUILD).length>0&&oy_peer_full()) oy_block_light(false);
+            }, OY_FULL_ZONE[1]);
         }, OY_BLOCK_SECTORS[3][1]);
 
         oy_chrono(function() {
             if (oy_block_continue===false) return false;
-
-            oy_block_challenge(1);
 
             let oy_light_deflate = function(oy_deflate_force = false) {
                 let oy_intro_default = Object.values(OY_INTRO_DEFAULT);
@@ -4043,10 +4049,6 @@ function oy_block_engine() {
                 if (oy_peer_count(true)>OY_PEER_MAX[1]) oy_light_deflate();
                 else break;
             }
-
-            oy_chrono(function() {
-                if (OY_LIGHT_STATE===true&&oy_state_current(true)===2&&Object.keys(OY_LIGHT_BUILD).length>0&&oy_peer_full()) oy_block_light(false);
-            }, OY_BLOCK_BUFFER_CLEAR[1]);
         }, OY_BLOCK_SECTORS[4][1]);
     }
 }
