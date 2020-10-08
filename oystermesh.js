@@ -3336,7 +3336,6 @@ function oy_block_reset(oy_reset_flag) {
     OY_PEER_SAFE = {};
     OY_PEER_STRIKE = {};
     OY_PEER_OFFER = [null, null, null];
-    OY_DENY_CACHE = {};
     OY_OFFER_COUNTER = 0;
     OY_OFFER_COLLECT = {};
     OY_OFFER_PICKUP = [];
@@ -3348,6 +3347,7 @@ function oy_block_reset(oy_reset_flag) {
     for (let oy_peer_select in OY_PEERS) {
         oy_node_deny(oy_peer_select, "OY_DENY_SELF_"+oy_reset_flag.substr(3));
     }
+    OY_DENY_CACHE = {};
 
     oy_log("[BLOCK][RESET]["+chalk.bolder(oy_reset_flag)+"]", 2);
 
