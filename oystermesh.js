@@ -1695,7 +1695,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         }
     }
     else if (oy_data_flag==="OY_PEER_LIGHT") {//peer as a blank or full node is converting into a light node
-        if (OY_PEERS[oy_peer_id][1]===1) {
+        if (OY_PEERS[oy_peer_id][1]===1&&OY_BLOCK_TIME>OY_PEERS[oy_peer_id][0]) {
             oy_node_deny(oy_peer_id, "OY_DENY_LIGHT_MISALIGN");
             return false;
         }
@@ -1715,7 +1715,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         return true;
     }
     else if (oy_data_flag==="OY_PEER_FULL") {//peer as a light node is converting into a full node
-        if (OY_PEERS[oy_peer_id][1]!==1||OY_BLOCK_END===false||oy_time_offset<(OY_BLOCK_SECTORS[3][0]+OY_FULL_ZONE[0])-(OY_BLOCK_BUFFER_CLEAR[0]+OY_MESH_BUFFER[0])||oy_time_offset>OY_BLOCK_SECTORS[4][0]) {
+        if ((OY_PEERS[oy_peer_id][1]!==1&&OY_BLOCK_TIME>OY_PEERS[oy_peer_id][0])||OY_BLOCK_END===false||oy_time_offset<(OY_BLOCK_SECTORS[3][0]+OY_FULL_ZONE[0])-(OY_BLOCK_BUFFER_CLEAR[0]+OY_MESH_BUFFER[0])||oy_time_offset>OY_BLOCK_SECTORS[4][0]) {
             oy_node_deny(oy_peer_id, "OY_DENY_FULL_MISALIGN");
             return false;
         }
