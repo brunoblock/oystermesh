@@ -1695,7 +1695,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         }
     }
     else if (oy_data_flag==="OY_PEER_LIGHT") {//peer as a blank or full node is converting into a light node
-        if (OY_PEERS[oy_peer_id][1]===1) {//OY_BLOCK_TIME>OY_PEERS[oy_peer_id][0]
+        if (OY_PEERS[oy_peer_id][1]===1) {
             oy_node_deny(oy_peer_id, "OY_DENY_LIGHT_MISALIGN");
             return false;
         }
@@ -3796,6 +3796,7 @@ function oy_block_engine() {
 
         oy_chrono(function() {
             OY_BLOCK_FINISH = false;
+            OY_BLOCK_END = true;
 
             if (OY_BLOCK_HASH===null) {
                 OY_BLOCK_CHALLENGE = {};
@@ -3814,7 +3815,6 @@ function oy_block_engine() {
                 return false;
             }
 
-            OY_BLOCK_END = true;
             OY_BLOCK_DIFF = false;
             OY_LIGHT_ACTIVATE = false;
             OY_DIFF_SPLIT = [];
