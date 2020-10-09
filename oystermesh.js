@@ -1155,7 +1155,7 @@ function oy_peer_cut() {
     return oy_cut_local;
 }
 
-function oy_peer_count(oy_light_mode = false) {
+function oy_peer_count(oy_light_mode = false, oy_blank_include = true) {
     let oy_return_count = 0;
     if (oy_light_mode===false) {
         for (let oy_peer_select in OY_PEERS) {
@@ -1164,7 +1164,7 @@ function oy_peer_count(oy_light_mode = false) {
     }
     else {
         for (let oy_peer_select in OY_PEERS) {
-            if (OY_PEERS[oy_peer_select][1]===1||OY_PEERS[oy_peer_select][1]===0) oy_return_count++;
+            if (OY_PEERS[oy_peer_select][1]===1||(oy_blank_include===true&&OY_PEERS[oy_peer_select][1]===0)) oy_return_count++;
         }
     }
     return oy_return_count;
@@ -3818,10 +3818,17 @@ function oy_block_engine() {
                 oy_block_reset("OY_RESET_BOOT_MISMATCH");
                 return false;
             }
-            if (oy_peer_count()+oy_peer_count(true)===0&&OY_BLOCK_BOOT===false) {
-                oy_block_continue = false;
-                oy_block_reset("OY_RESET_DROP_PEER");
-                return false;
+            if (OY_BLOCK_BOOT===false) {
+                if (oy_peer_count()+oy_peer_count(true)===0) {
+                    oy_block_continue = false;
+                    oy_block_reset("OY_RESET_DROP_PEER_A");
+                    return false;
+                }
+                if (OY_LIGHT_STATE===false&&oy_peer_count(true, false)===0&&!oy_peer_full()) {
+                    oy_block_continue = false;
+                    oy_block_reset("OY_RESET_DROP_PEER_B");
+                    return false;
+                }
             }
 
             OY_BLOCK_DIFF = false;
@@ -3920,7 +3927,7 @@ function oy_block_engine() {
                     break;
                 }
             }
-            if (OY_BLOCK_UPTIME!==null&&oy_light_pass===true&&OY_DIVE_STATE_PREV===true) {
+            if (oy_light_pass===true&&OY_DIVE_STATE_PREV===true) {
                 let oy_diff_flat = LZString.compressToUTF16(JSON.stringify(OY_DIFF_TRACK));
                 let oy_diff_hash = oy_hash_gen(oy_diff_flat);
                 let oy_diff_nonce_max = -1;
