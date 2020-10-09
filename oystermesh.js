@@ -1600,6 +1600,10 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                     OY_BLOCK_METAHASH = oy_hash_gen(OY_BLOCK_HASH);
                     OY_BLOCK_WEIGHT = new Blob([OY_BLOCK_FLAT]).size;
                     OY_BLOCK_FINISH = true;
+                    OY_BLOCK_DIFF = true;
+                    OY_LIGHT_STATE = true;
+                    OY_DIVE_STATE = false;
+                    OY_DIVE_STATE_PREV = false;
 
                     if (OY_BLOCK[0][1]!==OY_BLOCK_TIME-OY_BLOCK_SECTORS[5][0]) {
                         oy_block_reset("OY_RESET_BASE_MISSTEP");
@@ -1612,10 +1616,6 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
                     }
 
                     oy_log("[MB][BASE]["+chalk.bolder(OY_BLOCK_HASH)+"]", 1);
-
-                    OY_LIGHT_STATE = true;
-                    OY_DIVE_STATE = false;
-                    OY_DIVE_STATE_PREV = false;
 
                     oy_state_change("light", "blank");
 
