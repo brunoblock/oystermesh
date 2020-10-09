@@ -1723,7 +1723,7 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_PEER_LATENCY") {
         if (oy_data_payload[0]!==0&&OY_BLOCK_HASH===null) {
-            oy_node_deny(oy_peer_id, "OY_DENY_BLOCK_NULL_A");
+            oy_node_deny(oy_peer_id, "OY_DENY_LATENCY_NULL_A");
             return false;
         }
         oy_data_payload[1] = oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+oy_latency_sign(oy_data_payload[0])+oy_data_payload[1], true);
@@ -1837,7 +1837,15 @@ function oy_peer_report() {
 }
 
 function oy_deny_process(oy_deny_reason) {
-    return (oy_deny_reason==="OY_DENY_SYNC_PEER"||oy_deny_reason==="OY_DENY_SYNC_ABSENT"||oy_deny_reason==="OY_DENY_LATENCY_DROP"||oy_deny_reason==="OY_DENY_LATENCY_WEAK"||oy_deny_reason==="OY_DENY_PEER_UNREADY"||oy_deny_reason.indexOf("OY_DENY_DEFLATE_")!==-1)?3:2
+    return (oy_deny_reason==="OY_DENY_SYNC_PEER"||
+            oy_deny_reason==="OY_DENY_SYNC_ABSENT"||
+            oy_deny_reason==="OY_DENY_LATENCY_DROP"||
+            oy_deny_reason==="OY_DENY_LATENCY_WEAK"||
+            oy_deny_reason==="OY_DENY_LATENCY_VOID"||
+            oy_deny_reason==="OY_DENY_LATENCY_NULL_A"||
+            oy_deny_reason==="OY_DENY_LATENCY_NULL_B"||
+            oy_deny_reason==="OY_DENY_PEER_UNREADY"||
+            oy_deny_reason.indexOf("OY_DENY_DEFLATE_")!==-1)?3:2
 }
 
 function oy_node_deny(oy_node_id, oy_deny_reason) {
@@ -1948,7 +1956,10 @@ function oy_node_negotiate(oy_node_id, oy_data_flag, oy_data_payload) {
     }
     else if (oy_data_flag==="OY_PEER_LATENCY") {//respond to latency ping from node with peer proposal arrangement
         if (typeof(OY_PROPOSED[oy_node_id])!=="undefined"||typeof(OY_PEERS_PRE[oy_node_id])!=="undefined") {
-            if (oy_data_payload[0]!==0&&OY_BLOCK_HASH===null) oy_node_deny(oy_node_id, "OY_DENY_BLOCK_NULL_B");
+            if (oy_data_payload[0]!==0&&OY_BLOCK_HASH===null) {
+                oy_node_deny(oy_node_id, "OY_DENY_LATENCY_NULL_B");
+                return false;
+            }
             else {
                 oy_data_payload[1] = oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+oy_latency_sign(oy_data_payload[0])+oy_data_payload[1], true);
                 oy_data_beam(oy_node_id, "OY_LATENCY_RESPONSE", oy_data_payload);
@@ -3767,6 +3778,11 @@ function oy_block_engine() {
             }
 
             oy_chrono(function() {
+                OY_BLOCK_DIFF = false;
+                OY_BLOCK_FINISH = false;
+            }, OY_BLOCK_BUFFER_CLEAR[1]);
+
+            oy_chrono(function() {
                 for (let oy_peer_select in OY_PEERS) {
                     if (OY_PEERS[oy_peer_select][1]===0||OY_PEERS[oy_peer_select][0]>=OY_BLOCK_TIME) continue;
                     if (OY_SIMULATOR_MODE===true) {
@@ -3915,8 +3931,9 @@ function oy_block_engine() {
                 }
 
                 for (let oy_diff_nonce in oy_diff_split) {
+                    let oy_diff_payload = [OY_SELF_PUBLIC, oy_key_sign(OY_SELF_PRIVATE, OY_BLOCK_TIME+oy_diff_hash+oy_diff_nonce_max+oy_diff_nonce+oy_diff_split[oy_diff_nonce]), OY_BLOCK_TIME, oy_diff_hash, oy_diff_nonce_max, parseInt(oy_diff_nonce), oy_diff_split[oy_diff_nonce]];
                     for (let oy_peer_select in OY_PEERS) {
-                        if (OY_PEERS[oy_peer_select][1]===1) oy_data_beam(oy_peer_select, "OY_PEER_DIFF", [OY_SELF_PUBLIC, oy_key_sign(OY_SELF_PRIVATE, OY_BLOCK_TIME+oy_diff_hash+oy_diff_nonce_max+oy_diff_nonce+oy_diff_split[oy_diff_nonce]), OY_BLOCK_TIME, oy_diff_hash, oy_diff_nonce_max, parseInt(oy_diff_nonce), oy_diff_split[oy_diff_nonce]]);
+                        if (OY_PEERS[oy_peer_select][1]===1) oy_data_beam(oy_peer_select, "OY_PEER_DIFF", oy_diff_payload);
                     }
                 }
             }
