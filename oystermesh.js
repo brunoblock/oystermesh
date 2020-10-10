@@ -3821,12 +3821,12 @@ function oy_block_engine() {
             if (OY_BLOCK_BOOT===false) {
                 if (oy_peer_count()+oy_peer_count(true)===0) {
                     oy_block_continue = false;
-                    oy_block_reset("OY_RESET_DROP_PEER");
+                    oy_block_reset("OY_RESET_PEER_DROP");
                     return false;
                 }
-                if (OY_LIGHT_STATE===false&&oy_peer_count(true, false)===0&&!oy_peer_full()) {
+                if (oy_peer_count(true, false)===0&&!oy_peer_full()) {
                     oy_block_continue = false;
-                    oy_block_reset("OY_RESET_DROP_BARREN");
+                    oy_block_reset("OY_RESET_BARREN_DROP");
                     return false;
                 }
             }
