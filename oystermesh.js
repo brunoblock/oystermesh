@@ -3536,7 +3536,7 @@ function oy_block_engine() {
                         }
                     }, Math.ceil(OY_BLOCK_STRICT[0]*1000)+OY_MESH_BUFFER[1]);
                 }
-                oy_log("[SYNC][BROADCAST]["+chalk.bolder(oy_command_flat.length)+"]["+chalk.bolder(oy_identity_flat.length)+"]["+chalk.bolder(oy_solutions_flat.length)+"]["+chalk.bolder(oy_peerage_flat.length)+"]", 2);
+                //oy_log("[SYNC][BROADCAST]["+chalk.bolder(oy_command_flat.length)+"]["+chalk.bolder(oy_identity_flat.length)+"]["+chalk.bolder(oy_solutions_flat.length)+"]["+chalk.bolder(oy_peerage_flat.length)+"]", 1);
             }, OY_SYNC_BROADCAST_BUFFER[1]);
 
             let oy_command_sort = [];
