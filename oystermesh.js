@@ -3525,6 +3525,20 @@ function oy_block_engine() {
                 return false;
             }
 
+            let oy_sync_crypt;
+            let oy_sync_hop;
+            oy_chrono(function() {
+                oy_data_route("OY_LOGIC_SYNC", "OY_BLOCK_SYNC", [[], [oy_sync_hop], oy_sync_crypt, OY_BLOCK_TIME, oy_command_flat, oy_identity_flat, oy_solutions_flat, oy_peerage_flat]);
+                if (typeof(OY_BLOCK_STRICT[0])==="number") {
+                    oy_chrono(function() {
+                        for (let oy_key_public in OY_PEERS) {
+                            if (OY_PEERS[oy_key_public][1]===2&&(typeof(OY_BLOCK_SYNC[oy_key_public])==="undefined"||OY_BLOCK_SYNC[oy_key_public]===false)) oy_node_deny(oy_key_public, "OY_DENY_SYNC_ABSENT");
+                        }
+                    }, Math.ceil(OY_BLOCK_STRICT[0]*1000)+OY_MESH_BUFFER[1]);
+                }
+                oy_log("[SYNC][BROADCAST]["+chalk.bolder(oy_command_flat.length)+"]["+chalk.bolder(oy_identity_flat.length)+"]["+chalk.bolder(oy_solutions_flat.length)+"]["+chalk.bolder(oy_peerage_flat.length)+"]", 2);
+            }, OY_SYNC_BROADCAST_BUFFER[1]);
+
             let oy_command_sort = [];
             for (let oy_command_hash in OY_BLOCK_COMMAND) {
                 if (OY_BLOCK_COMMAND[oy_command_hash][0][1][0]===OY_BLOCK_TIME) {
@@ -3572,18 +3586,8 @@ function oy_block_engine() {
             OY_WORK_GRADES = [null];
             OY_WORK_BITS = [null];
 
-            let oy_sync_crypt = oy_key_sign(OY_SELF_PRIVATE, OY_BLOCK_TIME+oy_command_flat+oy_identity_flat+oy_solutions_flat+oy_peerage_flat);
-            oy_chrono(function() {
-                //oy_log("[SYNC][BROADCAST]["+(oy_time()-OY_BLOCK_TIME).toFixed(2)+"]", 2);
-                oy_data_route("OY_LOGIC_SYNC", "OY_BLOCK_SYNC", [[], [oy_key_sign(OY_SELF_PRIVATE, oy_sync_crypt)], oy_sync_crypt, OY_BLOCK_TIME, oy_command_flat, oy_identity_flat, oy_solutions_flat, oy_peerage_flat]);
-            }, OY_SYNC_BROADCAST_BUFFER[1]);
-            if (typeof(OY_BLOCK_STRICT[0])==="number") {
-                oy_chrono(function() {
-                    for (let oy_key_public in OY_PEERS) {
-                        if (OY_PEERS[oy_key_public][1]===2&&(typeof(OY_BLOCK_SYNC[oy_key_public])==="undefined"||OY_BLOCK_SYNC[oy_key_public]===false)) oy_node_deny(oy_key_public, "OY_DENY_SYNC_ABSENT");
-                    }
-                }, Math.ceil(OY_BLOCK_STRICT[0]*1000)+OY_MESH_BUFFER[1]);
-            }
+            oy_sync_crypt = oy_key_sign(OY_SELF_PRIVATE, OY_BLOCK_TIME+oy_command_flat+oy_identity_flat+oy_solutions_flat+oy_peerage_flat);
+            oy_sync_hop = oy_key_sign(OY_SELF_PRIVATE, oy_sync_crypt);
         }
         else if (oy_state_current()===2&&OY_BLOCK_BOOT===false) {
             //FULL NODE -> LIGHT NODE
