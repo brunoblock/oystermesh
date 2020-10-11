@@ -2324,7 +2324,7 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
 
         let oy_latency_result = oy_time_local-OY_LATENCY[oy_node_id][1];
         if (oy_latency_result>=OY_BLOCK_SECTORS[4][0]-OY_BLOCK_SECTORS[3][0]) oy_node_deny(oy_node_id, "OY_DENY_LATENCY_BREACH");
-        else if (OY_LATENCY[oy_node_id][3]===2&&typeof(OY_BLOCK_STRICT[1])==="number"&&oy_latency_result>=OY_BLOCK_STRICT[1]) oy_node_deny(oy_node_id, "OY_DENY_LATENCY_SYNC");
+        else if (OY_LATENCY[oy_node_id][3]===2&&typeof(OY_BLOCK_STRICT[1])==="number"&&oy_latency_result/2>=OY_BLOCK_STRICT[1]) oy_node_deny(oy_node_id, "OY_DENY_LATENCY_SYNC");
         else if (OY_LATENCY[oy_node_id][2]==="OY_PEER_REQUEST"||OY_LATENCY[oy_node_id][2]==="OY_PEER_ACCEPT") {
             let oy_accept_response = function() {
                 if (OY_LATENCY[oy_node_id][2]==="OY_PEER_REQUEST") {
