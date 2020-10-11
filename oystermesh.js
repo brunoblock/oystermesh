@@ -3535,7 +3535,7 @@ function oy_block_engine() {
                 if (typeof(OY_BLOCK_STRICT[0])==="number") {
                     oy_chrono(function() {
                         for (let oy_key_public in OY_PEERS) {
-                            if (OY_PEERS[oy_key_public][1]===2&&(typeof(OY_BLOCK_SYNC[oy_key_public])==="undefined"||OY_BLOCK_SYNC[oy_key_public]===false)) oy_node_deny(oy_key_public, "OY_DENY_SYNC_ABSENT");
+                            if (OY_PEERS[oy_key_public][1]===2&&typeof(OY_PEER_SAFE[oy_key_public])==="undefined"&&(typeof(OY_BLOCK_SYNC[oy_key_public])==="undefined"||OY_BLOCK_SYNC[oy_key_public]===false)) oy_node_deny(oy_key_public, "OY_DENY_SYNC_ABSENT");
                         }
                     }, Math.ceil(OY_BLOCK_STRICT[0]*1000)+OY_MESH_BUFFER[1]);
                 }
