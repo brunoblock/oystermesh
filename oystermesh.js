@@ -1140,7 +1140,7 @@ function oy_peer_latency(oy_peer_id, oy_latency_new) {
 
 function oy_peer_full() {
     for (let oy_peer_select in OY_PEERS) {
-        if (OY_PEERS[oy_peer_select][1]===2&&typeof(OY_BLOCK[1][oy_peer_select])!=="undefined"&&(typeof(OY_BLOCK_STRICT[0])!=="number"||OY_PEERS[oy_peer_select][3]<OY_BLOCK_STRICT[0])) return true;
+        if (OY_PEERS[oy_peer_select][1]===2&&typeof(OY_BLOCK[1][oy_peer_select])!=="undefined"&&(typeof(OY_BLOCK_STRICT[1])!=="number"||OY_PEERS[oy_peer_select][3]<OY_BLOCK_STRICT[1])) return true;
     }
     return false;
 }
@@ -1619,8 +1619,9 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
 
                     oy_state_change("light", "blank");
 
+                    let oy_beam_payload = oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH, true);
                     for (let oy_peer_select in OY_PEERS) {
-                        oy_data_beam(oy_peer_select, "OY_PEER_LIGHT", oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH, true));
+                        oy_data_beam(oy_peer_select, "OY_PEER_LIGHT", oy_beam_payload);
                     }
 
                     oy_block_finish();
@@ -1842,6 +1843,7 @@ function oy_deny_process(oy_deny_reason) {
             oy_deny_reason==="OY_DENY_LATENCY_DROP"||
             oy_deny_reason==="OY_DENY_LATENCY_WEAK"||
             oy_deny_reason==="OY_DENY_LATENCY_VOID"||
+            oy_deny_reason==="OY_DENY_LATENCY_SYNC"||
             oy_deny_reason==="OY_DENY_LATENCY_NULL_A"||
             oy_deny_reason==="OY_DENY_LATENCY_NULL_B"||
             oy_deny_reason==="OY_DENY_PEER_UNREADY"||
@@ -2322,6 +2324,7 @@ function oy_latency_response(oy_node_id, oy_data_payload) {
 
         let oy_latency_result = oy_time_local-OY_LATENCY[oy_node_id][1];
         if (oy_latency_result>=OY_BLOCK_SECTORS[4][0]-OY_BLOCK_SECTORS[3][0]) oy_node_deny(oy_node_id, "OY_DENY_LATENCY_BREACH");
+        else if (OY_LATENCY[oy_node_id][3]===2&&typeof(OY_BLOCK_STRICT[1])==="number"&&oy_latency_result>=OY_BLOCK_STRICT[1]) oy_node_deny(oy_node_id, "OY_DENY_LATENCY_SYNC");
         else if (OY_LATENCY[oy_node_id][2]==="OY_PEER_REQUEST"||OY_LATENCY[oy_node_id][2]==="OY_PEER_ACCEPT") {
             let oy_accept_response = function() {
                 if (OY_LATENCY[oy_node_id][2]==="OY_PEER_REQUEST") {
@@ -3605,8 +3608,9 @@ function oy_block_engine() {
             oy_state_change("light", "full");
             oy_worker_halt(1);
 
+            let oy_beam_payload = oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH, true);
             for (let oy_peer_select in OY_PEERS) {//TODO terminate any jump session
-                if (oy_peer_select!==OY_JUMP_ASSIGN[0]) oy_data_beam(oy_peer_select, "OY_PEER_LIGHT", oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH, true));
+                if (oy_peer_select!==OY_JUMP_ASSIGN[0]) oy_data_beam(oy_peer_select, "OY_PEER_LIGHT", oy_beam_payload);
             }
         }
 
@@ -3942,9 +3946,9 @@ function oy_block_engine() {
                 }
 
                 for (let oy_diff_nonce in oy_diff_split) {
-                    let oy_diff_payload = [OY_SELF_PUBLIC, oy_key_sign(OY_SELF_PRIVATE, OY_BLOCK_TIME+oy_diff_hash+oy_diff_nonce_max+oy_diff_nonce+oy_diff_split[oy_diff_nonce]), OY_BLOCK_TIME, oy_diff_hash, oy_diff_nonce_max, parseInt(oy_diff_nonce), oy_diff_split[oy_diff_nonce]];
+                    let oy_beam_payload = [OY_SELF_PUBLIC, oy_key_sign(OY_SELF_PRIVATE, OY_BLOCK_TIME+oy_diff_hash+oy_diff_nonce_max+oy_diff_nonce+oy_diff_split[oy_diff_nonce]), OY_BLOCK_TIME, oy_diff_hash, oy_diff_nonce_max, parseInt(oy_diff_nonce), oy_diff_split[oy_diff_nonce]];
                     for (let oy_peer_select in OY_PEERS) {
-                        if (OY_PEERS[oy_peer_select][1]===1) oy_data_beam(oy_peer_select, "OY_PEER_DIFF", oy_diff_payload);
+                        if (OY_PEERS[oy_peer_select][1]===1) oy_data_beam(oy_peer_select, "OY_PEER_DIFF", oy_beam_payload);
                     }
                 }
             }
@@ -4321,8 +4325,9 @@ function oy_block_light(oy_light_lag) {
         oy_state_change("full", "light");
         oy_worker_spawn(1);
 
+        let oy_beam_payload = oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH, true);
         for (let oy_peer_select in OY_PEERS) {
-            oy_data_beam(oy_peer_select, "OY_PEER_FULL", oy_key_sign(OY_SELF_PRIVATE, OY_MESH_DYNASTY+OY_BLOCK_HASH, true));
+            oy_data_beam(oy_peer_select, "OY_PEER_FULL", oy_beam_payload);
         }
     }
 
