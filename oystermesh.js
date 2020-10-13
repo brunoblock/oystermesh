@@ -423,6 +423,8 @@ let OY_REPORT_HASH = null;
 let OY_DB = null;
 let OY_ERROR_BROWSER;
 
+const OY_SIM_SNAPSHOT = ["OY_LIGHT_MODE", "OY_LIGHT_LEAN", "OY_LIGHT_STATE", "OY_DIVE_GRADE", "OY_DIVE_PAYOUT", "OY_DIVE_TEAM", "OY_DIVE_STATE", "OY_DIVE_STATE_PREV", "OY_VERBOSE_MODE"];
+
 const OY_NODE_STATE = typeof(window)==="undefined";
 
 // DEPENDENCIES
@@ -3474,6 +3476,10 @@ function oy_block_engine() {
             oy_peer_map[oy_hash_gen(oy_peer_select)] = true;
         }
 
+        if (OY_SIMULATOR_MODE===true) {
+            oy_sim_snapshot();
+        }
+
         oy_event_dispatch("oy_block_init");
 
         for (let oy_report_count = 10000; oy_report_count<=OY_BLOCK_SECTORS[5][1]; oy_report_count += 10000) {
@@ -4823,6 +4829,16 @@ function oy_block_finish() {
     //oy_log(JSON.stringify(OY_BLOCK));
 }
 
+function oy_sim_snapshot() {
+    if (OY_SIMULATOR_MODE!==true) return false;
+
+    let oy_snapshot_local = {};
+    for (let i in OY_SIM_SNAPSHOT) {
+        oy_snapshot_local[OY_SIM_SNAPSHOT[i]] = eval(OY_SIM_SNAPSHOT[i]);
+    }
+    parentPort.postMessage([4, "OY_SIM_SNAPSHOT", null, null, oy_snapshot_local]);
+}
+
 //initialize oyster mesh boot up sequence
 function oy_init(oy_console) {
     if (typeof(oy_console)==="function") {
@@ -5016,24 +5032,7 @@ if (OY_NODE_STATE===true) {
                         OY_SELF_SHORT = oy_short(OY_SELF_PUBLIC);
                     }
                     for (let oy_var in oy_sim_data[1]) {
-                        if (oy_var==="OY_PASSIVE_MODE") OY_PASSIVE_MODE = oy_sim_data[1][oy_var];
-                        else if (oy_var==="OY_VERBOSE_MODE") OY_VERBOSE_MODE = oy_sim_data[1][oy_var];
-                        else if (oy_var==="OY_SLOW_MOTION") OY_SLOW_MOTION = oy_sim_data[1][oy_var];
-                        else if (oy_var==="OY_SLOW_MIN") OY_SLOW_MIN = oy_sim_data[1][oy_var];
-                        else if (oy_var==="OY_SLOW_MAX") OY_SLOW_MAX = oy_sim_data[1][oy_var];
-                        else if (oy_var==="OY_SLOW_FACTOR") OY_SLOW_FACTOR = oy_sim_data[1][oy_var];
-                        else if (oy_var==="OY_SLOW_DEFLATE") OY_SLOW_DEFLATE = oy_sim_data[1][oy_var];
-                        else if (oy_var==="OY_SIMULATOR_TIMINGS") OY_SIMULATOR_TIMINGS = oy_sim_data[1][oy_var];
-                        else if (oy_var==="OY_BLOCK_BOOT_MARK") OY_BLOCK_BOOT_MARK = oy_sim_data[1][oy_var];
-                        else if (oy_var==="OY_BLOCK_BOOT_BUFFER") OY_BLOCK_BOOT_BUFFER = oy_sim_data[1][oy_var];
-                        else if (oy_var==="OY_INTRO_BOOT") OY_INTRO_BOOT = oy_sim_data[1][oy_var];
-                        else if (oy_var==="OY_INTRO_DEFAULT") OY_INTRO_DEFAULT = oy_sim_data[1][oy_var];
-                        else if (oy_var==="OY_LATENCY_SIZE") OY_LATENCY_SIZE = oy_sim_data[1][oy_var];
-                        else if (oy_var==="OY_LATENCY_GEO") OY_LATENCY_GEO = oy_sim_data[1][oy_var];
-                        else if (oy_var==="OY_SYNC_UNIQUE_DIFF") OY_SYNC_UNIQUE_DIFF = oy_sim_data[1][oy_var];
-                        else if (oy_var==="OY_SYNC_UNIQUE_HOP") OY_SYNC_UNIQUE_HOP = oy_sim_data[1][oy_var];
-                        else if (oy_var==="OY_WORKER_CORES_MIN") OY_WORKER_CORES_MIN = oy_sim_data[1][oy_var];
-                        else if (oy_var==="OY_WORKER_CORES_MAX") OY_WORKER_CORES_MAX = oy_sim_data[1][oy_var];
+                        eval(oy_var+" = "+oy_sim_data[1][oy_var]);
                     }
                     OY_SIMULATOR_ELAPSED = [0, OY_BLOCK_BOOT_MARK];
                     process.on('uncaughtException', function(oy_error) {
