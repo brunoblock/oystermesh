@@ -4852,7 +4852,7 @@ function oy_sim_snapshot() {
     for (let i in OY_SIM_SNAPSHOT) {
         oy_snapshot_local[OY_SIM_SNAPSHOT[i]] = eval(OY_SIM_SNAPSHOT[i]);
     }
-    parentPort.postMessage([4, "OY_SIM_SNAPSHOT", null, null, oy_snapshot_local]);
+    parentPort.postMessage([4, "OY_SIM_SNAPSHOT", null, null, JSON.stringify(oy_snapshot_local)]);
 }
 
 //initialize oyster mesh boot up sequence
