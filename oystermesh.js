@@ -20,7 +20,7 @@ const OY_MESH_FULLFILL_CHANCE = 0.2;//probability that data is stored whilst ful
 const OY_MESH_SOURCE = 3;//node in route passport (from destination) that is assigned with defining the source variable//TODO remove?
 const OY_MESH_SEQUENCE = 8;
 //let OY_MESH_SCALE = 1000;//core trilemma variable, maximum amount of full nodes. Higher is more scalable and less secure
-let OY_MESH_SECURITY = 0.33;//core trilemma variable, amount of rogue full nodes required to successfully attack the mesh, higher is more secure and less scalable
+let OY_MESH_SECURITY = 0.25;//core trilemma variable, amount of rogue full nodes required to successfully attack the mesh, higher is more secure and less scalable
 let OY_BLOCK_LOOP = [10, 30];//a lower value means increased accuracy for detecting the start of the next meshblock
 const OY_BLOCK_STABILITY_TRIGGER = 3;//mesh range history minimum to trigger reliance on real stability value
 const OY_BLOCK_STABILITY_LIMIT = 12;//mesh range history to keep to calculate meshblock stability, time is effectively value x 20 seconds
@@ -101,8 +101,8 @@ const OY_SHORT_LENGTH = 6;//various data value such as nonce IDs, data handles, 
 
 // PRE-CALCULATED VARS
 let OY_BLOCK_BOOT_MARK = oy_block_boot_calc(OY_BLOCK_BOOT_SEED);
-const OY_DNS_AUCTION_MIN = (OY_AKOYA_FEE+OY_DNS_FEE)*(OY_DNS_AUCTION_DURATION/OY_BLOCK_SECTORS[5][0]);
-const OY_DNS_OWNER_MIN = (OY_AKOYA_FEE+OY_DNS_FEE)*OY_DNS_AUCTION_MIN+(OY_AKOYA_FEE*(OY_DNS_OWNER_DURATION/OY_BLOCK_SECTORS[5][0]));
+let OY_DNS_AUCTION_MIN = (OY_AKOYA_FEE+OY_DNS_FEE)*(OY_DNS_AUCTION_DURATION/OY_BLOCK_SECTORS[5][0]);
+let OY_DNS_OWNER_MIN = (OY_AKOYA_FEE+OY_DNS_FEE)*OY_DNS_AUCTION_MIN+(OY_AKOYA_FEE*(OY_DNS_OWNER_DURATION/OY_BLOCK_SECTORS[5][0]));
 //const OY_META_OWNER_MIN
 
 // TEMPLATE VARS
@@ -303,6 +303,7 @@ let OY_SLOW_MIN = null;
 let OY_SLOW_MAX = null;
 let OY_SLOW_FACTOR = null;
 let OY_SLOW_DEFLATE = null;
+let OY_SNAPSHOT_OFFSET = 0;
 let OY_SIMULATOR_MODE = false;
 let OY_SIMULATOR_SKEW = 0;
 let OY_SIMULATOR_TIMINGS = null;
@@ -343,7 +344,7 @@ let OY_PEER_EXCHANGE = {};
 let OY_PEER_SAFE = {};
 let OY_PEER_STRIKE = {};
 let OY_PEER_OFFER = [null, null];
-const OY_PEER_BOOT_RESTORE = [OY_PEER_MAX, OY_PEER_INFLATE, OY_PEER_SELF, OY_NODE_MAX];
+let OY_PEER_BOOT_RESTORE = [OY_PEER_MAX, OY_PEER_INFLATE, OY_PEER_SELF, OY_NODE_MAX];
 let OY_NODES = {};//P2P connection handling for individual nodes
 let OY_COLD = {};//tracking connection shutdowns to specific nodes
 let OY_DENY_CACHE = {};
@@ -398,7 +399,7 @@ let OY_BLOCK_PRE = null;
 let OY_BLOCK_PRE_COUNTER = 0;
 let OY_BLOCK_WORKHASH = null;
 let OY_BLOCK_PROCESS = false;
-const OY_BLOCK_LOOP_RESTORE = OY_BLOCK_LOOP.slice();
+let OY_BLOCK_LOOP_RESTORE = OY_BLOCK_LOOP.slice();
 let OY_JUMP_ASSIGN = [null, null];//handle jump sessions
 let OY_JUMP_PRE = {};
 let OY_BLOCK_JUMP = null;
@@ -433,9 +434,9 @@ const OY_SIM_SNAPSHOT = [
 
     "OY_LIGHT_MODE", "OY_LIGHT_LEAN", "OY_LIGHT_STATE", "OY_DIVE_GRADE", "OY_DIVE_PAYOUT", "OY_DIVE_TEAM", "OY_DIVE_STATE", "OY_DIVE_STATE_PREV", "OY_VERBOSE_MODE", "OY_SLOW_MOTION", "OY_SLOW_MIN", "OY_SLOW_MAX", "OY_SLOW_FACTOR", "OY_SLOW_DEFLATE", "OY_SIMULATOR_MODE", "OY_SIMULATOR_SKEW",
     "OY_SIMULATOR_TIMINGS", "OY_SIMULATOR_SCALE", "OY_SIMULATOR_ELAPSED", "OY_SIMULATOR_CALLBACK", "OY_FULL_INTRO", "OY_INTRO_BOOT", "OY_INTRO_DEFAULT", "OY_INTRO_PUNISH", "OY_INTRO_BAN", "OY_INTRO_SELECT", "OY_INTRO_SOLUTIONS", "OY_INTRO_MARKER", "OY_INTRO_PRE", "OY_INTRO_ALLOCATE",
-    "OY_INTRO_PASS", "OY_INTRO_SELF", "OY_INTRO_TAG", "OY_PASSIVE_MODE", "OY_EVENTS", "OY_SELF_PRIVATE", "OY_SELF_PUBLIC", "OY_SELF_SHORT", "OY_CONSOLE", "OY_MESH_MAP", "OY_BLOCK_MAP", "OY_INIT", "OY_COLLECT", "OY_CONSTRUCT", "OY_DATA_PUSH", "OY_DATA_PULL", "OY_PEERS_PRE",
+    "OY_INTRO_PASS", "OY_INTRO_SELF", "OY_INTRO_TAG", "OY_PASSIVE_MODE", "OY_SELF_PRIVATE", "OY_SELF_PUBLIC", "OY_SELF_SHORT", "OY_CONSOLE", "OY_MESH_MAP", "OY_BLOCK_MAP", "OY_INIT", "OY_COLLECT", "OY_CONSTRUCT", "OY_DATA_PUSH", "OY_DATA_PULL", "OY_PEERS_PRE",
     "OY_PEER_EXCHANGE", "OY_PEER_SAFE", "OY_PEER_STRIKE", "OY_PEER_OFFER", "OY_PEER_BOOT_RESTORE", "OY_NODES", "OY_COLD", "OY_DENY_CACHE", "OY_OFFER_COUNTER", "OY_OFFER_COLLECT", "OY_OFFER_PICKUP", "OY_OFFER_BROKER", "OY_LATENCY", "OY_PROPOSED", "OY_PUSH_HOLD", "OY_PUSH_TALLY",
-    "OY_BASE_BUILD", "OY_JUMP_BUILD", "OY_LIGHT_BUILD", "OY_WORKER_THREADS", "OY_WORKER_POINTER", "OY_WORK_SOLUTIONS", "OY_WORK_GRADES", "OY_WORK_BITS", "OY_BLOCK_STRICT", "OY_BLOCK_LATENCY", "OY_BLOCK_HASH", "OY_BLOCK_HASH_PREV", "OY_BLOCK_METAHASH", "OY_BLOCK_HASH_PRE",
+    "OY_BASE_BUILD", "OY_JUMP_BUILD", "OY_LIGHT_BUILD", "OY_WORKER_POINTER", "OY_WORK_SOLUTIONS", "OY_WORK_GRADES", "OY_WORK_BITS", "OY_BLOCK_STRICT", "OY_BLOCK_LATENCY", "OY_BLOCK_HASH", "OY_BLOCK_HASH_PREV", "OY_BLOCK_METAHASH", "OY_BLOCK_HASH_PRE",
     "OY_BLOCK_METAHASH_PRE", "OY_BLOCK_FLAT", "OY_BLOCK_COMPRESS", "OY_BLOCK_DIFF", "OY_BLOCK_END", "OY_BLOCK_SIGN", "OY_BLOCK_NEXT", "OY_BLOCK_BOOT", "OY_BLOCK_UPTIME", "OY_BLOCK_WEIGHT", "OY_BLOCK_ELAPSED", "OY_BLOCK_STABILITY", "OY_BLOCK_STABILITY_KEEP",
     "OY_BLOCK_COMMAND_NONCE", "OY_BLOCK_COMMAND", "OY_BLOCK_COMMAND_SELF", "OY_BLOCK_COMMAND_ROLLBACK", "OY_BLOCK_SYNC", "OY_BLOCK_SYNC_PASS", "OY_BLOCK_WORK_GRADE", "OY_BLOCK_RECORD", "OY_BLOCK_RECORD_KEEP", "OY_BLOCK_FINISH", "OY_BLOCK_JUMP_MAP", "OY_BLOCK_PRE", "OY_BLOCK_PRE_COUNTER",
     "OY_BLOCK_WORKHASH", "OY_BLOCK_PROCESS", "OY_BLOCK_LOOP_RESTORE", "OY_JUMP_ASSIGN", "OY_JUMP_PRE", "OY_BLOCK_JUMP", "OY_BLOCK_FLAT_JUMP", "OY_BLOCK_HASH_JUMP", "OY_BLOCK_TIME_JUMP", "OY_BLOCK_NEXT_JUMP", "OY_SYNC_LAST", "OY_SYNC_LONG", "OY_SYNC_MAP", "OY_SYNC_TALLY", "OY_SYNC_UNIQUE",
@@ -870,7 +871,7 @@ function oy_chrono(oy_chrono_callback, oy_chrono_duration) {
 
 function oy_time() {
     if (OY_SIMULATOR_MODE===true) {
-        let oy_time_local = Date.now()/1000;
+        let oy_time_local = (Date.now()/1000)-OY_SNAPSHOT_OFFSET;
         let oy_time_append = ((oy_time_local-OY_SIMULATOR_ELAPSED[1])/OY_SLOW_MOTION);
         OY_SIMULATOR_ELAPSED[0] += oy_time_append;
         OY_SIMULATOR_ELAPSED[1] = oy_time_local;
@@ -4862,17 +4863,7 @@ function oy_sim_snapshot() {
     parentPort.postMessage([4, "OY_SIM_SNAPSHOT", null, null, JSON.stringify(oy_snapshot_local)]);
 }
 
-//initialize oyster mesh boot up sequence
-function oy_init(oy_console) {
-    if (typeof(oy_console)==="function") {
-        console.log("[OYSTER][CONSOLE][REDIRECT]");
-        OY_CONSOLE = oy_console;
-    }
-    if (OY_INIT===true) {
-        console.log("[ERROR]["+chalk.bolder("INIT_DUPLICATE")+"]", true);
-        return false;
-    }
-    OY_INIT = true;
+function oy_init_core() {
     if (OY_NODE_STATE===true) {
         chalk = require('chalk');
         chalk.bolder = function(input) {return (OY_NODE_STATE===true)?chalk.bold(input):input;}
@@ -4907,17 +4898,8 @@ function oy_init(oy_console) {
         }
     }
 
-    if (OY_SELF_PUBLIC===null) {
-        let oy_key_pair = oy_key_gen();
-        OY_SELF_PRIVATE = oy_key_pair[0];
-        OY_SELF_PUBLIC = oy_key_pair[1];
-        OY_SELF_SHORT = oy_short(OY_SELF_PUBLIC);
-    }
-    OY_PROPOSED = {};
-
     oy_worker_spawn(0);
 
-    //EVENTS
     oy_event_create("oy_peers_null", oy_block_reset);//trigger-able event for when peer_count == 0
     oy_event_create("oy_peers_recover");//trigger-able event for when peer_count > 0
     oy_event_create("oy_block_init");//trigger-able event for when a new block is issued
@@ -4926,6 +4908,29 @@ function oy_init(oy_console) {
     oy_event_create("oy_state_blank");//trigger-able event for when self becomes blank
     oy_event_create("oy_state_light");//trigger-able event for when self becomes a light node
     oy_event_create("oy_state_full");//trigger-able event for when self becomes a full node
+}
+
+//initialize oyster mesh boot up sequence
+function oy_init(oy_console) {
+    if (typeof(oy_console)==="function") {
+        console.log("[OYSTER][CONSOLE][REDIRECT]");
+        OY_CONSOLE = oy_console;
+    }
+    if (OY_INIT===true) {
+        console.log("[ERROR]["+chalk.bolder("INIT_DUPLICATE")+"]", true);
+        return false;
+    }
+    OY_INIT = true;
+
+    oy_init_core();
+
+    if (OY_SELF_PUBLIC===null) {
+        let oy_key_pair = oy_key_gen();
+        OY_SELF_PRIVATE = oy_key_pair[0];
+        OY_SELF_PUBLIC = oy_key_pair[1];
+        OY_SELF_SHORT = oy_short(OY_SELF_PUBLIC);
+    }
+    OY_PROPOSED = {};
 
     let oy_key_rand = oy_rand_gen(32);
     if (!oy_key_verify(OY_SELF_PUBLIC, oy_key_sign(OY_SELF_PRIVATE, oy_key_rand, true), oy_key_rand, true)) {
@@ -5067,6 +5072,7 @@ if (OY_NODE_STATE===true) {
                 }
                 else if (oy_sim_node==="OY_SIM_RECOVER") {
                     oy_sim_data = JSON.parse(oy_sim_data);
+                    let oy_block_time_prev = OY_BLOCK_TIME;
                     for (let oy_var in oy_sim_data) {
                         if (oy_var==="OY_SLOW_MOTION") {
                             OY_SLOW_MOTION = 1;
@@ -5074,6 +5080,10 @@ if (OY_NODE_STATE===true) {
                         }
                         else eval(oy_var+" = "+JSON.stringify(oy_sim_data[oy_var]));
                     }
+                    OY_SNAPSHOT_OFFSET = oy_block_time_prev-OY_BLOCK_TIME;
+                    oy_init_core();
+                    if (oy_state_current()===2) oy_worker_spawn(1);
+                    oy_block_engine();
                 }
                 else if (oy_sim_node==="OY_SIM_SLOW") {
                     if (OY_SIMULATOR_SCALE[1]===false||OY_SIMULATOR_SCALE[0]+1!==oy_sim_data) {
