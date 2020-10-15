@@ -2408,7 +2408,7 @@ function oy_state_current(oy_seek_mode = false) {
 }
 
 function oy_state_change(oy_state_new, oy_state_old) {
-    oy_log("[STATE]["+chalk.bolder(oy_state_old.toUpperCase())+"->"+chalk.bolder(oy_state_new.toUpperCase())+"]", 1);
+    if (oy_state_old!=="null") oy_log("[STATE]["+chalk.bolder(oy_state_old.toUpperCase())+"->"+chalk.bolder(oy_state_new.toUpperCase())+"]", 1);
     oy_event_dispatch("oy_state_"+oy_state_new);
 }
 
