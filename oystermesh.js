@@ -4910,6 +4910,17 @@ function oy_init_core() {
     oy_event_create("oy_state_full");//trigger-able event for when self becomes a full node
 }
 
+function oy_init_load(oy_load_flag) {
+    let oy_boot_msg = "[OYSTER]["+chalk.bolder(oy_load_flag)+"]["+chalk.bolder(OY_MESH_DYNASTY)+"]["+chalk.bolder(OY_SELF_SHORT)+"]["+chalk.bolder(OY_FULL_INTRO)+"]";
+    if (OY_PASSIVE_MODE===true) console.log("[PASSIVE]"+oy_boot_msg);
+    else oy_log(oy_boot_msg, 1);
+
+    if (OY_SIMULATOR_MODE===true) {
+        if (OY_VERBOSE_MODE===true) oy_log("[OYSTER][SIMULATOR][LOAD]"+chalk.bolder(JSON.stringify([OY_SIMULATOR_SKEW, OY_LIGHT_MODE, OY_FULL_INTRO])), 1);
+        parentPort.postMessage([6, OY_SELF_PUBLIC, OY_FULL_INTRO, (OY_LIGHT_MODE===false)?2:1]);
+    }
+}
+
 //initialize oyster mesh boot up sequence
 function oy_init(oy_console) {
     if (typeof(oy_console)==="function") {
@@ -4965,14 +4976,7 @@ function oy_init(oy_console) {
         return false;
     }
 
-    let oy_boot_msg = "[OYSTER]["+chalk.bolder(OY_MESH_DYNASTY)+"]["+chalk.bolder(OY_SELF_SHORT)+"]["+chalk.bolder(OY_FULL_INTRO)+"]";
-    if (OY_PASSIVE_MODE===true) console.log("[PASSIVE]"+oy_boot_msg);
-    else oy_log(oy_boot_msg, 1);
-
-    if (OY_SIMULATOR_MODE===true) {
-        if (OY_VERBOSE_MODE===true) oy_log("[OYSTER][SIMULATOR][LOAD]"+chalk.bolder(JSON.stringify([OY_SIMULATOR_SKEW, OY_LIGHT_MODE, OY_FULL_INTRO])), 1);
-        parentPort.postMessage([6, OY_SELF_PUBLIC, OY_FULL_INTRO, (OY_LIGHT_MODE===false)?2:1]);
-    }
+    oy_init_load((OY_SIMULATOR_MODE===true)?"OY_SIMULATOR_INIT":"OY_LIVE_INIT");
 
     /*TODO nodejs DB integration
     //Dexie.delete("oy_db");
@@ -5081,7 +5085,13 @@ if (OY_NODE_STATE===true) {
                         else eval(oy_var+" = "+JSON.stringify(oy_sim_data[oy_var]));
                     }
                     OY_SNAPSHOT_OFFSET = oy_block_time_prev-OY_BLOCK_TIME;
+                    process.on('uncaughtException', function(oy_error) {
+                        fs.appendFileSync("/dev/shm/oy_simulator/oy_fatal.log", "["+OY_SELF_SHORT+"][FATAL_ERROR]: "+JSON.stringify([oy_error, oy_error.stack])+"\n");
+                        console.log("["+OY_SELF_SHORT+"][FATAL_ERROR]["+Math.floor(Date.now()/1000)+"]: "+JSON.stringify([oy_error, oy_error.stack]));
+                        process.exit();
+                    });
                     oy_init_core();
+                    oy_init_load("OY_SIMULATOR_RECOVER");
                     if (oy_state_current()===2) oy_worker_spawn(1);
                     oy_block_engine();
                 }
