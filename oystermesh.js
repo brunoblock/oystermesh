@@ -3463,11 +3463,6 @@ function oy_block_engine() {
         OY_PEER_OFFER = [null, null, null];
         OY_BASE_BUILD = [];
         OY_JUMP_PRE = {};
-        oy_block_jump_reset();
-
-        if (OY_INTRO_SELECT!==null&&Object.values(OY_INTRO_TAG).indexOf(true)===-1) oy_intro_punish(OY_INTRO_SELECT);
-
-        OY_INTRO_SELECT = null;
         OY_INTRO_SOLUTIONS = {};
         OY_INTRO_PRE = {};
         OY_INTRO_ALLOCATE = {};
@@ -3476,7 +3471,14 @@ function oy_block_engine() {
         OY_INTRO_TAG = {};
         OY_INTRO_BAN = {};
 
-        if (OY_SIMULATOR_MODE===true) OY_SIMULATOR_CALLBACK = {};
+        if (OY_SIMULATOR_MODE===true) {
+            OY_SIMULATOR_CALLBACK = {};
+            oy_sim_snapshot();
+        }
+
+        oy_block_jump_reset();
+        if (OY_INTRO_SELECT!==null&&Object.values(OY_INTRO_TAG).indexOf(true)===-1) oy_intro_punish(OY_INTRO_SELECT);
+        OY_INTRO_SELECT = null;
 
         if (OY_BLOCK_BOOT===true) {
             if (OY_LIGHT_MODE===true) return false;//if self elects to be a light node they cannot participate in the initial boot-up sequence of the mesh
@@ -3499,8 +3501,6 @@ function oy_block_engine() {
             OY_PEERS[oy_peer_select][11] = [null, null, null, null, null, null];
             oy_peer_map[oy_hash_gen(oy_peer_select)] = true;
         }
-
-        if (OY_SIMULATOR_MODE===true) oy_sim_snapshot();
 
         oy_event_dispatch("oy_block_init");
 
