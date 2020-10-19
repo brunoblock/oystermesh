@@ -432,7 +432,7 @@ const OY_SIM_SNAPSHOT = [
     "OY_BLOCK_STRICT_FLOOR", "OY_SYNC_BROADCAST_BUFFER", "OY_SYNC_PREEMPT_BUFFER", "OY_SYNC_UNIQUE_DIFF", "OY_SYNC_UNIQUE_HOP", "OY_LIGHT_CHUNK", "OY_LIGHT_COMMIT", "OY_PEER_MAX", "OY_PEER_INFLATE", "OY_PEER_DEFLATE", "OY_PEER_INTRO", "OY_PEER_SELF", "OY_PEER_BOOT_CORE",
     "OY_PEER_BOOT_SCALE", "OY_NODE_MAX", "OY_WORK_DELTA", "OY_WORK_DILUTE", "OY_WORK_TARGET", "OY_WORKER_CORES_MIN", "OY_WORKER_CORES_MAX", "OY_LATENCY_SIZE", "OY_LATENCY_GEO", "OY_BLOCK_BOOT_MARK", "OY_DNS_AUCTION_MIN", "OY_DNS_OWNER_MIN",
 
-    "OY_LIGHT_MODE", "OY_LIGHT_LEAN", "OY_LIGHT_STATE", "OY_DIVE_GRADE", "OY_DIVE_PAYOUT", "OY_DIVE_TEAM", "OY_DIVE_STATE", "OY_DIVE_STATE_PREV", "OY_VERBOSE_MODE", "OY_SLOW_MOTION", "OY_SLOW_MIN", "OY_SLOW_MAX", "OY_SLOW_FACTOR", "OY_SLOW_DEFLATE", "OY_SIMULATOR_MODE", "OY_SIMULATOR_SKEW",
+    "OY_LIGHT_MODE", "OY_LIGHT_LEAN", "OY_LIGHT_STATE", "OY_DIVE_GRADE", "OY_DIVE_PAYOUT", "OY_DIVE_TEAM", "OY_DIVE_STATE", "OY_DIVE_STATE_PREV", "OY_VERBOSE_MODE", "OY_SLOW_MOTION", "OY_SLOW_MIN", "OY_SLOW_MAX", "OY_SLOW_FACTOR", "OY_SLOW_DEFLATE", "OY_SNAPSHOT_OFFSET", "OY_SIMULATOR_MODE", "OY_SIMULATOR_SKEW",
     "OY_SIMULATOR_TIMINGS", "OY_SIMULATOR_SCALE", "OY_SIMULATOR_ELAPSED", "OY_SIMULATOR_CALLBACK", "OY_FULL_INTRO", "OY_INTRO_BOOT", "OY_INTRO_DEFAULT", "OY_INTRO_PUNISH", "OY_INTRO_BAN", "OY_INTRO_SELECT", "OY_INTRO_SOLUTIONS", "OY_INTRO_MARKER", "OY_INTRO_PRE", "OY_INTRO_ALLOCATE",
     "OY_INTRO_PASS", "OY_INTRO_SELF", "OY_INTRO_TAG", "OY_PASSIVE_MODE", "OY_SELF_PRIVATE", "OY_SELF_PUBLIC", "OY_SELF_SHORT", "OY_CONSOLE", "OY_MESH_MAP", "OY_BLOCK_MAP", "OY_INIT", "OY_COLLECT", "OY_CONSTRUCT", "OY_DATA_PUSH", "OY_DATA_PULL", "OY_PEERS_PRE",
     "OY_PEER_EXCHANGE", "OY_PEER_SAFE", "OY_PEER_STRIKE", "OY_PEER_OFFER", "OY_PEER_BOOT_RESTORE", "OY_NODES", "OY_COLD", "OY_DENY_CACHE", "OY_OFFER_COUNTER", "OY_OFFER_COLLECT", "OY_OFFER_PICKUP", "OY_OFFER_BROKER", "OY_LATENCY", "OY_PROPOSED", "OY_PUSH_HOLD", "OY_PUSH_TALLY",
@@ -3500,9 +3500,7 @@ function oy_block_engine() {
             oy_peer_map[oy_hash_gen(oy_peer_select)] = true;
         }
 
-        if (OY_SIMULATOR_MODE===true) {
-            oy_sim_snapshot();
-        }
+        if (OY_SIMULATOR_MODE===true) oy_sim_snapshot();
 
         oy_event_dispatch("oy_block_init");
 
@@ -3657,7 +3655,7 @@ function oy_block_engine() {
         if (OY_BLOCK_HASH!==null) {
             if (OY_LIGHT_STATE===true&&OY_BLOCK_DIFF===false&&OY_LIGHT_ACTIVATE===true) oy_block_light(true);
 
-            let oy_status_log = "[MB][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2).padStart(5, "0"))+"LA]["+chalk.bolder(String(OY_SYNC_LONG[0]).padStart(2, "0"))+"/"+chalk.bolder(String(Math.ceil(Math.sqrt(OY_BLOCK[0][2]))).padStart(2, "0"))+"LO]["+chalk.bolder(OY_BLOCK_STABILITY.toFixed(1).padStart(5, "0"))+"ST]["+chalk.bolder(OY_SLOW_MOTION.toFixed(1))+"SM]["+chalk.bolder(String(Math.floor(Math.max(...OY_BLOCK_RECORD_KEEP)*1000)).padStart(3, "0"))+"RE]["+chalk.bolder((OY_WORKER_THREADS[0]===null)?0:OY_WORKER_THREADS[0].length)+"/"+chalk.bolder((OY_WORKER_THREADS[1]===null)?0:OY_WORKER_THREADS[1].length)+"]["+chalk.bolder((((OY_BLOCK_ELAPSED/60)/60)/24).toFixed(2))+"D]["+chalk.bolder(OY_BLOCK_ELAPSED)+"S]["+chalk.bolder(OY_FULL_INTRO.toString())+"]";
+            let oy_status_log = "[MB][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2).padStart(5, "0"))+"LA]["+chalk.bolder(String(OY_SYNC_LONG[0]).padStart(2, "0"))+"/"+chalk.bolder(String(Math.ceil(Math.sqrt(OY_BLOCK[0][2]))).padStart(2, "0"))+"LO]["+chalk.bolder(OY_BLOCK_STABILITY.toFixed(1).padStart(5, "0"))+"ST]["+chalk.bolder(OY_SLOW_MOTION.toFixed(1))+"SM]["+chalk.bolder(String(Math.floor(Math.max(...OY_BLOCK_RECORD_KEEP)*1000)).padStart(3, "0"))+"RE]["+chalk.bolder((OY_WORKER_THREADS[0]===null)?0:OY_WORKER_THREADS[0].length)+"/"+chalk.bolder((OY_WORKER_THREADS[1]===null)?0:OY_WORKER_THREADS[1].length)+"]["+chalk.bolder(OY_BLOCK_ELAPSED)+"S]["+chalk.bolder(OY_BLOCK_TIME)+"]["+chalk.bolder(OY_FULL_INTRO.toString())+"]";//["+chalk.bolder((((OY_BLOCK_ELAPSED/60)/60)/24).toFixed(2))+"D]
             oy_chrono(function() {
                 if (OY_BLOCK_ELAPSED+OY_BLOCK_BOOT_BUFFER>0) oy_log(oy_status_log, 1);
             }, (OY_LIGHT_STATE===false)?50:150);
@@ -5084,7 +5082,11 @@ if (OY_NODE_STATE===true) {
                         }
                         else eval(oy_var+" = "+JSON.stringify(oy_sim_data[oy_var]));
                     }
-                    OY_SNAPSHOT_OFFSET = oy_block_time_prev-OY_BLOCK_TIME;
+                    OY_SNAPSHOT_OFFSET += (oy_block_time_prev-(OY_BLOCK_TIME+OY_SNAPSHOT_OFFSET))+OY_BLOCK_SECTORS[5][0];
+                    OY_BLOCK_TIME -= OY_BLOCK_SECTORS[5][0];
+                    OY_BLOCK_NEXT -= OY_BLOCK_SECTORS[5][0];
+                    OY_SIMULATOR_ELAPSED[0] -= OY_BLOCK_SECTORS[5][0];
+                    OY_SIMULATOR_ELAPSED[1] = OY_BLOCK_TIME;
                     process.on('uncaughtException', function(oy_error) {
                         fs.appendFileSync("/dev/shm/oy_simulator/oy_fatal.log", "["+OY_SELF_SHORT+"][FATAL_ERROR]: "+JSON.stringify([oy_error, oy_error.stack])+"\n");
                         console.log("["+OY_SELF_SHORT+"][FATAL_ERROR]["+Math.floor(Date.now()/1000)+"]: "+JSON.stringify([oy_error, oy_error.stack]));
