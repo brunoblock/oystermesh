@@ -3853,9 +3853,6 @@ function oy_block_engine() {
 
         oy_chrono(function() {
             if (OY_SIMULATOR_MODE===true) {
-                let oy_block_pass = [OY_BLOCK[0], OY_BLOCK[1]];
-                OY_BLOCK = null;
-                OY_BLOCK = oy_block_pass;
                 OY_BLOCK_FLAT = null;
                 OY_BLOCK_COMPRESS = null;
                 oy_sim_snapshot();
