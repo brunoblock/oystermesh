@@ -1618,6 +1618,11 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
             else {
                 let oy_time_offset_sub = oy_time()-OY_BLOCK_TIME;
                 oy_chrono(function() {
+                    if (OY_BLOCK_FLAT===null) {
+                        oy_block_reset("OY_RESET_BASE_NULL");
+                        return false;
+                    }
+
                     OY_BLOCK = JSON.parse(OY_BLOCK_FLAT);
                     OY_BLOCK_HASH_PREV = (OY_BLOCK[2][1].length>0)?OY_BLOCK[2][1][OY_BLOCK[2][1].length-1]:"0000000000000000000000000000000000000000";
                     OY_BLOCK_HASH = oy_hash_gen(OY_BLOCK_FLAT);
