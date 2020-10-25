@@ -20,7 +20,7 @@ const OY_MESH_FULLFILL_CHANCE = 0.2;//probability that data is stored whilst ful
 const OY_MESH_SOURCE = 3;//node in route passport (from destination) that is assigned with defining the source variable//TODO remove?
 const OY_MESH_SEQUENCE = 8;
 //let OY_MESH_SCALE = 1000;//core trilemma variable, maximum amount of full nodes. Higher is more scalable and less secure
-let OY_MESH_SECURITY = 0.25;//core trilemma variable, amount of rogue full nodes required to successfully attack the mesh, higher is more secure and less scalable
+let OY_MESH_SECURITY = 0.3;//core trilemma variable, amount of rogue full nodes required to successfully attack the mesh, higher is more secure and less scalable
 let OY_BLOCK_LOOP = [10, 30];//a lower value means increased accuracy for detecting the start of the next meshblock
 const OY_BLOCK_STABILITY_TRIGGER = 3;//mesh range history minimum to trigger reliance on real stability value
 const OY_BLOCK_STABILITY_LIMIT = 12;//mesh range history to keep to calculate meshblock stability, time is effectively value x 20 seconds
@@ -312,6 +312,7 @@ let OY_SIMULATOR_TIMINGS = null;
 let OY_SIMULATOR_SCALE = [0, true, false];//[scale_counter, applied, buffer]
 let OY_SIMULATOR_ELAPSED = [0, null];
 let OY_SIMULATOR_CALLBACK = {};
+let OY_SIMULATOR_DENY = {};
 let OY_FULL_INTRO = false;//default is false, can be set here or via nodejs argv first parameter
 let OY_INTRO_BOOT = "vnode1.oyster.org:8443";
 let OY_INTRO_DEFAULT = {
@@ -1888,7 +1889,7 @@ function oy_node_deny(oy_node_id, oy_deny_reason) {
     if (typeof(OY_PEERS[oy_node_id])!=="undefined") {
         oy_node_state = OY_PEERS[oy_node_id][1];
         delete OY_PEERS[oy_node_id];
-        if (oy_peer_count()+oy_peer_count(true)===0) oy_event_dispatch("oy_peers_null");
+        if (Object.keys(OY_PEERS).length===0) oy_event_dispatch("oy_peers_null");
     }
     if (OY_JUMP_ASSIGN[0]===oy_node_id) {
         oy_log_debug("BLUE["+oy_deny_reason+"]["+JSON.stringify(OY_JUMP_ASSIGN)+"]");
@@ -1899,6 +1900,11 @@ function oy_node_deny(oy_node_id, oy_deny_reason) {
         oy_log("[DENY]["+chalk.bolder(oy_short(oy_node_id))+"]["+chalk.bolder(oy_node_state)+"]["+chalk.bolder(oy_deny_reason)+"]", oy_deny_process(oy_deny_reason));
     }
     oy_node_reset(oy_node_id);
+
+    if (OY_SIMULATOR_MODE===true) {
+        if (typeof(OY_SIMULATOR_DENY[oy_deny_reason])==="undefined") OY_SIMULATOR_DENY[oy_deny_reason] = 0;
+        OY_SIMULATOR_DENY[oy_deny_reason]++;
+    }
     return true;
 }
 
@@ -3676,6 +3682,12 @@ function oy_block_engine() {
                     if (OY_BLOCK_ELAPSED+OY_BLOCK_BOOT_BUFFER>0) oy_log(oy_status_log, 1);
                 }, (OY_LIGHT_STATE===false)?50:150);
             }
+            if (OY_SIMULATOR_MODE===true) {
+                oy_chrono(function() {
+                    parentPort.postMessage([4, "OY_SIM_REPORT", null, null, [OY_SELF_PUBLIC, oy_state_current(), OY_BLOCK_TIME, OY_BLOCK_HASH, OY_BLOCK[0][2], OY_SYNC_LAST[0], OY_SYNC_LONG[0], OY_BLOCK_STABILITY, Math.floor(Math.max(...OY_BLOCK_RECORD_KEEP)*1000), OY_SIMULATOR_DENY]]);
+                    OY_SIMULATOR_DENY = {};
+                }, 20);
+            }
         }
 
         oy_chrono(function() {
@@ -3960,6 +3972,8 @@ function oy_block_engine() {
             OY_BLOCK_WORK_GRADE = {};
             OY_SYNC_TALLY = {};
             OY_SYNC_UNIQUE = {};
+
+            if (Object.keys(OY_PEERS).length===0) return false;
 
             OY_DIVE_STATE_PREV = typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined";
             OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK_PRE);
