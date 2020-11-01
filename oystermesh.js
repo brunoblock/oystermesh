@@ -1060,9 +1060,9 @@ function oy_key_hash(oy_key_public_raw) {
     return oy_hash_reference[oy_hash_index];
 }
 
-function oy_key_gen(oy_key_private) {
+function oy_key_gen(oy_key_private = null) {
     let oy_key_pair;
-    if (typeof(oy_key_private)==="undefined") oy_key_pair = nacl.sign.keyPair();
+    if (oy_key_private===null) oy_key_pair = nacl.sign.keyPair();
     else oy_key_pair = nacl.sign.keyPair.fromSecretKey(nacl.util.decodeBase64(oy_key_private));
 
     let oy_key_public_raw = nacl.util.encodeBase64(oy_key_pair.publicKey).substr(0, 43);
@@ -3684,7 +3684,7 @@ function oy_block_engine() {
             }
             if (OY_SIMULATOR_MODE===true) {
                 oy_chrono(function() {
-                    parentPort.postMessage([4, "OY_SIM_REPORT", null, null, [OY_SELF_PUBLIC, oy_state_current(), OY_BLOCK_TIME, OY_BLOCK_HASH, OY_BLOCK[0][2], OY_SYNC_LAST[0], OY_SYNC_LONG[0], OY_BLOCK_STABILITY, Math.floor(Math.max(...OY_BLOCK_RECORD_KEEP)*1000), OY_SIMULATOR_DENY]]);
+                    parentPort.postMessage([4, "OY_SIM_REPORT", null, null, [OY_SLOW_MOTION, OY_BLOCK_TIME, OY_SELF_PUBLIC, oy_state_current(), OY_BLOCK[0][2], OY_BLOCK_STABILITY, OY_SYNC_LAST[0], OY_SYNC_LONG[0], OY_BLOCK_HASH, Math.floor(Math.max(...OY_BLOCK_RECORD_KEEP)*1000), OY_SIMULATOR_DENY]]);
                     OY_SIMULATOR_DENY = {};
                 }, 20);
             }
