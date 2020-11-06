@@ -3684,7 +3684,7 @@ function oy_block_engine() {
             }
             if (OY_SIMULATOR_MODE===true) {
                 oy_chrono(function() {
-                    parentPort.postMessage([4, "OY_SIM_REPORT", null, null, [OY_SLOW_MOTION, OY_BLOCK_TIME, OY_SELF_PUBLIC, oy_state_current(), OY_BLOCK[0][2], OY_BLOCK_STABILITY, OY_SYNC_LAST[0], OY_SYNC_LONG[0], OY_BLOCK_HASH, Math.floor(Math.max(...OY_BLOCK_RECORD_KEEP)*1000), OY_SIMULATOR_DENY]]);
+                    parentPort.postMessage([4, "OY_SIM_REPORT", null, null, [OY_SLOW_MOTION, OY_BLOCK_TIME, OY_SELF_PUBLIC, oy_state_current(), OY_BLOCK[0][2], OY_BLOCK_STABILITY, OY_SYNC_LAST[0], OY_SYNC_LONG[0], OY_BLOCK_HASH, Math.floor(Math.max(...OY_BLOCK_RECORD_KEEP)*1000), JSON.stringify(OY_SIMULATOR_DENY)]]);
                     OY_SIMULATOR_DENY = {};
                 }, 20);
             }
@@ -3973,7 +3973,7 @@ function oy_block_engine() {
             OY_SYNC_TALLY = {};
             OY_SYNC_UNIQUE = {};
 
-            if (Object.keys(OY_PEERS).length===0) return false;
+            if (Object.keys(OY_PEERS).length===0&&OY_BLOCK_BOOT===false) return false;
 
             OY_DIVE_STATE_PREV = typeof(OY_BLOCK[1][OY_SELF_PUBLIC])!=="undefined";
             OY_BLOCK_FLAT = JSON.stringify(OY_BLOCK_PRE);
