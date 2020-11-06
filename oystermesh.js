@@ -396,7 +396,7 @@ let OY_BLOCK_SYNC = {};
 let OY_BLOCK_SYNC_PASS = {};
 let OY_BLOCK_WORK_GRADE = {};
 let OY_BLOCK_RECORD = null;
-let OY_BLOCK_RECORD_KEEP = [];
+let OY_BLOCK_RECORD_KEEP = [0];
 let OY_BLOCK_FINISH = false;
 let OY_BLOCK_JUMP_MAP = {};
 let OY_BLOCK_PRE = null;
@@ -3341,7 +3341,7 @@ function oy_block_reset(oy_reset_flag) {
     OY_BLOCK_COMMAND = {};
     OY_BLOCK_SYNC = {};
     OY_BLOCK_RECORD = null;
-    OY_BLOCK_RECORD_KEEP = [];
+    OY_BLOCK_RECORD_KEEP = [0];
     OY_INTRO_MARKER = null;
     OY_INTRO_PRE = {};
     OY_INTRO_ALLOCATE = {};
