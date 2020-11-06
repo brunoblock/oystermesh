@@ -1877,6 +1877,7 @@ function oy_deny_process(oy_deny_reason) {
             oy_deny_reason==="OY_DENY_LATENCY_NULL_A"||
             oy_deny_reason==="OY_DENY_LATENCY_NULL_B"||
             oy_deny_reason==="OY_DENY_PEER_UNREADY"||
+            oy_deny_reason==="OY_DENY_SELF_BOOT_LINK"||
             oy_deny_reason.indexOf("OY_DENY_DEFLATE_")!==-1)?3:2
 }
 
