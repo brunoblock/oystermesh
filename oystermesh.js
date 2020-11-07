@@ -3685,7 +3685,7 @@ function oy_block_engine() {
             }
             if (OY_SIMULATOR_MODE===true) {
                 oy_chrono(function() {
-                    parentPort.postMessage([4, "OY_SIM_REPORT", null, null, [OY_SLOW_MOTION, OY_BLOCK_TIME, OY_SELF_PUBLIC, oy_state_current(), OY_BLOCK[0][2], OY_BLOCK_STABILITY, OY_SYNC_LAST[0], OY_SYNC_LONG[0], OY_BLOCK_HASH, Math.floor(Math.max(...OY_BLOCK_RECORD_KEEP)*1000), JSON.stringify(OY_SIMULATOR_DENY)]]);
+                    parentPort.postMessage([4, "OY_SIM_REPORT", null, null, [OY_SLOW_MOTION, OY_BLOCK_TIME, OY_BLOCK_HASH, OY_SELF_PUBLIC, (OY_FULL_INTRO===false)?null:OY_FULL_INTRO, oy_state_current(), OY_BLOCK[0][2], OY_BLOCK_STABILITY, OY_SYNC_LAST[0]*1000, OY_SYNC_LONG[0], Math.floor(Math.max(...OY_BLOCK_RECORD_KEEP)*1000), JSON.stringify(OY_SIMULATOR_DENY)]]);
                     OY_SIMULATOR_DENY = {};
                 }, 20);
             }
