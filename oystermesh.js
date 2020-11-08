@@ -22,7 +22,6 @@ const OY_MESH_SEQUENCE = 8;
 //let OY_MESH_SCALE = 1000;//core trilemma variable, maximum amount of full nodes. Higher is more scalable and less secure
 let OY_MESH_SECURITY = 0.3;//core trilemma variable, amount of rogue full nodes required to successfully attack the mesh, higher is more secure and less scalable
 let OY_BLOCK_LOOP = [10, 30];//a lower value means increased accuracy for detecting the start of the next meshblock
-const OY_BLOCK_STABILITY_TRIGGER = 3;//mesh range history minimum to trigger reliance on real stability value
 const OY_BLOCK_STABILITY_LIMIT = 12;//mesh range history to keep to calculate meshblock stability, time is effectively value x 20 seconds
 const OY_BLOCK_EPOCH_MACRO = 40;//360, cadence in blocks to perform epoch processing - 6 hr interval
 const OY_BLOCK_EPOCH_MICRO = 4;//10, cadence in blocks to perform jump retention, higher is less memory burden on full nodes, lower is less time to wait for transaction finality - 10 min interval
@@ -3685,7 +3684,7 @@ function oy_block_engine() {
             }
             if (OY_SIMULATOR_MODE===true) {
                 oy_chrono(function() {
-                    parentPort.postMessage([4, "OY_SIM_REPORT", null, null, [OY_SLOW_MOTION, OY_BLOCK_TIME, OY_BLOCK_HASH, OY_SELF_PUBLIC, (OY_FULL_INTRO===false)?null:OY_FULL_INTRO, oy_state_current(), oy_peer_count(), oy_peer_count(true, false), oy_peer_count(true, true)-oy_peer_count(true, false), OY_BLOCK[0][2], OY_BLOCK_STABILITY, OY_SYNC_LAST[0]*1000, OY_SYNC_LONG[0], Math.floor(Math.max(...OY_BLOCK_RECORD_KEEP)*1000), JSON.stringify(OY_SIMULATOR_DENY)]]);
+                    parentPort.postMessage([4, "OY_SIM_REPORT", null, null, [OY_SLOW_MOTION, OY_BLOCK_TIME, OY_BLOCK_HASH, OY_SELF_PUBLIC, (OY_FULL_INTRO===false)?null:OY_FULL_INTRO, oy_state_current(), oy_peer_count(), oy_peer_count(true, false), oy_peer_count(true, true)-oy_peer_count(true, false), OY_BLOCK[0][2], OY_BLOCK_STABILITY, OY_SYNC_LAST[0], OY_SYNC_LONG[0], Math.floor(Math.max(...OY_BLOCK_RECORD_KEEP)*1000), JSON.stringify(OY_SIMULATOR_DENY)]]);
                     OY_SIMULATOR_DENY = {};
                 }, 400);
             }
@@ -4824,7 +4823,7 @@ function oy_block_finish() {
     if (OY_BLOCK_BOOT===false) {
         OY_BLOCK_STABILITY_KEEP.push(OY_BLOCK[0][2]);
         while (OY_BLOCK_STABILITY_KEEP.length>OY_BLOCK_STABILITY_LIMIT) OY_BLOCK_STABILITY_KEEP.shift();
-        OY_BLOCK_STABILITY = (OY_BLOCK_STABILITY_KEEP.length<OY_BLOCK_STABILITY_TRIGGER)?0:oy_block_stability(OY_BLOCK_STABILITY_KEEP);
+        OY_BLOCK_STABILITY = (OY_BLOCK_STABILITY_KEEP.length<=1)?0:oy_block_stability(OY_BLOCK_STABILITY_KEEP);
     }
 
     if (typeof(OY_BLOCK_MAP)==="function") OY_BLOCK_MAP(0);
