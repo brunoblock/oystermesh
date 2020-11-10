@@ -312,6 +312,7 @@ let OY_SIMULATOR_SCALE = [0, true, false];//[scale_counter, applied, buffer]
 let OY_SIMULATOR_ELAPSED = [0, null];
 let OY_SIMULATOR_CALLBACK = {};
 let OY_SIMULATOR_DENY = {};
+let OY_SIM_BASE = null;
 let OY_FULL_INTRO = false;//default is false, can be set here or via nodejs argv first parameter
 let OY_INTRO_BOOT = "vnode1.oyster.org:8443";
 let OY_INTRO_DEFAULT = {
@@ -1281,18 +1282,6 @@ function oy_peer_process(oy_peer_id, oy_data_flag, oy_data_payload) {
         if (oy_identity_parse[2]!==false&&!oy_intro_check(oy_identity_parse[2])) {
             oy_node_deny(oy_peer_id, "OY_DENY_SYNC_INTRO");
             return false;
-        }
-
-        if (oy_sync_pass===0&&
-            OY_LIGHT_STATE===false&&//check that self is running block_sync as a full node
-            OY_BLOCK_HASH!==null&&//check that there is a known meshblock hash
-            oy_data_payload[3]===OY_BLOCK_TIME&&//check that the current timestamp is in the sync processing zone
-            oy_time_offset<OY_BLOCK_SECTORS[2][0]) {
-
-            if ((typeof(OY_BLOCK_STRICT[oy_data_payload[0].length])==="undefined"||oy_time_offset<OY_BLOCK_STRICT[oy_data_payload[0].length])) {}
-            else {
-                fs.appendFileSync("/dev/shm/oy_debug2.log", "["+OY_SELF_SHORT+"] STRICT FAIL: "+JSON.stringify([oy_data_payload[0].length, typeof(OY_PEER_SAFE[oy_peer_id])!=="undefined", Object.values(OY_INTRO_DEFAULT).indexOf(oy_peer_id)!==-1, oy_data_payload[2], oy_time_offset, OY_BLOCK_STRICT[oy_data_payload[0].length], OY_PEERS[oy_peer_id][3], typeof(OY_BLOCK_STRICT[oy_data_payload[0].length]), OY_BLOCK_STRICT.length])+"\n");
-            }
         }
 
         if (OY_LIGHT_STATE===false&&//check that self is running block_sync as a full node
@@ -3563,8 +3552,6 @@ function oy_block_engine() {
                 OY_BLOCK_METAHASH = oy_hash_gen(OY_BLOCK_HASH);
                 oy_state_change("full", "boot");
                 oy_worker_spawn(1);
-
-                if (Object.values(OY_INTRO_DEFAULT).indexOf(OY_SELF_PUBLIC)!==-1) fs.appendFileSync("/dev/shm/oy_debug2.log", "["+OY_SELF_SHORT+"] INTRO DEFAULT BOOT: "+JSON.stringify([OY_BLOCK_HASH])+"\n");
             }
             //BLOCK SEED--------------------------------------------------
 
@@ -3952,9 +3939,6 @@ function oy_block_engine() {
                             break;
                         }
                     }
-                }
-                if (Object.keys(OY_PEER_SAFE).length>0) {
-                    fs.appendFileSync("/dev/shm/oy_debug.log", "["+OY_SELF_SHORT+"] PEER SAFE: "+Object.keys(OY_PEER_SAFE).length+" - "+Object.keys(OY_PEERS).length+" - "+((Object.keys(OY_PEER_SAFE).length/Object.keys(OY_PEERS).length)*100).toFixed(2)+"\n");
                 }
 
                 for (let oy_key_public in OY_PEER_STRIKE) {
@@ -4897,7 +4881,20 @@ function oy_sim_snapshot() {
     parentPort.postMessage([4, "OY_SIM_SNAPSHOT", null, null, JSON.stringify(oy_snapshot_local)]);
 }
 
+function oy_sim_halt(oy_halt_code, oy_halt_notice = null) {
+    fs.writeFileSync(OY_SIM_BASE[0]+"/oy_halt.cmd", JSON.stringify([oy_halt_code, "OY_HALT_NODE", oy_halt_notice]));
+}
+
 function oy_init_core() {
+    process.on('uncaughtException', function(oy_error) {
+        if (OY_SIMULATOR_MODE===true) {
+            oy_sim_halt(0, [oy_error, oy_error.stack]);
+            fs.appendFileSync(OY_SIM_BASE[1]+"/oy_fatal.log", "["+OY_SELF_SHORT+"][FATAL_ERROR]: "+JSON.stringify([oy_error, oy_error.stack])+"\n");
+        }
+        console.log("["+OY_SELF_SHORT+"][FATAL_ERROR]["+Math.floor(Date.now()/1000)+"]: "+JSON.stringify([oy_error, oy_error.stack]));
+        process.exit();
+    });
+
     if (OY_NODE_STATE===true) {
         chalk = require('chalk');
         chalk.bolder = function(input) {return (OY_NODE_STATE===true)?chalk.bold(input):input;}
@@ -5101,11 +5098,6 @@ if (OY_NODE_STATE===true) {
                         eval(oy_var+" = "+JSON.stringify(oy_sim_data[1][oy_var]));
                     }
                     OY_SIMULATOR_ELAPSED = [0, OY_BLOCK_BOOT_MARK];
-                    process.on('uncaughtException', function(oy_error) {
-                        fs.appendFileSync("/mnt/ramfs/oy_simulator/oy_fatal.log", "["+OY_SELF_SHORT+"][FATAL_ERROR]: "+JSON.stringify([oy_error, oy_error.stack])+"\n");
-                        console.log("["+OY_SELF_SHORT+"][FATAL_ERROR]["+Math.floor(Date.now()/1000)+"]: "+JSON.stringify([oy_error, oy_error.stack]));
-                        process.exit();
-                    });
                     oy_init();
                 }
                 else if (oy_sim_node==="OY_SIM_RECOVER") {
@@ -5124,11 +5116,7 @@ if (OY_NODE_STATE===true) {
                     OY_BLOCK_NEXT -= OY_BLOCK_SECTORS[5][0];
                     OY_SIMULATOR_ELAPSED[0] -= OY_BLOCK_SECTORS[5][0];
                     OY_SIMULATOR_ELAPSED[1] = OY_BLOCK_TIME;
-                    process.on('uncaughtException', function(oy_error) {
-                        fs.appendFileSync("/mnt/ramfs/oy_simulator/oy_fatal.log", "["+OY_SELF_SHORT+"][FATAL_ERROR]: "+JSON.stringify([oy_error, oy_error.stack])+"\n");
-                        console.log("["+OY_SELF_SHORT+"][FATAL_ERROR]["+Math.floor(Date.now()/1000)+"]: "+JSON.stringify([oy_error, oy_error.stack]));
-                        process.exit();
-                    });
+
                     oy_init_core();
                     oy_init_load("OY_SIMULATOR_RECOVER");
                     if (oy_state_current()===2) oy_worker_spawn(1);
