@@ -5102,7 +5102,7 @@ if (OY_NODE_STATE===true) {
                     }
                     OY_SIMULATOR_ELAPSED = [0, OY_BLOCK_BOOT_MARK];
                     process.on('uncaughtException', function(oy_error) {
-                        fs.appendFileSync("/dev/shm/oy_simulator/oy_fatal.log", "["+OY_SELF_SHORT+"][FATAL_ERROR]: "+JSON.stringify([oy_error, oy_error.stack])+"\n");
+                        fs.appendFileSync("/mnt/ramfs/oy_simulator/oy_fatal.log", "["+OY_SELF_SHORT+"][FATAL_ERROR]: "+JSON.stringify([oy_error, oy_error.stack])+"\n");
                         console.log("["+OY_SELF_SHORT+"][FATAL_ERROR]["+Math.floor(Date.now()/1000)+"]: "+JSON.stringify([oy_error, oy_error.stack]));
                         process.exit();
                     });
@@ -5125,7 +5125,7 @@ if (OY_NODE_STATE===true) {
                     OY_SIMULATOR_ELAPSED[0] -= OY_BLOCK_SECTORS[5][0];
                     OY_SIMULATOR_ELAPSED[1] = OY_BLOCK_TIME;
                     process.on('uncaughtException', function(oy_error) {
-                        fs.appendFileSync("/dev/shm/oy_simulator/oy_fatal.log", "["+OY_SELF_SHORT+"][FATAL_ERROR]: "+JSON.stringify([oy_error, oy_error.stack])+"\n");
+                        fs.appendFileSync("/mnt/ramfs/oy_simulator/oy_fatal.log", "["+OY_SELF_SHORT+"][FATAL_ERROR]: "+JSON.stringify([oy_error, oy_error.stack])+"\n");
                         console.log("["+OY_SELF_SHORT+"][FATAL_ERROR]["+Math.floor(Date.now()/1000)+"]: "+JSON.stringify([oy_error, oy_error.stack]));
                         process.exit();
                     });
