@@ -3664,7 +3664,7 @@ function oy_block_engine() {
             if (OY_BLOCK_HASH!==null) {
                 if (OY_LIGHT_STATE===true&&OY_BLOCK_DIFF===false&&OY_LIGHT_ACTIVATE===true) oy_block_light(true);
 
-                let oy_status_log = "[MB][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2).padStart(5, "0"))+"LA]["+chalk.bolder(String(OY_SYNC_LONG[0]).padStart(2, "0"))+"/"+chalk.bolder(String(Math.ceil(Math.sqrt(OY_BLOCK[0][2]))).padStart(2, "0"))+"LO]["+chalk.bolder(OY_BLOCK_STABILITY.toFixed(1).padStart(5, "0"))+"ST]["+chalk.bolder(OY_SLOW_MOTION.toFixed(1))+"SM]["+chalk.bolder(String(Math.floor(Math.max(...OY_BLOCK_RECORD_KEEP)*1000)).padStart(3, "0"))+"RE]["+chalk.bolder((OY_WORKER_THREADS[0]===null)?0:OY_WORKER_THREADS[0].length)+"/"+chalk.bolder((OY_WORKER_THREADS[1]===null)?0:OY_WORKER_THREADS[1].length)+"]["+chalk.bolder(OY_BLOCK_ELAPSED)+"S]["+chalk.bolder(OY_BLOCK_TIME)+"]["+chalk.bolder(OY_FULL_INTRO.toString())+"]";//["+chalk.bolder((((OY_BLOCK_ELAPSED/60)/60)/24).toFixed(2))+"D]
+                let oy_status_log = "[MB][STATUS]["+chalk.bolder(OY_BLOCK[0][2])+"N]["+chalk.bolder(OY_SYNC_LAST[0].toFixed(2).padStart(5, "0"))+"LA]["+chalk.bolder(OY_SYNC_LONG[0].toString().padStart(2, "0"))+"/"+chalk.bolder(Math.ceil(Math.sqrt(OY_BLOCK[0][2])).toString().padStart(2, "0"))+"LO]["+chalk.bolder(OY_BLOCK_STABILITY.toFixed(1).padStart(5, "0"))+"ST]["+chalk.bolder(OY_SLOW_MOTION.toFixed(1))+"SM]["+chalk.bolder(Math.floor(Math.max(...OY_BLOCK_RECORD_KEEP)*1000).toString().padStart(3, "0"))+"RE]["+chalk.bolder((OY_WORKER_THREADS[0]===null)?0:OY_WORKER_THREADS[0].length)+"/"+chalk.bolder((OY_WORKER_THREADS[1]===null)?0:OY_WORKER_THREADS[1].length)+"]["+chalk.bolder(OY_BLOCK_ELAPSED)+"S]["+chalk.bolder(OY_BLOCK_TIME)+"]["+chalk.bolder(OY_FULL_INTRO.toString())+"]";//["+chalk.bolder((((OY_BLOCK_ELAPSED/60)/60)/24).toFixed(2))+"D]
                 oy_chrono(function() {
                     if (OY_BLOCK_ELAPSED+OY_BLOCK_BOOT_BUFFER>0) oy_log(oy_status_log, 1);
                 }, (OY_LIGHT_STATE===false)?50:150);
@@ -4910,8 +4910,10 @@ function oy_init_core() {
         globalThis.Blob = require("cross-blob");
         isMainThread = require('worker_threads').isMainThread;
         websock = require('ws');
-        fs = require("fs");
-        if (OY_SIMULATOR_MODE===false) {
+        if (OY_SIMULATOR_MODE===true) {
+            fs = require("fs");
+        }
+        else {
             SimplePeer = require('simple-peer');
             wrtc = require('wrtc');
         }
