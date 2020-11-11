@@ -4910,7 +4910,7 @@ function oy_init_core() {
         globalThis.Blob = require("cross-blob");
         isMainThread = require('worker_threads').isMainThread;
         websock = require('ws');
-        fs = require("fs");//TODO temp
+        fs = require("fs");
         if (OY_SIMULATOR_MODE===false) {
             SimplePeer = require('simple-peer');
             wrtc = require('wrtc');
