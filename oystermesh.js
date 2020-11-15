@@ -4814,10 +4814,7 @@ function oy_sim_halt(oy_halt_code, oy_halt_notice = null) {
 
 function oy_init_core() {
     process.on('uncaughtException', function(oy_error) {
-        if (OY_SIM_MODE===true) {
-            oy_sim_halt(0, [oy_error, oy_error.stack]);
-            fs.appendFileSync(OY_SIM_BASE[1]+"/oy_fatal.log", "["+OY_SELF_SHORT+"][FATAL_ERROR]: "+JSON.stringify([oy_error, oy_error.stack])+"\n");
-        }
+        if (OY_SIM_MODE===true) oy_sim_halt(0, [oy_error, oy_error.stack]);
         console.log("["+OY_SELF_SHORT+"][FATAL_ERROR]["+Math.floor(Date.now()/1000)+"]: "+JSON.stringify([oy_error, oy_error.stack]));
         process.exit();
     });
