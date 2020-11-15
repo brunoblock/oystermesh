@@ -3003,10 +3003,10 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
     return false;
 }
 
-function oy_intro_punish(oy_intro_select) {
+function oy_intro_punish() {//oy_intro_select
     //if (typeof(OY_INTRO_PUNISH[oy_intro_select])==="undefined") OY_INTRO_PUNISH[oy_intro_select] = 1;
     //else OY_INTRO_PUNISH[oy_intro_select]++;
-    oy_log("[INTRO][PUNISH]["+chalk.bolder(oy_intro_select)+"]");
+    //oy_log("[INTRO][PUNISH]["+chalk.bolder(oy_intro_select)+"]");
     return true;
 }
 
