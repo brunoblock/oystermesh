@@ -3003,13 +3003,12 @@ function oy_intro_soak(oy_soak_node, oy_soak_data) {
     return false;
 }
 
-/*
 function oy_intro_punish(oy_intro_select) {
     //if (typeof(OY_INTRO_PUNISH[oy_intro_select])==="undefined") OY_INTRO_PUNISH[oy_intro_select] = 1;
     //else OY_INTRO_PUNISH[oy_intro_select]++;
+    oy_log("[INTRO][PUNISH]["+chalk.bolder(oy_intro_select)+"]");
     return true;
 }
-*/
 
 function oy_intro_process(oy_data_flag, oy_data_payload) {
     if (oy_data_flag!=="OY_INTRO_SIGNAL_A"||typeof(oy_data_payload)!=="object"||oy_data_payload.length===0) {
