@@ -4809,7 +4809,7 @@ function oy_sim_snapshot() {
 }
 
 function oy_sim_halt(oy_halt_code, oy_halt_notice = null) {
-    fs.writeFileSync(OY_SIM_BASE[0]+"/oy_halt.cmd", JSON.stringify([oy_halt_code, "OY_HALT_NODE", oy_halt_notice]));
+    fs.writeFile(OY_SIM_BASE[0]+"/oy_halt.cmd", JSON.stringify([oy_halt_code, "OY_HALT_NODE", oy_halt_notice]), () => {});
 }
 
 function oy_init_core() {
