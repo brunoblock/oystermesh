@@ -3193,7 +3193,7 @@ function oy_block_stability(oy_list) {
         return oy_diff*oy_diff;
     });
 
-    return Math.sqrt(oy_stability_avg(oy_square_diffs));
+    return Math.max(0.1, Math.sqrt(oy_stability_avg(oy_square_diffs)));
 }
 
 function oy_block_dive_sort(oy_dive_ledger) {
