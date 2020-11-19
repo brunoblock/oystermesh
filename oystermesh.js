@@ -4808,14 +4808,11 @@ function oy_sim_snapshot() {
     parentPort.postMessage([4, "OY_SIM_SNAPSHOT", null, null, JSON.stringify(oy_snapshot_local)]);
 }
 
-function oy_sim_halt(oy_halt_code, oy_halt_notice = null) {
-    fs.writeFile(OY_SIM_BASE[0]+"/oy_halt.cmd", JSON.stringify([oy_halt_code, "OY_HALT_NODE", oy_halt_notice]), () => {});
-}
-
 function oy_init_core() {
     process.on('uncaughtException', function(oy_error) {
-        if (OY_SIM_MODE===true) oy_sim_halt(0, [oy_error, oy_error.stack]);
+        if (OY_SIM_MODE===true) fs.writeFileSync(OY_SIM_BASE[0]+"/oy_halt.cmd", JSON.stringify([0, "OY_HALT_NODE", [oy_error, oy_error.stack]]))
         console.log("["+OY_SELF_SHORT+"][FATAL_ERROR]["+Math.floor(Date.now()/1000)+"]: "+JSON.stringify([oy_error, oy_error.stack]));
+        console.trace();
         process.exit();
     });
 
