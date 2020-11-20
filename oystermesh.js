@@ -3371,6 +3371,19 @@ function oy_block_engine() {
         let oy_block_continue = true;
 
         if (OY_SIM_RECOVER===false) {
+            if (OY_SIM_MODE===true) {
+                oy_chrono(function() {
+                    let oy_report_pass = false;
+                    let oy_peers_thin = {};
+                    for (let oy_peer_select in OY_PEERS) {
+                        oy_report_pass = true;
+                        oy_peers_thin[oy_hash_gen(oy_peer_select).substr(0, OY_SHORT_LENGTH)] = 0;
+                    }
+                    parentPort.postMessage([4, "OY_SIM_REPORT", null, null, [OY_SLOW_MOTION, OY_BLOCK_TIME, OY_BLOCK_HASH, OY_SELF_PUBLIC, (OY_FULL_INTRO===false)?null:OY_FULL_INTRO, oy_state_current(), oy_peer_count(), oy_peer_count(true, false), oy_peer_count(true, true)-oy_peer_count(true, false), OY_BLOCK[0][2], OY_BLOCK_STABILITY, OY_SYNC_LAST[0], OY_SYNC_LONG[0], Math.floor(Math.max(...OY_BLOCK_RECORD_KEEP)*1000), JSON.stringify(OY_SIM_DENY), JSON.stringify((oy_report_pass===true)?[oy_hash_gen(OY_SELF_PUBLIC).substr(0, OY_SHORT_LENGTH), oy_state_current(), oy_peers_thin]:[])]]);
+                    OY_SIM_DENY = {};
+                }, OY_REPORT_DELAY);
+            }
+
             if (OY_FULL_INTRO!==false&&OY_FULL_INTRO===OY_INTRO_BOOT) {
                 if (OY_BLOCK_BOOT===true) {
                     OY_PEER_MAX = [OY_PEER_BOOT_CORE, 0];
@@ -3598,18 +3611,6 @@ function oy_block_engine() {
                 oy_chrono(function() {
                     if (OY_BLOCK_ELAPSED+OY_BLOCK_BOOT_BUFFER>0) oy_log(oy_status_log, 1);
                 }, (OY_LIGHT_STATE===false)?50:150);
-            }
-            if (OY_SIM_MODE===true) {
-                oy_chrono(function() {
-                    let oy_report_pass = false;
-                    let oy_peers_thin = {};
-                    for (let oy_peer_select in OY_PEERS) {
-                        oy_report_pass = true;
-                        oy_peers_thin[oy_hash_gen(oy_peer_select).substr(0, OY_SHORT_LENGTH)] = 0;
-                    }
-                    parentPort.postMessage([4, "OY_SIM_REPORT", null, null, [OY_SLOW_MOTION, OY_BLOCK_TIME, OY_BLOCK_HASH, OY_SELF_PUBLIC, (OY_FULL_INTRO===false)?null:OY_FULL_INTRO, oy_state_current(), oy_peer_count(), oy_peer_count(true, false), oy_peer_count(true, true)-oy_peer_count(true, false), OY_BLOCK[0][2], OY_BLOCK_STABILITY, OY_SYNC_LAST[0], OY_SYNC_LONG[0], Math.floor(Math.max(...OY_BLOCK_RECORD_KEEP)*1000), JSON.stringify(OY_SIM_DENY), JSON.stringify((oy_report_pass===true)?[oy_hash_gen(OY_SELF_PUBLIC).substr(0, OY_SHORT_LENGTH), oy_state_current(), oy_peers_thin]:[])]]);
-                    OY_SIM_DENY = {};
-                }, OY_REPORT_DELAY);
             }
         }
 
