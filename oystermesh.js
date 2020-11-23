@@ -81,8 +81,8 @@ const OY_META_DATA_LIMIT = 131072;//max size of meta_data
 const OY_META_DAPP_RANGE = 9;//max amount of meshblock amendable dapps including 0
 const OY_META_FEE = 0.0001*OY_AKOYA_DECIMALS;//meta fee per block per 99 characters - 99 used instead of 100 for space savings on the meshblock
 const OY_NULLING_BUFFER = 0.001*OY_AKOYA_DECIMALS;
-let OY_WORKER_CORES_MIN = 2;
-let OY_WORKER_CORES_MAX = 8;
+const OY_WORKER_CORES_MIN = 2;
+const OY_WORKER_CORES_MAX = 8;
 let OY_LATENCY_SIZE = 80;//size of latency ping payload, larger is more accurate yet more taxing
 const OY_LATENCY_LENGTH = 8;//length of rand sequence which is repeated for payload and signed for ID verification
 const OY_LATENCY_TRACK = 200;//how many latency measurements to keep at a time per peer
@@ -437,7 +437,7 @@ const OY_SIM_SNAPSHOT = [
 
     "OY_MESH_FLOW", "OY_MESH_BEAM_COOL", "OY_MESH_BEAM_MIN", "OY_MESH_SOAK_SAMPLE", "OY_MESH_SOAK_BUFFER", "OY_MESH_SECURITY", "OY_BLOCK_LOOP", "OY_BLOCK_RANGE_MIN", "OY_BLOCK_BOOT_BUFFER", "OY_BLOCK_BUFFER_CLEAR", "OY_BLOCK_RECORD_LIMIT", "OY_BLOCK_STRICT_CURVE", "OY_BLOCK_STRICT_ENTRY",
     "OY_BLOCK_STRICT_FLOOR", "OY_SYNC_BROADCAST_BUFFER", "OY_SYNC_PREEMPT_BUFFER", "OY_SYNC_UNIQUE_DIFF", "OY_SYNC_UNIQUE_HOP", "OY_LIGHT_CHUNK", "OY_LIGHT_COMMIT", "OY_PEER_MAX", "OY_PEER_INFLATE", "OY_PEER_DEFLATE", "OY_PEER_INTRO", "OY_PEER_SELF", "OY_PEER_BOOT_CORE",
-    "OY_PEER_BOOT_SCALE", "OY_NODE_MAX", "OY_WORK_DELTA", "OY_WORK_DILUTE", "OY_WORK_TARGET", "OY_WORKER_CORES_MIN", "OY_WORKER_CORES_MAX", "OY_LATENCY_SIZE", "OY_LATENCY_GEO", "OY_BLOCK_BOOT_MARK", "OY_DNS_AUCTION_MIN", "OY_DNS_OWNER_MIN",
+    "OY_PEER_BOOT_SCALE", "OY_NODE_MAX", "OY_WORK_DELTA", "OY_WORK_DILUTE", "OY_WORK_TARGET", "OY_LATENCY_SIZE", "OY_LATENCY_GEO", "OY_BLOCK_BOOT_MARK", "OY_DNS_AUCTION_MIN", "OY_DNS_OWNER_MIN",
 
     "OY_LIGHT_MODE", "OY_LIGHT_LEAN", "OY_LIGHT_STATE", "OY_DIVE_GRADE", "OY_DIVE_PAYOUT", "OY_DIVE_TEAM", "OY_DIVE_STATE", "OY_DIVE_STATE_PREV", "OY_VERBOSE_MODE", "OY_SLOW_MOTION", "OY_SLOW_MIN", "OY_SLOW_MAX", "OY_SLOW_FACTOR", "OY_SLOW_DEFLATE", "OY_SNAPSHOT_OFFSET", "OY_REPORT_DELAY", "OY_SIM_MODE", "OY_SIM_SKEW",
     "OY_SIM_TIMINGS", "OY_SIM_SCALE", "OY_SIM_ELAPSED", "OY_SIM_CALLBACK", "OY_FULL_INTRO", "OY_INTRO_BOOT", "OY_INTRO_DEFAULT", "OY_INTRO_PUNISH", "OY_INTRO_BAN", "OY_INTRO_SELECT", "OY_INTRO_SOLUTIONS", "OY_INTRO_MARKER", "OY_INTRO_PRE", "OY_INTRO_ALLOCATE",
@@ -792,7 +792,7 @@ function oy_worker_spawn(oy_worker_type) {
     OY_WORKER_POINTER[oy_worker_type] = 0;
     for (let i in OY_WORKER_THREADS[oy_worker_type]) {
         if (OY_NODE_STATE===true) {
-            OY_WORKER_THREADS[oy_worker_type][i] = new Worker(oy_worker_define, {eval:true, resourceLimits:{maxOldGenerationSizeMb:32000, maxYoungGenerationSizeMb:32000, stackSizeMb:128}});
+            OY_WORKER_THREADS[oy_worker_type][i] = new Worker(oy_worker_define, {eval:true});//resourceLimits:{maxOldGenerationSizeMb:32000, maxYoungGenerationSizeMb:32000, stackSizeMb:32}
             OY_WORKER_THREADS[oy_worker_type][i].on('message', (oy_data) => {
                 oy_worker_manager(i, oy_data);
             });
