@@ -309,6 +309,7 @@ let OY_SIM_MODE = false;
 let OY_SIM_RECOVER = false;
 let OY_SIM_SKEW = 0;
 let OY_SIM_TIMINGS = null;
+let OY_SIM_TIMINGS_LOAD = null;
 let OY_SIM_SCALE = [0, true, false];//[scale_counter, applied, buffer]
 let OY_SIM_ELAPSED = [0, null];
 let OY_SIM_CALLBACK = {};
@@ -475,34 +476,43 @@ if (OY_NODE_STATE===true) parentPort = require('worker_threads').parentPort;
 //VOID
 
 //WEB WORKER BLOCK
-function oy_worker_internal(oy_static_data) {
-    let oy_static_thru = JSON.parse(decodeURI(oy_static_data));
+function oy_worker_internal(oy_static_data, oy_worker_direct = null) {
+    let oy_static_thru;
+    if (oy_worker_direct!==null) oy_static_thru = oy_static_data;
+    else oy_static_thru = JSON.parse(decodeURI(oy_static_data));
+
     const OY_SIM_MODE = oy_static_thru[0];
     let OY_SIM_TIMINGS = oy_static_thru[1];
     const OY_WORK_MATCH = oy_static_thru[2];
     const OY_SELF_PRIVATE = oy_static_thru[3];
-    const OY_NODE_STATE = typeof(window)==="undefined";
+    const OY_NODE_STATE = oy_static_thru[4];
 
-    let parentPort, nacl, keccak256;
+    let parentPort, nacl_worker, keccak256_worker;
 
-    if (OY_NODE_STATE===true) {
-        parentPort = require('worker_threads').parentPort;
-        nacl = require('tweetnacl');
-        nacl.util = require('tweetnacl-util');
-        keccak256 = require('js-sha3').keccak256;
+    if (oy_worker_direct!==null) {
+        nacl_worker = nacl;
+        keccak256_worker = keccak256;
     }
     else {
-        //OYSTER DEPENDENCY TWEETNACL-JS
-        //https://github.com/dchest/tweetnacl-js
-        //VOID
+        if (OY_NODE_STATE===true) {
+            parentPort = require('worker_threads').parentPort;
+            nacl_worker = require('tweetnacl');
+            nacl_worker.util = require('tweetnacl-util');
+            keccak256_worker = require('js-sha3').keccak256;
+        }
+        else {
+            //OYSTER DEPENDENCY TWEETNACL-JS
+            //https://github.com/dchest/tweetnacl-js
+            //VOID
 
-        //OYSTER DEPENDENCY JS-SHA3
-        //https://github.com/emn178/js-sha3
-        //VOID
+            //OYSTER DEPENDENCY JS-SHA3
+            //https://github.com/emn178/js-sha3
+            //VOID
+        }
     }
 
     function oy_hash_gen(oy_input) {//DUPLICATED IN MAIN BLOCK
-        return keccak256(oy_input);
+        return keccak256_worker(oy_input);
     }
 
     function oy_rand_gen(oy_length) {//DUPLICATED IN MAIN BLOCK
@@ -609,17 +619,20 @@ function oy_worker_internal(oy_static_data) {
 
     function oy_key_sign(oy_key_private, oy_key_data, oy_sim_force = false) {//DUPLICATED IN MAIN BLOCK
         if (OY_SIM_MODE===true&&oy_sim_force===false) return oy_rand_gen(4);
-        return nacl.util.encodeBase64(nacl.sign.detached(nacl.util.decodeUTF8(oy_key_data), nacl.util.decodeBase64(oy_key_private)));
+        return nacl_worker.util.encodeBase64(nacl_worker.sign.detached(nacl_worker.util.decodeUTF8(oy_key_data), nacl_worker.util.decodeBase64(oy_key_private)));
     }
 
     function oy_key_verify(oy_key_public, oy_key_signature, oy_key_data, oy_sim_force = false) {//DUPLICATED IN MAIN BLOCK
         if (OY_SIM_MODE===true&&oy_sim_force===false) return true;
-        return nacl.sign.detached.verify(nacl.util.decodeUTF8(oy_key_data), nacl.util.decodeBase64(oy_key_signature), nacl.util.decodeBase64(oy_key_public.substr(1)+"="));
+        return nacl_worker.sign.detached.verify(nacl_worker.util.decodeUTF8(oy_key_data), nacl_worker.util.decodeBase64(oy_key_signature), nacl_worker.util.decodeBase64(oy_key_public.substr(1)+"="));
     }
 
     function oy_worker_respond(oy_data) {
-        if (OY_NODE_STATE===true) parentPort.postMessage(oy_data);
-        else postMessage(oy_data);
+        if (oy_worker_direct!==null) oy_worker_manager(0, oy_data);
+        else {
+            if (OY_NODE_STATE===true) parentPort.postMessage(oy_data);
+            else postMessage(oy_data);
+        }
     }
 
     function oy_worker_receive(oy_data) {
@@ -666,14 +679,17 @@ function oy_worker_internal(oy_static_data) {
         }
         else if (oy_work_type===-1) OY_SIM_TIMINGS = oy_work_data;
     }
-    if (OY_NODE_STATE===true) {
-        parentPort.on('message', (oy_data) => {
-            oy_worker_receive(oy_data);
-        });
+    if (oy_worker_direct!==null) oy_worker_receive(oy_worker_direct);
+    else {
+        if (OY_NODE_STATE===true) {
+            parentPort.on('message', (oy_data) => {
+                oy_worker_receive(oy_data);
+            });
+        }
+        else self.onmessage = function(oy_event) {
+            oy_worker_receive(oy_event.data);
+        };
     }
-    else self.onmessage = function(oy_event) {
-        oy_worker_receive(oy_event.data);
-    };
 }
 
 function oy_worker_manager(oy_instance, oy_data) {
@@ -755,7 +771,7 @@ function oy_worker_cores() {
 }
 
 function oy_worker_halt(oy_worker_type) {
-    if (OY_WORKER_THREADS[oy_worker_type]===null) return false;
+    if (OY_WORKER_THREADS[oy_worker_type]===null||OY_SIM_MODE===true) return false;
 
     for (let i in OY_WORKER_THREADS[oy_worker_type]) {
         OY_WORKER_THREADS[oy_worker_type][i].terminate();
@@ -765,22 +781,18 @@ function oy_worker_halt(oy_worker_type) {
 }
 
 function oy_worker_spawn(oy_worker_type) {
-    if (OY_WORKER_THREADS[oy_worker_type]!==null) return false;
+    if (OY_WORKER_THREADS[oy_worker_type]!==null||OY_SIM_MODE===true) return false;
 
     let oy_worker_define;
-    if (OY_NODE_STATE===true) {
-        let oy_simulator_timings = null;
-        if (OY_SIM_MODE===true) oy_simulator_timings = [[Math.round(OY_SIM_TIMINGS[0][0]*OY_SLOW_MOTION), Math.round(OY_SIM_TIMINGS[0][1]*OY_SLOW_MOTION)], [Math.round(OY_SIM_TIMINGS[1][0]*OY_SLOW_MOTION), Math.round(OY_SIM_TIMINGS[1][1]*OY_SLOW_MOTION)]];
-        oy_worker_define = "("+oy_worker_internal.toString()+")(\""+encodeURI(JSON.stringify([OY_SIM_MODE, oy_simulator_timings, OY_WORK_MATCH, OY_SELF_PRIVATE]))+"\")";
-    }
-    else oy_worker_define = URL.createObjectURL(new Blob(["("+oy_worker_internal.toString()+")(\""+encodeURI(JSON.stringify([OY_SIM_MODE, null, OY_WORK_MATCH, OY_SELF_PRIVATE]))+"\")"], {type: 'text/javascript'}));
+    if (OY_NODE_STATE===true) oy_worker_define = "("+oy_worker_internal.toString()+")(\""+encodeURI(JSON.stringify([false, null, OY_WORK_MATCH, OY_SELF_PRIVATE, true]))+"\")";
+    else oy_worker_define = URL.createObjectURL(new Blob(["("+oy_worker_internal.toString()+")(\""+encodeURI(JSON.stringify([false, null, OY_WORK_MATCH, OY_SELF_PRIVATE, false]))+"\")"], {type: 'text/javascript'}));
 
     OY_WORKER_THREADS[oy_worker_type] = new Array(oy_worker_cores());
     OY_WORKER_THREADS[oy_worker_type].fill(null);
     OY_WORKER_POINTER[oy_worker_type] = 0;
     for (let i in OY_WORKER_THREADS[oy_worker_type]) {
         if (OY_NODE_STATE===true) {
-            OY_WORKER_THREADS[oy_worker_type][i] = new Worker(oy_worker_define, {eval:true});
+            OY_WORKER_THREADS[oy_worker_type][i] = new Worker(oy_worker_define, {eval:true, resourceLimits:{maxOldGenerationSizeMb:32000, maxYoungGenerationSizeMb:32000, stackSizeMb:128}});
             OY_WORKER_THREADS[oy_worker_type][i].on('message', (oy_data) => {
                 oy_worker_manager(i, oy_data);
             });
@@ -801,13 +813,16 @@ function oy_worker_point(oy_worker_type) {
 }
 
 function oy_worker_process(oy_worker_type, oy_worker_instance, oy_worker_data) {
-    if (oy_worker_instance===false) {
-        for (let i in OY_WORKER_THREADS[oy_worker_type]) {
-            OY_WORKER_THREADS[oy_worker_type][i].postMessage([oy_worker_type, oy_worker_data]);
+    if (OY_SIM_MODE===true) oy_worker_internal([true, OY_SIM_TIMINGS_LOAD, OY_WORK_MATCH, OY_SELF_PRIVATE, true], [oy_worker_type, oy_worker_data]);
+    else {
+        if (oy_worker_instance===false) {
+            for (let i in OY_WORKER_THREADS[oy_worker_type]) {
+                OY_WORKER_THREADS[oy_worker_type][i].postMessage([oy_worker_type, oy_worker_data]);
+            }
         }
+        else if (oy_worker_instance===null) OY_WORKER_THREADS[oy_worker_type][oy_worker_point(oy_worker_type)].postMessage([oy_worker_type, oy_worker_data]);
+        else OY_WORKER_THREADS[oy_worker_type][oy_worker_point(oy_worker_type)].postMessage([oy_worker_type, oy_worker_data]);
     }
-    else if (oy_worker_instance===null) OY_WORKER_THREADS[oy_worker_type][oy_worker_point(oy_worker_type)].postMessage([oy_worker_type, oy_worker_data]);
-    else OY_WORKER_THREADS[oy_worker_type][oy_worker_point(oy_worker_type)].postMessage([oy_worker_type, oy_worker_data]);
 }
 //WEB WORKER BLOCK
 
@@ -3358,13 +3373,16 @@ function oy_block_engine() {
             OY_SLOW_MOTION = Math.min(OY_SLOW_MAX, OY_SLOW_MOTION);
             OY_BLOCK_LOOP[0] = Math.ceil(OY_BLOCK_LOOP_RESTORE[0]*OY_SLOW_MOTION);
             OY_BLOCK_LOOP[1] = Math.ceil(OY_BLOCK_LOOP_RESTORE[1]*OY_SLOW_MOTION);
-            let oy_simulator_timings = [[Math.round(OY_SIM_TIMINGS[0][0]*OY_SLOW_MOTION), Math.round(OY_SIM_TIMINGS[0][1]*OY_SLOW_MOTION)], [Math.round(OY_SIM_TIMINGS[1][0]*OY_SLOW_MOTION), Math.round(OY_SIM_TIMINGS[1][1]*OY_SLOW_MOTION)]];
+            OY_SIM_TIMINGS_LOAD = [[Math.round(OY_SIM_TIMINGS[0][0]*OY_SLOW_MOTION), Math.round(OY_SIM_TIMINGS[0][1]*OY_SLOW_MOTION)], [Math.round(OY_SIM_TIMINGS[1][0]*OY_SLOW_MOTION), Math.round(OY_SIM_TIMINGS[1][1]*OY_SLOW_MOTION)]];
+            /*
+            let oy_simulator_timings = ;
             for (let i in OY_WORKER_THREADS[0]) {
                 OY_WORKER_THREADS[0][i].postMessage([-1, oy_simulator_timings]);
             }
             for (let i in OY_WORKER_THREADS[1]) {
                 OY_WORKER_THREADS[1][i].postMessage([-1, oy_simulator_timings]);
             }
+            */
         }
         OY_BLOCK_ELAPSED = Math.floor(oy_time()-OY_BLOCK_BOOT_MARK)-OY_BLOCK_BOOT_BUFFER;
 
@@ -4814,7 +4832,6 @@ function oy_init_core() {
     process.on('uncaughtException', function(oy_error) {
         if (OY_SIM_MODE===true) fs.writeFileSync(OY_SIM_BASE[0]+"/oy_halt.cmd", JSON.stringify([0, "OY_HALT_NODE", [oy_error, oy_error.stack]]))
         console.log("["+OY_SELF_SHORT+"][FATAL_ERROR]["+Math.floor(Date.now()/1000)+"]: "+JSON.stringify([oy_error, oy_error.stack]));
-        console.trace();
         process.exit();
     });
 
@@ -5023,6 +5040,7 @@ if (OY_NODE_STATE===true) {
                         eval(oy_var+" = "+JSON.stringify(oy_sim_data[1][oy_var]));
                     }
                     OY_SIM_ELAPSED = [0, OY_BLOCK_BOOT_MARK];
+                    OY_SIM_TIMINGS_LOAD = OY_SIM_TIMINGS;//TODO verify
                     oy_init();
                 }
                 else if (oy_sim_node==="OY_SIM_RECOVER") {
@@ -5041,6 +5059,7 @@ if (OY_NODE_STATE===true) {
                     OY_BLOCK_NEXT -= OY_BLOCK_SECTORS[5][0];
                     OY_SIM_ELAPSED[0] -= OY_BLOCK_SECTORS[5][0];
                     OY_SIM_ELAPSED[1] = OY_BLOCK_TIME;
+                    OY_SIM_TIMINGS_LOAD = OY_SIM_TIMINGS;
 
                     oy_init_core();
                     oy_init_load("OY_SIM_RECOVER");
