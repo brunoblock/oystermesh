@@ -306,6 +306,7 @@ let OY_SLOW_DEFLATE = null;
 let OY_SNAPSHOT_OFFSET = 0;
 let OY_SNAPSHOT_TARGET = null;
 let OY_REPORT_DELAY = 0;
+//const OY_SIM_MODE = false;//prevent simulator mode attack vector for production meshes
 let OY_SIM_MODE = false;
 let OY_SIM_INIT = false;
 let OY_SIM_RECOVER = false;
@@ -1118,26 +1119,6 @@ function oy_db_error(oy_error) {
     if ((oy_error.name==="QuotaExceededError")||(oy_error.inner&&oy_error.inner.name==="QuotaExceededError")) oy_data_deposit_purge();
     else oy_log("[ERROR][DB]["+chalk.bolder(oy_error.name)+"]["+chalk.bolder(oy_error.message)+"]", 2);
 }
-
-/*
-function oy_local_get(oy_local_name, oy_local_default, oy_callback) {
-    OY_DB.oy_local.get(oy_local_name)
-        .then(oy_obj => {
-            if (oy_obj.oy_local_value===undefined) oy_callback(oy_local_default);
-            else oy_callback(oy_obj.oy_local_value);
-        })
-        .catch(function(){});
-}
-
-function oy_local_set(oy_local_name, oy_local_data) {
-    OY_DB.oy_local.put({oy_local_key:oy_local_name, oy_local_value:oy_local_data})
-        .then(function() {
-            oy_log("[LOCAL][UPDATE]["+oy_local_name+"]");
-        })
-        .catch(oy_db_error);
-    return true;
-}
-*/
 
 function oy_signal_beam(oy_signal_data) {
     oy_signal_data = JSON.stringify(oy_signal_data);
@@ -3374,15 +3355,6 @@ function oy_block_engine() {
             OY_BLOCK_LOOP[1] = Math.ceil(OY_BLOCK_LOOP_RESTORE[1]*OY_SLOW_MOTION);
             OY_SIM_TIMINGS_LOAD = [[Math.round(OY_SIM_TIMINGS[0][0]*OY_SLOW_MOTION), Math.round(OY_SIM_TIMINGS[0][1]*OY_SLOW_MOTION)], [Math.round(OY_SIM_TIMINGS[1][0]*OY_SLOW_MOTION), Math.round(OY_SIM_TIMINGS[1][1]*OY_SLOW_MOTION)]];
             OY_SIM_INIT = false;
-            /*
-            let oy_simulator_timings = ;
-            for (let i in OY_WORKER_THREADS[0]) {
-                OY_WORKER_THREADS[0][i].postMessage([-1, oy_simulator_timings]);
-            }
-            for (let i in OY_WORKER_THREADS[1]) {
-                OY_WORKER_THREADS[1][i].postMessage([-1, oy_simulator_timings]);
-            }
-            */
         }
 
         if (OY_BLOCK_TIME<OY_BLOCK_BOOT_MARK) {
@@ -3403,7 +3375,7 @@ function oy_block_engine() {
                         oy_report_pass = true;
                         oy_peers_thin[oy_hash_gen(oy_peer_select).substr(0, OY_SHORT_LENGTH)] = 0;
                     }
-                    parentPort.postMessage([4, "OY_SIM_REPORT", null, null, [OY_SLOW_MOTION, OY_BLOCK_TIME, OY_BLOCK_HASH, OY_SELF_PUBLIC, (OY_FULL_INTRO===false)?null:OY_FULL_INTRO, oy_state_current(), oy_peer_count(), oy_peer_count(true, false), oy_peer_count(true, true)-oy_peer_count(true, false), OY_BLOCK[0][2], OY_BLOCK_STABILITY, OY_SYNC_LAST[0], OY_SYNC_LONG[0], Math.floor(Math.max(...OY_BLOCK_RECORD_KEEP)*1000), JSON.stringify(OY_SIM_DENY), JSON.stringify((oy_report_pass===true)?[oy_hash_gen(OY_SELF_PUBLIC).substr(0, OY_SHORT_LENGTH), oy_state_current(), oy_peers_thin]:[])]]);
+                    parentPort.postMessage([4, "OY_SIM_REPORT", null, null, [OY_SLOW_MOTION, OY_BLOCK_TIME, OY_BLOCK_HASH, OY_SELF_PUBLIC, (OY_FULL_INTRO===false)?null:OY_FULL_INTRO, oy_state_current(), oy_peer_count(), oy_peer_count(true, false), oy_peer_count(true, true)-oy_peer_count(true, false), OY_BLOCK[0][2], OY_BLOCK_STABILITY, OY_SYNC_LAST[0], OY_SYNC_LONG[0], Math.floor(Math.max(...OY_BLOCK_RECORD_KEEP)*1000), JSON.stringify(OY_BLOCK[0]), JSON.stringify(OY_SIM_DENY), JSON.stringify((oy_report_pass===true)?[oy_hash_gen(OY_SELF_PUBLIC).substr(0, OY_SHORT_LENGTH), oy_state_current(), oy_peers_thin]:[])]]);
                     OY_SIM_DENY = {};
                 }, OY_REPORT_DELAY);
             }
@@ -4820,8 +4792,6 @@ function oy_block_finish() {
         OY_BLOCK_RECORD_KEEP.push(oy_time()-OY_BLOCK_RECORD);
         while (OY_BLOCK_RECORD_KEEP.length>OY_BLOCK_RECORD_LIMIT) OY_BLOCK_RECORD_KEEP.shift();
     }
-
-    //oy_log(JSON.stringify(OY_BLOCK));
 }
 
 function oy_sim_snapshot() {
@@ -4956,15 +4926,6 @@ function oy_init(oy_console) {
     }
 
     oy_init_load((OY_SIM_MODE===true)?"OY_SIM_INIT":"OY_LIVE_INIT");
-
-    /*TODO nodejs DB integration
-    //Dexie.delete("oy_db");
-    OY_DB = new Dexie("oy_db");
-    OY_DB.version(1).stores({
-        oy_local:"oy_local_key",
-        oy_data:"oy_data_key,oy_data_time"
-    });
-    */
 
     let oy_time_local = oy_time();
     if (oy_time_local<OY_BLOCK_BOOT_MARK) OY_BLOCK_BOOT = null;
