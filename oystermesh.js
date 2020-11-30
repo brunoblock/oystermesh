@@ -3325,6 +3325,13 @@ function oy_block_engine() {
         OY_BLOCK_TIME = oy_block_time_local;
         OY_BLOCK_NEXT = OY_BLOCK_TIME+OY_BLOCK_SECTORS[5][0];
 
+        if (OY_BLOCK_TIME<OY_BLOCK_BOOT_MARK) {
+            OY_BLOCK_BOOT = null;
+            return null;
+        }
+        else OY_BLOCK_BOOT = OY_BLOCK_TIME-OY_BLOCK_BOOT_MARK<OY_BLOCK_BOOT_BUFFER;
+        OY_BLOCK_ELAPSED = Math.floor(oy_time()-OY_BLOCK_BOOT_MARK)-OY_BLOCK_BOOT_BUFFER;
+
         if (OY_SIM_MODE===true) {
             if (OY_SNAPSHOT_TARGET!==null) {
                 if (OY_SNAPSHOT_TARGET===OY_BLOCK_TIME) OY_SNAPSHOT_TARGET = null;
@@ -3356,13 +3363,6 @@ function oy_block_engine() {
             OY_SIM_TIMINGS_LOAD = [[Math.round(OY_SIM_TIMINGS[0][0]*OY_SLOW_MOTION), Math.round(OY_SIM_TIMINGS[0][1]*OY_SLOW_MOTION)], [Math.round(OY_SIM_TIMINGS[1][0]*OY_SLOW_MOTION), Math.round(OY_SIM_TIMINGS[1][1]*OY_SLOW_MOTION)]];
             OY_SIM_INIT = false;
         }
-
-        if (OY_BLOCK_TIME<OY_BLOCK_BOOT_MARK) {
-            OY_BLOCK_BOOT = null;
-            return null;
-        }
-        else OY_BLOCK_BOOT = OY_BLOCK_TIME-OY_BLOCK_BOOT_MARK<OY_BLOCK_BOOT_BUFFER;
-        OY_BLOCK_ELAPSED = Math.floor(oy_time()-OY_BLOCK_BOOT_MARK)-OY_BLOCK_BOOT_BUFFER;
 
         let oy_block_continue = true;
 
