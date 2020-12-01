@@ -4814,7 +4814,7 @@ function oy_init_core() {
 
     if (OY_NODE_STATE===true) {
         chalk = require('chalk');
-        chalk.bolder = function(input) {return (OY_NODE_STATE===true)?chalk.bold(input):input;}
+        chalk.bolder = function(input) {return chalk.bold(input);}
         os = require('os');
         nacl = require('tweetnacl');
         nacl.util = require('tweetnacl-util');
