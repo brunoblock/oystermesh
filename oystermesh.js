@@ -5027,7 +5027,7 @@ if (OY_NODE_STATE===true) {
                     oy_init_load("OY_SIM_RECOVER");
                 }
                 else if (oy_sim_node==="OY_SIM_RECOVER_B") {
-                    OY_SNAPSHOT_OFFSET += (oy_block_time_first(Math.floor((Date.now()/1000)/10)*10)-(OY_BLOCK_TIME+OY_SNAPSHOT_OFFSET))+OY_BLOCK_SECTORS[5][0];
+                    OY_SNAPSHOT_OFFSET += (oy_sim_data-(OY_BLOCK_TIME+OY_SNAPSHOT_OFFSET))+OY_BLOCK_SECTORS[5][0];
                     OY_SNAPSHOT_TARGET = OY_BLOCK_TIME;
                     OY_BLOCK_TIME -= OY_BLOCK_SECTORS[5][0];
                     OY_BLOCK_NEXT -= OY_BLOCK_SECTORS[5][0];
