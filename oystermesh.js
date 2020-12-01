@@ -315,6 +315,7 @@ let OY_SIM_TIMINGS = null;
 let OY_SIM_TIMINGS_LOAD = null;
 let OY_SIM_SCALE = [0, true, false];//[scale_counter, applied, buffer]
 let OY_SIM_ELAPSED = [0, null];
+let OY_SIM_ELAPSED_PASS = null;
 let OY_SIM_CALLBACK = {};
 let OY_SIM_DENY = {};
 let OY_SIM_BASE = null;
@@ -5011,9 +5012,8 @@ if (OY_NODE_STATE===true) {
                     OY_SIM_TIMINGS_LOAD = OY_SIM_TIMINGS;//TODO verify
                     oy_init();
                 }
-                else if (oy_sim_node==="OY_SIM_RECOVER") {
+                else if (oy_sim_node==="OY_SIM_RECOVER_A") {
                     oy_sim_data = JSON.parse(oy_sim_data);
-                    let oy_block_time_prev = OY_BLOCK_TIME;
                     for (let oy_var in oy_sim_data) {
                         if (oy_var==="OY_SLOW_MOTION") {
                             OY_SLOW_MOTION = 1;
@@ -5021,17 +5021,21 @@ if (OY_NODE_STATE===true) {
                         }
                         else eval(oy_var+" = "+JSON.stringify(oy_sim_data[oy_var]));
                     }
-                    OY_SNAPSHOT_OFFSET += (oy_block_time_prev-(OY_BLOCK_TIME+OY_SNAPSHOT_OFFSET))+(OY_BLOCK_SECTORS[5][0]*2);
-                    OY_SNAPSHOT_TARGET = OY_BLOCK_TIME;
-                    OY_BLOCK_TIME -= OY_BLOCK_SECTORS[5][0];
-                    OY_BLOCK_NEXT -= OY_BLOCK_SECTORS[5][0];
-                    OY_SIM_ELAPSED[0] -= OY_BLOCK_SECTORS[5][0];
-                    OY_SIM_ELAPSED[1] = OY_BLOCK_TIME;
-                    OY_SIM_TIMINGS_LOAD = OY_SIM_TIMINGS;
+                    OY_SIM_ELAPSED_PASS = oy_clone_object(OY_SIM_ELAPSED);
 
                     oy_init_core();
                     oy_init_load("OY_SIM_RECOVER");
-                    if (oy_state_current()===2) oy_worker_spawn(1);
+                }
+                else if (oy_sim_node==="OY_SIM_RECOVER_B") {
+                    OY_SNAPSHOT_OFFSET += (oy_block_time_first(Math.floor((Date.now()/1000)/10)*10)-(OY_BLOCK_TIME+OY_SNAPSHOT_OFFSET))+OY_BLOCK_SECTORS[5][0];
+                    OY_SNAPSHOT_TARGET = OY_BLOCK_TIME;
+                    OY_BLOCK_TIME -= OY_BLOCK_SECTORS[5][0];
+                    OY_BLOCK_NEXT -= OY_BLOCK_SECTORS[5][0];
+                    OY_SIM_ELAPSED = oy_clone_object(OY_SIM_ELAPSED_PASS);
+                    OY_SIM_ELAPSED_PASS = null;
+                    OY_SIM_ELAPSED[0] -= OY_BLOCK_SECTORS[5][0];
+                    OY_SIM_ELAPSED[1] = OY_BLOCK_TIME;
+                    OY_SIM_TIMINGS_LOAD = OY_SIM_TIMINGS;
                     oy_block_engine();
                 }
                 else if (oy_sim_node==="OY_SIM_SLOW") {
